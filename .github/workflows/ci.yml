@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tools:
+    name: Инструменты (Node)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - name: Никаких сырых значений в WestronUI
+        run: npm run lint:raw-values
+      - name: Сгенерированный код совпадает со свежей генерацией
+        run: npm run generate:check
+
+  apple:
+    name: Apple — пакет и каталог
+    # Тот же образ и Xcode, что у пилота todo-app (decisions/0008).
+    runs-on: xcode-27
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+      - name: Xcode и Swift
+        run: |
+          source tools/apple/xcode-env.sh
+          xcodebuild -version
+          swift --version
+      - name: Формат
+        run: tools/apple/check.sh format
+      - name: Сборка и тесты (macOS)
+        run: tools/apple/check.sh package
+      - name: Компиляция для iOS и watchOS
+        run: tools/apple/check.sh platforms
+      - name: Каталог и UI-тесты
+        run: tools/apple/check.sh catalog
+
+  catalog-screenshots:
+    name: Скриншоты каталога
+    runs-on: xcode-27
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: iOS, светлая тема
+        run: tools/apple/catalog-screenshot.sh ios --entry environment --appearance light
+      - name: iOS, тёмная тема
+        run: tools/apple/catalog-screenshot.sh ios --entry environment --appearance dark
+      - name: macOS
+        run: tools/apple/catalog-screenshot.sh macos --entry environment --appearance light
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: catalog-screenshots
+          path: |
+            .build/screenshots/
+            .build/logs/
+          if-no-files-found: warn
