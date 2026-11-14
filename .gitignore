@@ -1,1 +1,15 @@
 .DS_Store
+
+# SwiftPM и Xcode
+.build/
+.swiftpm/
+xcuserdata/
+DerivedData/
+*.xcresult
+
+# Node
+node_modules/
+
+# Личные настройки Claude Code
+.claude/settings.local.json
+CLAUDE.local.md
