@@ -1,0 +1,98 @@
+{
+  "default-configuration": "Release",
+  "configurations": [
+    "Debug",
+    "Release",
+  ],
+  "localizations": {
+    "development": "ru",
+  },
+  "packages": [
+    {
+      "kind": "local",
+      "path": "../../..",
+    },
+  ],
+  "files": [
+    { "kind": "folder", "path": "Catalog", "target-membership": [ "Catalog" ] },
+    { "kind": "folder", "path": "CatalogUITests", "target-membership": [ "CatalogUITests" ] },
+    {
+      "kind": "group",
+      "name": "Products",
+      "children": [
+        { "path": "<PRODUCTS>/Catalog.app", "type": "wrapper.application" },
+        { "path": "<PRODUCTS>/CatalogUITests.xctest", "type": "wrapper.cfbundle" },
+      ],
+    },
+  ],
+  "targets": [
+    {
+      "name": "Catalog",
+      "id": "Catalog",
+      "product": "Products/Catalog.app",
+      "product-type": "application",
+      "build-phases": [
+        "compile-sources",
+        "frameworks",
+      ],
+      "package-product-members": [
+        {
+          "product-name": "WestronCatalog",
+          "build-phase": { "build-phase": "frameworks" },
+        },
+      ],
+      "build-settings": {
+        "ALWAYS_SEARCH_USER_PATHS": "NO",
+        "CODE_SIGN_IDENTITY": "-",
+        "CODE_SIGN_STYLE": "Manual",
+        "CURRENT_PROJECT_VERSION": "1",
+        "ENABLE_PREVIEWS": "YES",
+        "GENERATE_INFOPLIST_FILE": "YES",
+        "INFOPLIST_KEY_CFBundleDisplayName": "Westron Catalog",
+        "INFOPLIST_KEY_LSApplicationCategoryType": "public.app-category.developer-tools",
+        "INFOPLIST_KEY_UIApplicationSceneManifest_Generation": "YES",
+        "INFOPLIST_KEY_UILaunchScreen_Generation": "YES",
+        "IPHONEOS_DEPLOYMENT_TARGET": "17.0",
+        "MACOSX_DEPLOYMENT_TARGET": "14.0",
+        "MARKETING_VERSION": "0.0.0",
+        "PRODUCT_BUNDLE_IDENTIFIER": "dev.westron.catalog",
+        "PRODUCT_NAME": "Catalog",
+        "SDKROOT": "auto",
+        "SUPPORTED_PLATFORMS": "iphoneos iphonesimulator macosx",
+        "SUPPORTS_MACCATALYST": "NO",
+        "SWIFT_VERSION": "6.0",
+        "TARGETED_DEVICE_FAMILY": "1,2",
+      },
+    }, {
+      "name": "CatalogUITests",
+      "id": "CatalogUITests",
+      "product": "Products/CatalogUITests.xctest",
+      "product-type": "bundle.ui-testing",
+      "test-host-target": "Catalog",
+      "dependencies": [
+        "Catalog",
+      ],
+      "build-phases": [
+        "compile-sources",
+        "frameworks",
+      ],
+      "build-settings": {
+        "ALWAYS_SEARCH_USER_PATHS": "NO",
+        "CODE_SIGN_IDENTITY": "-",
+        "CODE_SIGN_STYLE": "Manual",
+        "GENERATE_INFOPLIST_FILE": "YES",
+        "IPHONEOS_DEPLOYMENT_TARGET": "17.0",
+        "MACOSX_DEPLOYMENT_TARGET": "14.0",
+        "PRODUCT_BUNDLE_IDENTIFIER": "dev.westron.catalog.uitests",
+        "PRODUCT_NAME": "CatalogUITests",
+        "SDKROOT": "auto",
+        "SUPPORTED_PLATFORMS": "iphoneos iphonesimulator macosx",
+        "SUPPORTS_MACCATALYST": "NO",
+        "SWIFT_VERSION": "6.0",
+        "TARGETED_DEVICE_FAMILY": "1,2",
+        "TEST_TARGET_NAME": "Catalog",
+      },
+    },
+  ],
+  "products-group": null,
+}
