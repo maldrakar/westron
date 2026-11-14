@@ -7,9 +7,6 @@ xcuserdata/
 DerivedData/
 *.xcresult
 
-# Node
-node_modules/
-
 # Personal Claude Code settings
 .claude/settings.local.json
 CLAUDE.local.md

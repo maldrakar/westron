@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# The westron generators and checks from the tools/ package; builds it first if needed.
+#
+#   tools/westron lint raw-values [FILE.swift | DIRECTORY …]   no raw values in component code
+#   tools/westron generate [--check]                           regenerate code, or compare it with a fresh generation
+#
+# Runs from the repository root, so paths are relative to it. On macOS it uses the Xcode from .xcode-version,
+# on Linux the swift on PATH.
+set -euo pipefail
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$root"
+if [ "$(uname -s)" = Darwin ]; then
+  # shellcheck source=tools/apple/xcode-env.sh
+  source tools/apple/xcode-env.sh
+fi
+exec swift run --quiet --package-path tools westron "$@"

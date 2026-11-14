@@ -19,7 +19,7 @@ paths:
 
 ## Values
 
-- Tokens only. The hook and `npm run lint:raw-values` catch raw colors, sizes, spacing, radii, opacity and animation
+- Tokens only. The hook and `tools/westron lint raw-values` catch raw colors, sizes, spacing, radii, opacity and animation
   in `WestronUI`. An exception is `// westron-lint: allow <reason>`, with a real reason.
 - Text goes through semantic text roles and `Font.custom(_:size:relativeTo:)`, so that Dynamic Type works.
   Scalable spacing goes through `@ScaledMetric`.

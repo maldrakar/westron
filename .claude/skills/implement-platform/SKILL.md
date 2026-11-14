@@ -22,7 +22,7 @@ Arguments: `$ARGUMENTS`, the component id and the platform.
 
 ## 2. Implementation (apple)
 
-1. `npm run generate`: enums and signatures from the contract (phase 2). Do not edit generated code.
+1. `tools/westron generate`: enums and signatures from the contract (phase 2). Do not edit generated code.
 2. The style or component in `platforms/apple/Sources/WestronUI/<Component>/`: tokens only, a system control
    underneath, `if #available` for APIs newer than the minimum.
 3. A catalog entry in `Catalog.entries`: the matrix of variants × sizes × states from the contract.
@@ -33,8 +33,7 @@ Arguments: `$ARGUMENTS`, the component id and the platform.
 
 ```sh
 tools/apple/check.sh all
-npm run lint:raw-values
-npm run generate:check
+tools/check.sh             # tools tests, the raw-values lint, generate --check
 ```
 
 Then run `/visual-check <id>` and open every screenshot.
