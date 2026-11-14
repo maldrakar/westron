@@ -78,15 +78,28 @@ if ! xcodebuild "${xcodebuild_args[@]}" build-for-testing > "$log" 2>&1; then
   exit 1
 fi
 
-export TEST_RUNNER_WESTRON_OUTPUT="$out" TEST_RUNNER_WESTRON_ENTRY="$entry"
-[ -n "$appearance" ] && export TEST_RUNNER_WESTRON_APPEARANCE="$appearance"
-[ -n "$dynamic_type" ] && export TEST_RUNNER_WESTRON_DYNAMIC_TYPE="$dynamic_type"
-
-if ! xcodebuild "${xcodebuild_args[@]}" test-without-building \
-  -only-testing:CatalogUITests/CatalogScreenshotTests/testScreenshot >> "$log" 2>&1 || [ ! -f "$out" ]; then
+screenshot_failed() {
   grep -E ": error: |Underlying Error|automation mode" "$log" | grep -v "\[MT\]" | head -20 >&2 || true
   echo "catalog-screenshot: скриншот не получен, лог: $log" >&2
   exit 1
-fi
+}
+
+export TEST_RUNNER_WESTRON_ENTRY="$entry"
+[ -n "$appearance" ] && export TEST_RUNNER_WESTRON_APPEARANCE="$appearance"
+[ -n "$dynamic_type" ] && export TEST_RUNNER_WESTRON_DYNAMIC_TYPE="$dynamic_type"
+
+# Раннер не пишет файл сам (на macOS он в песочнице): PNG — вложение в результате теста.
+results=".build/xcode/results/$name.xcresult"
+attachments=".build/xcode/results/$name-attachments"
+rm -rf "$results" "$attachments"
+mkdir -p .build/xcode/results
+
+xcodebuild "${xcodebuild_args[@]}" test-without-building -resultBundlePath "$results" \
+  -only-testing:CatalogUITests/CatalogScreenshotTests/testScreenshot >> "$log" 2>&1 || screenshot_failed
+xcrun xcresulttool export attachments --path "$results" --output-path "$attachments" \
+  --filter "westron-screenshot*" >> "$log" 2>&1 || screenshot_failed
+png="$(find "$attachments" -name '*.png' | head -1)"
+[ -n "$png" ] || screenshot_failed
+mv "$png" "$out"
 
 echo "$out"

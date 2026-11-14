@@ -34,7 +34,9 @@
 ### Скриншоты для агента
 
 - `tools/apple/catalog-screenshot.sh ios|macos --entry <id>` собирает каталог и запускает UI-тест
-  `CatalogScreenshotTests`. Тест открывает одну запись изолированно и пишет PNG.
+  `CatalogScreenshotTests`. Тест открывает одну запись изолированно и прикладывает PNG к результату теста;
+  скрипт достаёт его из `.xcresult` (`xcresulttool export attachments`). Писать файл сам раннер не может:
+  на macOS Xcode запускает его в песочнице, где файловая система доступна только для чтения.
 - Скриншот снимает раннер XCTest. Варианты внутри процесса проверены 2026-11-14 на macOS 26.7 с Xcode 27.1
   и отклонены:
   - `NSView.cacheDisplay` и `CALayer.render(in:)` дают пустое изображение: SwiftUI рисует через рендер-сервер;
