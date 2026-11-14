@@ -1,0 +1,21 @@
+{
+  "name": "westron-tools",
+  "private": true,
+  "description": "Генераторы и проверки westron. Запускаются на Node без сборки (type stripping).",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "node --test \"tools/**/*.test.ts\"",
+    "typecheck": "tsc --project tsconfig.json",
+    "lint:raw-values": "node tools/lint/raw-values.ts",
+    "generate": "node tools/generate/generate.ts",
+    "generate:check": "node tools/generate/generate.ts --check"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "7.0.2"
+  }
+}
