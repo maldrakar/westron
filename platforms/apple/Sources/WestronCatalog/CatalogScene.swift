@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Сцена каталога. Приложение в `platforms/apple/Catalog` — это `@main` над ней и ничего больше.
+/// The catalog scene. The app in `platforms/apple/Catalog` is an `@main` over it and nothing more.
 public struct CatalogScene: Scene {
     public init() {}
 
@@ -9,7 +9,7 @@ public struct CatalogScene: Scene {
             CatalogRootView()
         }
         #if os(macOS)
-            // Размер окна задан, чтобы скриншоты macOS были одного размера от запуска к запуску.
+            // The window size is fixed so that macOS screenshots have the same size from run to run.
             .defaultSize(width: 720, height: 540)
         #endif
     }

@@ -1,53 +1,53 @@
 # westron
 
-Дизайн-система для технических продуктов с кроссплатформенным ядром и нативным UI на каждой платформе.
+A design system for technical products with a cross-platform core and a native UI on each platform.
 
-**Статус:** фаза 0 «Каркас». Есть пакет SwiftPM, приложение-каталог для iOS и macOS со скриншотами для агента, CI и настройка Claude Code. Компонентов пока нет. Пилотный продукт — [todo-app](https://github.com/maldrakar/todo-app).
+**Status:** phase 0 "Scaffold". There is a SwiftPM package, a catalog app for iOS and macOS with screenshots for the agent, CI and a Claude Code setup. There are no components yet. The pilot product is [todo-app](https://github.com/maldrakar/todo-app).
 
-## Идея
+## The idea
 
-- **Один язык дизайна и один источник данных.** Токены, контракты компонентов и документы языка дизайна лежат в этом репозитории и не принадлежат ни одной платформе.
-- **Нативные библиотеки на каждую платформу.** Apple (iOS, iPadOS, macOS, watchOS) на SwiftUI, web, Linux (GNOME: GTK4 + libadwaita), позже Android (Compose).
-- **Одинаковые имена.** Значения вариантов, размеров и состояний генерируются из контракта, поэтому совпадают на всех платформах.
-- **Системные контролы важнее своих.** Если на платформе есть нативный компонент, westron даёт для него стиль и расширения, а не замену.
+- **One design language and one data source.** Tokens, component contracts and design language documents live in this repository and belong to no single platform.
+- **A native library for each platform.** Apple (iOS, iPadOS, macOS, watchOS) in SwiftUI, web, Linux (GNOME: GTK4 + libadwaita), later Android (Compose).
+- **Identical names.** The values of variants, sizes and states are generated from the contract, so they match on every platform.
+- **System controls over custom ones.** If a platform has a native component, westron gives it a style and extensions, not a replacement.
 
 ```swift
-Button("Сохранить") { save() }
+Button("Save") { save() }
     .buttonStyle(.primary, size: .m)
 ```
 
-## Порядок работы
+## How the work goes
 
-Пилотная платформа — Apple. Компоненты сначала появляются на SwiftUI, затем переносятся на web и Linux по тем же контрактам.
+The pilot platform is Apple. Components appear in SwiftUI first, then move to web and Linux from the same contracts.
 
-Фазы ведутся как [milestones](../../milestones), задачи — как [issues](../../issues). Каждый компонент проходит три точки утверждения человеком: контракт, матрица скриншотов, релиз.
+Phases are tracked as [milestones](../../milestones), tasks as [issues](../../issues). Each component passes three approval gates, all held by the human: contract, screenshot matrix, release.
 
-## Что где лежит
+## What lives where
 
-| Путь | Содержимое |
+| Path | Contents |
 |---|---|
-| `decisions/` | Принятые решения (ADR) |
-| `design-language/` | Язык дизайна (фаза 1) |
-| `tokens/` | Токены DTCG и резолвер режимов (фаза 1) |
-| `spec/components/` | Контракты компонентов (фаза 2) |
-| `platforms/apple/` | Библиотека SwiftUI и приложение-каталог |
-| `tools/` | Генераторы, проверки и скрипты |
-| `reports/` | Итоговый отчёт исследования |
-| `research_notes/` | Заметки исследования с источниками |
+| `decisions/` | Accepted decisions (ADR) |
+| `design-language/` | Design language (phase 1) |
+| `tokens/` | DTCG tokens and the mode resolver (phase 1) |
+| `spec/components/` | Component contracts (phase 2) |
+| `platforms/apple/` | SwiftUI library and catalog app |
+| `tools/` | Generators, checks and scripts |
+| `reports/` | Final research report |
+| `research_notes/` | Research notes with sources |
 
-Команды сборки и проверки — в [AGENTS.md](AGENTS.md).
+Build and check commands are in [AGENTS.md](AGENTS.md).
 
-## Лицензия
+## License
 
-Код, токены и контракты — [MIT](LICENSE). Тексты языка дизайна в `design-language/` — [CC BY 4.0](design-language/LICENSE).
+Code, tokens and contracts: [MIT](LICENSE). Design language texts in `design-language/`: [CC BY 4.0](design-language/LICENSE).
 
-## Решения
+## Decisions
 
-- [0001. Общий контракт вместо общей UI-библиотеки](decisions/0001-shared-contract-not-shared-ui.md)
-- [0002. Платформы и стеки](decisions/0002-platforms-and-stacks.md)
-- [0003. Стили поверх системных контролов и форма API](decisions/0003-styles-on-system-controls.md)
-- [0004. Форматы источника данных](decisions/0004-source-formats.md)
-- [0005. Процесс работы](decisions/0005-workflow.md)
-- [0006. Пилотный продукт: todo-app](decisions/0006-pilot-product.md)
-- [0007. Лицензии](decisions/0007-license.md)
-- [0008. Apple: версии, тулчейн, каталог и скриншоты](decisions/0008-apple-toolchain-and-catalog.md)
+- [0001. A shared contract instead of a shared UI library](decisions/0001-shared-contract-not-shared-ui.md)
+- [0002. Platforms and stacks](decisions/0002-platforms-and-stacks.md)
+- [0003. Styles on top of system controls, and the API shape](decisions/0003-styles-on-system-controls.md)
+- [0004. Data source formats](decisions/0004-source-formats.md)
+- [0005. Workflow](decisions/0005-workflow.md)
+- [0006. Pilot product: todo-app](decisions/0006-pilot-product.md)
+- [0007. Licenses](decisions/0007-license.md)
+- [0008. Apple: versions, toolchain, catalog and screenshots](decisions/0008-apple-toolchain-and-catalog.md)

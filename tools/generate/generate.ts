@@ -1,38 +1,38 @@
-// Единая точка запуска генераторов westron.
+// The single entry point for the westron generators.
 //
-//   node tools/generate/generate.ts           записать сгенерированные файлы
-//   node tools/generate/generate.ts --check   сравнить файлы на диске со свежей генерацией, ничего не записывая
+//   node tools/generate/generate.ts           write the generated files
+//   node tools/generate/generate.ts --check   compare the files on disk with a fresh generation, writing nothing
 //
-// Сгенерированный код коммитится (decisions/0001), а CI запускает --check: расхождение означает,
-// что источник поменяли, а генерацию не перезапустили, или что сгенерированный файл правили руками.
-// Каждый генератор детерминирован: на том же входе выдаёт те же байты.
+// Generated code is committed (decisions/0001), and CI runs --check: a mismatch means
+// that someone changed the source but did not rerun generation, or edited a generated file by hand.
+// Every generator is deterministic: for the same input it produces the same bytes.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
 export interface Generator {
-  /** Короткое имя для вывода, например `tokens-apple`. */
+  /** A short name for the output, for example `tokens-apple`. */
   name: string;
-  /** Пути относительно корня репозитория → содержимое файлов. */
+  /** Paths relative to the repository root → file contents. */
   run(): Promise<Map<string, string>> | Map<string, string>;
 }
 
 /**
- * Реестр генераторов. Пока пуст: первые генераторы — токены для Apple (фаза 1, #13, #14)
- * и API из контрактов (фаза 2, #20).
+ * The generator registry. Empty for now: the first generators are tokens for Apple (phase 1, #13, #14)
+ * and the API from the contracts (phase 2, #20).
  */
 export const generators: Generator[] = [];
 
 export interface Drift {
   path: string;
-  reason: "отсутствует" | "отличается";
+  reason: "missing" | "differs";
 }
 
 export async function collect(list: Generator[]): Promise<Map<string, string>> {
   const outputs = new Map<string, string>();
   for (const generator of list) {
     for (const [path, content] of await generator.run()) {
-      if (outputs.has(path)) throw new Error(`${generator.name}: файл ${path} уже выпускает другой генератор`);
+      if (outputs.has(path)) throw new Error(`${generator.name}: file ${path} is already produced by another generator`);
       outputs.set(path, content);
     }
   }
@@ -43,8 +43,8 @@ export function findDrift(outputs: Map<string, string>, read: (path: string) => 
   const drift: Drift[] = [];
   for (const [path, content] of outputs) {
     const current = read(path);
-    if (current === undefined) drift.push({ path, reason: "отсутствует" });
-    else if (current !== content) drift.push({ path, reason: "отличается" });
+    if (current === undefined) drift.push({ path, reason: "missing" });
+    else if (current !== content) drift.push({ path, reason: "differs" });
   }
   return drift;
 }
@@ -52,25 +52,25 @@ export function findDrift(outputs: Map<string, string>, read: (path: string) => 
 async function main(args: string[]): Promise<number> {
   const check = args.includes("--check");
   if (generators.length === 0) {
-    console.log("generate: генераторов пока нет — появятся в фазе 1");
+    console.log("generate: no generators yet; they arrive in phase 1");
     return 0;
   }
   const outputs = await collect(generators);
   if (check) {
     const drift = findDrift(outputs, (path) => (existsSync(path) ? readFileSync(path, "utf8") : undefined));
-    for (const d of drift) console.error(`${d.path}: ${d.reason} от свежей генерации`);
+    for (const d of drift) console.error(`${d.path}: ${d.reason} (compared with a fresh generation)`);
     if (drift.length > 0) {
-      console.error("generate --check: запустите `npm run generate` и закоммитьте результат");
+      console.error("generate --check: run `npm run generate` and commit the result");
       return 1;
     }
-    console.log(`generate --check: файлов — ${outputs.size}, все совпадают`);
+    console.log(`generate --check: files: ${outputs.size}, all match`);
     return 0;
   }
   for (const [path, content] of outputs) {
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, content);
   }
-  console.log(`generate: файлов записано — ${outputs.size}`);
+  console.log(`generate: files written: ${outputs.size}`);
   return 0;
 }
 

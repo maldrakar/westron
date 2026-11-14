@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Проверки Swift-части westron. Их же запускают CI и хук Stop агента.
+# Checks for the Swift part of westron. CI and the agent's Stop hook run the same checks.
 #
 #   tools/apple/check.sh package     swift build + swift test (macOS)
-#   tools/apple/check.sh platforms   компиляция пакета для iOS и watchOS
-#   tools/apple/check.sh catalog     сборка каталога и UI-тестов для iOS-симулятора и macOS
-#   tools/apple/check.sh format      swift format lint без правок
-#   tools/apple/check.sh fix-format  swift format с правкой файлов
-#   tools/apple/check.sh all         всё, кроме fix-format
+#   tools/apple/check.sh platforms   compile the package for iOS and watchOS
+#   tools/apple/check.sh catalog     build the catalog and UI tests for the iOS simulator and macOS
+#   tools/apple/check.sh format      swift format lint without changes
+#   tools/apple/check.sh fix-format  swift format that rewrites the files
+#   tools/apple/check.sh all         everything except fix-format
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -32,11 +32,11 @@ catalog() {
   local destination log=.build/logs/catalog-build.log
   mkdir -p .build/logs
   for destination in "generic/platform=iOS Simulator" "platform=macOS,arch=$(uname -m)"; do
-    echo "== каталог: $destination"
+    echo "== catalog: $destination"
     if ! xcodebuild -project platforms/apple/Catalog/Catalog.xcodeproj -scheme Catalog -destination "$destination" \
       -derivedDataPath .build/xcode/catalog build-for-testing > "$log" 2>&1; then
       grep -E "error:|warning:|FAILED" "$log" | grep -v "\[MT\]" | tail -40 >&2
-      echo "check.sh: сборка каталога не удалась ($destination), лог: $log" >&2
+      echo "check.sh: catalog build failed ($destination), log: $log" >&2
       return 1
     fi
   done
@@ -57,5 +57,5 @@ case "${1:-}" in
   format) format ;;
   fix-format) fix_format ;;
   all) format; package; platforms; catalog ;;
-  *) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+  *) sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac

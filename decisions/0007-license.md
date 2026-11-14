@@ -1,29 +1,29 @@
-# 0007. Лицензии
+# 0007. Licenses
 
-Дата: 2026-11-14. Статус: принято.
+Date: 2026-11-14. Status: accepted.
 
-## Контекст
+## Context
 
-Репозиторий публичный. Без лицензии код формально нельзя использовать даже в собственных продуктах автора,
-если они публикуются отдельно. Документы языка дизайна — это тексты, к ним лучше подходит лицензия
-для контента.
+The repository is public. Without a license, the code formally cannot be used even in the author's own products
+if they are published separately. The design language documents are texts, and a content license
+suits them better.
 
-## Решение
+## Decision
 
-| Что | Лицензия | Файл |
+| What | License | File |
 |---|---|---|
-| Всё, кроме `design-language/`: код, токены, контракты, генераторы, решения, документация | MIT | `LICENSE` |
-| Тексты и иллюстрации языка дизайна в `design-language/` | CC BY 4.0 | `design-language/LICENSE` |
+| Everything except `design-language/`: code, tokens, contracts, generators, decisions, documentation | MIT | `LICENSE` |
+| Design language texts and illustrations in `design-language/` | CC BY 4.0 | `design-language/LICENSE` |
 
-## Почему
+## Why
 
-- MIT — самая короткая и привычная лицензия для пакетов SwiftPM и npm. Под ней выпущены Primer и Fluent.
-- Apache-2.0 даёт явную патентную оговорку, но требует вести NOTICE. Для дизайн-системы одного автора
-  это лишняя церемония.
-- CC BY 4.0 позволяет переиспользовать тексты языка дизайна с указанием авторства. Для кода она не подходит.
+- MIT is the shortest and most familiar license for SwiftPM and npm packages. Primer and Fluent are released under it.
+- Apache-2.0 gives an explicit patent clause but requires maintaining a NOTICE file. For a single-author design system
+  that is needless ceremony.
+- CC BY 4.0 lets others reuse the design language texts with attribution. It does not suit code.
 
-## Следствия
+## Consequences
 
-- Сторонние шрифты и иконки остаются под своими лицензиями. Выбирая их в фазе 1 (issue #16), берём только
-  OFL, MIT, ISC и подобные; SF Symbols и SF Pro юридически привязаны к платформам Apple.
-- Токены и контракты — это данные, на них действует MIT.
+- Third-party fonts and icons stay under their own licenses. When we choose them in phase 1 (issue #16), we take only
+  OFL, MIT, ISC and similar; SF Symbols and SF Pro are legally tied to Apple platforms.
+- Tokens and contracts are data, and MIT applies to them.

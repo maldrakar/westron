@@ -5,7 +5,7 @@ import { findRawValues } from "./raw-values.ts";
 
 const kinds = (source: string) => findRawValues(source).map((v) => `${v.line}:${v.kind}:${v.text}`);
 
-test("находит сырые цвета", () => {
+test("finds raw colors", () => {
   assert.deepEqual(
     kinds(
       [
@@ -17,17 +17,17 @@ test("находит сырые цвета", () => {
       ].join("\n"),
     ),
     [
-      "1:цвет:Color(red:",
-      "2:цвет:Color(.sRGB,",
-      "3:цвет:Color(hex:",
-      '3:цвет:"#3653C9"',
-      "4:цвет:#colorLiteral(",
-      "5:цвет:NSColor(white:",
+      "1:color:Color(red:",
+      "2:color:Color(.sRGB,",
+      "3:color:Color(hex:",
+      '3:color:"#3653C9"',
+      "4:color:#colorLiteral(",
+      "5:color:NSColor(white:",
     ],
   );
 });
 
-test("находит сырые размеры, отступы, прозрачность и анимацию", () => {
+test("finds raw sizes, spacing, opacity and animation", () => {
   assert.deepEqual(
     kinds(
       [
@@ -43,22 +43,22 @@ test("находит сырые размеры, отступы, прозрачн
       ].join("\n"),
     ),
     [
-      "1:размер или отступ:.padding(12)",
-      "2:размер или отступ:.padding(.horizontal, 8)",
-      "3:размер или отступ:width: 44",
-      "3:размер или отступ:height: 44",
-      "4:размер или отступ:spacing: 6",
-      "5:размер или отступ:cornerRadius: 10",
-      "6:шрифт:size: 17",
-      "7:прозрачность или масштаб:.opacity(0.4)",
-      "8:анимация:duration: 0.25",
-      "9:анимация:response: 0.3",
-      "9:анимация:dampingFraction: 0.8",
+      "1:size or spacing:.padding(12)",
+      "2:size or spacing:.padding(.horizontal, 8)",
+      "3:size or spacing:width: 44",
+      "3:size or spacing:height: 44",
+      "4:size or spacing:spacing: 6",
+      "5:size or spacing:cornerRadius: 10",
+      "6:font:size: 17",
+      "7:opacity or scale:.opacity(0.4)",
+      "8:animation:duration: 0.25",
+      "9:animation:response: 0.3",
+      "9:animation:dampingFraction: 0.8",
     ],
   );
 });
 
-test("находит отступы набором рёбер, EdgeInsets, межстрочный интервал и константы CGFloat", () => {
+test("finds padding with an edge set, EdgeInsets, line spacing and CGFloat constants", () => {
   assert.deepEqual(
     kinds(
       [
@@ -71,19 +71,19 @@ test("находит отступы набором рёбер, EdgeInsets, ме�
       ].join("\n"),
     ),
     [
-      "1:размер или отступ:.padding([.top, .bottom], 12)",
-      "2:размер или отступ:top: 12",
-      "2:размер или отступ:bottom: 8",
-      "2:размер или отступ:trailing: 16",
-      "3:шрифт:.lineSpacing(4)",
-      "4:шрифт:.tracking(0.5)",
-      "5:размер или отступ:CGFloat = 12",
-      "6:размер или отступ:CGFloat(6)",
+      "1:size or spacing:.padding([.top, .bottom], 12)",
+      "2:size or spacing:top: 12",
+      "2:size or spacing:bottom: 8",
+      "2:size or spacing:trailing: 16",
+      "3:font:.lineSpacing(4)",
+      "4:font:.tracking(0.5)",
+      "5:size or spacing:CGFloat = 12",
+      "6:size or spacing:CGFloat(6)",
     ],
   );
 });
 
-test("пропускает токены, нули, единицы и не числа", () => {
+test("skips tokens, zeros, ones and non-numbers", () => {
   assert.deepEqual(
     kinds(
       [
@@ -101,21 +101,21 @@ test("пропускает токены, нули, единицы и не чис
   );
 });
 
-test("пропускает комментарии и строки с исключением", () => {
+test("skips comments and lines with an exception", () => {
   assert.deepEqual(
     kinds(
       [
-        "// .padding(12) в комментарии",
+        "// .padding(12) in a comment",
         "/* Color(red: 1, green: 0, blue: 0) */",
         "/*",
         "  .opacity(0.5)",
         "*/",
-        ".padding(4) // westron-lint: allow оптическая компенсация иконки",
-        "// westron-lint: allow фиксированный размер системной иконки",
+        ".padding(4) // westron-lint: allow optical compensation for the icon",
+        "// westron-lint: allow fixed size of a system icon",
         ".frame(width: 20)",
         ".frame(height: 30)",
       ].join("\n"),
     ),
-    ["9:размер или отступ:height: 30"],
+    ["9:size or spacing:height: 30"],
   );
 });

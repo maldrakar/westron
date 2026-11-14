@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Stop: не даёт агенту закончить работу, пока не пройдут проверки затронутых частей.
+# Stop: does not let the agent finish its work until the checks of the affected parts pass.
 #
-# Затронутое — незакоммиченные изменения и новые файлы. Результат запоминается по отпечатку изменений
-# (.build/agent/): после успеха повторная остановка без новых правок ничего не перезапускает. Если проверка
-# упала, а агент остановился снова, ничего не поменяв, его отпускают — значит, исправить он не смог и должен
-# объяснить причину человеку. Код 2 возвращает агенту упавшую проверку и хвост её вывода.
+# Affected means uncommitted changes and new files. The result is remembered by a fingerprint of the changes
+# (.build/agent/): after a success, stopping again without new edits reruns nothing. If a check failed
+# and the agent stops again without changing anything, it is let go: it could not fix the failure and must
+# explain the reason to the human. Exit code 2 returns the failed check and the tail of its output to the agent.
 set -uo pipefail
 
 root="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 cd "$root" || exit 0
-cat > /dev/null # входной JSON не нужен: повтор без правок распознаётся по отпечатку
+cat > /dev/null # the input JSON is not needed: a repeat without edits is recognized by the fingerprint
 
 changed="$(git -c core.quotePath=false status --porcelain --untracked-files=all | cut -c4- | sed 's/.* -> //')"
 [ -n "$changed" ] || exit 0
@@ -27,7 +27,7 @@ if has '^(Package\.swift|\.swift-format|\.xcode-version|platforms/apple/|tools/a
       checks+=("tools/apple/check.sh catalog")
     fi
   else
-    echo "stop-checks: Xcode $(cat .xcode-version) не найден — проверки Swift пропущены" >&2
+    echo "stop-checks: Xcode $(cat .xcode-version) not found, so the Swift checks are skipped" >&2
   fi
 fi
 if has '^platforms/apple/Sources/WestronUI/|^tools/lint/'; then
@@ -54,9 +54,9 @@ for check in "${checks[@]}"; do
   if ! bash -c "$check" > "$log" 2>&1; then
     echo "$fingerprint" > "$failed"
     {
-      echo "Проверка не прошла: $check"
+      echo "Check failed: $check"
       grep -v "\[MT\]" "$log" | tail -40
-      echo "Исправьте и завершите снова. Если исправить нельзя, объясните причину человеку."
+      echo "Fix it and finish again. If it cannot be fixed, explain the reason to the human."
     } >&2
     exit 2
   fi

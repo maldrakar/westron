@@ -1,29 +1,29 @@
 import XCTest
 
-/// Скриншот одной записи каталога. Запускается из `tools/apple/catalog-screenshot.sh`,
-/// который передаёт параметры через переменные окружения `TEST_RUNNER_WESTRON_*`:
+/// A screenshot of one catalog entry. It runs from `tools/apple/catalog-screenshot.sh`,
+/// which passes parameters through the `TEST_RUNNER_WESTRON_*` environment variables:
 ///
-/// - `WESTRON_ENTRY` — id записи (обязателен; без него тест пропускается);
-/// - `WESTRON_APPEARANCE` — `light` или `dark`;
-/// - `WESTRON_DYNAMIC_TYPE` — размер шрифта, как у `-WestronDynamicType`.
+/// - `WESTRON_ENTRY`: the entry id (required; without it the test is skipped);
+/// - `WESTRON_APPEARANCE`: `light` or `dark`;
+/// - `WESTRON_DYNAMIC_TYPE`: the font size, as for `-WestronDynamicType`.
 ///
-/// Скриншот снимает раннер XCTest, поэтому на macOS не нужно разрешение на запись экрана.
-/// Файл раннер не пишет: на macOS он в песочнице без права записи. PNG уходит вложением в результат
-/// теста, а скрипт достаёт его из `.xcresult`.
+/// The XCTest runner takes the screenshot, so macOS needs no screen recording permission.
+/// The runner writes no file: on macOS it is sandboxed without write access. The PNG goes as an attachment
+/// into the test result, and the script extracts it from `.xcresult`.
 final class CatalogScreenshotTests: XCTestCase {
-    /// Должно совпадать с `CatalogAccessibilityID` в WestronCatalog.
+    /// Must match `CatalogAccessibilityID` in WestronCatalog.
     private static let entryID = "westron.catalog.entry"
     private static let problemID = "westron.catalog.problem"
-    /// Имя вложения; по нему скрипт находит PNG в `.xcresult`.
+    /// The attachment name; the script finds the PNG in `.xcresult` by it.
     private static let attachmentName = "westron-screenshot"
-    /// Пауза после появления записи: даёт завершиться раскладке и первой анимации.
+    /// A pause after the entry appears: it lets layout and the first animation finish.
     private static let settleDelay: TimeInterval = 0.6
 
     @MainActor
     func testScreenshot() throws {
         let environment = ProcessInfo.processInfo.environment
         guard let entryID = environment["WESTRON_ENTRY"] else {
-            throw XCTSkip("WESTRON_ENTRY не задан: тест запускает tools/apple/catalog-screenshot.sh")
+            throw XCTSkip("WESTRON_ENTRY is not set: tools/apple/catalog-screenshot.sh runs this test")
         }
 
         let app = XCUIApplication()
@@ -43,7 +43,9 @@ final class CatalogScreenshotTests: XCTestCase {
             predicate: NSPredicate { _, _ in entry.exists || problem.exists },
             object: nil
         )
-        XCTAssertEqual(XCTWaiter.wait(for: [appeared], timeout: 30), .completed, "каталог не отрисовал запись за 30 с")
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [appeared], timeout: 30), .completed, "the catalog did not render the entry within 30 s"
+        )
         if problem.exists {
             XCTFail(problem.label)
             return

@@ -1,12 +1,12 @@
-# Изменения
+# Changelog
 
-Одна версия на весь репозиторий. Теги — голая semver-версия (`0.1.0`), из них SwiftPM берёт версии.
-В каждой версии разделы «Добавлено», «Изменено», «Исправлено» и «Миграция» — шаги для продуктов
-при несовместимых изменениях. Записи пишет скил `/release`.
+One version for the whole repository. Tags are a bare semver version (`0.1.0`); SwiftPM takes versions from them.
+Each version has the sections "Added", "Changed", "Fixed" and "Migration" (steps for products
+when a change is breaking). Entries are written by the `/release` skill.
 
-## Не выпущено
+## Unreleased
 
-### Добавлено
+### Added
 
-- Пакет SwiftPM `Westron` с продуктами `WestronUI` (пока пуст) и `WestronCatalog`; iOS 17, macOS 14, watchOS 10.
-- Приложение-каталог для iOS и macOS и скрипт скриншотов `tools/apple/catalog-screenshot.sh`.
+- SwiftPM package `Westron` with the products `WestronUI` (empty for now) and `WestronCatalog`; iOS 17, macOS 14, watchOS 10.
+- Catalog app for iOS and macOS and the screenshot script `tools/apple/catalog-screenshot.sh`.

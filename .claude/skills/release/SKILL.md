@@ -1,37 +1,37 @@
 ---
 name: release
-description: Выпускает новую версию westron — CHANGELOG, тег и GitHub Release. Третья точка утверждения; вызывает только человек.
+description: Releases a new westron version (CHANGELOG, tag and GitHub Release). The third approval gate; only the human invokes it.
 disable-model-invocation: true
 argument-hint: "[major|minor|patch]"
 ---
 
-# Релиз westron
+# Releasing westron
 
-Одна версия на весь репозиторий; SwiftPM берёт её из тега (decisions/0005). Тег — голая semver-версия
-без префикса: `0.2.0`, не `v0.2.0`.
+One version for the whole repository; SwiftPM takes it from the tag (decisions/0005). The tag is a bare semver version
+with no prefix: `0.2.0`, not `v0.2.0`.
 
-## Состояние на момент вызова
+## State at invocation
 
-- Ветка: !`git branch --show-current`
-- Незакоммиченное: !`git status --porcelain | head -20`
-- Последний тег: !`git describe --tags --abbrev=0 2>/dev/null || echo "тегов нет"`
-- Коммиты после него: !`git log --oneline $(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD | head -40`
-- CI на HEAD: !`gh run list --branch main --limit 3 --json headSha,conclusion,status,workflowName --jq '.[] | "\(.workflowName) \(.headSha[0:7]) \(.status) \(.conclusion)"' 2>/dev/null`
+- Branch: !`git branch --show-current`
+- Uncommitted: !`git status --porcelain | head -20`
+- Last tag: !`git describe --tags --abbrev=0 2>/dev/null || echo "no tags"`
+- Commits since it: !`git log --oneline $(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD | head -40`
+- CI on HEAD: !`gh run list --branch main --limit 3 --json headSha,conclusion,status,workflowName --jq '.[] | "\(.workflowName) \(.headSha[0:7]) \(.status) \(.conclusion)"' 2>/dev/null`
 
-## Шаги
+## Steps
 
-1. **Предусловия.** Ветка `main`, рабочее дерево чистое, `main` совпадает с `origin/main` (`git fetch` и сравнение),
-   последний запуск CI на этом коммите зелёный. Если что-то не так — остановись и скажи, что именно.
-2. **Версия.** Если человек передал `major|minor|patch` (`$ARGUMENTS`), используй это. Иначе предложи сам по
-   разделу «Не выпущено» в `CHANGELOG.md` и коммитам: до 1.0 несовместимое изменение — это minor.
-   Без тегов первая версия — `0.1.0`. Покажи итоговую версию и дождись подтверждения.
-3. **CHANGELOG.** Перенеси «Не выпущено» в раздел `## <версия> — <ГГГГ-ММ-ДД>`. Только изменения, заметные
-   потребителю. Несовместимые изменения — в подраздел «Миграция» с конкретными шагами для продукта.
-   Оставь пустой раздел «Не выпущено» сверху.
-4. **Проверки.** `tools/apple/check.sh all`, `npm test`, `npm run generate:check` — приложи вывод.
-5. **Коммит и тег.** `git commit -m "Release <версия>"`, `git tag -a <версия> -m "<версия>"`.
-6. **Публикация.** Покажи человеку diff CHANGELOG и команды ниже, дождись явного «да», затем:
-   `git push origin main <версия>` и `gh release create <версия> --title <версия> --notes-file <файл с разделом версии>`.
-7. **Итог.** Ссылка на релиз и строка для потребителя: `.package(url: "https://github.com/maldrakar/westron", from: "<версия>")`.
+1. **Preconditions.** The branch is `main`, the working tree is clean, `main` matches `origin/main` (`git fetch` and compare),
+   and the last CI run on this commit is green. If something is wrong, stop and say what exactly.
+2. **Version.** If the human passed `major|minor|patch` (`$ARGUMENTS`), use that. Otherwise propose one yourself from
+   the "Unreleased" section in `CHANGELOG.md` and the commits: before 1.0, a breaking change is a minor bump.
+   With no tags, the first version is `0.1.0`. Show the resulting version and wait for confirmation.
+3. **CHANGELOG.** Move "Unreleased" into a section `## <version> — <YYYY-MM-DD>`. Only changes a consumer
+   can notice. Breaking changes go in a "Migration" subsection, with concrete steps for the product.
+   Leave an empty "Unreleased" section at the top.
+4. **Checks.** `tools/apple/check.sh all`, `npm test`, `npm run generate:check`; attach the output.
+5. **Commit and tag.** `git commit -m "Release <version>"`, `git tag -a <version> -m "<version>"`.
+6. **Publish.** Show the human the CHANGELOG diff and the commands below, wait for an explicit "yes", then run
+   `git push origin main <version>` and `gh release create <version> --title <version> --notes-file <file with the version's section>`.
+7. **Result.** The link to the release and a line for the consumer: `.package(url: "https://github.com/maldrakar/westron", from: "<version>")`.
 
-Никогда не публикуй без подтверждения в шаге 6 и не переписывай уже выпущенные теги.
+Never publish without the confirmation in step 6, and never rewrite tags that are already released.

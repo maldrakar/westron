@@ -1,12 +1,12 @@
-# Контракты компонентов
+# Component contracts
 
-Каждый компонент — папка `spec/components/<id>/`:
+Each component is a folder `spec/components/<id>/`:
 
-| Файл | Что это |
+| File | What it is |
 |---|---|
-| `<id>.spec.yaml` | Контракт: опции, состояния, слоты, ограничения, привязки к токенам, доступность, блок `platforms` |
-| `decisions/` | Решения по компоненту с рассмотренными вариантами |
-| `reference/` | Эталонные скриншоты, утверждённые человеком |
+| `<id>.spec.yaml` | The contract: options, states, slots, constraints, token bindings, accessibility, the `platforms` block |
+| `decisions/` | Decisions about the component, with the options considered |
+| `reference/` | Reference screenshots approved by the human |
 
-Схема контракта и валидатор появятся в фазе 2 (issue #18), первый контракт — Button (issue #22).
-Новый контракт начинается со скила `/new-component`.
+The contract schema and the validator will appear in phase 2 (issue #18); the first contract is Button (issue #22).
+A new contract starts with the `/new-component` skill.

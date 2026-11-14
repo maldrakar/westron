@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Скриншот записи каталога на iOS-симуляторе или macOS — «глаза» агента и поверхность ревью.
+# A screenshot of a catalog entry on the iOS simulator or macOS: the agent's "eyes" and the review surface.
 #
 #   tools/apple/catalog-screenshot.sh <ios|macos> [--entry ID] [--appearance light|dark]
-#                                     [--dynamic-type РАЗМЕР] [--device "iPhone 17"] [--out ФАЙЛ.png]
+#                                     [--dynamic-type SIZE] [--device "iPhone 17"] [--out FILE.png]
 #
-# Собирает каталог (инкрементально), запускает UI-тест CatalogScreenshotTests и печатает абсолютный путь к PNG.
-# По умолчанию PNG ложится в .build/screenshots/. Лог xcodebuild — в .build/logs/.
-# macOS: один раз на машине нужно включить Automation Mode (см. platforms/apple/README.md).
+# Builds the catalog (incrementally), runs the CatalogScreenshotTests UI test and prints the absolute path to the PNG.
+# By default the PNG goes to .build/screenshots/. The xcodebuild log goes to .build/logs/.
+# macOS: Automation Mode must be enabled once per machine (see platforms/apple/README.md).
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -39,7 +39,7 @@ rm -f "$out"
 log=".build/logs/catalog-$name.log"
 
 if [ "$platform" = ios ]; then
-  # Самая новая среда iOS с этим устройством, не новее SDK текущего Xcode.
+  # The newest iOS runtime with this device, no newer than the SDK of the current Xcode.
   sdk_version="$(xcrun --sdk iphonesimulator --show-sdk-version)"
   udid="$(xcrun simctl list devices available -j | node -e '
     const [device, sdk] = process.argv.slice(1);
@@ -57,11 +57,11 @@ if [ "$platform" = ios ]; then
     if (pick) console.log(pick.udid);
   ' "$device" "$sdk_version")"
   if [ -z "$udid" ]; then
-    echo "catalog-screenshot: нет симулятора «$device»; доступные: xcrun simctl list devices available" >&2
+    echo "catalog-screenshot: no simulator \"$device\"; list the available ones: xcrun simctl list devices available" >&2
     exit 1
   fi
   xcrun simctl bootstatus "$udid" -b > /dev/null
-  # Одинаковая строка состояния на всех скриншотах.
+  # The same status bar on every screenshot.
   xcrun simctl status_bar "$udid" override --time 9:41 --batteryState charged --batteryLevel 100 \
     --wifiBars 3 --cellularMode active --cellularBars 4 --dataNetwork wifi
   destination="id=$udid"
@@ -74,13 +74,13 @@ xcodebuild_args=(-project platforms/apple/Catalog/Catalog.xcodeproj -scheme Cata
 
 if ! xcodebuild "${xcodebuild_args[@]}" build-for-testing > "$log" 2>&1; then
   grep -E "error:|BUILD FAILED" "$log" | head -20 >&2 || true
-  echo "catalog-screenshot: сборка не удалась, лог: $log" >&2
+  echo "catalog-screenshot: build failed, log: $log" >&2
   exit 1
 fi
 
 screenshot_failed() {
   grep -E ": error: |Underlying Error|automation mode" "$log" | grep -v "\[MT\]" | head -20 >&2 || true
-  echo "catalog-screenshot: скриншот не получен, лог: $log" >&2
+  echo "catalog-screenshot: no screenshot captured, log: $log" >&2
   exit 1
 }
 
@@ -88,7 +88,7 @@ export TEST_RUNNER_WESTRON_ENTRY="$entry"
 [ -n "$appearance" ] && export TEST_RUNNER_WESTRON_APPEARANCE="$appearance"
 [ -n "$dynamic_type" ] && export TEST_RUNNER_WESTRON_DYNAMIC_TYPE="$dynamic_type"
 
-# Раннер не пишет файл сам (на macOS он в песочнице): PNG — вложение в результате теста.
+# The runner does not write the file itself (on macOS it is sandboxed): the PNG is an attachment in the test result.
 results=".build/xcode/results/$name.xcresult"
 attachments=".build/xcode/results/$name-attachments"
 rm -rf "$results" "$attachments"

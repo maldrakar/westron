@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   tools:
-    name: Инструменты (Node)
+    name: Tools (Node)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -22,35 +22,35 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
-      - name: Никаких сырых значений в WestronUI
+      - name: No raw values in WestronUI
         run: npm run lint:raw-values
-      - name: Сгенерированный код совпадает со свежей генерацией
+      - name: Generated code matches a fresh generation
         run: npm run generate:check
 
   apple:
-    name: Apple — пакет и каталог
-    # Тот же образ и Xcode, что у пилота todo-app (decisions/0008).
+    name: Apple — package and catalog
+    # The same image and Xcode as the todo-app pilot (decisions/0008).
     runs-on: xcode-27
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     steps:
       - uses: actions/checkout@v7
-      - name: Xcode и Swift
+      - name: Xcode and Swift
         run: |
           source tools/apple/xcode-env.sh
           xcodebuild -version
           swift --version
-      - name: Формат
+      - name: Format
         run: tools/apple/check.sh format
-      - name: Сборка и тесты (macOS)
+      - name: Build and tests (macOS)
         run: tools/apple/check.sh package
-      - name: Компиляция для iOS и watchOS
+      - name: Compile for iOS and watchOS
         run: tools/apple/check.sh platforms
-      - name: Каталог и UI-тесты
+      - name: Catalog and UI tests
         run: tools/apple/check.sh catalog
 
   catalog-screenshots:
-    name: Скриншоты каталога
+    name: Catalog screenshots
     runs-on: xcode-27
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
@@ -59,9 +59,9 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
-      - name: iOS, светлая тема
+      - name: iOS, light theme
         run: tools/apple/catalog-screenshot.sh ios --entry environment --appearance light
-      - name: iOS, тёмная тема
+      - name: iOS, dark theme
         run: tools/apple/catalog-screenshot.sh ios --entry environment --appearance dark
       - name: macOS
         run: tools/apple/catalog-screenshot.sh macos --entry environment --appearance light

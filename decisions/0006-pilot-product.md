@@ -1,75 +1,75 @@
-# 0006. Пилотный продукт: todo-app
+# 0006. Pilot product: todo-app
 
-Дата: 2026-11-14. Статус: принято.
+Date: 2026-11-14. Status: accepted.
 
-## Контекст
+## Context
 
-Компоненты westron появляются только под реальную потребность продукта (decisions/0005). Нужен продукт,
-который первым подключит westron на Apple и из которого компоненты будут извлекаться, а не изобретаться.
+westron components appear only for a real product need (decisions/0005). We need a product that will be the first
+to adopt westron on Apple, and from which components will be extracted rather than invented.
 
-## Решение
+## Decision
 
-Пилот — [todo-app](https://github.com/maldrakar/todo-app): приложение задач в духе Things 3 с общим ядром
-на Swift и нативным UI на каждой платформе. Apple-приложение написано на SwiftUI и поддерживает
-iOS 17, macOS 14 и watchOS 10.
+The pilot is [todo-app](https://github.com/maldrakar/todo-app): a task app in the spirit of Things 3 with a shared core
+in Swift and a native UI on each platform. The Apple app is written in SwiftUI and supports
+iOS 17, macOS 14 and watchOS 10.
 
-Первыми westron обслуживает два экрана пилота.
+westron first serves two screens of the pilot.
 
-### Экран списков (Lists screen)
+### Lists screen
 
-Список представлений (views), которые ведёт человек. На iPhone это отдельный экран и основание стека,
-на Mac и iPad — боковая панель. Спецификация: `docs/specs/lists-screen.md` в todo-app.
+The list of views the user keeps. On iPhone it is a separate screen and the root of the stack;
+on Mac and iPad, a sidebar. Spec: `docs/specs/lists-screen.md` in todo-app.
 
-Что на нём рисуется:
-- строка списка: плитка с цветом и иконкой, название, счётчик открытых задач, шеврон сворачивания ветки;
-- направляющие уровней вложенности; область (area) как линия с названием поперёк дерева;
-- нижняя панель: кнопка «…», капсула поиска, кнопка «+» с меню;
-- контекстные меню: переименовать, новый список, переместить, удалить;
-- поле ввода имени прямо в строке;
-- режим правки: ручки перетаскивания, индикатор места вставки;
-- лист «Переместить в…» с деревом списков; подтверждение удаления.
+What it draws:
+- a list row: a tile with a color and an icon, the name, the count of open tasks, a chevron that collapses the branch;
+- guide lines for nesting levels; an area as a line with its name across the tree;
+- the bottom bar: a "…" button, a search capsule, a "+" button with a menu;
+- context menus: rename, new list, move, delete;
+- a name field right in the row;
+- edit mode: drag handles, an insertion point indicator;
+- a "Move to…" sheet with the tree of lists; delete confirmation.
 
-### Экран списка задач (list screen)
+### List screen
 
-Задачи одного представления — экран, который открывается тапом по списку. На Mac и iPad он стоит в панели
-рядом с боковой. Спецификация: `docs/specs/list-screen.md` в todo-app.
+The tasks of one view: the screen that opens when you tap a list. On Mac and iPad it sits in the pane
+next to the sidebar. Spec: `docs/specs/list-screen.md` in todo-app.
 
-Что на нём рисуется:
-- плавающие стеклянные кнопки «назад» и «…»;
-- заголовок экрана: плитка, название, день;
-- панель тегов с чипами-фильтрами;
-- блоки: заголовок с шевроном, названием и датой; «+ Добавить задачу» в конце блока;
-- строка задачи: кружок выполнения, название, строка метаданных, свайп удаления;
-- карточка задачи: поля, подзадачи, строка добавления, пилюли дня, срока и тегов;
-- колонки; полоса «Сделано сегодня»; «+ Добавить список»; круглая кнопка «+»;
-- пустое состояние; меню «Показать как».
+What it draws:
+- floating glass "back" and "…" buttons;
+- the screen header: tile, name, day;
+- a tag bar with filter chips;
+- blocks: a header with a chevron, a title and a date; "+ Add task" at the end of the block;
+- a task row: a completion circle, the title, a metadata line, swipe to delete;
+- a task card: fields, subtasks, an add row, day, deadline and tag pills;
+- columns; a "Done today" strip; "+ Add list"; a round "+" button;
+- an empty state; a "Show as" menu.
 
-## Источники вида
+## Where the look comes from
 
-- Вид обоих экранов задан холстом «Todo — дизайн», который владелец утвердил. Где холст и спецификация
-  расходятся, холст прав о виде, а спецификация — о поведении.
-- Решения о виде уже записаны в коде пилота. Модуль `DesignSystem` содержит палитру по темам, акцент #3653C9,
-  одиннадцать цветов списков, шрифт заголовков SF Pro Rounded, иконки и анимации. `DesignSystemComponents`
-  содержит модели и стили компонентов этих экранов.
-- Отсюда в фазе 1 извлекаются токены, а в фазах 2–4 — компоненты.
+- The look of both screens is set by the canvas "Todo — дизайн", which the owner approved. Where the canvas and the spec
+  disagree, the canvas is right about the look and the spec is right about behavior.
+- The decisions about the look are already written in the pilot's code. The `DesignSystem` module holds the palette per theme, the accent #3653C9,
+  eleven list colors, the SF Pro Rounded heading font, icons and animations. `DesignSystemComponents`
+  holds the models and styles of the components on these screens.
+- Phase 1 extracts the tokens from here, and phases 2–4 extract the components.
 
-### Что станет с модулями вида в пилоте
+### What happens to the pilot's look modules
 
-Когда в westron появляются токены, стили и компоненты, пилот переходит на них, а свои `DesignSystem`
-и `DesignSystemComponents` удаляет: две реализации одного вида не нужны. Переход идёт частями, по мере того как
-westron покрывает то, что лежит в этих модулях: токены фазы 1 заменяют `DesignSystem`, компоненты фаз 2–4 —
+As westron gets tokens, styles and components, the pilot moves to them and deletes its own `DesignSystem`
+and `DesignSystemComponents`: two implementations of the same look are not needed. The move happens in parts, as
+westron covers what these modules contain: phase 1 tokens replace `DesignSystem`, and components from phases 2–4 replace
 `DesignSystemComponents`.
 
-## Следствия
+## Consequences
 
-- Минимальные версии ОС westron равны пилотным (decisions/0008).
-- Тулчейн westron равен пилотному: Xcode 27.1, Swift 6.4.
-- Поле `consumers` в контракте компонента ссылается на экран пилота: `todo-app/lists-screen` или
+- westron's minimum OS versions equal the pilot's (decisions/0008).
+- westron's toolchain equals the pilot's: Xcode 27.1, Swift 6.4.
+- The `consumers` field in a component contract refers to a pilot screen: `todo-app/lists-screen` or
   `todo-app/list-screen`.
-- Список компонентов фазы 4 (issue #32) составляется из перечня выше.
-- Токены и компоненты westron должны покрыть всё, что пилот берёт из своих модулей, иначе удалить их
-  не получится. Перечень того, что в них есть, — вход для фазы 1 (issues #10, #11, #16) и для #32.
-- `DesignSystem` пилота не зависит от SwiftUI и собирается для WASM. Если пилоту на WASM нужны те же числа,
-  генератор токенов для Apple (issue #14) должен учесть это. Например, значения можно держать в модуле
-  без SwiftUI, а адаптер для SwiftUI — в `WestronUI`. Решается в #14.
-- Перевод пилота — работа в репозитории todo-app; задачи на него заводятся там, когда готова замена.
+- The phase 4 component list (issue #32) is drawn up from the inventory above.
+- westron tokens and components must cover everything the pilot takes from its own modules; otherwise the pilot cannot
+  delete them. The inventory of what these modules contain is input for phase 1 (issues #10, #11, #16) and for #32.
+- The pilot's `DesignSystem` does not depend on SwiftUI and builds for WASM. If the pilot needs the same numbers on WASM,
+  the Apple token generator (issue #14) must account for it. For example, the values can live in a module
+  without SwiftUI, and the SwiftUI adapter in `WestronUI`. Decided in #14.
+- Moving the pilot over is work in the todo-app repository; its tasks are opened there once a replacement is ready.

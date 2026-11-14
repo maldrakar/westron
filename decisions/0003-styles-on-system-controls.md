@@ -1,30 +1,30 @@
-# 0003. Стили поверх системных контролов и форма API
+# 0003. Styles on top of system controls, and the API shape
 
-Дата: 2026-11-14. Статус: принято.
+Date: 2026-11-14. Status: accepted.
 
-## Решение
+## Decision
 
-1. **Если системный контрол есть**, контракт привязывается к нему. westron даёт стиль и расширения, а не свой тип. Обёрток вроде `WButton` нет.
-2. **Если системного контрола нет** (например, Badge, Banner, EmptyState), westron делает свой компонент с именем из контракта, без префикса.
-3. **Имя компонента может отличаться между платформами**, если назвать как в контракте нельзя. Совпадать обязаны дизайн-решения: значения вариантов, размеров, состояний и токены в контракте и в сгенерированном коде.
+1. **If a system control exists**, the contract binds to it. westron provides a style and extensions, not its own type. There are no wrappers like `WButton`.
+2. **If there is no system control** (for example, Badge, Banner, EmptyState), westron builds its own component, named as in the contract, without a prefix.
+3. **A component's name may differ between platforms** if it cannot be named as in the contract. The design decisions must match: the values of variants, sizes and states, and the tokens, in the contract and in the generated code.
 
-## Форма API в SwiftUI
+## API shape in SwiftUI
 
 ```swift
-Button("Сохранить") { save() }
+Button("Save") { save() }
     .buttonStyle(.primary, size: .m)
 ```
 
-- `ButtonVariant` и `ButtonSize` генерируются из контракта.
-- `buttonStyle(_:size:)` — перегрузка в расширении `View`, принимающая сгенерированные перечисления; внутри применяется рукописный `ButtonStyle`.
-- Состояния, которых нет у системной кнопки (например, `loading`), задаются модификатором через окружение.
-- Размеры называются `s`, `m`, `l`, как в контракте, а не `small/regular/large`.
+- `ButtonVariant` and `ButtonSize` are generated from the contract.
+- `buttonStyle(_:size:)` is an overload in a `View` extension that takes the generated enums; inside, it applies a hand-written `ButtonStyle`.
+- States the system button does not have (for example, `loading`) are set by a modifier through the environment.
+- Sizes are named `s`, `m`, `l`, as in the contract, not `small/regular/large`.
 
-## Ограничение на имена значений
+## Constraint on value names
 
-Значение варианта не должно совпадать со статическим именем системного стиля того же контрола. Для кнопки это, в частности, `plain`, `bordered`, `borderedProminent`, `borderless`, `automatic`, `link`, `glass`, `glassProminent`. Иначе вызов `.buttonStyle(.plain)` станет неоднозначным. Проверку добавляем в валидатор контракта.
+A variant value must not match the static name of a system style of the same control. For a button these include `plain`, `bordered`, `borderedProminent`, `borderless`, `automatic`, `link`, `glass`, `glassProminent`. Otherwise the call `.buttonStyle(.plain)` becomes ambiguous. We add this check to the contract validator.
 
-## Другие платформы
+## Other platforms
 
-- GTK: стандартный `GtkButton`, варианты отображаются в CSS-классы.
-- Web: решается в веб-фазе; по той же логике предпочтителен нативный `<button>` со стилями westron.
+- GTK: the standard `GtkButton`; variants map to CSS classes.
+- Web: decided in the web phase; by the same logic, a native `<button>` with westron styles is preferred.

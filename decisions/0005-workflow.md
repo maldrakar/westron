@@ -1,30 +1,30 @@
-# 0005. Процесс работы
+# 0005. Workflow
 
-Дата: 2026-11-14. Статус: принято.
+Date: 2026-11-14. Status: accepted.
 
-## Решение
+## Decision
 
-Работа ведётся в режиме spec-first: человек принимает дизайн-решения, Claude Code пишет спецификации и реализацию.
+Work runs spec-first: the human makes the design decisions, Claude Code writes the specifications and the implementation.
 
-Каждый компонент проходит три точки утверждения человеком:
+Each component passes three approval gates, all held by the human:
 
-1. **Контракт.** Агент расспрашивает о назначении, вариантах, состояниях и доступности, пишет контракт и короткое решение. Человек утверждает контракт.
-2. **Матрица скриншотов.** Агент реализует компонент, добавляет его в каталог и снапшот-тесты. Человек смотрит матрицу состояний и diff снапшотов.
-3. **Релиз.** Запускает только человек.
+1. **Contract.** The agent asks about purpose, variants, states and accessibility, then writes the contract and a short decision. The human approves the contract.
+2. **Screenshot matrix.** The agent implements the component and adds it to the catalog and the snapshot tests. The human reviews the state matrix and the snapshot diff.
+3. **Release.** Only the human runs it.
 
-Если при реализации обнаружен пробел, сначала правится контракт, затем код.
+If a gap turns up during implementation, the contract is fixed first, then the code.
 
 ## GitHub
 
-- Один публичный монорепозиторий.
-- Фазы — milestones, задачи — issues.
-- На каждый компонент — issue и pull request с контрактом, реализацией и матрицей скриншотов.
-- Решения хранятся файлами в `decisions/`, а не в issues.
-- Одна версия на весь репозиторий: SwiftPM берёт версии из тегов репозитория.
+- One public monorepo.
+- Phases are milestones, tasks are issues.
+- Each component gets an issue and a pull request with the contract, the implementation and the screenshot matrix.
+- Decisions are stored as files in `decisions/`, not in issues.
+- One version for the whole repository: SwiftPM takes versions from the repository tags.
 
-## Правила
+## Rules
 
-- Новый компонент появляется только под реальную потребность продукта.
-- Разрыв паритета между платформами без записи в контракте считается багом.
-- В коде компонентов нет сырых значений — только токены.
-- Вместо фразы «тесты прошли» агент показывает вывод команды или скриншот.
+- A new component appears only for a real product need.
+- A parity gap between platforms with no record in the contract is a bug.
+- Component code has no raw values, only tokens.
+- Instead of saying "tests passed", the agent shows the command output or a screenshot.

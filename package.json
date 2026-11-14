@@ -1,7 +1,7 @@
 {
   "name": "westron-tools",
   "private": true,
-  "description": "Генераторы и проверки westron. Запускаются на Node без сборки (type stripping).",
+  "description": "westron generators and checks. They run on Node without a build step (type stripping).",
   "license": "MIT",
   "type": "module",
   "engines": {

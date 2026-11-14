@@ -1,14 +1,15 @@
 import SwiftUI
 
-/// Аргументы запуска каталога. Их передаёт UI-тест скриншотов по просьбе `tools/apple/catalog-screenshot.sh`.
+/// Catalog launch arguments. The screenshot UI test passes them at the request of
+/// `tools/apple/catalog-screenshot.sh`.
 ///
 /// ```
-/// -WestronEntry <id>                 показать одну запись изолированно, без навигации
-/// -WestronAppearance light|dark      оформление
-/// -WestronDynamicType <размер>       xSmall … xxxLarge, accessibility1 … accessibility5
+/// -WestronEntry <id>                 show one entry in isolation, without navigation
+/// -WestronAppearance light|dark      appearance
+/// -WestronDynamicType <size>         xSmall … xxxLarge, accessibility1 … accessibility5
 /// ```
 ///
-/// Незнакомые аргументы пропускаются: Xcode и система добавляют свои.
+/// Unknown arguments are skipped: Xcode and the system add their own.
 public struct CatalogLaunchOptions: Equatable, Sendable {
     public enum Appearance: String, CaseIterable, Sendable {
         case light, dark
@@ -28,9 +29,9 @@ public struct CatalogLaunchOptions: Equatable, Sendable {
         public var description: String {
             switch self {
             case .missingValue(let flag):
-                "\(flag): нет значения"
+                "\(flag): no value"
             case .invalidValue(let flag, let value, let allowed):
-                "\(flag): недопустимое значение «\(value)»; допустимы: \(allowed.joined(separator: ", "))"
+                "\(flag): invalid value \"\(value)\"; allowed: \(allowed.joined(separator: ", "))"
             }
         }
     }
@@ -45,7 +46,7 @@ public struct CatalogLaunchOptions: Equatable, Sendable {
         self.dynamicTypeSize = dynamicTypeSize
     }
 
-    /// Разбирает аргументы процесса без первого элемента (пути к исполняемому файлу).
+    /// Parses the process arguments without the first element (the path to the executable).
     public init(arguments: [String]) throws(ParseError) {
         self.init()
         var index = arguments.startIndex
@@ -80,7 +81,7 @@ public struct CatalogLaunchOptions: Equatable, Sendable {
         }
     }
 
-    /// Аргументы текущего процесса.
+    /// The arguments of the current process.
     public static var current: Result<CatalogLaunchOptions, ParseError> {
         Result { () throws(ParseError) in
             try CatalogLaunchOptions(arguments: Array(ProcessInfo.processInfo.arguments.dropFirst()))
@@ -89,7 +90,7 @@ public struct CatalogLaunchOptions: Equatable, Sendable {
 
     static let flags: Set<String> = ["-WestronEntry", "-WestronAppearance", "-WestronDynamicType"]
 
-    /// Имена размеров совпадают с именами случаев `DynamicTypeSize`.
+    /// The size names match the names of the `DynamicTypeSize` cases.
     static let dynamicTypeSizes: [(name: String, size: DynamicTypeSize)] = [
         ("xSmall", .xSmall),
         ("small", .small),

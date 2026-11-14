@@ -3,14 +3,14 @@ import Testing
 
 @testable import WestronCatalog
 
-@Suite("Аргументы запуска каталога")
+@Suite("Catalog launch arguments")
 struct CatalogLaunchOptionsTests {
-    @Test("Без аргументов — навигация по каталогу")
+    @Test("No arguments: navigation over the catalog")
     func empty() throws {
         #expect(try CatalogLaunchOptions(arguments: []) == CatalogLaunchOptions())
     }
 
-    @Test("Все аргументы разбираются")
+    @Test("All arguments are parsed")
     func all() throws {
         let options = try CatalogLaunchOptions(arguments: [
             "-WestronEntry", "environment",
@@ -27,7 +27,7 @@ struct CatalogLaunchOptionsTests {
         )
     }
 
-    @Test("Чужие аргументы пропускаются")
+    @Test("Foreign arguments are skipped")
     func foreignArguments() throws {
         let options = try CatalogLaunchOptions(arguments: [
             "-NSDocumentRevisionsDebugMode", "YES", "-WestronEntry", "environment", "-ApplePersistenceIgnoreState",
@@ -35,7 +35,7 @@ struct CatalogLaunchOptionsTests {
         #expect(options.entryID == "environment")
     }
 
-    @Test("Флаг без значения — ошибка")
+    @Test("A flag without a value is an error")
     func missingValue() {
         #expect(throws: CatalogLaunchOptions.ParseError.missingValue(flag: "-WestronEntry")) {
             try CatalogLaunchOptions(arguments: ["-WestronEntry"])
@@ -45,7 +45,7 @@ struct CatalogLaunchOptionsTests {
         }
     }
 
-    @Test("Недопустимое значение — ошибка со списком допустимых")
+    @Test("An invalid value is an error that lists the allowed values")
     func invalidValue() {
         #expect(
             throws: CatalogLaunchOptions.ParseError.invalidValue(
@@ -58,25 +58,25 @@ struct CatalogLaunchOptionsTests {
         }
     }
 
-    @Test("Имена размеров шрифта покрывают все DynamicTypeSize")
+    @Test("Font size names cover every DynamicTypeSize")
     func dynamicTypeNames() {
         let named = CatalogLaunchOptions.dynamicTypeSizes.map(\.size)
         #expect(named == DynamicTypeSize.allCases)
     }
 }
 
-@Suite("Реестр каталога")
+@Suite("Catalog registry")
 struct CatalogRegistryTests {
-    @Test("id записей уникальны и не пусты")
+    @Test("Entry ids are unique and not empty")
     func uniqueIDs() {
         let ids = Catalog.entries.map(\.id)
         #expect(Set(ids).count == ids.count)
         #expect(ids.allSatisfy { !$0.isEmpty })
     }
 
-    @Test("Запись находится по id")
+    @Test("An entry is found by its id")
     func lookup() {
-        #expect(Catalog.entry(id: "environment")?.title == "Окружение")
-        #expect(Catalog.entry(id: "нет-такой") == nil)
+        #expect(Catalog.entry(id: "environment")?.title == "Environment")
+        #expect(Catalog.entry(id: "no-such-entry") == nil)
     }
 }

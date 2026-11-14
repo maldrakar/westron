@@ -1,17 +1,18 @@
 // swift-tools-version: 6.2
 import PackageDescription
 
-// Манифест лежит в корне, потому что SwiftPM берёт удалённый пакет только из корня репозитория,
-// а версии — из тегов репозитория. Исходники — в platforms/apple/ (decisions/0005, 0008).
+// The manifest lives at the root because SwiftPM takes a remote package only from the repository root,
+// and its versions from the repository tags. The sources are in platforms/apple/ (decisions/0005, 0008).
 let package = Package(
     name: "Westron",
-    // Минимум совпадает с пилотом todo-app (decisions/0006, 0008).
+    // The minimum matches the todo-app pilot (decisions/0006, 0008).
     platforms: [.iOS(.v17), .macOS(.v14), .watchOS(.v10)],
     products: [
-        // Стили и компоненты westron. Подключают продукты.
+        // westron styles and components. Products depend on it.
         .library(name: "WestronUI", targets: ["WestronUI"]),
-        // Записи каталога, их хост и снимки. Подключает только приложение-каталог
-        // в platforms/apple/Catalog; продукт нужен, потому что Xcode-проект видит пакет только через продукты.
+        // Catalog entries, their host and snapshots. Only the catalog app depends on it,
+        // in platforms/apple/Catalog; the product exists because an Xcode project sees a package only through
+        // its products.
         .library(name: "WestronCatalog", targets: ["WestronCatalog"]),
     ],
     targets: [

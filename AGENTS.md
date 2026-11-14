@@ -1,84 +1,86 @@
-# westron — инструкции для агентов
+# westron: instructions for agents
 
-westron — дизайн-система для технических продуктов: один источник данных (токены, контракты компонентов,
-язык дизайна) и нативная библиотека на каждой платформе. Пилотная платформа — Apple (SwiftUI),
-пилотный продукт — [todo-app](https://github.com/maldrakar/todo-app) (decisions/0006).
+westron is a design system for technical products: a single source (tokens, component contracts,
+design language) and a native library on each platform. The pilot platform is Apple (SwiftUI),
+the pilot product is [todo-app](https://github.com/maldrakar/todo-app) (decisions/0006).
 
-Сейчас идёт фаза 0 «Каркас»; фазы — milestones на GitHub, задачи — issues. Порядок важнее скорости:
-сначала токены (фаза 1), затем схема контракта и сквозной срез Button (фаза 2). Пока на Button не работают
-генерация API и линт паритета, второй компонент не начинается — иначе дрейф появится раньше, чем механизм,
-который его ловит (`reports/`, раздел «План работ»).
+Phase 0 "Scaffold" is in progress; phases are GitHub milestones, tasks are issues. Order matters more than speed:
+tokens first (phase 1), then the contract schema and the end-to-end Button slice (phase 2). Until API generation
+and the parity lint work on Button, no second component starts: otherwise drift would appear before the mechanism
+that catches it (`reports/`, section "Work plan").
 
-## Где что лежит
+## Where things are
 
-| Путь | Что там |
+| Path | What is there |
 |---|---|
-| `decisions/` | Принятые решения (ADR). Читай перед тем, как менять подход |
-| `design-language/` | Язык дизайна, главы `00–09` (фаза 1) |
-| `tokens/` | Токены DTCG 2025.10 и резолвер режимов (фаза 1) |
-| `spec/components/<id>/` | Контракт компонента `<id>.spec.yaml`, его решения и эталонные скриншоты (фаза 2) |
-| `platforms/apple/Sources/WestronUI/` | Стили и компоненты SwiftUI — то, что подключают продукты |
-| `platforms/apple/Sources/WestronCatalog/` | Реестр записей каталога, его хост; их же переиспользуют снапшот-тесты |
-| `platforms/apple/Catalog/` | Приложение-каталог (iOS + macOS) и UI-тест скриншотов; проект — `project.xcproj` в формате Xcode 27, не `project.pbxproj` |
-| `tools/` | Генераторы и проверки (TypeScript на Node 24) и скрипты для Apple |
-| `Package.swift` | Манифест SwiftPM; лежит в корне, потому что так требует SwiftPM |
+| `decisions/` | Accepted decisions (ADR). Read them before you change the approach |
+| `design-language/` | Design language, chapters `00–09` (phase 1) |
+| `tokens/` | DTCG 2025.10 tokens and the mode resolver (phase 1) |
+| `spec/components/<id>/` | Component contract `<id>.spec.yaml`, its decisions and reference screenshots (phase 2) |
+| `platforms/apple/Sources/WestronUI/` | SwiftUI styles and components: what products import |
+| `platforms/apple/Sources/WestronCatalog/` | Registry of catalog entries and its host; snapshot tests reuse them too |
+| `platforms/apple/Catalog/` | Catalog app (iOS + macOS) and the screenshot UI test; the project is `project.xcproj` in Xcode 27 format, not `project.pbxproj` |
+| `tools/` | Generators and checks (TypeScript on Node 24) and scripts for Apple |
+| `Package.swift` | SwiftPM manifest; it sits at the root because SwiftPM requires it |
 
-## Команды
+## Commands
 
-Тулчейн: Xcode из `.xcode-version` (27.1, Swift 6.4) и Node 24. Скрипты ищут в `/Applications` Xcode
-с точно этой версией (27.1.1 не подойдёт) или берут `DEVELOPER_DIR`, если он задан, и не трогают `xcode-select`.
-Если вызываешь `swift` или `xcodebuild` напрямую, сначала `source tools/apple/xcode-env.sh`.
+Toolchain: Xcode from `.xcode-version` (27.1, Swift 6.4) and Node 24. Scripts look in `/Applications` for an Xcode
+with exactly this version (27.1.1 will not do) or use `DEVELOPER_DIR` if it is set, and do not touch `xcode-select`.
+If you call `swift` or `xcodebuild` directly, run `source tools/apple/xcode-env.sh` first.
 
 ```sh
 tools/apple/check.sh package      # swift build + swift test (macOS)
-tools/apple/check.sh platforms    # компиляция для iOS и watchOS
-tools/apple/check.sh catalog      # сборка приложения-каталога и UI-тестов
-tools/apple/check.sh format       # swift format lint; исправить: tools/apple/check.sh fix-format
-tools/apple/check.sh all          # всё сразу
+tools/apple/check.sh platforms    # compile for iOS and watchOS
+tools/apple/check.sh catalog      # build the catalog app and the UI tests
+tools/apple/check.sh format       # swift format lint; to fix: tools/apple/check.sh fix-format
+tools/apple/check.sh all          # everything at once
 
-tools/apple/catalog-screenshot.sh ios   --entry environment --appearance dark   # печатает путь к PNG
-tools/apple/catalog-screenshot.sh macos --entry environment                     # то же на macOS
+tools/apple/catalog-screenshot.sh ios   --entry environment --appearance dark   # prints the path to the PNG
+tools/apple/catalog-screenshot.sh macos --entry environment                     # the same on macOS
 
-npm ci                            # один раз
-npm test                          # тесты tools/
+npm ci                            # once
+npm test                          # tests of tools/
 npm run typecheck
-npm run lint:raw-values           # никаких сырых значений в WestronUI
-npm run generate                  # перегенерировать код из источников
-npm run generate:check            # сгенерированное совпадает со свежей генерацией (так проверяет CI)
+npm run lint:raw-values           # no raw values in WestronUI
+npm run generate                  # regenerate code from the sources
+npm run generate:check            # generated code matches a fresh generation (this is how CI checks)
 ```
 
-Скриншот — способ увидеть свою работу: открой PNG и посмотри, прежде чем говорить «готово».
-Параметры: `--entry <id>` (по умолчанию `environment`), `--appearance light|dark`,
-`--dynamic-type xSmall…accessibility5`, `--device "<симулятор>"` (по умолчанию `iPhone 17` или `$WESTRON_SIM_DEVICE`),
-`--out <файл.png>`. Без `--out` PNG ложится в `.build/screenshots/<платформа>-<id>[-<тема>][-<размер>].png`,
-лог — в `.build/logs/`. На macOS скриншоты требуют один раз включённого Automation Mode (`platforms/apple/README.md`).
+A screenshot is how you see your work: open the PNG and look at it before you say "done".
+Parameters: `--entry <id>` (default `environment`), `--appearance light|dark`,
+`--dynamic-type xSmall…accessibility5`, `--device "<simulator>"` (default `iPhone 17` or `$WESTRON_SIM_DEVICE`),
+`--out <file.png>`. Without `--out` the PNG goes to `.build/screenshots/<platform>-<id>[-<theme>][-<size>].png`,
+the log to `.build/logs/`. On macOS, screenshots need Automation Mode enabled once (`platforms/apple/README.md`).
 
-## Правила
+## Rules
 
-1. **Контракт раньше кода.** Компонент реализуется по утверждённому контракту в `spec/components/`.
-   Если при реализации нашёлся пробел, сначала правится контракт, потом код (decisions/0005).
-2. **Только токены.** В `WestronUI` нет сырых цветов, размеров, отступов, радиусов, прозрачности
-   и анимаций. Осознанное исключение помечается `// westron-lint: allow <причина>`.
-3. **Системный контрол важнее своего.** Если на платформе есть нативный компонент, westron даёт стиль
-   и расширения, а не обёртку; префиксов вроде `WButton` нет (decisions/0003).
-4. **Одинаковые имена генерируются.** Значения вариантов, размеров и состояний берутся из контракта
-   через генератор. Сгенерированные файлы не правятся руками.
-5. **Паритет записан.** Расхождение между платформами без записи в блоке `platforms` контракта — баг.
-6. **Новый компонент — только под потребность пилота.** У контракта заполнено поле `consumers`.
-7. **Доказательства, а не слова.** Вместо «тесты прошли» — команда и её вывод или скриншот.
-8. **Минимум ОС — как у пилота:** iOS 17, macOS 14, watchOS 10. API новее — через
+1. **Contract before code.** A component is implemented from an approved contract in `spec/components/`.
+   If implementation reveals a gap, fix the contract first, then the code (decisions/0005).
+2. **Tokens only.** `WestronUI` has no raw colors, sizes, spacing, radii, opacity
+   or animations. A deliberate exception is marked `// westron-lint: allow <reason>`.
+3. **A system control beats our own.** If the platform has a native component, westron provides a style
+   and extensions, not a wrapper; there are no prefixes like `WButton` (decisions/0003).
+4. **Identical names are generated.** Values of variants, sizes and states come from the contract
+   through the generator. Generated files are not edited by hand.
+5. **Parity is recorded.** A difference between platforms without an entry in the contract's `platforms` block is a bug.
+6. **A new component only for a pilot need.** The contract has its `consumers` field filled in.
+7. **Evidence, not claims.** Instead of "tests passed": the command and its output, or a screenshot.
+8. **Minimum OS matches the pilot:** iOS 17, macOS 14, watchOS 10. Newer APIs go behind
    `if #available` (decisions/0008).
-9. **Язык.** Документы, комментарии и сообщения — на русском; идентификаторы в коде — на английском.
+9. **Language.** Everything written in the repository is in English: documents, decisions, comments, messages,
+   UI strings, commit messages, issues and pull requests. Proper names keep their spelling (the pilot's canvas
+   "Todo — дизайн"). Talk to the human in their language.
 
-## Решения
+## Decisions
 
-- [0001](decisions/0001-shared-contract-not-shared-ui.md) общий контракт вместо общей UI-библиотеки
-- [0002](decisions/0002-platforms-and-stacks.md) платформы и стеки
-- [0003](decisions/0003-styles-on-system-controls.md) стили поверх системных контролов и форма API
-- [0004](decisions/0004-source-formats.md) форматы источника данных
-- [0005](decisions/0005-workflow.md) процесс работы и три точки утверждения
-- [0006](decisions/0006-pilot-product.md) пилотный продукт и его экраны
-- [0007](decisions/0007-license.md) лицензии
-- [0008](decisions/0008-apple-toolchain-and-catalog.md) Apple: версии, тулчейн, каталог и скриншоты
+- [0001](decisions/0001-shared-contract-not-shared-ui.md) a shared contract instead of a shared UI library
+- [0002](decisions/0002-platforms-and-stacks.md) platforms and stacks
+- [0003](decisions/0003-styles-on-system-controls.md) styles on top of system controls and the shape of the API
+- [0004](decisions/0004-source-formats.md) source data formats
+- [0005](decisions/0005-workflow.md) workflow and the three approval gates
+- [0006](decisions/0006-pilot-product.md) the pilot product and its screens
+- [0007](decisions/0007-license.md) licenses
+- [0008](decisions/0008-apple-toolchain-and-catalog.md) Apple: versions, toolchain, catalog and screenshots
 
-Итоговый отчёт исследования с источниками: `reports/`.
+The final research report, with sources: `reports/`.

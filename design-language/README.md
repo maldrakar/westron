@@ -1,6 +1,6 @@
-# Язык дизайна
+# Design language
 
-Главы языка дизайна westron появятся в фазе 1 (issue #8): от `00-principles.md` до `09-platform-adaptation.md`.
-Глава отвечает на вопрос «почему так»; значения живут в `tokens/`, правила компонентов — в `spec/components/`.
+The chapters of the westron design language will appear in phase 1 (issue #8): from `00-principles.md` to `09-platform-adaptation.md`.
+A chapter answers the question "why is it this way"; values live in `tokens/`, component rules in `spec/components/`.
 
-Тексты и иллюстрации в этой папке распространяются под CC BY 4.0 (`LICENSE`, decisions/0007).
+The texts and illustrations in this folder are distributed under CC BY 4.0 (`LICENSE`, decisions/0007).

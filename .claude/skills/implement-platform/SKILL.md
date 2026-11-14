@@ -1,35 +1,35 @@
 ---
 name: implement-platform
-description: Вторая точка утверждения — реализация компонента westron на платформе по утверждённому контракту, с каталогом, тестами, скриншотами и ревью субагентами. Используй после того, как контракт компонента утверждён.
-argument-hint: "<id компонента> <apple|web|linux>"
+description: The second approval gate. Implements a westron component on a platform from its approved contract, with a catalog entry, tests, screenshots and review by subagents. Use after the component's contract is approved.
+argument-hint: "<component id> <apple|web|linux>"
 ---
 
-# Реализация компонента на платформе
+# Implementing a component on a platform
 
-> **Черновик до фазы 2.** Генератор API из контракта (#20), линт паритета (#21), матрица снапшотов (#24)
-> и аудит доступности в тестах (#25) появятся в фазе 2. Шаги, которые на них опираются, помечены «фаза 2».
-> Сейчас реализована только платформа `apple`.
+> **Draft until phase 2.** The API generator from the contract (#20), the parity lint (#21), the snapshot matrix (#24)
+> and the accessibility audit in tests (#25) arrive in phase 2. Steps that rely on them are marked "phase 2".
+> Only the `apple` platform is implemented now.
 
-Аргументы: `$ARGUMENTS` — id компонента и платформа.
+Arguments: `$ARGUMENTS`, the component id and the platform.
 
-## 1. Предусловия
+## 1. Preconditions
 
-- Контракт `spec/components/<id>/<id>.spec.yaml` существует и имеет `status: approved`. Если нет — остановись:
-  сначала `/new-component`.
-- Прочитай контракт, его решения, `decisions/0003` и правила платформы `.claude/rules/<платформа>.md`.
-- Если компонент уже есть на другой платформе, прочитай ту реализацию как эталон поведения, но спорные места
-  решает контракт, а не эталон.
+- The contract `spec/components/<id>/<id>.spec.yaml` exists and has `status: approved`. If not, stop:
+  run `/new-component` first.
+- Read the contract, its decisions, `decisions/0003` and the platform rules `.claude/rules/<platform>.md`.
+- If the component already exists on another platform, read that implementation as the reference for behavior, but the
+  contract, not the reference, settles disputed points.
 
-## 2. Реализация (apple)
+## 2. Implementation (apple)
 
-1. `npm run generate` — перечисления и сигнатуры из контракта (фаза 2). Сгенерированное не правь.
-2. Стиль или компонент в `platforms/apple/Sources/WestronUI/<Компонент>/`: только токены, системный контрол
-   в основе, `if #available` для API новее минимума.
-3. Запись каталога в `Catalog.entries`: матрица вариантов × размеров × состояний из контракта.
-4. Тесты: поведение и состояния — Swift Testing; снапшоты матрицы (фаза 2).
-5. Если контракт где-то молчит, не решай сам: остановись, предложи правку контракта и дождись утверждения.
+1. `npm run generate`: enums and signatures from the contract (phase 2). Do not edit generated code.
+2. The style or component in `platforms/apple/Sources/WestronUI/<Component>/`: tokens only, a system control
+   underneath, `if #available` for APIs newer than the minimum.
+3. A catalog entry in `Catalog.entries`: the matrix of variants × sizes × states from the contract.
+4. Tests: behavior and states with Swift Testing; snapshots of the matrix (phase 2).
+5. If the contract is silent somewhere, do not decide yourself: stop, propose a contract change and wait for approval.
 
-## 3. Проверить
+## 3. Check
 
 ```sh
 tools/apple/check.sh all
@@ -37,14 +37,14 @@ npm run lint:raw-values
 npm run generate:check
 ```
 
-Затем `/visual-check <id>` и открой каждый снимок.
+Then run `/visual-check <id>` and open every screenshot.
 
-## 4. Ревью
+## 4. Review
 
-Запусти параллельно субагентов `spec-reviewer` и `a11y-auditor` с id компонента и платформой. Исправь всё,
-что они нашли, или объясни, почему это не ошибка. Пробелы контракта — правкой контракта.
+Run the `spec-reviewer` and `a11y-auditor` subagents in parallel, with the component id and the platform. Fix everything
+they found, or explain why it is not a bug. Fix contract gaps by changing the contract.
 
-## 5. Показать человеку
+## 5. Show the human
 
-Матрица скриншотов (пути к PNG), вывод проверок, итоги ревью и список отклонений, записанных в блок `platforms`.
-Человек смотрит матрицу и diff снапшотов — это вторая точка утверждения. Коммит и pull request — по его просьбе.
+The screenshot matrix (paths to the PNGs), the output of the checks, the review results and the list of deviations recorded in the `platforms` block.
+The human looks at the matrix and the snapshot diff: this is the second approval gate. Commit and pull request only when the human asks.

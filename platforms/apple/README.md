@@ -1,15 +1,15 @@
-# westron для Apple
+# westron for Apple
 
-SwiftUI-библиотека для iOS, iPadOS, macOS и watchOS. Манифест пакета лежит в корне репозитория.
+A SwiftUI library for iOS, iPadOS, macOS and watchOS. The package manifest lives at the repository root.
 
-| Путь | Что там |
+| Path | What is there |
 |---|---|
-| `Sources/WestronUI/` | Стили и компоненты — то, что подключают продукты |
-| `Sources/WestronCatalog/` | Записи каталога, их хост и аргументы запуска |
-| `Tests/` | Тесты пакета (Swift Testing) |
-| `Catalog/` | Приложение-каталог для iOS и macOS и UI-тест скриншотов |
+| `Sources/WestronUI/` | Styles and components: what products import |
+| `Sources/WestronCatalog/` | Catalog entries, their host and launch arguments |
+| `Tests/` | Package tests (Swift Testing) |
+| `Catalog/` | Catalog app for iOS and macOS and the screenshot UI test |
 
-## Подключение
+## Adding the package
 
 ```swift
 .package(url: "https://github.com/maldrakar/westron", from: "0.1.0")
@@ -17,19 +17,19 @@ SwiftUI-библиотека для iOS, iPadOS, macOS и watchOS. Манифе�
 .product(name: "WestronUI", package: "westron")
 ```
 
-## Каталог
+## Catalog
 
-Открыть в Xcode 27.1: `platforms/apple/Catalog/Catalog.xcodeproj`. Без аргументов каталог показывает навигацию
-по всем записям. С `-WestronEntry <id>` — одну запись на весь экран; так её снимает
-`tools/apple/catalog-screenshot.sh`.
+Open in Xcode 27.1: `platforms/apple/Catalog/Catalog.xcodeproj`. Without arguments, the catalog shows navigation
+across all entries. With `-WestronEntry <id>`, it shows one entry full screen; this is how
+`tools/apple/catalog-screenshot.sh` captures it.
 
-### Скриншоты на macOS: один раз включить Automation Mode
+### Screenshots on macOS: turn on Automation Mode once
 
-UI-тесты на macOS, через которые снимаются скриншоты, требуют Automation Mode. Включить его без запроса пароля
-при каждом запуске:
+The UI tests on macOS that take the screenshots require Automation Mode. To turn it on without a password prompt
+on every run:
 
 ```sh
 sudo automationmodetool enable-automationmode-without-authentication
 ```
 
-Почему не `screencapture` и не снимок внутри процесса — в decisions/0008.
+Why not `screencapture` and not an in-process capture: see decisions/0008.

@@ -1,24 +1,24 @@
 import SwiftUI
 
-/// Одна запись каталога: компонент, образец основы или служебная страница.
+/// One catalog entry: a component, a foundation sample or a utility page.
 ///
-/// Каталог рендерит любую запись изолированно по её `id` (аргумент запуска `-WestronEntry`),
-/// поэтому `id` стабилен и совпадает с `id` компонента в контракте (`spec/components/<id>/`).
+/// The catalog renders any entry in isolation by its `id` (the `-WestronEntry` launch argument),
+/// so the `id` is stable and matches the component's `id` in its contract (`spec/components/<id>/`).
 public struct CatalogEntry: Identifiable, Sendable {
-    /// Раздел каталога, в котором показывается запись.
+    /// The catalog section that shows the entry.
     public enum Section: String, CaseIterable, Sendable {
-        /// Компоненты из `spec/components/`.
+        /// Components from `spec/components/`.
         case components
-        /// Образцы токенов: цвет, типографика, отступы (появятся в фазе 1).
+        /// Token samples: color, typography, spacing (they arrive in phase 1).
         case foundations
-        /// Служебные страницы каталога.
+        /// Utility pages of the catalog.
         case utilities
 
         public var title: LocalizedStringKey {
             switch self {
-            case .components: "Компоненты"
-            case .foundations: "Основы"
-            case .utilities: "Служебное"
+            case .components: "Components"
+            case .foundations: "Foundations"
+            case .utilities: "Utilities"
             }
         }
     }

@@ -8,16 +8,16 @@ const fake = (name: string, files: Record<string, string>): Generator => ({
   run: () => new Map(Object.entries(files)),
 });
 
-test("собирает выходы всех генераторов", async () => {
+test("collects the outputs of all generators", async () => {
   const outputs = await collect([fake("a", { "x.swift": "1" }), fake("b", { "y.css": "2" })]);
   assert.deepEqual([...outputs], [["x.swift", "1"], ["y.css", "2"]]);
 });
 
-test("два генератора не могут выпускать один файл", async () => {
+test("two generators cannot produce the same file", async () => {
   await assert.rejects(collect([fake("a", { "x.swift": "1" }), fake("b", { "x.swift": "2" })]), /x\.swift/);
 });
 
-test("находит отсутствующие и изменённые файлы", () => {
+test("finds missing and changed files", () => {
   const disk: Record<string, string> = { "same.swift": "1", "changed.swift": "old" };
   const outputs = new Map([
     ["same.swift", "1"],
@@ -27,8 +27,8 @@ test("находит отсутствующие и изменённые файл
   assert.deepEqual(
     findDrift(outputs, (path) => disk[path]),
     [
-      { path: "changed.swift", reason: "отличается" },
-      { path: "missing.swift", reason: "отсутствует" },
+      { path: "changed.swift", reason: "differs" },
+      { path: "missing.swift", reason: "missing" },
     ],
   );
 });

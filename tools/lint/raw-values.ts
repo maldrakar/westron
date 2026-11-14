@@ -1,10 +1,10 @@
-// Линт «никаких сырых значений»: в коде компонентов westron цвета, размеры, отступы, радиусы,
-// прозрачность и анимация берутся только из токенов (decisions/0005).
+// The "no raw values" lint: in westron component code, colors, sizes, spacing, radii,
+// opacity and animation come only from tokens (decisions/0005).
 //
-//   node tools/lint/raw-values.ts [файл.swift …]
+//   node tools/lint/raw-values.ts [file.swift …]
 //
-// Без аргументов проверяет все .swift в platforms/apple/Sources/WestronUI. Код выхода 1, если есть нарушения.
-// Исключение для строки: комментарий `// westron-lint: allow <причина>` на ней или строкой выше.
+// Without arguments it checks every .swift file in platforms/apple/Sources/WestronUI. Exit code 1 if there are
+// violations. An exception for a line: a `// westron-lint: allow <reason>` comment on it or on the line above.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -19,7 +19,7 @@ export interface Violation {
 interface Rule {
   kind: string;
   pattern: RegExp;
-  /** Разрешённые числа: если первая непустая группа захвата — одно из них, совпадение пропускается. */
+  /** Allowed numbers: if the first non-empty capture group is one of them, the match is skipped. */
   allowed?: number[];
 }
 
@@ -49,28 +49,28 @@ const motionLabels = ["duration", "response", "dampingFraction", "bounce", "blen
 
 const rules: Rule[] = [
   {
-    kind: "цвет",
+    kind: "color",
     pattern: /\b(?:Color|UIColor|NSColor)\(\s*(?:red|hue|white|\.sRGB|\.displayP3|hex)\s*[:,]|#colorLiteral\(/g,
   },
-  { kind: "цвет", pattern: /"#[0-9a-fA-F]{3,8}"/g },
-  { kind: "шрифт", pattern: new RegExp(String.raw`\bsize:\s*${number}`, "g") },
+  { kind: "color", pattern: /"#[0-9a-fA-F]{3,8}"/g },
+  { kind: "font", pattern: new RegExp(String.raw`\bsize:\s*${number}`, "g") },
   {
-    kind: "шрифт",
+    kind: "font",
     pattern: new RegExp(String.raw`\.(?:lineSpacing|tracking|kerning)\(\s*${number}\s*\)`, "g"),
     allowed: [0],
   },
   {
-    kind: "размер или отступ",
+    kind: "size or spacing",
     pattern: new RegExp(String.raw`\bCGFloat\s*(?:=\s*${number}|\(\s*${number}\s*\))`, "g"),
     allowed: [0],
   },
   {
-    kind: "размер или отступ",
+    kind: "size or spacing",
     pattern: new RegExp(String.raw`\b(?:${layoutLabels}):\s*${number}`, "g"),
     allowed: [0],
   },
   {
-    kind: "размер или отступ",
+    kind: "size or spacing",
     pattern: new RegExp(
       String.raw`\.(?:padding|cornerRadius)\(\s*(?:(?:\.\w+|\[[^\]]*\])\s*,\s*)?${number}\s*\)`,
       "g",
@@ -78,12 +78,12 @@ const rules: Rule[] = [
     allowed: [0],
   },
   {
-    kind: "прозрачность или масштаб",
+    kind: "opacity or scale",
     pattern: new RegExp(String.raw`\.(?:opacity|scaleEffect)\(\s*${number}\s*\)`, "g"),
     allowed: [0, 1],
   },
   {
-    kind: "анимация",
+    kind: "animation",
     pattern: new RegExp(String.raw`\b(?:${motionLabels}):\s*${number}`, "g"),
     allowed: [0],
   },
@@ -140,16 +140,16 @@ function main(args: string[]): number {
     for (const v of findRawValues(readFileSync(file, "utf8"))) {
       count += 1;
       console.error(
-        `${relative(process.cwd(), file)}:${v.line}:${v.column}: сырое значение (${v.kind}) «${v.text}» — ` +
-          `возьмите токен; осознанное исключение: // ${allowMarker} <причина>`,
+        `${relative(process.cwd(), file)}:${v.line}:${v.column}: raw value (${v.kind}) \`${v.text}\`: ` +
+          `use a token; for a deliberate exception: // ${allowMarker} <reason>`,
       );
     }
   }
   if (count > 0) {
-    console.error(`raw-values: нарушений — ${count}`);
+    console.error(`raw-values: violations: ${count}`);
     return 1;
   }
-  console.log(`raw-values: файлов проверено — ${files.length}, нарушений нет`);
+  console.log(`raw-values: files checked: ${files.length}, no violations`);
   return 0;
 }
 

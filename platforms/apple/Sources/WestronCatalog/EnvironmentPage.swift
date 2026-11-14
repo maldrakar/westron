@@ -1,9 +1,9 @@
 import SwiftUI
 
 extension CatalogEntry {
-    /// Служебная страница: условия, в которых каталог сейчас рендерит записи.
-    /// Помогает убедиться, что аргументы запуска (оформление, размер шрифта) применились.
-    static let environment = CatalogEntry(id: "environment", title: "Окружение", section: .utilities) {
+    /// A utility page: the conditions in which the catalog renders entries right now.
+    /// It helps confirm that the launch arguments (appearance, font size) took effect.
+    static let environment = CatalogEntry(id: "environment", title: "Environment", section: .utilities) {
         EnvironmentPage()
     }
 }
@@ -25,29 +25,29 @@ struct EnvironmentPage: View {
 
     var body: some View {
         Form {
-            Section("Платформа") {
-                LabeledContent("Система", value: Self.platform)
-                LabeledContent("Версия", value: ProcessInfo.processInfo.operatingSystemVersionString)
+            Section("Platform") {
+                LabeledContent("System", value: Self.platform)
+                LabeledContent("Version", value: ProcessInfo.processInfo.operatingSystemVersionString)
                 #if os(iOS)
                     LabeledContent(
                         "Size class", value: "\(describe(horizontalSizeClass)) × \(describe(verticalSizeClass))")
                 #endif
             }
-            Section("Оформление") {
-                LabeledContent("Тема", value: colorScheme == .dark ? "тёмная" : "светлая")
-                LabeledContent("Контраст", value: contrast == .increased ? "повышенный" : "стандартный")
-                LabeledContent("Размер шрифта", value: String(describing: dynamicTypeSize))
-                LabeledContent("Жирный текст", value: legibilityWeight == .bold ? "да" : "нет")
+            Section("Appearance") {
+                LabeledContent("Theme", value: colorScheme == .dark ? "dark" : "light")
+                LabeledContent("Contrast", value: contrast == .increased ? "increased" : "standard")
+                LabeledContent("Font size", value: String(describing: dynamicTypeSize))
+                LabeledContent("Bold text", value: legibilityWeight == .bold ? "yes" : "no")
             }
-            Section("Доступность") {
-                LabeledContent("Уменьшение движения", value: reduceMotion ? "да" : "нет")
-                LabeledContent("Уменьшение прозрачности", value: reduceTransparency ? "да" : "нет")
-                LabeledContent("Без различения цветом", value: differentiateWithoutColor ? "да" : "нет")
+            Section("Accessibility") {
+                LabeledContent("Reduce motion", value: reduceMotion ? "yes" : "no")
+                LabeledContent("Reduce transparency", value: reduceTransparency ? "yes" : "no")
+                LabeledContent("Differentiate without color", value: differentiateWithoutColor ? "yes" : "no")
             }
-            Section("Язык") {
-                LabeledContent("Локаль", value: locale.identifier)
+            Section("Language") {
+                LabeledContent("Locale", value: locale.identifier)
                 LabeledContent(
-                    "Направление", value: layoutDirection == .rightToLeft ? "справа налево" : "слева направо")
+                    "Direction", value: layoutDirection == .rightToLeft ? "right to left" : "left to right")
             }
         }
         #if os(macOS)
@@ -63,7 +63,7 @@ struct EnvironmentPage: View {
         #elseif os(watchOS)
             "watchOS"
         #else
-            "другая"
+            "other"
         #endif
     }
 

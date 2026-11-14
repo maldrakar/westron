@@ -1,18 +1,18 @@
 import SwiftUI
 
-/// Идентификаторы доступности, по которым UI-тест скриншотов (`CatalogUITests`) понимает,
-/// что изолированная запись отрисована или что показать её нельзя.
+/// Accessibility identifiers that tell the screenshot UI test (`CatalogUITests`)
+/// that the isolated entry has rendered or that it cannot be shown.
 public enum CatalogAccessibilityID {
-    /// Контейнер изолированной записи.
+    /// The container of the isolated entry.
     public static let entry = "westron.catalog.entry"
-    /// Сообщение о проблеме; его `label` — причина.
+    /// The problem message; its `label` is the reason.
     public static let problem = "westron.catalog.problem"
 }
 
-/// Корневое представление каталога.
+/// The root view of the catalog.
 ///
-/// Без `-WestronEntry` показывает навигацию по всем записям. С ним — одну запись на весь экран, без навигации:
-/// так её снимает `tools/apple/catalog-screenshot.sh`.
+/// Without `-WestronEntry` it shows navigation over all entries. With it, it shows one entry on the whole screen,
+/// without navigation: this is how `tools/apple/catalog-screenshot.sh` captures it.
 public struct CatalogRootView: View {
     private let options: Result<CatalogLaunchOptions, CatalogLaunchOptions.ParseError>
 
@@ -41,7 +41,7 @@ public struct CatalogRootView: View {
                     .accessibilityIdentifier(CatalogAccessibilityID.entry)
             } else {
                 let known = Catalog.entries.map(\.id).joined(separator: ", ")
-                CatalogProblemView(message: "Нет записи каталога «\(id)». Есть: \(known)")
+                CatalogProblemView(message: "No catalog entry \"\(id)\". Available: \(known)")
             }
         } else {
             CatalogBrowser()
@@ -71,7 +71,7 @@ private struct CatalogBrowser: View {
                     let entries = Catalog.entries(in: section)
                     Section(section.title) {
                         if entries.isEmpty {
-                            Text("Пока пусто")
+                            Text("Empty for now")
                                 .foregroundStyle(.secondary)
                         }
                         ForEach(entries) { entry in
@@ -86,7 +86,7 @@ private struct CatalogBrowser: View {
                 entry.content()
                     .navigationTitle(entry.title)
             } else {
-                ContentUnavailableView("Выберите запись", systemImage: "square.grid.2x2")
+                ContentUnavailableView("Select an entry", systemImage: "square.grid.2x2")
             }
         }
     }
@@ -97,7 +97,7 @@ private struct CatalogProblemView: View {
 
     var body: some View {
         ContentUnavailableView {
-            Label("Каталог не может показать запись", systemImage: "exclamationmark.triangle")
+            Label("The catalog cannot show the entry", systemImage: "exclamationmark.triangle")
         } description: {
             Text(message)
         }

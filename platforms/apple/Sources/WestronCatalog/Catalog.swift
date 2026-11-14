@@ -1,7 +1,7 @@
-/// Реестр записей каталога.
+/// The registry of catalog entries.
 ///
-/// Новый компонент добавляет сюда запись в том же pull request, что и реализацию.
-/// Снапшот-тесты (фаза 2) перебирают эти же записи, поэтому реестр живёт в пакете, а не в приложении.
+/// A new component adds its entry here in the same pull request as its implementation.
+/// Snapshot tests (phase 2) iterate over the same entries, so the registry lives in the package, not in the app.
 public enum Catalog {
     public static let entries: [CatalogEntry] = [
         .environment

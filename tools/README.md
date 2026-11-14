@@ -1,11 +1,11 @@
-# Инструменты
+# Tools
 
-| Путь | Что делает |
+| Path | What it does |
 |---|---|
-| `apple/xcode-env.sh` | Находит Xcode из `.xcode-version` и выставляет `DEVELOPER_DIR` |
-| `apple/check.sh` | Сборка, тесты, формат и сборка каталога для Apple; их же запускают CI и хук Stop |
-| `apple/catalog-screenshot.sh` | Скриншот записи каталога на iOS или macOS |
-| `lint/raw-values.ts` | Линт «никаких сырых значений» для `WestronUI` |
-| `generate/generate.ts` | Реестр генераторов; `--check` сверяет закоммиченный код со свежей генерацией |
+| `apple/xcode-env.sh` | Finds the Xcode from `.xcode-version` and sets `DEVELOPER_DIR` |
+| `apple/check.sh` | Build, tests, format and catalog build for Apple; CI and the Stop hook run the same script |
+| `apple/catalog-screenshot.sh` | Screenshot of a catalog entry on iOS or macOS |
+| `lint/raw-values.ts` | The raw-values lint ("no raw values") for `WestronUI` |
+| `generate/generate.ts` | Generator registry; `--check` compares the committed code with a fresh generation |
 
-TypeScript запускается Node 24 без сборки: `npm test`, `npm run typecheck`, `npm run generate`.
+TypeScript runs on Node 24 without a build step: `npm test`, `npm run typecheck`, `npm run generate`.

@@ -1,26 +1,26 @@
 @AGENTS.md
 
-## Claude Code в этом репозитории
+## Claude Code in this repository
 
-Процесс из decisions/0005 проходится командами:
+The process from decisions/0005 runs through commands:
 
-| Шаг | Команда | Кто запускает |
+| Step | Command | Who runs it |
 |---|---|---|
-| Интервью → контракт → утверждение | `/new-component` | человек или агент |
-| Реализация на платформе по контракту | `/implement-platform <компонент> <платформа>` | агент |
-| Скриншоты каталога и сверка с контрактом | `/visual-check [запись]` | агент |
-| Релиз | `/release` | только человек |
+| Interview → contract → approval | `/new-component` | the human or an agent |
+| Implementation on a platform from the contract | `/implement-platform <component> <platform>` | an agent |
+| Catalog screenshots and a check against the contract | `/visual-check [entry]` | an agent |
+| Release | `/release` | only the human |
 
-Субагенты со свежим контекстом:
-- `spec-reviewer` сверяет diff с контрактом по каждому требованию;
-- `a11y-auditor` проверяет доступность реализации.
+Subagents with a fresh context:
+- `spec-reviewer` checks the diff against the contract, requirement by requirement;
+- `a11y-auditor` checks the accessibility of the implementation.
 
-Запускай их после реализации, до того как показывать результат человеку.
+Run them after implementation, before you show the result to the human.
 
-Хуки (`.claude/settings.json`) работают сами:
-- после правки `.swift` файл форматируется, а код в `WestronUI` проверяется линтом сырых значений;
-- перед завершением работы запускаются проверки затронутых частей; пока они не прошли, закончить нельзя.
+Hooks (`.claude/settings.json`) run on their own:
+- after an edit to a `.swift` file, the file is formatted, and code in `WestronUI` is checked by the raw-values lint;
+- before the work finishes, checks of the affected parts run; until they pass, you cannot finish.
 
-Правила по платформам лежат в `.claude/rules/` и подгружаются, когда работа идёт в соответствующих путях.
+Per-platform rules live in `.claude/rules/` and load when the work is in the matching paths.
 
-Коммиты и push — только по просьбе человека. Работа идёт в ветке, на каждый issue — pull request.
+Commits and pushes only when the human asks. Work happens in a branch, with one pull request per issue.

@@ -5,15 +5,15 @@ paths:
   - "tsconfig.json"
 ---
 
-# Правила для tools/
+# Rules for tools/
 
-- TypeScript запускается Node 24 напрямую, без сборки (type stripping). Поэтому синтаксис только стираемый:
-  без `enum`, `namespace`, параметров-свойств в конструкторах; импорты — с расширением `.ts`.
-  `npm run typecheck` проверяет типы, CI тоже.
-- Тесты — `node:test` рядом с кодом, файл `*.test.ts`. Проверяемая логика — в экспортируемых функциях,
-  CLI-обёртка — под `if (import.meta.main)`.
-- Генераторы регистрируются в `tools/generate/generate.ts` и детерминированы: тот же вход — те же байты,
-  без дат, случайных чисел и зависимости от порядка обхода файловой системы.
-- Сгенерированный файл начинается с комментария, что он сгенерирован, из чего и какой командой.
-- Новая зависимость — только если без неё заметно хуже; точная версия (`--save-exact`).
-- Bash-скрипты для Apple — в `tools/apple/`, с `set -euo pipefail`; Xcode берут через `source tools/apple/xcode-env.sh`.
+- Node 24 runs TypeScript directly, without a build step (type stripping). So only erasable syntax is allowed:
+  no `enum`, no `namespace`, no parameter properties in constructors; imports use the `.ts` extension.
+  `npm run typecheck` checks the types, and so does CI.
+- Tests use `node:test` and sit next to the code, in `*.test.ts` files. Testable logic goes in exported functions,
+  the CLI wrapper goes under `if (import.meta.main)`.
+- Generators are registered in `tools/generate/generate.ts` and are deterministic: the same input gives the same bytes,
+  with no dates, no random numbers and no dependence on file system traversal order.
+- A generated file starts with a comment that says it is generated, from what and by which command.
+- A new dependency only if things are noticeably worse without it; pin the exact version (`--save-exact`).
+- Bash scripts for Apple live in `tools/apple/`, with `set -euo pipefail`; they get Xcode through `source tools/apple/xcode-env.sh`.
