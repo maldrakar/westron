@@ -58,6 +58,31 @@ test("находит сырые размеры, отступы, прозрачн
   );
 });
 
+test("находит отступы набором рёбер, EdgeInsets, межстрочный интервал и константы CGFloat", () => {
+  assert.deepEqual(
+    kinds(
+      [
+        ".padding([.top, .bottom], 12)",
+        "EdgeInsets(top: 12, leading: 0, bottom: 8, trailing: 16)",
+        ".lineSpacing(4)",
+        ".tracking(0.5)",
+        "let inset: CGFloat = 12",
+        "let gap = CGFloat(6)",
+      ].join("\n"),
+    ),
+    [
+      "1:размер или отступ:.padding([.top, .bottom], 12)",
+      "2:размер или отступ:top: 12",
+      "2:размер или отступ:bottom: 8",
+      "2:размер или отступ:trailing: 16",
+      "3:шрифт:.lineSpacing(4)",
+      "4:шрифт:.tracking(0.5)",
+      "5:размер или отступ:CGFloat = 12",
+      "6:размер или отступ:CGFloat(6)",
+    ],
+  );
+});
+
 test("пропускает токены, нули, единицы и не числа", () => {
   assert.deepEqual(
     kinds(

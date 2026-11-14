@@ -4,7 +4,10 @@ westron — дизайн-система для технических проду
 язык дизайна) и нативная библиотека на каждой платформе. Пилотная платформа — Apple (SwiftUI),
 пилотный продукт — [todo-app](https://github.com/maldrakar/todo-app) (decisions/0006).
 
-Сейчас идёт фаза 0 «Каркас»; фазы — milestones на GitHub, задачи — issues.
+Сейчас идёт фаза 0 «Каркас»; фазы — milestones на GitHub, задачи — issues. Порядок важнее скорости:
+сначала токены (фаза 1), затем схема контракта и сквозной срез Button (фаза 2). Пока на Button не работают
+генерация API и линт паритета, второй компонент не начинается — иначе дрейф появится раньше, чем механизм,
+который его ловит (`reports/`, раздел «План работ»).
 
 ## Где что лежит
 
@@ -16,15 +19,15 @@ westron — дизайн-система для технических проду
 | `spec/components/<id>/` | Контракт компонента `<id>.spec.yaml`, его решения и эталонные скриншоты (фаза 2) |
 | `platforms/apple/Sources/WestronUI/` | Стили и компоненты SwiftUI — то, что подключают продукты |
 | `platforms/apple/Sources/WestronCatalog/` | Реестр записей каталога, его хост; их же переиспользуют снапшот-тесты |
-| `platforms/apple/Catalog/` | Приложение-каталог (iOS + macOS) и UI-тест скриншотов |
+| `platforms/apple/Catalog/` | Приложение-каталог (iOS + macOS) и UI-тест скриншотов; проект — `project.xcproj` в формате Xcode 27, не `project.pbxproj` |
 | `tools/` | Генераторы и проверки (TypeScript на Node 24) и скрипты для Apple |
 | `Package.swift` | Манифест SwiftPM; лежит в корне, потому что так требует SwiftPM |
 
 ## Команды
 
-Тулчейн: Xcode из `.xcode-version` (27.1, Swift 6.4) и Node 24. Скрипты сами находят нужный Xcode
-и не трогают `xcode-select`. Если вызываешь `swift` или `xcodebuild` напрямую, сначала
-`source tools/apple/xcode-env.sh`.
+Тулчейн: Xcode из `.xcode-version` (27.1, Swift 6.4) и Node 24. Скрипты ищут в `/Applications` Xcode
+с точно этой версией (27.1.1 не подойдёт) или берут `DEVELOPER_DIR`, если он задан, и не трогают `xcode-select`.
+Если вызываешь `swift` или `xcodebuild` напрямую, сначала `source tools/apple/xcode-env.sh`.
 
 ```sh
 tools/apple/check.sh package      # swift build + swift test (macOS)
@@ -40,11 +43,15 @@ npm ci                            # один раз
 npm test                          # тесты tools/
 npm run typecheck
 npm run lint:raw-values           # никаких сырых значений в WestronUI
-npm run generate                  # перегенерировать код из источников; CI проверяет --check
+npm run generate                  # перегенерировать код из источников
+npm run generate:check            # сгенерированное совпадает со свежей генерацией (так проверяет CI)
 ```
 
 Скриншот — способ увидеть свою работу: открой PNG и посмотри, прежде чем говорить «готово».
-Параметры записи: `--appearance light|dark`, `--dynamic-type xSmall…accessibility5`, `--device "iPhone 17"`.
+Параметры: `--entry <id>` (по умолчанию `environment`), `--appearance light|dark`,
+`--dynamic-type xSmall…accessibility5`, `--device "<симулятор>"` (по умолчанию `iPhone 17` или `$WESTRON_SIM_DEVICE`),
+`--out <файл.png>`. Без `--out` PNG ложится в `.build/screenshots/<платформа>-<id>[-<тема>][-<размер>].png`,
+лог — в `.build/logs/`. На macOS скриншоты требуют один раз включённого Automation Mode (`platforms/apple/README.md`).
 
 ## Правила
 

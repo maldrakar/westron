@@ -19,8 +19,7 @@ export interface Violation {
 interface Rule {
   kind: string;
   pattern: RegExp;
-  /** Индекс группы с числом; если число разрешено, совпадение пропускается. */
-  numberGroup?: number;
+  /** Разрешённые числа: если первая непустая группа захвата — одно из них, совпадение пропускается. */
   allowed?: number[];
 }
 
@@ -39,6 +38,10 @@ const layoutLabels = [
   "idealHeight",
   "maxHeight",
   "minLength",
+  "top",
+  "leading",
+  "bottom",
+  "trailing",
   "x",
   "y",
 ].join("|");
@@ -50,29 +53,38 @@ const rules: Rule[] = [
     pattern: /\b(?:Color|UIColor|NSColor)\(\s*(?:red|hue|white|\.sRGB|\.displayP3|hex)\s*[:,]|#colorLiteral\(/g,
   },
   { kind: "цвет", pattern: /"#[0-9a-fA-F]{3,8}"/g },
-  { kind: "шрифт", pattern: new RegExp(String.raw`\bsize:\s*${number}`, "g"), numberGroup: 1 },
+  { kind: "шрифт", pattern: new RegExp(String.raw`\bsize:\s*${number}`, "g") },
   {
-    kind: "размер или отступ",
-    pattern: new RegExp(String.raw`\b(?:${layoutLabels}):\s*${number}`, "g"),
-    numberGroup: 1,
+    kind: "шрифт",
+    pattern: new RegExp(String.raw`\.(?:lineSpacing|tracking|kerning)\(\s*${number}\s*\)`, "g"),
     allowed: [0],
   },
   {
     kind: "размер или отступ",
-    pattern: new RegExp(String.raw`\.(?:padding|cornerRadius)\(\s*(?:\.\w+\s*,\s*)?${number}\s*\)`, "g"),
-    numberGroup: 1,
+    pattern: new RegExp(String.raw`\bCGFloat\s*(?:=\s*${number}|\(\s*${number}\s*\))`, "g"),
+    allowed: [0],
+  },
+  {
+    kind: "размер или отступ",
+    pattern: new RegExp(String.raw`\b(?:${layoutLabels}):\s*${number}`, "g"),
+    allowed: [0],
+  },
+  {
+    kind: "размер или отступ",
+    pattern: new RegExp(
+      String.raw`\.(?:padding|cornerRadius)\(\s*(?:(?:\.\w+|\[[^\]]*\])\s*,\s*)?${number}\s*\)`,
+      "g",
+    ),
     allowed: [0],
   },
   {
     kind: "прозрачность или масштаб",
     pattern: new RegExp(String.raw`\.(?:opacity|scaleEffect)\(\s*${number}\s*\)`, "g"),
-    numberGroup: 1,
     allowed: [0, 1],
   },
   {
     kind: "анимация",
     pattern: new RegExp(String.raw`\b(?:${motionLabels}):\s*${number}`, "g"),
-    numberGroup: 1,
     allowed: [0],
   },
 ];
@@ -105,10 +117,8 @@ export function findRawValues(source: string): Violation[] {
 
     for (const rule of rules) {
       for (const match of line.matchAll(rule.pattern)) {
-        if (rule.numberGroup !== undefined) {
-          const value = Number(match[rule.numberGroup]);
-          if ((rule.allowed ?? []).includes(value)) continue;
-        }
+        const captured = match.slice(1).find((group) => group !== undefined);
+        if (captured !== undefined && (rule.allowed ?? []).includes(Number(captured))) continue;
         violations.push({ line: index + 1, column: (match.index ?? 0) + 1, text: match[0], kind: rule.kind });
       }
     }
