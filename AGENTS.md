@@ -20,12 +20,12 @@ that catches it (`reports/`, section "Work plan").
 | `platforms/apple/Sources/WestronUI/` | SwiftUI styles and components: what products import |
 | `platforms/apple/Sources/WestronCatalog/` | Registry of catalog entries and its host; snapshot tests reuse them too |
 | `platforms/apple/Catalog/` | Catalog app (iOS + macOS) and the screenshot UI test; the project is `project.xcproj` in Xcode 27 format, not `project.pbxproj` |
-| `tools/` | Generators and checks (TypeScript on Node 24) and scripts for Apple |
+| `tools/` | Generators and checks: a separate SwiftPM package with the `westron` executable, and scripts for Apple |
 | `Package.swift` | SwiftPM manifest; it sits at the root because SwiftPM requires it |
 
 ## Commands
 
-Toolchain: Xcode from `.xcode-version` (27.1, Swift 6.4) and Node 24. Scripts look in `/Applications` for an Xcode
+Toolchain: Xcode from `.xcode-version` (27.1, Swift 6.4); nothing else. Scripts look in `/Applications` for an Xcode
 with exactly this version (27.1.1 will not do) or use `DEVELOPER_DIR` if it is set, and do not touch `xcode-select`.
 If you call `swift` or `xcodebuild` directly, run `source tools/apple/xcode-env.sh` first.
 
@@ -39,12 +39,10 @@ tools/apple/check.sh all          # everything at once
 tools/apple/catalog-screenshot.sh ios   --entry environment --appearance dark   # prints the path to the PNG
 tools/apple/catalog-screenshot.sh macos --entry environment                     # the same on macOS
 
-npm ci                            # once
-npm test                          # tests of tools/
-npm run typecheck
-npm run lint:raw-values           # no raw values in WestronUI
-npm run generate                  # regenerate code from the sources
-npm run generate:check            # generated code matches a fresh generation (this is how CI checks)
+tools/check.sh                    # build and test tools/, then the two checks below (CI runs it on Linux)
+tools/westron lint raw-values     # no raw values in WestronUI
+tools/westron generate            # regenerate code from the sources
+tools/westron generate --check    # generated code matches a fresh generation
 ```
 
 A screenshot is how you see your work: open the PNG and look at it before you say "done".
@@ -82,5 +80,6 @@ the log to `.build/logs/`. On macOS, screenshots need Automation Mode enabled on
 - [0006](decisions/0006-pilot-product.md) the pilot product and its screens
 - [0007](decisions/0007-license.md) licenses
 - [0008](decisions/0008-apple-toolchain-and-catalog.md) Apple: versions, toolchain, catalog and screenshots
+- [0009](decisions/0009-tools-in-swift.md) tools in Swift
 
 The final research report, with sources: `reports/`.

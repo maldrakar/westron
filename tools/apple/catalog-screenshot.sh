@@ -41,21 +41,17 @@ log=".build/logs/catalog-$name.log"
 if [ "$platform" = ios ]; then
   # The newest iOS runtime with this device, no newer than the SDK of the current Xcode.
   sdk_version="$(xcrun --sdk iphonesimulator --show-sdk-version)"
-  udid="$(xcrun simctl list devices available -j | node -e '
-    const [device, sdk] = process.argv.slice(1);
-    const num = (v) => v.split(".").map(Number);
-    const cmp = (a, b) => { for (let i = 0; i < 3; i++) { const d = (a[i] ?? 0) - (b[i] ?? 0); if (d) return d; } return 0; };
-    const data = JSON.parse(require("fs").readFileSync(0, "utf8"));
-    const found = [];
-    for (const [runtime, list] of Object.entries(data.devices)) {
-      const m = runtime.match(/SimRuntime\.iOS-(\d+(?:-\d+)*)$/);
-      if (!m) continue;
-      for (const d of list) if (d.name === device) found.push({ udid: d.udid, version: num(m[1].replaceAll("-", ".")) });
-    }
-    const fits = found.filter((f) => cmp(f.version, num(sdk)) <= 0);
-    const pick = (fits.length ? fits : found).sort((a, b) => cmp(b.version, a.version))[0];
-    if (pick) console.log(pick.udid);
-  ' "$device" "$sdk_version")"
+  # jq ships with macOS. Versions become [major, minor, patch] and compare as arrays.
+  udid="$(xcrun simctl list devices available -j | jq -r --arg device "$device" --arg sdk "$sdk_version" '
+    def version: split(".") | map(tonumber) | (. + [0, 0, 0])[0:3];
+    ($sdk | version) as $max
+    | [.devices | to_entries[]
+        | (.key | capture("SimRuntime\\.iOS-(?<v>[0-9]+(-[0-9]+)*)$").v | gsub("-"; ".") | version) as $v
+        | .value[] | select(.name == $device) | {udid, v: $v}]
+    | (map(select(.v <= $max))) as $fits
+    | (if ($fits | length) > 0 then $fits else . end)
+    | sort_by(.v) | last | .udid // empty
+  ')"
   if [ -z "$udid" ]; then
     echo "catalog-screenshot: no simulator \"$device\"; list the available ones: xcrun simctl list devices available" >&2
     exit 1

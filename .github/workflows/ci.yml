@@ -11,21 +11,14 @@ concurrency:
 
 jobs:
   tools:
-    name: Tools (Node)
+    name: Tools (Swift on Linux)
     runs-on: ubuntu-24.04
+    # On Linux on purpose: the tools must not depend on Apple (decisions/0009).
+    container: swift:6.4-noble
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm test
-      - name: No raw values in WestronUI
-        run: npm run lint:raw-values
-      - name: Generated code matches a fresh generation
-        run: npm run generate:check
+      - name: Build and test tools, the raw-values lint, generate --check
+        run: tools/check.sh
 
   apple:
     name: Apple — package and catalog
@@ -56,9 +49,6 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
       - name: iOS, light theme
         run: tools/apple/catalog-screenshot.sh ios --entry environment --appearance light
       - name: iOS, dark theme

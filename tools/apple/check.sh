@@ -4,8 +4,8 @@
 #   tools/apple/check.sh package     swift build + swift test (macOS)
 #   tools/apple/check.sh platforms   compile the package for iOS and watchOS
 #   tools/apple/check.sh catalog     build the catalog and UI tests for the iOS simulator and macOS
-#   tools/apple/check.sh format      swift format lint without changes
-#   tools/apple/check.sh fix-format  swift format that rewrites the files
+#   tools/apple/check.sh format      swift format lint without changes, tools/ included
+#   tools/apple/check.sh fix-format  swift format that rewrites the files, tools/ included
 #   tools/apple/check.sh all         everything except fix-format
 set -euo pipefail
 
@@ -14,7 +14,7 @@ cd "$root"
 # shellcheck source=tools/apple/xcode-env.sh
 source tools/apple/xcode-env.sh
 
-swift_sources=(Package.swift platforms/apple)
+swift_sources=(Package.swift platforms/apple tools/Package.swift tools/Sources tools/Tests)
 min_ios="$(sed -n 's/.*\.iOS(\.v\([0-9]*\)).*/\1/p' Package.swift).0"
 min_watchos="$(sed -n 's/.*\.watchOS(\.v\([0-9]*\)).*/\1/p' Package.swift).0"
 

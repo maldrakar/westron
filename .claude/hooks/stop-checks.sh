@@ -16,25 +16,29 @@ changed="$(git -c core.quotePath=false status --porcelain --untracked-files=all 
 
 has() { grep -qE "$1" <<< "$changed"; }
 
+# The Apple library and its catalog; the tools/ package and what its checks read (lint, generation sources).
+apple='^(Package\.swift|\.swift-format|\.xcode-version|platforms/apple/|tools/apple/)'
+tools='^(\.swift-format|\.xcode-version|tools/(Package\.swift|Sources/|Tests/|westron$|check\.sh$)|platforms/apple/Sources/WestronUI/|tokens/|spec/)'
+
 checks=()
-if has '^(Package\.swift|\.swift-format|\.xcode-version|platforms/apple/|tools/apple/)'; then
+if has "$apple" || has "$tools"; then
   if (source tools/apple/xcode-env.sh) 2> /dev/null; then
-    checks+=("tools/apple/check.sh format" "tools/apple/check.sh package")
-    if has '^(Package\.swift|platforms/apple/Sources/)'; then
-      checks+=("tools/apple/check.sh platforms")
+    checks+=("tools/apple/check.sh format")
+    if has "$apple"; then
+      checks+=("tools/apple/check.sh package")
+      if has '^(Package\.swift|platforms/apple/Sources/)'; then
+        checks+=("tools/apple/check.sh platforms")
+      fi
+      if has '^(Package\.swift|platforms/apple/Catalog/|platforms/apple/Sources/WestronCatalog/)'; then
+        checks+=("tools/apple/check.sh catalog")
+      fi
     fi
-    if has '^(Package\.swift|platforms/apple/Catalog/|platforms/apple/Sources/WestronCatalog/)'; then
-      checks+=("tools/apple/check.sh catalog")
+    if has "$tools"; then
+      checks+=("tools/check.sh")
     fi
   else
     echo "stop-checks: Xcode $(cat .xcode-version) not found, so the Swift checks are skipped" >&2
   fi
-fi
-if has '^platforms/apple/Sources/WestronUI/|^tools/lint/'; then
-  checks+=("npm run -s lint:raw-values")
-fi
-if has '^(tools/.*\.ts|package(-lock)?\.json|tsconfig\.json)$'; then
-  checks+=("npm run -s typecheck" "npm test --silent" "npm run -s generate:check")
 fi
 [ ${#checks[@]} -gt 0 ] || exit 0
 

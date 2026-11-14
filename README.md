@@ -51,3 +51,4 @@ Code, tokens and contracts: [MIT](LICENSE). Design language texts in `design-lan
 - [0006. Pilot product: todo-app](decisions/0006-pilot-product.md)
 - [0007. Licenses](decisions/0007-license.md)
 - [0008. Apple: versions, toolchain, catalog and screenshots](decisions/0008-apple-toolchain-and-catalog.md)
+- [0009. Tools in Swift](decisions/0009-tools-in-swift.md)

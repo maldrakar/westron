@@ -29,14 +29,14 @@ List the contract's requirements and, for each one, find the place in the code t
 - value names come from the generated enums and are not written by hand;
 - every state (`states`) is reachable, the priorities of interaction states hold, `disabled` overrides the others;
 - every constraint (`constraints`) holds;
-- every token binding (`tokens`) is used, and there are no raw values (`npm run lint:raw-values`);
+- every token binding (`tokens`) is used, and there are no raw values (`tools/westron lint raw-values`);
 - accessibility (`accessibility`): role, intents and keyboard;
 - the `platforms` block: the strategy is followed, and every difference from other platforms is recorded there;
 - the catalog entry shows every variant, size and state;
 - the tests cover the requirements, not only "renders without crashing".
 
-Run the checks yourself and attach the output: `tools/apple/check.sh package`, `npm run lint:raw-values`,
-`npm run generate:check`.
+Run the checks yourself and attach the output: `tools/apple/check.sh package` and `tools/check.sh`
+(build and tests of the tools, the raw-values lint, generate --check).
 
 ## Report
 

@@ -28,7 +28,7 @@ with no prefix: `0.2.0`, not `v0.2.0`.
 3. **CHANGELOG.** Move "Unreleased" into a section `## <version> — <YYYY-MM-DD>`. Only changes a consumer
    can notice. Breaking changes go in a "Migration" subsection, with concrete steps for the product.
    Leave an empty "Unreleased" section at the top.
-4. **Checks.** `tools/apple/check.sh all`, `npm test`, `npm run generate:check`; attach the output.
+4. **Checks.** `tools/apple/check.sh all` and `tools/check.sh`; attach the output.
 5. **Commit and tag.** `git commit -m "Release <version>"`, `git tag -a <version> -m "<version>"`.
 6. **Publish.** Show the human the CHANGELOG diff and the commands below, wait for an explicit "yes", then run
    `git push origin main <version>` and `gh release create <version> --title <version> --notes-file <file with the version's section>`.
