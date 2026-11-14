@@ -1,0 +1,67 @@
+# 0008. Apple: versions, toolchain, catalog and screenshots
+
+Date: 2026-11-14. Status: accepted.
+
+## Decision
+
+### Versions and toolchain
+
+- Minimum: iOS 17, macOS 14, watchOS 10, as in the pilot (decisions/0006). Newer APIs, including Liquid Glass,
+  are used inside `if #available(iOS 26, macOS 26, watchOS 26, *)`. Raising the minimum later is cheap;
+  lowering it is expensive.
+- Xcode 27.1, Swift 6.4, Swift 6 language mode. The Xcode version is pinned in `.xcode-version`. The scripts
+  find this Xcode themselves (`tools/apple/xcode-env.sh`) and do not touch `xcode-select`. CI runs on the
+  `xcode-27` image with `DEVELOPER_DIR` set to the same Xcode, as in the pilot.
+- `// swift-tools-version: 6.2` in the manifest is the minimum the manifest requires, not the version the checks
+  run on.
+
+### Package
+
+- `Package.swift` at the root (decisions/0005), sources in `platforms/apple/`.
+- `WestronUI` is what products import.
+- `WestronCatalog` is the registry of catalog entries, the host and the launch argument parsing. It lives in the package rather than
+  in the app so that the phase 2 snapshot tests iterate over the same entries. It is a separate SwiftPM product because
+  the Xcode project sees the package only through products; the products that use westron do not need it.
+- `WestronTokens` (generated tokens) arrives in phase 1.
+
+### Catalog app
+
+- The catalog is a thin shell: `@main` over `CatalogScene` from the package. One multiplatform app
+  for iOS and macOS. watchOS will get its own target when the watch subset appears (issue #34).
+- The project is `Catalog.xcodeproj/project.xcproj` in the Xcode 27 format, as in the pilot. Files are picked up
+  from folders, so the project changes only for settings and targets.
+
+### Screenshots for the agent
+
+- `tools/apple/catalog-screenshot.sh ios|macos --entry <id>` builds the catalog and runs the UI test
+  `CatalogScreenshotTests`. The test opens one entry in isolation and attaches a PNG to the test result;
+  the script extracts it from `.xcresult` (`xcresulttool export attachments`). The runner cannot write the file itself:
+  on macOS, Xcode runs it in a sandbox where the file system is read-only.
+- The XCTest runner takes the screenshot. In-process options were tested on 2026-11-14 on macOS 26.7 with Xcode 27.1
+  and rejected:
+  - `NSView.cacheDisplay` and `CALayer.render(in:)` produce an empty image: SwiftUI draws through the render server;
+  - `screencapture` requires the terminal to have screen recording permission;
+  - `ImageRenderer` replaces system controls with placeholders.
+- On iOS the status bar is pinned (`simctl status_bar`, 9:41) so that screenshots do not differ by the time.
+- UI tests on macOS require Automation Mode. It is on for GitHub runners. On your own machine the human turns it on
+  once: `sudo automationmodetool enable-automationmode-without-authentication`.
+- The same UI test target will host the `performAccessibilityAudit` audit in phase 2 (issue #25).
+
+## Consequences
+
+- Phase 2 reference snapshots must be taken in the same environment as CI: the same Xcode version, the same device
+  and the same OS version. Issue #24 decides how to align the environments. The first CI run (2026-11-14, entry `environment`)
+  showed how the environments differ now:
+
+  | | Local | CI (`xcode-27`) |
+  |---|---|---|
+  | iOS in the simulator | 26.3 | 27.0 |
+  | macOS | 26.7, 2x scale | 27.0.1, 1x scale (720×540 window) |
+  | "Reduce motion" and "Reduce transparency" on macOS | off | on |
+  | Locale | `ru_RU` | `ru_US` |
+
+  Snapshots must not depend on these machine settings. What it can, the test sets itself: theme, font size, locale.
+  The capture environment pins the rest: SwiftUI only reads some accessibility settings, and a test cannot change
+  the scale or the OS version.
+- The CI job with screenshots takes about 16 minutes: each shot calls `xcodebuild` separately. The snapshot matrix
+  needs one run per platform; that is also #24.

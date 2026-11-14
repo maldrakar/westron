@@ -1,24 +1,24 @@
-# 0002. Платформы и стеки
+# 0002. Platforms and stacks
 
-Дата: 2026-11-14. Статус: принято для Apple и Linux; для web и Android — предварительно.
+Date: 2026-11-14. Status: accepted for Apple and Linux; provisional for web and Android.
 
-## Решение
+## Decision
 
-| Платформа | Стек | Статус |
+| Platform | Stack | Status |
 |---|---|---|
-| Apple (iOS, iPadOS, macOS, watchOS) | SwiftUI, один SwiftPM-пакет | Пилотная платформа |
-| Linux | GTK4 + libadwaita на Rust; основная аудитория — GNOME | Принято |
-| Web | CSS custom properties; Web Components на Lit или стили поверх нативных элементов | Уточняется в веб-фазе |
-| Android | Compose поверх Material3 через `CompositionLocal` | Позже |
+| Apple (iOS, iPadOS, macOS, watchOS) | SwiftUI, one SwiftPM package | Pilot platform |
+| Linux | GTK4 + libadwaita in Rust; the main audience is GNOME | Accepted |
+| Web | CSS custom properties; Web Components in Lit or styles on top of native elements | To be settled in the web phase |
+| Android | Compose on top of Material3 through `CompositionLocal` | Later |
 
-## Пилот
+## Pilot
 
-Компоненты сначала появляются на SwiftUI. Web и Linux получают их по тем же контрактам после того, как конвейер отработан на Apple.
+Components appear in SwiftUI first. Web and Linux get them from the same contracts once the pipeline has been worked out on Apple.
 
-Риск: контракт может незаметно принять допущения SwiftUI. Чтобы это поймать рано, контракт Button проверяется коротким прототипом на web и GTK до массового выпуска компонентов.
+Risk: the contract may quietly take on SwiftUI assumptions. To catch this early, the Button contract is checked with a short prototype on web and GTK before components are released in bulk.
 
-## Следствия
+## Consequences
 
-- На Apple действует Liquid Glass и рекомендации HIG: бренд живёт в слое контента, акцентный цвет применяется экономно.
-- На GNOME пространство для бренда узкое: акцентный цвет, небольшой `style.css`, иконки, типографика заголовков. Высокий контраст отключить нельзя.
-- watchOS получает сознательно урезанное подмножество компонентов.
+- On Apple, Liquid Glass and the HIG apply: the brand lives in the content layer, and the accent color is used sparingly.
+- On GNOME the room for the brand is narrow: the accent color, a small `style.css`, icons, heading typography. High contrast cannot be turned off.
+- watchOS gets a deliberately reduced subset of components.

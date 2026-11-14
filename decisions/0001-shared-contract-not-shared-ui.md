@@ -1,33 +1,33 @@
-# 0001. Общий контракт вместо общей UI-библиотеки
+# 0001. A shared contract instead of a shared UI library
 
-Дата: 2026-11-14. Статус: принято.
+Date: 2026-11-14. Status: accepted.
 
-## Контекст
+## Context
 
-Нужно было решить, где живут дизайн-решения: в одной кроссплатформенной библиотеке или в общей спецификации, из которой каждая платформа получает нативную реализацию.
+We had to decide where design decisions live: in one cross-platform library, or in a shared specification from which each platform gets a native implementation.
 
-## Решение
+## Decision
 
-Общей UI-библиотеки нет. Общим является источник данных в этом репозитории с единой версией:
+There is no shared UI library. What is shared is the data source in this repository, with a single version:
 
-- токены;
-- контракты компонентов;
-- документы языка дизайна.
+- tokens;
+- component contracts;
+- design language documents.
 
-Из него получаются три слоя:
+It produces three layers:
 
-| Слой | Что входит | Как производится |
+| Layer | What it contains | How it is produced |
 |---|---|---|
-| Генерируется | Токены для каждой платформы, перечисления вариантов и размеров, сигнатуры стилей, матрицы снапшотов, контекст для агента | Скрипты; повторная генерация на том же входе даёт пустой diff |
-| Пишется нативно | Тела стилей и компонентов, взаимодействие, анимация, доступность | Вручную по контракту, с проверкой тестами и ревью |
-| Остаётся системе | Навигация, листы, меню, пикеры, ввод текста, фокус, оформление окна | Платформа; westron только применяет токены |
+| Generated | Tokens for each platform, enums of variants and sizes, style signatures, snapshot matrices, agent context | Scripts; regenerating from the same input gives an empty diff |
+| Written natively | Bodies of styles and components, interaction, animation, accessibility | By hand from the contract, checked by tests and review |
+| Left to the system | Navigation, sheets, menus, pickers, text input, focus, window chrome | The platform; westron only applies tokens |
 
-Сгенерированный код коммитится, CI сверяет его со свежей генерацией.
+Generated code is committed, and CI compares it with a fresh generation.
 
-## Почему
+## Why
 
-- Material, Fluent, Spectrum и Backpack делят между платформами данные и алгоритмы, а не UI-код.
-- Генерация целых компонентов из одного описания (Lona, Redwood) не прижилась.
-- Реализация на каждой платформе с агентом стала дешёвой; дорогими остались точный контракт и проверка соответствия ему.
+- Material, Fluent, Spectrum and Backpack share data and algorithms across platforms, not UI code.
+- Generating whole components from one description (Lona, Redwood) did not catch on.
+- With an agent, implementing on each platform has become cheap; what stays expensive is a precise contract and checking conformance to it.
 
-Подробности и источники: [отчёт исследования](../reports/Дизайн%20система%20westron%20исследование.md).
+Details and sources: [research report](../reports/westron-design-system-research.md).

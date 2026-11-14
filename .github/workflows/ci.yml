@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tools:
+    name: Tools (Swift on Linux)
+    runs-on: ubuntu-24.04
+    # On Linux on purpose: the tools must not depend on Apple (decisions/0009).
+    container: swift:6.4-noble
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build and test tools, the raw-values lint, generate --check
+        run: tools/check.sh
+
+  apple:
+    name: Apple — package and catalog
+    # The same image and Xcode as the todo-app pilot (decisions/0008).
+    runs-on: xcode-27
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+      - name: Xcode and Swift
+        run: |
+          source tools/apple/xcode-env.sh
+          xcodebuild -version
+          swift --version
+      - name: Format
+        run: tools/apple/check.sh format
+      - name: Build and tests (macOS)
+        run: tools/apple/check.sh package
+      - name: Compile for iOS and watchOS
+        run: tools/apple/check.sh platforms
+      - name: Catalog and UI tests
+        run: tools/apple/check.sh catalog
+
+  catalog-screenshots:
+    name: Catalog screenshots
+    runs-on: xcode-27
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+      - name: iOS, light theme
+        run: tools/apple/catalog-screenshot.sh ios --entry environment --appearance light
+      - name: iOS, dark theme
+        run: tools/apple/catalog-screenshot.sh ios --entry environment --appearance dark
+      - name: macOS
+        run: tools/apple/catalog-screenshot.sh macos --entry environment --appearance light
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: catalog-screenshots
+          path: |
+            .build/screenshots/
+            .build/logs/
+          if-no-files-found: warn
