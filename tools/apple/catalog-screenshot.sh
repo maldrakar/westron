@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # A screenshot of a catalog entry on the iOS simulator or macOS: the agent's "eyes" and the review surface.
 #
-#   tools/apple/catalog-screenshot.sh <ios|macos> [--entry ID] [--appearance light|dark]
+#   tools/apple/catalog-screenshot.sh <ios|macos> [--entry ID] [--appearance light|dark] [--contrast standard|high]
 #                                     [--dynamic-type SIZE] [--device "iPhone 17"] [--out FILE.png]
 #
 # Builds the catalog (incrementally), runs the CatalogScreenshotTests UI test and prints the absolute path to the PNG.
-# By default the PNG goes to .build/screenshots/. The xcodebuild log goes to .build/logs/.
+# By default the PNG goes to .build/screenshots/<platform>-<id>[-<theme>][-hc][-<size>].png, the xcodebuild log to
+# .build/logs/.
 # macOS: Automation Mode must be enabled once per machine (see platforms/apple/README.md).
 set -euo pipefail
 
@@ -14,16 +15,17 @@ cd "$root"
 # shellcheck source=tools/apple/xcode-env.sh
 source tools/apple/xcode-env.sh
 
-usage() { sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
 platform="${1:-}"
 [ "$platform" = ios ] || [ "$platform" = macos ] || usage
 shift
-entry=environment appearance="" dynamic_type="" device="${WESTRON_SIM_DEVICE:-iPhone 17}" out=""
+entry=environment appearance="" contrast="" dynamic_type="" device="${WESTRON_SIM_DEVICE:-iPhone 17}" out=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --entry) entry="$2"; shift 2 ;;
     --appearance) appearance="$2"; shift 2 ;;
+    --contrast) contrast="$2"; shift 2 ;;
     --dynamic-type) dynamic_type="$2"; shift 2 ;;
     --device) device="$2"; shift 2 ;;
     --out) out="$2"; shift 2 ;;
@@ -31,7 +33,9 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-name="$platform-$entry${appearance:+-$appearance}${dynamic_type:+-$dynamic_type}"
+hc=""
+[ "$contrast" = high ] && hc="-hc"
+name="$platform-$entry${appearance:+-$appearance}$hc${dynamic_type:+-$dynamic_type}"
 out="${out:-.build/screenshots/$name.png}"
 case "$out" in /*) ;; *) out="$root/$out" ;; esac
 mkdir -p "$(dirname "$out")" .build/logs
@@ -82,6 +86,7 @@ screenshot_failed() {
 
 export TEST_RUNNER_WESTRON_ENTRY="$entry"
 [ -n "$appearance" ] && export TEST_RUNNER_WESTRON_APPEARANCE="$appearance"
+[ -n "$contrast" ] && export TEST_RUNNER_WESTRON_CONTRAST="$contrast"
 [ -n "$dynamic_type" ] && export TEST_RUNNER_WESTRON_DYNAMIC_TYPE="$dynamic_type"
 
 # The runner does not write the file itself (on macOS it is sandboxed): the PNG is an attachment in the test result.

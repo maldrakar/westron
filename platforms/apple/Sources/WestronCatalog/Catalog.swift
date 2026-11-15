@@ -4,7 +4,16 @@
 /// Snapshot tests (phase 2) iterate over the same entries, so the registry lives in the package, not in the app.
 public enum Catalog {
     public static let entries: [CatalogEntry] = [
-        .environment
+        .colorBackgrounds,
+        .colorForegrounds,
+        .colorCategories,
+        .colorInUse,
+        .typography,
+        .space,
+        .shape,
+        .motion,
+        .icons,
+        .environment,
     ]
 
     public static func entry(id: String) -> CatalogEntry? {

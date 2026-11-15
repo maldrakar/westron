@@ -6,6 +6,7 @@ import SwiftUI
 /// ```
 /// -WestronEntry <id>                 show one entry in isolation, without navigation
 /// -WestronAppearance light|dark      appearance
+/// -WestronContrast standard|high     contrast: high is the system's increased contrast, the -hc themes
 /// -WestronDynamicType <size>         xSmall … xxxLarge, accessibility1 … accessibility5
 /// ```
 ///
@@ -18,6 +19,17 @@ public struct CatalogLaunchOptions: Equatable, Sendable {
             switch self {
             case .light: .light
             case .dark: .dark
+            }
+        }
+    }
+
+    public enum Contrast: String, CaseIterable, Sendable {
+        case standard, high
+
+        public var colorSchemeContrast: ColorSchemeContrast {
+            switch self {
+            case .standard: .standard
+            case .high: .increased
             }
         }
     }
@@ -38,11 +50,16 @@ public struct CatalogLaunchOptions: Equatable, Sendable {
 
     public var entryID: String?
     public var appearance: Appearance?
+    public var contrast: Contrast?
     public var dynamicTypeSize: DynamicTypeSize?
 
-    public init(entryID: String? = nil, appearance: Appearance? = nil, dynamicTypeSize: DynamicTypeSize? = nil) {
+    public init(
+        entryID: String? = nil, appearance: Appearance? = nil, contrast: Contrast? = nil,
+        dynamicTypeSize: DynamicTypeSize? = nil
+    ) {
         self.entryID = entryID
         self.appearance = appearance
+        self.contrast = contrast
         self.dynamicTypeSize = dynamicTypeSize
     }
 
@@ -69,6 +86,11 @@ public struct CatalogLaunchOptions: Equatable, Sendable {
                     throw .invalidValue(flag: flag, value: value, allowed: Appearance.allCases.map(\.rawValue))
                 }
                 appearance = parsed
+            case "-WestronContrast":
+                guard let parsed = Contrast(rawValue: value) else {
+                    throw .invalidValue(flag: flag, value: value, allowed: Contrast.allCases.map(\.rawValue))
+                }
+                contrast = parsed
             case "-WestronDynamicType":
                 guard let parsed = Self.dynamicTypeSizes.first(where: { $0.name == value })?.size else {
                     throw .invalidValue(flag: flag, value: value, allowed: Self.dynamicTypeSizes.map(\.name))
@@ -88,7 +110,7 @@ public struct CatalogLaunchOptions: Equatable, Sendable {
         }
     }
 
-    static let flags: Set<String> = ["-WestronEntry", "-WestronAppearance", "-WestronDynamicType"]
+    static let flags: Set<String> = ["-WestronEntry", "-WestronAppearance", "-WestronContrast", "-WestronDynamicType"]
 
     /// The size names match the names of the `DynamicTypeSize` cases.
     static let dynamicTypeSizes: [(name: String, size: DynamicTypeSize)] = [

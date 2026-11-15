@@ -27,6 +27,7 @@ public struct CatalogRootView: View {
         case .success(let options):
             content(options)
                 .preferredColorScheme(options.appearance?.colorScheme)
+                .modifier(ContrastOverride(contrast: options.contrast?.colorSchemeContrast))
                 .modifier(DynamicTypeOverride(size: options.dynamicTypeSize))
         }
     }
@@ -45,6 +46,20 @@ public struct CatalogRootView: View {
             }
         } else {
             CatalogBrowser()
+        }
+    }
+}
+
+/// SwiftUI has no `preferredColorSchemeContrast`, so the contrast goes into the environment of the whole tree: colors
+/// from colorsets take their high-contrast variant, as they do when the system's Increase Contrast is on.
+private struct ContrastOverride: ViewModifier {
+    let contrast: ColorSchemeContrast?
+
+    func body(content: Content) -> some View {
+        if let contrast {
+            content.environment(\._colorSchemeContrast, contrast)
+        } else {
+            content
         }
     }
 }

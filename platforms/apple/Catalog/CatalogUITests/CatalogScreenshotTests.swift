@@ -5,6 +5,7 @@ import XCTest
 ///
 /// - `WESTRON_ENTRY`: the entry id (required; without it the test is skipped);
 /// - `WESTRON_APPEARANCE`: `light` or `dark`;
+/// - `WESTRON_CONTRAST`: `standard` or `high`, as for `-WestronContrast`;
 /// - `WESTRON_DYNAMIC_TYPE`: the font size, as for `-WestronDynamicType`.
 ///
 /// The XCTest runner takes the screenshot, so macOS needs no screen recording permission.
@@ -30,6 +31,9 @@ final class CatalogScreenshotTests: XCTestCase {
         app.launchArguments = ["-WestronEntry", entryID]
         if let appearance = environment["WESTRON_APPEARANCE"] {
             app.launchArguments += ["-WestronAppearance", appearance]
+        }
+        if let contrast = environment["WESTRON_CONTRAST"] {
+            app.launchArguments += ["-WestronContrast", contrast]
         }
         if let size = environment["WESTRON_DYNAMIC_TYPE"] {
             app.launchArguments += ["-WestronDynamicType", size]
