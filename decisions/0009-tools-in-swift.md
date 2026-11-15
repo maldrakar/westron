@@ -16,7 +16,7 @@ has no reason left to be in the repository.
 - The tools build on macOS and Linux and use Foundation only. CI builds and tests them on Linux in the
   `swift:6.4-noble` container, which keeps them independent of Apple.
 - Libraries are added with the first code that needs them, pinned to an exact version: Yams for the YAML contracts,
-  swift-json-schema for validating token files against the DTCG JSON Schemas (draft 2020-12), SwiftSyntax for lints
+  swift-json-schema for validating token files against the DTCG JSON Schemas (draft-07), SwiftSyntax for lints
   that read Swift code (#21).
 - Color conversion (OKLCH to sRGB and Display P3, with gamut mapping as in CSS Color 4) is our own code, tested
   against reference values. This changes decisions/0004, which expected a library.
@@ -33,8 +33,9 @@ has no reason left to be in the repository.
 
 - Swift has no mature platform-neutral color library: the existing ones are small and tied to SwiftUI, which does not
   build on Linux. So color conversion is ours to maintain. The formulas and matrices are published in CSS Color 4.
-- swift-json-schema is younger than Ajv (0.15, before 1.0). Its fit for the DTCG schemas is checked when token
-  validation is built in phase 1.
+- swift-json-schema is younger than Ajv (0.15, before 1.0) and implements draft 2020-12 only, while the DTCG schemas
+  are draft-07. It validates them in part: it ignores tuple-form `items`, so the range of each color component and
+  cubic Bézier coordinate goes unchecked. The token reader in `tools/` checks those itself (#13).
 - A clean build of the tools takes longer than starting a script; incremental runs are fast. SwiftSyntax will make
   the clean build noticeably longer.
 - The web library (phase 6) will need its own Node toolchain in `platforms/web/`. That does not move the tools.

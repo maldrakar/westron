@@ -1,0 +1,8 @@
+{
+  "palette": {
+    "$type": "color",
+    "white": { "$value": { "colorSpace": "srgb", "components": [1, 1, 1] } },
+    "black": { "$value": { "colorSpace": "srgb", "components": [0, 0, 0] } },
+    "blue": { "$value": { "colorSpace": "srgb", "components": [0.2, 0.33, 0.79], "hex": "#3653c9" } }
+  }
+}

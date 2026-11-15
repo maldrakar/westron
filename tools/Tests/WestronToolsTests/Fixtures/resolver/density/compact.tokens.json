@@ -1,0 +1,5 @@
+{
+  "inset": {
+    "card": { "$type": "dimension", "$value": "{space.s}" }
+  }
+}

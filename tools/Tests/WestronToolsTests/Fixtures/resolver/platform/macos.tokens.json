@@ -1,0 +1,5 @@
+{
+  "radius": {
+    "window": { "$type": "dimension", "$value": { "value": 10, "unit": "px" } }
+  }
+}

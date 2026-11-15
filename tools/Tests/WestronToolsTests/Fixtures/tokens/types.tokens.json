@@ -1,0 +1,108 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
+  "$description": "One or more tokens of every type westron supports",
+  "color": {
+    "$type": "color",
+    "accent": {
+      "$value": { "colorSpace": "oklch", "components": [0.62, 0.19, 259.8], "alpha": 1, "hex": "#3366e6" }
+    },
+    "overlay": {
+      "$value": { "colorSpace": "srgb", "components": [0, 0, 0], "alpha": 0.4 }
+    },
+    "white": {
+      "$value": { "colorSpace": "hsl", "components": ["none", 0, 100] }
+    },
+    "wide": {
+      "$value": { "colorSpace": "display-p3", "components": [1, 0, 0.5] }
+    }
+  },
+  "space": {
+    "$type": "dimension",
+    "m": { "$value": { "value": 8, "unit": "px" } },
+    "text": { "$value": { "value": 1.25, "unit": "rem" } }
+  },
+  "opacity": {
+    "disabled": { "$type": "number", "$value": 0.4 }
+  },
+  "motion": {
+    "duration": {
+      "$type": "duration",
+      "fast": { "$value": { "value": 150, "unit": "ms" } },
+      "slow": { "$value": { "value": 0.5, "unit": "s" } }
+    },
+    "easing": {
+      "standard": { "$type": "cubicBezier", "$value": [0.2, 0, 0, 1] }
+    },
+    "fade": {
+      "$type": "transition",
+      "$value": {
+        "duration": "{motion.duration.fast}",
+        "delay": { "value": 0, "unit": "ms" },
+        "timingFunction": "{motion.easing.standard}"
+      }
+    },
+    "drop": {
+      "$type": "transition",
+      "$value": {
+        "duration": { "value": 0.32, "unit": "s" },
+        "delay": { "value": 40, "unit": "ms" },
+        "timingFunction": [0.34, 1.56, 0.64, 1]
+      }
+    }
+  },
+  "font": {
+    "family": {
+      "$type": "fontFamily",
+      "body": { "$value": ["Inter", "system-ui"] },
+      "mono": { "$value": "JetBrains Mono" }
+    },
+    "weight": {
+      "$type": "fontWeight",
+      "regular": { "$type": "fontWeight", "$value": "regular" },
+      "semibold": { "$value": 600 }
+    }
+  },
+  "text": {
+    "body": {
+      "$type": "typography",
+      "$value": {
+        "fontFamily": ["Inter"],
+        "fontSize": { "value": 16, "unit": "px" },
+        "fontWeight": 400,
+        "letterSpacing": { "value": 0, "unit": "px" },
+        "lineHeight": 1.5
+      }
+    }
+  },
+  "shadow": {
+    "$type": "shadow",
+    "card": {
+      "$value": {
+        "color": { "colorSpace": "srgb", "components": [0, 0, 0], "alpha": 0.2 },
+        "offsetX": { "value": 0, "unit": "px" },
+        "offsetY": { "value": 2, "unit": "px" },
+        "blur": { "value": 8, "unit": "px" },
+        "spread": { "value": 0, "unit": "px" }
+      }
+    },
+    "pressed": {
+      "$value": [
+        {
+          "color": { "colorSpace": "srgb", "components": [0, 0, 0], "alpha": 0.1 },
+          "offsetX": { "value": 0, "unit": "px" },
+          "offsetY": { "value": 1, "unit": "px" },
+          "blur": { "value": 2, "unit": "px" },
+          "spread": { "value": 0, "unit": "px" }
+        },
+        {
+          "color": { "colorSpace": "srgb", "components": [0, 0, 0], "alpha": 0.3 },
+          "offsetX": { "value": 0, "unit": "px" },
+          "offsetY": { "value": 1, "unit": "px" },
+          "blur": { "value": 3, "unit": "px" },
+          "spread": { "value": -1, "unit": "px" },
+          "inset": true
+        }
+      ]
+    }
+  }
+}

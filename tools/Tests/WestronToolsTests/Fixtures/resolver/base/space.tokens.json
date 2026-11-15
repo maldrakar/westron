@@ -1,0 +1,10 @@
+{
+  "space": {
+    "$type": "dimension",
+    "s": { "$value": { "value": 4, "unit": "px" } },
+    "m": { "$value": { "value": 8, "unit": "px" } }
+  },
+  "inset": {
+    "card": { "$type": "dimension", "$value": "{space.m}" }
+  }
+}
