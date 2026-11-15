@@ -137,8 +137,9 @@ themes, and none failed.
   fails with the token and the theme when a target cannot be met.
 - **The contrast check has a fifth kind, `chart`.**
 - **On-fill colors pass.** `on-fill` passes on every fill, so the lit tag chip no longer needs a special rule.
-- **Later platforms need their own settings.** GNOME needs the dark `--accent-color` set explicitly, `#5992FF`,
-  because its own derivation drifts blue towards cyan. Android maps the tokens to a static `ColorScheme`. Both
+- **Later platforms need their own settings.** If westron sets its accent on GNOME (chapter 02 asks whether), the
+  dark `--accent-color` must be set explicitly, `#5992FF`, because libadwaita's own derivation drifts blue towards
+  cyan. Android maps the tokens to a static `ColorScheme`. Both
   arrive with their phases (research 5.1, 5.2).
 - **The catalog shows the colors.** It has a page of statuses and charts (`color-status`). `color-in-use` shows a
   task list, a table of deployments, notices and buttons.

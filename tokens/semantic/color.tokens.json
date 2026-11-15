@@ -65,7 +65,7 @@
         "$extensions": {
           "dev.westron.usage": {
             "use": ["primary button", "checked box", "switch on"],
-            "avoid": "Status: use status.info.fill, even though info is the accent's blue today."
+            "avoid": "Large areas, and more than one filled control on a screen. Status: use status.info.fill, even though info is the accent's blue today."
           }
         }
       },

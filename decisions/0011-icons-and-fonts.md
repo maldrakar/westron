@@ -70,8 +70,11 @@ SF Pro and SF Symbols are licensed for Apple platforms only. The research is in 
 
 ## Consequences
 
-- The rule in `.claude/rules/apple.md` changes. A view takes a text role (`.font(.headingLarge)`) and never calls
-  `Font.custom` or `Font.system` with a size of its own.
+- The rule in `.claude/rules/apple.md` changes. A view takes a text role (`.textRole(.headingLarge)`, or
+  `.font(.bodyRegular)`) and never calls `Font.custom` or `Font.system` with a size of its own. A shipped font takes
+  the size the platform gives its text style, so headings keep their proportion to the system font on the Mac.
 - decisions/0007 lists the fonts under the SIL OFL.
 - Updating a font means cutting the instances again with the command above and checking the catalog's typography page.
-- Phase 6 maps the icon names to Adwaita icons and Material Symbols, and draws the domain icons on westron's grid.
+- The platform phases map the icon names: phase 6 (web) to westron's own set, phase 7 (GNOME) to Adwaita icons, phase 8
+  (Android) to Material Symbols. The web has no platform icon set, so there westron's own set covers standard actions
+  too. The first of these phases draws the domain icons on westron's grid.

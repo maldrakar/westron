@@ -39,7 +39,7 @@ private struct TypographyPage: View {
 
     private func sample(_ role: Westron.TextRole) -> some View {
         Text(Self.sample(role))
-            .font(Font(role))
+            .textRole(role)
             .foregroundStyle(.textPrimary)
             .lineLimit(1)
             .fixedSize()

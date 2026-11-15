@@ -83,8 +83,8 @@ extension Westron.Color {
 
     /// The fill of the one primary action on a screen, a checked box, a switch that is on.
     ///
-    /// Use for: primary button, checked box, switch on. Avoid: Status: use status.info.fill, even though info is the
-    /// accent's blue today.
+    /// Use for: primary button, checked box, switch on. Avoid: Large areas, and more than one filled control on a
+    /// screen. Status: use status.info.fill, even though info is the accent's blue today.
     public static let backgroundAccent = Westron.Color(
         name: "color.background.accent",
         light: Westron.RGB(hex: 0x2863D7),

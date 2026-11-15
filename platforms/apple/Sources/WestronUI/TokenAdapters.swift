@@ -6,6 +6,12 @@ import CoreText
 import SwiftUI
 import WestronTokens
 
+#if os(macOS)
+    import AppKit
+#else
+    import UIKit
+#endif
+
 extension Color {
     /// A semantic color from its colorset in WestronUI's asset catalog, so that it switches with the appearance and
     /// the contrast setting, both the system's and the SwiftUI environment's.
@@ -30,14 +36,81 @@ extension Color.RGBColorSpace {
 
 extension Font {
     /// A text role in its text style, so that it follows Dynamic Type (decisions/0011): a font westron ships as
-    /// `Font.custom(_:size:relativeTo:)`, and the system font as `Font.system(_:design:weight:)`.
+    /// `Font.custom(_:size:relativeTo:)` at the text style's size on this platform, and the system font as
+    /// `Font.system(_:design:weight:)`.
     public init(_ role: Westron.TextRole) {
         if let font = role.font, BundledFonts.registered {
-            self = .custom(font, size: CGFloat(role.size), relativeTo: Font.TextStyle(role.textStyle))
+            self = .custom(font, size: role.platformSize, relativeTo: Font.TextStyle(role.textStyle))
         } else {
             self = .system(
                 Font.TextStyle(role.textStyle), design: Font.Design(role.design), weight: Font.Weight(role.weight))
         }
+    }
+}
+
+extension Westron.TextRole {
+    /// The role's size at the default text size on this platform, as the system font takes it for the text style:
+    /// the Mac's smaller sizes on macOS, iOS's at the default content size on iOS. watchOS has no API for the
+    /// default size, so there the token's size, which is iOS's, is used.
+    var platformSize: CGFloat {
+        #if os(macOS)
+            NSFont.preferredFont(forTextStyle: NSFont.TextStyle(textStyle)).pointSize
+        #elseif os(watchOS)
+            CGFloat(size)
+        #else
+            UIFont.preferredFont(
+                forTextStyle: UIFont.TextStyle(textStyle),
+                compatibleWith: UITraitCollection(preferredContentSizeCategory: .large)
+            ).pointSize
+        #endif
+    }
+}
+
+#if os(macOS)
+    extension NSFont.TextStyle {
+        init(_ style: Westron.TextRole.TextStyle) {
+            switch style {
+            case .largeTitle: self = .largeTitle
+            case .title1: self = .title1
+            case .title2: self = .title2
+            case .title3: self = .title3
+            case .headline: self = .headline
+            case .body: self = .body
+            case .callout: self = .callout
+            case .subheadline: self = .subheadline
+            case .footnote: self = .footnote
+            case .caption: self = .caption1
+            case .caption2: self = .caption2
+            }
+        }
+    }
+#elseif !os(watchOS)
+    extension UIFont.TextStyle {
+        init(_ style: Westron.TextRole.TextStyle) {
+            switch style {
+            case .largeTitle: self = .largeTitle
+            case .title1: self = .title1
+            case .title2: self = .title2
+            case .title3: self = .title3
+            case .headline: self = .headline
+            case .body: self = .body
+            case .callout: self = .callout
+            case .subheadline: self = .subheadline
+            case .footnote: self = .footnote
+            case .caption: self = .caption1
+            case .caption2: self = .caption2
+            }
+        }
+    }
+#endif
+
+extension View {
+    /// Sets a text role: its font and its tracking, which a font cannot carry. Headings are tracked
+    /// (decisions/0013), so they take this rather than `.font(_:)` alone:
+    ///
+    ///     Text("Inbox").textRole(.headingMedium)
+    public func textRole(_ role: Westron.TextRole) -> some View {
+        font(Font(role)).tracking(CGFloat(role.letterSpacing))
     }
 }
 

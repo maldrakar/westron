@@ -66,7 +66,7 @@ private struct TasksSample: View {
                 HStack(alignment: .center, spacing: .space100) {
                     VStack(alignment: .leading, spacing: 0) {
                         Text("Inbox")
-                            .font(.headingMedium)
+                            .textRole(.headingMedium)
                             .foregroundStyle(.textPrimary)
                         Text("4 open, 1 done")
                             .font(.footnoteRegular)

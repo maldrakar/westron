@@ -1,70 +1,105 @@
 # 04. Shape
 
-Date: 2026-11-15. Status: draft for the owner's approval (#8).
+Date: 2026-11-15. Status: draft for the owner's approval (#8). It follows
+[decisions/0013](../decisions/0013-typography-space-shape-motion.md), which the owner accepted by choosing direction B.
 
-Shape is corners, lines and shadows: how a thing is outlined and how far it stands off what is under it. westron keeps
-all three soft and few, so that content, not frames, holds the eye (chapter 00, principle 4). The values are in
-`tokens/semantic/radius.tokens.json`, `stroke.tokens.json` and `shadow.tokens.json`.
+Shape is corners, lines and shadows: how a thing is outlined and how far it stands off what is under it. Direction B
+makes all three soft: corners at about a quarter of a control's height, quiet lines, and shadows in two soft layers.
+This chapter says why. The values are in decisions/0013 and in `tokens/semantic/radius.tokens.json`,
+`stroke.tokens.json`, `shadow.light.tokens.json` and `shadow.dark.tokens.json`.
 
 ## Corners
 
-- **Rounded, never sharp.** Every surface westron draws has round corners: rows, cards, fields, chips, tiles, columns.
-  Round corners read as soft and fit beside the system's own controls, which are rounded on every platform westron
-  targets.
-- **One ladder, shared with space.** `radius.75`, `100`, `125`, `150`, `175` and `225` are steps on the same ladder as
-  `space.*` (chapter 06): `radius.100` equals `space.100`. So a corner and the padding inside it are chosen from the
-  same scale and stay in proportion.
-- **A larger thing has a larger corner.** A small control or a sidebar row takes a low step; a card, a column or an
-  empty state's tile takes a high one. A corner that is too small on a large surface looks sharp; one too large on a
-  small control turns it into a pill by accident.
-- **A capsule is the platform's capsule.** Chips, pills, the phone's search field and the Done strip are capsules:
-  fully round ends at any height. They use the platform's capsule shape, never a large radius, so they stay capsules
-  when Dynamic Type makes them taller.
-- **A shape that scales has its own rule.** A list's tile keeps its corner in proportion to its side. That proportion is
-  the tile's own rule, written in its contract, not a step of the ladder.
-- **Off-ladder corners belong to one component.** The pilot uses a few odd radii, each in one place. A component that
-  needs one keeps it in its own contract (a component tier, decisions/0010), so the ladder stays short.
+- **About a quarter of the height.** `radius.control` is 8 px on a 32 px control. The ratio of radius to height sets a
+  look's character: about 0.15 reads precise, 0.25 soft, 0.5 expressive. At 0.25 westron's controls sit next to
+  Apple's and Adwaita's own without looking foreign. libadwaita's buttons and Spectrum 2's controls have about the
+  same ratio (`research_notes/space-shape-motion.md`, 2.3).
+- **A radius for each kind of shape.** A component takes a role, never a step:
+
+  | Token | For |
+  |---|---|
+  | `radius.control` | A button, a field or a segmented control westron draws |
+  | `radius.row` | The highlight of a row under the pointer or selected |
+  | `radius.card` | A card or a panel on the canvas |
+  | `radius.overlay` | A popover or a menu westron draws; system ones keep their own |
+  | `radius.sheet` | A sheet or a dialog westron draws |
+
+- **A larger thing has a larger corner, within limits.** Controls and rows have the smallest corner, cards and overlays
+  a larger one, sheets the largest. Container corners stay modest. A large corner pushes content away from the edge,
+  and that costs room in a table or a log.
+- **The roles sit on one ladder.** `radius.25` to `radius.400` are steps of the space ladder (chapter 06): `radius.100`
+  equals `space.100`. So a corner and the padding inside it come from one scale and stay in proportion.
+- **A capsule is the platform's capsule.** Tags and badges are capsules: fully round ends at any height. They use the
+  platform's capsule shape, never a large radius, so they stay capsules when Dynamic Type makes them taller.
+- **Nested corners share a center.** A shape that sits within its container's corner, closer to the edge than the
+  container's radius, takes `max(outer − inset, 4)`, so the two corners stay concentric and the inner one never turns
+  square. Further in, a shape keeps its own role's radius: a row highlight inside a card with 16 px of padding stays
+  `radius.row`. Apple describes its concentric shapes the same way
+  ([WWDC25 356](https://developer.apple.com/videos/play/wwdc2025/356/)). On Apple 26 and later, `ConcentricRectangle`
+  applies the rule where westron content meets the edge of the device or the window. Older systems use the radius
+  computed from the tokens ([decisions/0008](../decisions/0008-apple-toolchain-and-catalog.md)).
+- **Corners are continuous on Apple and circular elsewhere.** Apple's controls and glass have continuous corners, and
+  westron's shapes match them. GTK and most browsers cannot draw that curve natively, and on Android it would disagree
+  with Material's shapes. The curve is a trait of the platform, so every contract records the same difference in its
+  `platforms` block.
+- **Off-ladder corners belong to one component.** A shape that needs another radius, or one whose corner scales with
+  its own size, keeps its rule in its contract (a component tier,
+  [decisions/0010](../decisions/0010-token-structure-and-modes.md)). The ladder stays short.
 
 ## Lines
 
 - **Four widths, each with a job.** `stroke.hairline` edges glass and a card on a fill. `stroke.thin` draws rules,
   dividers and tree guides in a sidebar. `stroke.regular` draws guides on a phone, a dashed outline and a small check's
   ring. `stroke.thick` draws a focus ring, a drop indicator and a selection ring.
-- **A thicker line means more attention.** The thick width is for things a person must find at once: where focus is,
+- **A thicker line means more attention.** The thick width marks what a person must find at once: where focus is,
   where a dragged item will land. Rules and guides stay thin, because space and alignment already show the grouping.
-- **Color comes from the border tokens** (`color.border.*`, chapter 02). In the high-contrast themes rules and guides
-  gain contrast until they are real boundaries; their widths stay.
+- **A card needs no outline.** In the standard themes a card is set off from the canvas by its tone, and in light also
+  by its shadow. A hairline edges it only where tone does not, such as a card on a fill.
+- **Color comes from the border tokens** (chapter 02). `color.border.default` draws separators, `border.strong` the
+  outline of a field or a checkbox, and `border.focus` the focus ring. In the high-contrast themes lines gain contrast
+  through their color, and their widths stay.
 
 ## Shadows
 
-Shadows mean depth, and depth means that something is lifted or floats. Content at rest is flat.
+Depth means that something stands off what is under it. Three kinds of thing do, with one token each. Everything else
+is flat: a row, a field or a tag casts no shadow.
 
-| Token | What casts it |
-|---|---|
-| `shadow.resting` | A card at rest on a fill, such as a card in a board column |
-| `shadow.hovered` | The same card under the pointer |
-| `shadow.raised` | A control raised off what it stands on, such as a floating button or an open card |
-| `shadow.lifted` | Something a drag carries |
+| Token | What casts it | Light | Dark |
+|---|---|---|---|
+| `shadow.raised` | A card or a panel raised off the canvas | Two faint layers | None: the card is lighter |
+| `shadow.overlay` | A popover, a menu or a floating button westron draws | Two soft layers | Three times as opaque |
+| `shadow.dragged` | Something a drag carries | Two deeper layers | Three times as opaque |
 
-- **One layer, black, the same in both themes**, as in the pilot. A shadow is a hint of height, not a decoration, so a
-  single soft layer is enough.
-- **The order is the height.** Resting is barely there, lifted is unmistakable. A component never mixes two shadows to
-  get a height between them.
-- **System surfaces bring their own shadow.** Liquid Glass, sheets, popovers and menus cast the system's shadow, and
+- **Two layers, a close one and a wide one.** The close layer marks where a thing meets its ground, and the wide one
+  shows how far it floats. Fluent, Spectrum and libadwaita draw layered shadows too; one black layer for every theme
+  was the outlier among the systems surveyed (decisions/0013).
+- **The order is the height.** A raised card barely lifts, an overlay floats, and a dragged item is unmistakable. A
+  component never stacks two shadows to get a height between them.
+- **In dark, tone shows the height.** Higher is lighter in every theme (chapter 02), and a black shadow barely shows on
+  a near-black ground. So a raised card casts no shadow in dark. Overlays and dragged items keep theirs, three times as
+  opaque as in light, as Spectrum does.
+- **Shadows are part of the theme.** The theme modifier merges in `shadow.light` or `shadow.dark`
+  ([decisions/0010](../decisions/0010-token-structure-and-modes.md)). On Apple, `.shadow(_:)` picks the layers of the
+  environment's theme.
+- **In high contrast, every raised surface gets an outline.** The high-contrast themes keep the shadows and outline
+  every raised surface in `color.border.default`, because a shadow alone does not mark an edge. On the web, forced
+  colors remove shadows altogether ([CSS Color Adjust](https://www.w3.org/TR/css-color-adjust-1/)). For the same
+  reason a focus ring is always a line, never a shadow.
+- **System surfaces bring their own shadow.** Sheets, popovers, menus and Liquid Glass cast the system's shadow, and
   westron adds none (chapter 09).
-- **Blur is written as CSS writes it.** The token holds the blur as DTCG and CSS define it; the Apple generator halves
-  it into SwiftUI's radius, as the pilot does by hand.
+- **Blur is written as CSS writes it.** The token holds the blur as DTCG and CSS define it. On Apple a shadow's radius
+  is half of it.
 
 ## Open questions
 
-1. **The canvas's shadows.** The canvas draws two warm layers in light and much heavier black shadows in dark. The
-   pilot collapsed each to one black layer, the same in both themes. Keep the pilot's, or bring back the canvas's
-   warmth and a dark-theme variant?
-2. **Corner style.** The pilot mixes two corner curves: most of its shapes use circular corners, as the canvas's CSS
-   draws them, while its title field, search field, picker tile and drag cards keep SwiftUI's default continuous
-   corners. Proposal: one rule for all westron shapes. Which one: circular, as the canvas, or continuous, as the
-   system's own controls?
-3. **The tile's corner.** The pilot's tile radii fit one proportion of the tile's side, but the canvas does not state
-   it as a rule. Adopt the proportion as the tile's rule?
-4. **Shadows in high contrast.** An open card differs from the canvas by little more than its shadow, and the
-   high-contrast themes keep both surfaces as they are. Should a raised surface get an outline in those themes?
+1. **A role or the nesting rule.** A row highlight inside a card meets both `radius.row` and the nesting rule, and the
+   two can differ: in a card with an 8 px inset, the rule gives 4 px where the role gives 8. Which wins? Apple's advice
+   is a concentric shape with a fallback radius for when the shape stands alone. And should the generator compute each
+   nested pair and store it, so that every platform draws the same number?
+2. **The control's corner in compact.** Compact makes controls one 8 px step shorter (chapter 06). Should
+   `radius.control` follow, to stay about a quarter of the height? It would be the first radius set by density (#33).
+3. **The outline in high contrast.** decisions/0013 names its color, `color.border.default`, but not its width. Is it
+   `stroke.hairline` or `stroke.thin`?
+4. **Cards on GNOME.** libadwaita's `.card` class draws a native card with its own shadow, dark variant and
+   high-contrast outline. Should a raised surface on GNOME use that class and record the difference, or draw westron's
+   tokens (phase 7)?

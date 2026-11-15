@@ -36,6 +36,7 @@ tokens/
   primitive/*.tokens.json           the raw scales
   primitive/color.<theme>.tokens.json   the color ramps of a theme, generated
   semantic/*.tokens.json            roles that do not depend on a mode: colors, text roles, spacing, radii, motion
+  semantic/shadow.<light|dark>.tokens.json   the shadows, which the theme contexts merge in (decisions/0013)
   density/<density>.tokens.json
   platform/<platform>.tokens.json   only where a value differs by platform
 ```
@@ -85,7 +86,7 @@ The tools reject any other `dev.westron.*` key, so a misspelled key fails instea
   an `all` list.
 - A Swift name is the token path in lowerCamelCase, without the first segment where the type already names it:
   `color.text.secondary` is `Color.textSecondary`, `typography.heading.large` is `Font.headingLarge`,
-  `motion.row-leave` is `Animation.rowLeave`, `shadow.raised` is `Westron.Shadow.raised`; a length keeps it:
+  `motion.move` is `Animation.move`, `shadow.raised` is `Westron.Shadow.raised`; a length keeps it:
   `CGFloat.space100`, `.radius150`, `.strokeThin`. A list color's role is `Color.categoryText(_:)`. A name that
   collides with a static SwiftUI already has on that type (`Color.primary`, `Font.body`, `Animation.default`) or with
   another token's fails generation.
@@ -101,8 +102,9 @@ The tools reject any other `dev.westron.*` key, so a misspelled key fails instea
   watchOS asset catalogs take no appearances (actool drops them as unassigned children, Xcode 27.1, 2026-11-15), so
   the watch is dark whatever its contrast setting.
 - Density and platform switch nothing yet: the generator reads `density=regular` on each Apple platform and fails
-  when any value differs between them, or when a token other than a color differs by theme. The mechanism comes
-  with the first token that needs it.
+  when any value differs between them, or when a token other than a color or a shadow differs by theme. The
+  mechanism comes with the first token that needs it. Shadows switch by theme since 2026-11-15: `Westron.Shadow`
+  holds the layers of each theme, and `View.shadow(_:)` picks them from the environment (decisions/0013).
 
 ## Why
 

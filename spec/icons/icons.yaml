@@ -7,7 +7,7 @@
 #   identifier; the names are the pilot's own, byte for byte.
 # - `description` is one line on what the glyph draws; it becomes the doc comment of the Swift case.
 # - `apple` is the SF Symbol, which must exist on iOS 17, macOS 14 and watchOS 10. The other platforms get their
-#   glyphs with phase 6.
+#   glyphs with their phases: 6 (web), 7 (GNOME), 8 (Android).
 # - `default` is the icon drawn for a name this version does not know, such as one a newer version of a product wrote.
 # - The order of `icons` is the order of `Westron.Icon.allCases`. A new icon goes at the end.
 

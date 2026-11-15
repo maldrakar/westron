@@ -3,6 +3,10 @@ import SwiftUI
 import Testing
 import WestronUI
 
+#if os(macOS)
+    import AppKit
+#endif
+
 /// The SwiftUI side of the tokens against WestronTokens: the colorsets, the fonts, the animations and the lengths.
 @Suite("Token accessors")
 @MainActor
@@ -118,9 +122,14 @@ struct TokenAccessorTests {
         #expect(Westron.TextRole.headingLarge.font == "Onest-Bold")
         #expect(Westron.TextRole.headingSmall.font == "Onest-SemiBold")
         #expect(Westron.TextRole.codeRegular.font == "GeistMono-Regular")
-        #expect(Font.headingLarge == .custom("Onest-Bold", size: 34, relativeTo: .largeTitle))
-        #expect(Font.headingOverline == .custom("Onest-SemiBold", size: 12, relativeTo: .caption))
-        #expect(Font.codeStrong == .custom("GeistMono-SemiBold", size: 13, relativeTo: .footnote))
+        // At the text style's size on this platform, as the system font: the Mac's sizes are smaller than iOS's.
+        #if os(macOS)
+            let large = NSFont.preferredFont(forTextStyle: .largeTitle).pointSize
+        #else
+            let large = CGFloat(34)
+        #endif
+        #expect(Font.headingLarge == .custom("Onest-Bold", size: large, relativeTo: .largeTitle))
+        #expect(Font.headingLarge != .custom("Onest-SemiBold", size: large, relativeTo: .largeTitle))
         #expect(Font.bodyRegular == .system(.body, design: .default, weight: .regular))
         #expect(Font.subheadlineStrong == .system(.subheadline, design: .default, weight: .semibold))
         #expect(Font.captionMedium == .system(.caption, design: .default, weight: .medium))

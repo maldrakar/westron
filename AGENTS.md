@@ -1,8 +1,9 @@
 # westron: instructions for agents
 
-westron is a design system for technical products: a single source (tokens, component contracts,
-design language) and a native library on each platform. The pilot platform is Apple (SwiftUI),
-the pilot product is [todo-app](https://github.com/maldrakar/todo-app) (decisions/0006).
+westron is a design system for several products, everyday and technical: a single source (tokens, component
+contracts, design language) and a native library on each platform. Its look is its own (decisions/0011, 0012, 0013).
+The pilot platform is Apple (SwiftUI), the pilot product is [todo-app](https://github.com/maldrakar/todo-app)
+(decisions/0006): its screens decide which components come first, and it is the first to adopt westron's look.
 
 Phase 1 "Design language and tokens" is in progress; phases are GitHub milestones, tasks are issues. Order matters
 more than speed: tokens first (phase 1), then the contract schema and the end-to-end Button slice (phase 2). Until
@@ -15,7 +16,7 @@ the mechanism that catches it (`reports/`, section "Work plan").
 |---|---|
 | `decisions/` | Accepted decisions (ADR). Read them before you change the approach |
 | `design-language/` | Design language, chapters `00–09` (phase 1) |
-| `tokens/` | DTCG 2025.10 tokens and the mode resolver `westron.resolver.json` (decisions/0010) |
+| `tokens/` | DTCG 2025.10 tokens, the mode resolver `westron.resolver.json` (decisions/0010) and `palette.json`, the anchors the color ramps are generated from (decisions/0012) |
 | `spec/components/<id>/` | Component contract `<id>.spec.yaml`, its decisions and reference screenshots (phase 2) |
 | `spec/icons/icons.yaml` | Icon registry: westron's icon names, what each glyph draws, its SF Symbol, the default (decisions/0011) |
 | `platforms/apple/Sources/WestronTokens/` | Token values as plain Swift with no imports, generated (decisions/0010) |
@@ -87,8 +88,8 @@ the log to `.build/logs/`. On macOS, screenshots need Automation Mode enabled on
 - [0008](decisions/0008-apple-toolchain-and-catalog.md) Apple: versions, toolchain, catalog and screenshots
 - [0009](decisions/0009-tools-in-swift.md) tools in Swift
 - [0010](decisions/0010-token-structure-and-modes.md) token structure, modes and the Apple output
-- [0011](decisions/0011-icons-and-fonts.md) icons and fonts
-- [0012](decisions/0012-color.md) color (proposed)
-- [0013](decisions/0013-typography-space-shape-motion.md) typography, space, shape and motion (proposed)
+- [0011](decisions/0011-icons-and-fonts.md) icons and fonts: Onest, the system font, Geist Mono; platform and own icons
+- [0012](decisions/0012-color.md) color: the cobalt palette, solved into ramps for each theme
+- [0013](decisions/0013-typography-space-shape-motion.md) typography, space, shape and motion of direction B
 
 The final research report, with sources: `reports/`.

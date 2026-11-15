@@ -1,7 +1,7 @@
 # 02. Color
 
-Date: 2026-11-15. Status: accepted with [decisions/0012](../decisions/0012-color.md): the owner chose direction B
-with the cobalt palette.
+Date: 2026-11-15. Status: draft for the owner's approval (#8). It follows
+[decisions/0012](../decisions/0012-color.md), which the owner accepted by choosing direction B with the cobalt palette.
 
 westron's color is a cool, quiet ground and a few signals. This chapter says why the colors are what they are. The
 values, the ramps and the rules that solve them are in decisions/0012; the token layout and the four themes are in
@@ -123,6 +123,6 @@ needs. The contrast check (#15) reads that list and fails the build when a pair 
    menus and sheets show cobalt instead of the system blue? The HIG asks to keep tint off most controls. On macOS the
    app's accent applies only when the person has chosen "multicolor".
 2. **The person's accent on GNOME.** libadwaita lets a person choose an accent since GNOME 47, and an app that sets its
-   own overrides that choice. Does westron override it, or follow the person (phase 6)?
+   own overrides that choice. Does westron override it, or follow the person (phase 7)?
 3. **Display P3.** The ramps are sRGB today. Should the accent and the list colors gain P3 chroma on Apple and the
    web, keeping the sRGB values as their fallback?

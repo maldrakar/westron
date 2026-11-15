@@ -31,9 +31,12 @@ The owner chose B: the soft shape and its rhythm, with the cobalt palette (decis
   - Large and medium are Bold, small and overline SemiBold.
   - Headings are tracked in by 1 % of their size.
   - The overline is written in capitals by the product and tracked out by 6 %.
-  - On Apple the font cannot carry tracking. A view applies the token's `letterSpacing` with `.tracking(_:)`.
+  - On Apple the font cannot carry tracking, so a view sets a heading with `.textRole(.headingLarge)`, which applies
+    the font and the token's `letterSpacing`. `.font(.headingLarge)` alone sets the face without the tracking.
 - **On Apple a role scales with Dynamic Type.** A heading or code role is `Font.custom(_:size:relativeTo:)` with its
-  text style; a text role is `Font.system(_:design:weight:)`.
+  text style, at the size the platform gives that text style, as the system font takes it: the Mac's sizes are
+  smaller than iOS's. watchOS has no API for that size, so there the token's size, which is iOS's, is used. A text
+  role is `Font.system(_:design:weight:)`.
 
 ### Space and rhythm
 
@@ -49,11 +52,12 @@ The owner chose B: the soft shape and its rhythm, with the cobalt palette (decis
   | The page margin, narrow / wide | 20 / 32 | `space.250` / `space.400` |
   | A web control / list row / table row | 32 / 44 / 36 | |
 
-  Rows on touch platforms keep the platform's floors: 44 pt on iOS, 48 dp on Android
+  Rows on touch platforms keep the platform's recommended hit target: 44 pt on iOS, 48 dp on Android
   (research_notes/space-shape-motion.md 6.3, 6.4).
 - **Density.** Density changes the sizes and insets of components, never the ladder, the text size, the page margins
   or the gaps between sections. Compact makes controls and rows one 8 px step smaller, halves cell insets and moves
-  gaps inside a group one step down. Comfortable is the default for every product. The tokens for control and row
+  gaps inside a group one step down. Comfortable, the `regular` context of the `density` modifier, is the default for
+  every product. The tokens for control and row
   sizes come with the dense components (#33): the platform supplies both columns and the density picks one, so no
   token is set by two modifiers (decisions/0010).
 
@@ -72,7 +76,9 @@ The owner chose B: the soft shape and its rhythm, with the cobalt palette (decis
   | `radius.sheet` | 16 | a sheet or a dialog westron draws |
 
   Tags and badges are capsules. Controls are rounded at about a quarter of their height: 8 on 32.
-- **Nesting.** A shape inside another takes `max(outer − inset, 4)`, so the corners stay concentric. On Apple 26 and
+- **Nesting.** A shape that sits within its container's corner, closer to the edge than the container's radius,
+  takes `max(outer − inset, 4)`, so the corners stay concentric. Further in, a shape keeps its own role's radius: a
+  row highlight inside a card with 16 px of padding stays `radius.row`. On Apple 26 and
   later, `ConcentricRectangle` does this where westron content meets the edge of the device or the window.
 - **Corners.** Corners are continuous on Apple, as the system's are, and circular on the web, GNOME and Android.
 - **Strokes.** `stroke.hairline`, `thin`, `regular` and `thick` are 0.5, 1, 1.5 and 2 px.
@@ -89,7 +95,7 @@ The owner chose B: the soft shape and its rhythm, with the cobalt palette (decis
   | `shadow.dragged` | `0 8 16` 10 %, `0 16 40` 16 % | three times as opaque |
 
 - **High contrast.** The high-contrast themes keep the shadows and outline every raised surface in
-  `color.border.default`, because a shadow alone does not mark an edge.
+  `color.border.default` at `stroke.thin`, because a shadow alone does not mark an edge.
 - **Shadows are part of the theme.** The theme modifier merges them in (`semantic/shadow.<light|dark>.tokens.json`),
   and on Apple `View.shadow(_:)` picks the layers of the environment's theme.
 - **Never shadow what the system draws:** a sheet, a popover, a menu, glass.
@@ -127,7 +133,8 @@ The owner chose B: the soft shape and its rhythm, with the cobalt palette (decis
 
 - **Text styles.** They keep Dynamic Type and each platform's own sizes. The brand lives in the heading face and
   its weight.
-- **The 4 px grid with an 8 px base.** Every surveyed system uses it. Atlassian and Carbon name steps the same way.
+- **The 4 px grid with an 8 px base.** It is Atlassian's naming with Carbon's and Spectrum's values, and Primer and
+  Fluent sit on the same grid. libadwaita works in 6 px steps, and Apple publishes no grid.
 - **Density changes components, not the ladder.** No surveyed system rescales its ladder, and page margins should not
   shrink in a dense view.
 - **The radius ratio.** It sets the character: about 0.15 of the height reads precise, 0.25 soft, 0.5 expressive.

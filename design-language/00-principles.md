@@ -5,22 +5,29 @@ Date: 2026-11-15. Status: draft for the owner's approval (#8).
 These principles settle the cases the other chapters do not cover. Each one says what it asks, why, and what it means
 for a designer and for an agent writing code. Where a machine can check a principle, the principle says how.
 
+westron serves several products on several platforms: everyday ones, such as a task list, and technical ones, such as
+a table of deployments, a log or a dashboard. Its look is designed for all of them and is not taken from any one
+product. The pilot, todo-app, is its first consumer and takes this look
+([decisions/0006](../decisions/0006-pilot-product.md)).
+
 ## 1. The brand lives in the content layer, not in recolored system controls
 
-People recognize westron by what a screen shows: its headings, tiles, list colors, icons, words and dense data views.
-They never recognize it by a repainted navigation bar, toggle or menu.
+People recognize westron by what a screen shows: its Onest headings, its cool ground and soft cards, its cobalt accent,
+its list colors, its domain icons, its words and its dense data views. They never recognize it by a repainted
+navigation bar, toggle or menu.
 
 **Why.** Every platform owner draws this line. The HIG asks apps to apply the accent color "judiciously", to minimize
 it on controls, and to move brand color "into the content layer, where it scrolls beneath Liquid Glass controls"
-([HIG Branding](https://developer.apple.com/design/human-interface-guidelines/branding)). GNOME asks apps to keep custom
-styling "to a minimum" ([GNOME HIG](https://developer.gnome.org/hig/guidelines/ui-styling.html)). Android recommends
-Material and shows how to extend its theme. A recolored control fights the platform, breaks with each OS release and
-loses the accessibility the system gives for free. The pilot's look comes from its warm paper, heavy rounded titles,
-list tiles and checks in the list's color; its glass buttons and menus are the system's
-([decisions/0006](../decisions/0006-pilot-product.md)).
+([HIG Branding](https://developer.apple.com/design/human-interface-guidelines/branding)). GNOME asks apps to keep
+custom styling "to a minimum" ([GNOME HIG](https://developer.gnome.org/hig/guidelines/ui-styling.html)). Android
+recommends Material and shows how to extend its theme. A recolored control fights the platform, breaks with each OS
+release and loses the accessibility the system gives for free. So westron's look is in its content: the heading face
+([decisions/0011](../decisions/0011-icons-and-fonts.md)), the palette ([decisions/0012](../decisions/0012-color.md)),
+and the shapes, shadows and motions ([decisions/0013](../decisions/0013-typography-space-shape-motion.md)). Bars,
+sheets, menus and glass stay the system's.
 
 **In practice.**
-- Designer: to make a screen more recognizable, change the content: a heading, a tile, a color, an icon, the words,
+- Designer: to make a screen more recognizable, change the content: a heading, a card, a color, an icon, the words,
   the density. Leave bars, sheets, menus and pickers as the platform draws them.
 - Agent: never tint or restyle navigation, toolbars, tab bars, sidebars, sheets, menus or pickers beyond the accent
   the platform already takes. Brand values go into content-layer components and into the styles of controls.
@@ -47,38 +54,46 @@ familiar components" and to keep their "sizing, placement, and behavior" familia
 
 ## 3. Color and motion carry meaning, never decoration
 
-The accent marks the primary action and the current selection. Other colors identify something, such as a list, or
-warn, such as a due deadline. Motion shows where something went. Neither is ever the only signal.
+The accent marks the primary action and the current selection. A status color warns or reports, and a list color
+identifies a thing a person named. Motion shows what changed and where it went. Neither color nor motion is ever the
+only signal.
 
-**Why.** A color used everywhere stops meaning anything, and in a technical product people read color as state. The
-pilot uses its one blue for adding, for Done and for selection; lists bring their own colors in tiles and checks. Each
-of its motions answers a change: a check pops, a done row waits to be read and then leaves, a card opens in place of
-its row. People who cannot tell colors apart or who turn motion off must lose nothing (chapter 08).
+**Why.** A color used everywhere stops meaning anything, and in a technical product people read color as state. So
+westron has one accent, cobalt, which also means "info", and a screen holds four hues at most. A status always shows
+an icon and a word. A list color never means a state ([decisions/0012](../decisions/0012-color.md)). Each motion is
+named by what moves and answers a change: a check pops, a reordered row moves to its place, a sheet is revealed
+([decisions/0013](../decisions/0013-typography-space-shape-motion.md)). People who cannot tell colors apart or who
+turn motion off must lose nothing (chapter 08).
 
 **In practice.**
-- Designer: on one screen, the accent fills one control at a time, the primary action. A color that means a state
-  comes with a glyph, a shape or a word. Every motion answers "what changed, and where did it go?".
+- Designer: on one screen, the accent fills one action, the primary one. A checked box or a switch that is on takes
+  the accent too, because it marks a selection. A color that means a state comes with a glyph, a shape or a word.
+  Every motion answers "what changed, and where did it go?".
 - Agent: take colors by role from the semantic tokens, and read `dev.westron.usage` before using the accent. Take
   motion from the motion tokens, and honor Reduce Motion in every animation.
 - Check: the `a11y-auditor` subagent checks Reduce Motion and differentiation without color. A screen with more than
-  one accent-filled control is a review finding.
+  one accent-filled button is a review finding.
 
 ## 4. Quiet by default, dense where the work is
 
-Surfaces are calm and close in tone. Hierarchy comes from type weight and space, not from boxes and borders. Where
-people read a lot of data, westron gets denser, not louder.
+Surfaces are calm and close in tone. Hierarchy comes from type, space and a soft shadow, not from boxes and borders.
+Where people read a lot of data, westron gets denser, not louder.
 
-**Why.** westron is for technical products. People keep these screens open for hours and scan them for one value.
-The pilot's paper, ink and hairlines keep attention on the content. Density follows directly from the word
-"technical": tables, logs and code need it (research report, "Ten additions").
+**Why.** People keep westron's screens open for hours, and in a technical product they scan them for one value. A
+cool, quiet ground and thin lines keep attention on the content (chapter 02). Density follows directly from the word
+"technical": tables, logs and code need it (research report, "Ten additions"). Comfortable is the default density for
+every product, and a dense view is a mode, not a second design
+([decisions/0013](../decisions/0013-typography-space-shape-motion.md)).
 
 **In practice.**
-- Designer: before you add a card, a border or a shadow, try space and weight. Depth means that something is lifted
-  or floats, such as a dragged row or a raised control. Content at rest is flat.
+- Designer: before you add a border, try space and weight. A card groups content and is raised off the canvas: by a
+  soft shadow in light, by a lighter surface in dark. Something that floats or is dragged stands higher (chapter 04).
 - Agent: density comes from the `density` modifier through the environment
   ([decisions/0010](../decisions/0010-token-structure-and-modes.md)), never from a component's own option. It changes
-  spacing and control sizes, not text sizes.
-- Check: no contract has a density option of its own. The `compact` context gets values with the dense components (#33).
+  the sizes and insets of components, never the space ladder, the text size, the page margins or the gaps between
+  sections.
+- Check: no contract has a density option of its own. The `compact` context gets values with the dense components
+  (#33).
 
 ## 5. Every value has a role and a name
 
@@ -115,7 +130,5 @@ column of the snapshot matrix.
 ## Open questions
 
 1. **Order when principles conflict.** Proposal: accessibility (6) wins, then the platform (2), then the brand (1).
-2. **westron or todo-app.** decisions/0012 makes the eleven list colors westron's. Is the list tile westron's too?
-3. **Technical content.** Which content does westron own beyond the pilot (tables, code, logs, statuses, #33), and
-   does the brand show in it, for example through a monospaced text role?
-4. **One accent-filled control at a time.** Principle 3 reads this from the pilot's screens. Rule or habit?
+2. **A consumer for dense components.** A component needs a product that uses it, and the pilot is a task list. Which
+   product consumes the dense components, such as a table or a log (#33), so that they can be built?

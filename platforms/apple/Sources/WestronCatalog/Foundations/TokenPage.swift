@@ -15,7 +15,7 @@ struct TokenPage<Content: View>: View {
             VStack(alignment: .leading, spacing: SampleMetrics.pagePadding) {
                 VStack(alignment: .leading, spacing: .space25) {
                     Text(title)
-                        .font(.headingSmall)
+                        .textRole(.headingSmall)
                         .foregroundStyle(.textPrimary)
                     Text(summary)
                         .font(.footnoteRegular)
