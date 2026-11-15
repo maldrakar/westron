@@ -1,0 +1,62 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/resolver.json",
+  "name": "westron",
+  "version": "2025.10",
+  "description": "The westron tokens: primitives, the semantic roles that do not depend on a mode, and three modifiers that never set the same token (decisions/0010).",
+  "sets": {
+    "primitive": {
+      "description": "The palettes in OKLCH with a hex fallback, and the raw scales. Components never use them directly.",
+      "sources": [
+        {"$ref": "primitive/color.tokens.json"},
+        {"$ref": "primitive/easing.tokens.json"},
+        {"$ref": "primitive/font.tokens.json"}
+      ]
+    },
+    "semantic": {
+      "description": "Roles that do not depend on a mode: motion, radii, shadows, spacing, strokes, text roles.",
+      "sources": [
+        {"$ref": "semantic/motion.tokens.json"},
+        {"$ref": "semantic/radius.tokens.json"},
+        {"$ref": "semantic/shadow.tokens.json"},
+        {"$ref": "semantic/space.tokens.json"},
+        {"$ref": "semantic/stroke.tokens.json"},
+        {"$ref": "semantic/typography.tokens.json"}
+      ]
+    }
+  },
+  "modifiers": {
+    "theme": {
+      "description": "The color theme. A high-contrast theme is its theme plus a small file of overrides. Resolved at runtime, by the platform's own switching.",
+      "contexts": {
+        "light": [{"$ref": "semantic/color.light.tokens.json"}],
+        "dark": [{"$ref": "semantic/color.dark.tokens.json"}],
+        "light-hc": [{"$ref": "semantic/color.light.tokens.json"}, {"$ref": "semantic/color.light-hc.tokens.json"}],
+        "dark-hc": [{"$ref": "semantic/color.dark.tokens.json"}, {"$ref": "semantic/color.dark-hc.tokens.json"}]
+      },
+      "default": "light"
+    },
+    "density": {
+      "description": "Spacing and control sizes. compact has no values until the dense components (#33) need them. Resolved at runtime, through the environment.",
+      "contexts": {
+        "regular": [],
+        "compact": []
+      },
+      "default": "regular"
+    },
+    "platform": {
+      "description": "Values that differ by platform, in platform/<platform>.tokens.json when there are any. No default: each platform's generator names its own. Resolved at build time.",
+      "contexts": {
+        "ios": [],
+        "macos": [],
+        "watchos": []
+      }
+    }
+  },
+  "resolutionOrder": [
+    {"$ref": "#/sets/primitive"},
+    {"$ref": "#/sets/semantic"},
+    {"$ref": "#/modifiers/theme"},
+    {"$ref": "#/modifiers/density"},
+    {"$ref": "#/modifiers/platform"}
+  ]
+}
