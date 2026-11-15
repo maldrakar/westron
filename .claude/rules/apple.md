@@ -21,8 +21,22 @@ paths:
 
 - Tokens only. The hook and `tools/westron lint raw-values` catch raw colors, sizes, spacing, radii, opacity and animation
   in `WestronUI`. An exception is `// westron-lint: allow <reason>`, with a real reason.
-- Text goes through semantic text roles and `Font.custom(_:size:relativeTo:)`, so that Dynamic Type works.
-  Scalable spacing goes through `@ScaledMetric`.
+- Tokens come from `tools/westron generate` (decisions/0010): never edit `WestronTokens/Generated/`,
+  `WestronUI/Generated/` or `WestronUI/Tokens.xcassets`; change the tokens and generate again. Names are the token
+  path in lowerCamelCase, without the group the type already names:
+  - colors: `Color.textSecondary`, `.foregroundStyle(.textSecondary)`, `Color(Westron.Color.textSecondary)`; they come
+    from colorsets, so they switch with the theme and the contrast setting by themselves;
+  - list colors: `Westron.Category(rawValue: name)` with `.background`, `.text`, … and `Color.categoryText(.amber)`;
+  - text: `.font(.headingLarge)`, which is `Font.system(textStyle, design:weight:)`, never `Font.custom`, so that
+    Dynamic Type works (decisions/0011);
+  - space, radius, stroke: `CGFloat.space100`, `.radius150`, `.strokeThin`; motion: `withAnimation(.rowLeave)`;
+    shadow: `.shadow(.raised)`.
+  - icons: `Image(Westron.Icon.sun)`, `Label("Rename", icon: .pen)`, not `Image(systemName:)` with a symbol spelled
+    out; a stored name reads as `Westron.Icon(rawValue: name) ?? .fallback`. The names and their SF Symbols are in
+    `spec/icons/icons.yaml` (decisions/0011).
+- Scalable spacing goes through `@ScaledMetric`, with a token as its base value.
+- The adapters from WestronTokens values to SwiftUI values are hand-written in `WestronUI/TokenAdapters.swift`.
+  `WestronTokens` imports nothing, not even Foundation: shared code and its WebAssembly build use it.
 
 ## Platforms
 

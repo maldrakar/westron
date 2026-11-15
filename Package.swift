@@ -8,7 +8,10 @@ let package = Package(
     // The minimum matches the todo-app pilot (decisions/0006, 0008).
     platforms: [.iOS(.v17), .macOS(.v14), .watchOS(.v10)],
     products: [
-        // westron styles and components. Products depend on it.
+        // westron's token values as plain Swift, with no SwiftUI and no Foundation: for a product's shared code,
+        // which may build for WebAssembly and Linux (decisions/0006, 0010).
+        .library(name: "WestronTokens", targets: ["WestronTokens"]),
+        // westron styles and components, and the SwiftUI accessors of the tokens. Products depend on it.
         .library(name: "WestronUI", targets: ["WestronUI"]),
         // Catalog entries, their host and snapshots. Only the catalog app depends on it,
         // in platforms/apple/Catalog; the product exists because an Xcode project sees a package only through
@@ -16,14 +19,27 @@ let package = Package(
         .library(name: "WestronCatalog", targets: ["WestronCatalog"]),
     ],
     targets: [
+        // Generated/ is written by `tools/westron generate` from tokens/westron.resolver.json.
+        .target(
+            name: "WestronTokens",
+            path: "platforms/apple/Sources/WestronTokens"
+        ),
+        // Generated/ and Tokens.xcassets are written by `tools/westron generate`.
         .target(
             name: "WestronUI",
-            path: "platforms/apple/Sources/WestronUI"
+            dependencies: ["WestronTokens"],
+            path: "platforms/apple/Sources/WestronUI",
+            resources: [.process("Tokens.xcassets")]
         ),
         .target(
             name: "WestronCatalog",
             dependencies: ["WestronUI"],
             path: "platforms/apple/Sources/WestronCatalog"
+        ),
+        .testTarget(
+            name: "WestronUITests",
+            dependencies: ["WestronUI"],
+            path: "platforms/apple/Tests/WestronUITests"
         ),
         .testTarget(
             name: "WestronCatalogTests",
