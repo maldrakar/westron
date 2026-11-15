@@ -15,7 +15,8 @@ paths:
   gives the same bytes, with no dates, no random numbers and no dependence on file system traversal order.
 - A generated file starts with a comment that says it is generated, from what and by which command.
 - A new dependency only if things are noticeably worse without it, added with the first code that needs it and pinned
-  to an exact version (`exact:`). Planned: Yams (contracts), swift-json-schema (DTCG validation), SwiftSyntax (#21).
+  to an exact version (`exact:`). In use: swift-json-schema (DTCG validation), Yams (the icon registry, then the
+  contracts). Planned: SwiftSyntax (#21).
 - Color conversion is our own code, tested against reference values (decisions/0009).
 - Bash scripts: `set -euo pipefail`; on macOS they get Xcode through `source tools/apple/xcode-env.sh`.
   Apple-only scripts live in `tools/apple/`. JSON in scripts is parsed with `jq` or `plutil`, which ship with macOS.
