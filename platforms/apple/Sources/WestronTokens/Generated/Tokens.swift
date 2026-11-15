@@ -1818,26 +1818,28 @@ extension Westron.TextRole {
         lineHeight: 1.333,
         letterSpacing: 0)
 
-    /// Code, logs, identifiers and hashes: Geist Mono at the size of the footnote text style.
+    /// Code, logs, identifiers and hashes: Geist Mono at the size of the subheadline text style, a step below body
+    /// text.
     public static let codeRegular = Westron.TextRole(
         name: "typography.code.regular",
-        textStyle: .footnote,
+        textStyle: .subheadline,
         design: .monospaced,
         weight: .regular,
         font: "GeistMono-Regular",
-        size: 13,
-        lineHeight: 1.385,
+        size: 15,
+        lineHeight: 1.333,
         letterSpacing: 0)
 
-    /// Emphasis inside code or a log: a keyword, a level. Geist Mono SemiBold at the size of the footnote text style.
+    /// Emphasis inside code or a log: a keyword, a level. Geist Mono SemiBold at the size of the subheadline text
+    /// style.
     public static let codeStrong = Westron.TextRole(
         name: "typography.code.strong",
-        textStyle: .footnote,
+        textStyle: .subheadline,
         design: .monospaced,
         weight: .semibold,
         font: "GeistMono-SemiBold",
-        size: 13,
-        lineHeight: 1.385,
+        size: 15,
+        lineHeight: 1.333,
         letterSpacing: 0)
 
     /// Every text role in token order.

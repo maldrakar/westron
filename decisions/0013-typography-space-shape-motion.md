@@ -23,7 +23,8 @@ The owner chose B: the soft shape and its rhythm, with the cobalt palette (decis
   - Headings: `typography.heading.large`, `medium`, `small` and `overline`, in Onest.
   - Text: `body`, `callout`, `subheadline`, `footnote` and `caption`, with `regular`, `medium` or `strong`
     (semibold), in the system font.
-  - Code: `code.regular` and `code.strong`, in Geist Mono at the footnote size.
+  - Code: `code.regular` and `code.strong`, in Geist Mono at the subheadline size, a step below body text, as in the
+    specimen the owner chose. The footnote size would make code 10 pt on the Mac.
 - **Each role is a DTCG typography token.** Its size and line height are Apple's iOS values for the text style at the
   default text size, so the web and GNOME have numbers to start from. `$extensions.dev.westron.apple.textStyle` names
   the text style.

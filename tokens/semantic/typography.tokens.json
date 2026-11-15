@@ -183,24 +183,24 @@
       "regular": {
         "$value": {
           "fontFamily": "{font.family.mono}",
-          "fontSize": {"value": 13, "unit": "px"},
+          "fontSize": {"value": 15, "unit": "px"},
           "fontWeight": "{font.weight.regular}",
           "letterSpacing": {"value": 0, "unit": "px"},
-          "lineHeight": 1.385
+          "lineHeight": 1.333
         },
-        "$description": "Code, logs, identifiers and hashes: Geist Mono at the size of the footnote text style.",
-        "$extensions": {"dev.westron.apple": {"textStyle": "footnote"}}
+        "$description": "Code, logs, identifiers and hashes: Geist Mono at the size of the subheadline text style, a step below body text.",
+        "$extensions": {"dev.westron.apple": {"textStyle": "subheadline"}}
       },
       "strong": {
         "$value": {
           "fontFamily": "{font.family.mono}",
-          "fontSize": {"value": 13, "unit": "px"},
+          "fontSize": {"value": 15, "unit": "px"},
           "fontWeight": "{font.weight.semibold}",
           "letterSpacing": {"value": 0, "unit": "px"},
-          "lineHeight": 1.385
+          "lineHeight": 1.333
         },
-        "$description": "Emphasis inside code or a log: a keyword, a level. Geist Mono SemiBold at the size of the footnote text style.",
-        "$extensions": {"dev.westron.apple": {"textStyle": "footnote"}}
+        "$description": "Emphasis inside code or a log: a keyword, a level. Geist Mono SemiBold at the size of the subheadline text style.",
+        "$extensions": {"dev.westron.apple": {"textStyle": "subheadline"}}
       }
     }
   }

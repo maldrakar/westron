@@ -53,8 +53,8 @@ prefix.
 | `footnote.medium` | System Medium | `footnote` | A small label: a column header, a date, a tag's name |
 | `footnote.strong` | System SemiBold | `footnote` | The words on a chip, a pill or a small button |
 | `caption.medium` | System Medium | `caption` | Metadata and badges: a status badge, a line of metadata |
-| `code.regular` | Geist Mono Regular | `footnote` | Code, logs, identifiers and hashes |
-| `code.strong` | Geist Mono SemiBold | `footnote` | Emphasis inside code or a log: a keyword, a level |
+| `code.regular` | Geist Mono Regular | `subheadline` | Code, logs, identifiers and hashes |
+| `code.strong` | Geist Mono SemiBold | `subheadline` | Emphasis inside code or a log: a keyword, a level |
 
 - **A role is chosen by what the text is.** A component asks for a role, never for a size. A product that needs a size
   the roles do not have asks for a new role.

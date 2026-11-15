@@ -762,12 +762,14 @@ extension Font {
         Font(Westron.TextRole.captionMedium)
     }
 
-    /// Code, logs, identifiers and hashes: Geist Mono at the size of the footnote text style.
+    /// Code, logs, identifiers and hashes: Geist Mono at the size of the subheadline text style, a step below body
+    /// text.
     public static var codeRegular: Font {
         Font(Westron.TextRole.codeRegular)
     }
 
-    /// Emphasis inside code or a log: a keyword, a level. Geist Mono SemiBold at the size of the footnote text style.
+    /// Emphasis inside code or a log: a keyword, a level. Geist Mono SemiBold at the size of the subheadline text
+    /// style.
     public static var codeStrong: Font {
         Font(Westron.TextRole.codeStrong)
     }
