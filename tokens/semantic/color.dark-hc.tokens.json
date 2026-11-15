@@ -1,0 +1,487 @@
+{
+  "color": {
+    "$type": "color",
+    "background": {
+      "accent": {
+        "$value": {"colorSpace": "oklch", "components": [0.4751, 0.18649, 268.36], "hex": "#324DC3"},
+        "$description": "The fill of the primary action: a floating \"+\", Done. The accent, the same in light and dark.",
+        "$extensions": {
+          "dev.westron.usage": {
+            "use": ["primary action fill"],
+            "avoid": "Large areas, or more than one filled control on a screen; text and borders in the accent use text.accent and border.accent."
+          }
+        }
+      },
+      "danger": {
+        "$value": {"colorSpace": "oklch", "components": [0.4808, 0.15423, 27.5], "hex": "#A32E28"},
+        "$description": "The fill of a destructive action, such as a swipe's Delete."
+      }
+    },
+    "text": {
+      "secondary": {
+        "$value": {"colorSpace": "oklch", "components": [0.8255, 0.01949, 83.06], "hex": "#CCC5B8"},
+        "$description": "Supporting text and glyphs: counts, dates, metadata, notes, a done task's title.",
+        "$extensions": {
+          "dev.westron.contrast": [
+            {
+              "kind": "text",
+              "on": [
+                "color.background.canvas",
+                "color.background.surface",
+                "color.background.sidebar",
+                "color.background.muted",
+                "color.background.selected",
+                ["color.background.hover", "color.background.canvas"],
+                ["color.background.hover", "color.background.muted"],
+                ["color.background.highlight", "color.background.canvas"],
+                ["color.background.glass", "color.background.canvas"]
+              ]
+            }
+          ]
+        }
+      },
+      "placeholder": {
+        "$value": {"colorSpace": "oklch", "components": [0.7468, 0.0187, 81.32], "hex": "#B3ACA0"},
+        "$description": "What a field shows while it is empty. Translucent.",
+        "$extensions": {"dev.westron.contrast": [{"kind": "text", "on": ["color.background.surface", "color.background.canvas"]}]}
+      },
+      "accent": {
+        "$value": {"colorSpace": "oklch", "components": [0.7732, 0.11473, 268.85], "hex": "#97B2FF"},
+        "$description": "A word or glyph in the accent that acts, such as an action on an edit bar, or marks the chosen option.",
+        "$extensions": {
+          "dev.westron.usage": {
+            "use": ["action word", "chosen option's check"],
+            "avoid": "Fills: use color.background.accent. Rings and indicators: use color.border.accent."
+          },
+          "dev.westron.contrast": [
+            {
+              "kind": "text",
+              "on": [
+                "color.background.canvas",
+                "color.background.surface",
+                "color.background.sidebar",
+                ["color.background.glass", "color.background.canvas"]
+              ]
+            }
+          ]
+        }
+      },
+      "danger": {
+        "$value": {"colorSpace": "oklch", "components": [0.7932, 0.11925, 27.56], "hex": "#FF9D91"},
+        "$description": "Text and glyphs that warn: a due deadline.",
+        "$extensions": {
+          "dev.westron.contrast": [{"kind": "text", "on": ["color.background.canvas", "color.background.surface", "color.background.muted"]}]
+        }
+      }
+    },
+    "icon": {
+      "tertiary": {
+        "$value": {"colorSpace": "oklch", "components": [0.7006, 0.01545, 84.59], "hex": "#A39E94"},
+        "$description": "Quiet glyphs and decorations: a grip, a strike-through line. Meets 3:1, not 4.5:1.",
+        "$extensions": {
+          "dev.westron.usage": {"use": ["grip", "strike-through"], "avoid": "Words of any size: use text.secondary."},
+          "dev.westron.contrast": [
+            {
+              "kind": "non-text",
+              "on": [
+                "color.background.canvas",
+                "color.background.surface",
+                "color.background.sidebar",
+                "color.background.muted",
+                "color.background.selected"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "border": {
+      "default": {
+        "$value": {"colorSpace": "oklch", "components": [0.5321, 0.00994, 84.59], "hex": "#6F6C66"},
+        "$description": "Rules, dividers and outlines.",
+        "$extensions": {
+          "dev.westron.contrast": [
+            {
+              "kind": "separator",
+              "on": ["color.background.canvas", "color.background.surface", "color.background.sidebar"]
+            }
+          ]
+        }
+      },
+      "guide": {
+        "$value": {"colorSpace": "oklch", "components": [0.5181, 0.01, 84.59], "hex": "#6B6862"},
+        "$description": "The guides down the branches of a tree in a sidebar.",
+        "$extensions": {"dev.westron.contrast": [{"kind": "separator", "on": ["color.background.sidebar"]}]}
+      },
+      "glass": {
+        "$value": {"colorSpace": "oklch", "components": [1, 0, "none"], "alpha": 0.35, "hex": "#FFFFFF"},
+        "$description": "The hairline round glass and round a card on a fill. Translucent.",
+        "$extensions": {"dev.westron.contrast": [{"kind": "separator", "on": ["color.background.canvas", "color.background.muted"]}]}
+      },
+      "accent": {
+        "$value": {"colorSpace": "oklch", "components": [0.7078, 0.15165, 267.86], "hex": "#789BFF"},
+        "$description": "A focus ring, a drop indicator, the outline of a drop slot.",
+        "$extensions": {
+          "dev.westron.usage": {"use": ["focus ring", "drop indicator"], "avoid": "Text: use text.accent. Fills: use background.accent."},
+          "dev.westron.contrast": [
+            {
+              "kind": "non-text",
+              "on": [
+                "color.background.canvas",
+                "color.background.surface",
+                "color.background.sidebar",
+                "color.background.muted",
+                "color.background.selected",
+                "color.background.accent-subtle"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "category": {
+      "blue": {
+        "text": {
+          "$value": {"colorSpace": "oklch", "components": [0.7802, 0.09701, 261.58], "hex": "#95B8F6"},
+          "$description": "Text and glyphs in the list color blue: a section title, the glyph on the list's tile.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {"kind": "text", "on": ["color.background.canvas", "color.background.muted", "color.background.surface"]},
+              {
+                "kind": "non-text",
+                "on": [
+                  ["color.category.blue.background", "color.background.canvas"],
+                  ["color.category.blue.background", "color.background.surface"],
+                  ["color.category.blue.background", "color.background.sidebar"],
+                  ["color.category.blue.background", "color.background.muted"],
+                  ["color.category.blue.background", "color.background.selected"]
+                ]
+              }
+            ]
+          }
+        },
+        "border": {
+          "$value": {"colorSpace": "oklch", "components": [0.6323, 0.11612, 261.71], "hex": "#6289D0"},
+          "$description": "The ring of an open check in the list color blue.",
+          "$extensions": {
+            "dev.westron.contrast": [{"kind": "non-text", "on": ["color.background.canvas", "color.background.surface"]}]
+          }
+        },
+        "fill": {
+          "$value": {"colorSpace": "oklch", "components": [0.5695, 0.13329, 261.41], "hex": "#4975C5"},
+          "$description": "The disc of a done check, a lit chip: the list color blue.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["things that carry a list's color"],
+              "avoid": "States such as danger or success: use their own tokens."
+            }
+          }
+        }
+      },
+      "amber": {
+        "text": {
+          "$value": {"colorSpace": "oklch", "components": [0.8073, 0.12652, 84.46], "hex": "#E6B957"},
+          "$description": "Text and glyphs in the list color amber: a section title, the glyph on the list's tile.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {"kind": "text", "on": ["color.background.canvas", "color.background.muted", "color.background.surface"]},
+              {
+                "kind": "non-text",
+                "on": [
+                  ["color.category.amber.background", "color.background.canvas"],
+                  ["color.category.amber.background", "color.background.surface"],
+                  ["color.category.amber.background", "color.background.sidebar"],
+                  ["color.category.amber.background", "color.background.muted"],
+                  ["color.category.amber.background", "color.background.selected"]
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "rose": {
+        "text": {
+          "$value": {"colorSpace": "oklch", "components": [0.7937, 0.12148, 11.26], "hex": "#FF9AA8"},
+          "$description": "Text and glyphs in the list color rose: a section title, the glyph on the list's tile.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {"kind": "text", "on": ["color.background.canvas", "color.background.muted", "color.background.surface"]},
+              {
+                "kind": "non-text",
+                "on": [
+                  ["color.category.rose.background", "color.background.canvas"],
+                  ["color.category.rose.background", "color.background.surface"],
+                  ["color.category.rose.background", "color.background.sidebar"],
+                  ["color.category.rose.background", "color.background.muted"],
+                  ["color.category.rose.background", "color.background.selected"]
+                ]
+              }
+            ]
+          }
+        },
+        "fill": {
+          "$value": {"colorSpace": "oklch", "components": [0.5865, 0.16367, 14.05], "hex": "#CA495E"},
+          "$description": "The disc of a done check, a lit chip: the list color rose.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["things that carry a list's color"],
+              "avoid": "States such as danger or success: use their own tokens."
+            }
+          }
+        }
+      },
+      "green": {
+        "text": {
+          "$value": {"colorSpace": "oklch", "components": [0.7682, 0.0878, 157.62], "hex": "#83C59E"},
+          "$description": "Text and glyphs in the list color green: a section title, the glyph on the list's tile.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {"kind": "text", "on": ["color.background.canvas", "color.background.muted", "color.background.surface"]},
+              {
+                "kind": "non-text",
+                "on": [
+                  ["color.category.green.background", "color.background.canvas"],
+                  ["color.category.green.background", "color.background.surface"],
+                  ["color.category.green.background", "color.background.sidebar"],
+                  ["color.category.green.background", "color.background.muted"],
+                  ["color.category.green.background", "color.background.selected"]
+                ]
+              }
+            ]
+          }
+        },
+        "fill": {
+          "$value": {"colorSpace": "oklch", "components": [0.555, 0.11201, 155.58], "hex": "#2F8656"},
+          "$description": "The disc of a done check, a lit chip: the list color green.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["things that carry a list's color"],
+              "avoid": "States such as danger or success: use their own tokens."
+            }
+          }
+        }
+      },
+      "stone": {
+        "text": {
+          "$value": {"colorSpace": "oklch", "components": [0.7807, 0.01079, 81.79], "hex": "#BBB7B0"},
+          "$description": "Text and glyphs in the list color stone: a section title, the glyph on the list's tile.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {"kind": "text", "on": ["color.background.canvas", "color.background.muted", "color.background.surface"]},
+              {
+                "kind": "non-text",
+                "on": [
+                  ["color.category.stone.background", "color.background.canvas"],
+                  ["color.category.stone.background", "color.background.surface"],
+                  ["color.category.stone.background", "color.background.sidebar"],
+                  ["color.category.stone.background", "color.background.muted"],
+                  ["color.category.stone.background", "color.background.selected"]
+                ]
+              }
+            ]
+          }
+        },
+        "fill": {
+          "$value": {"colorSpace": "oklch", "components": [0.5678, 0.01354, 79.75], "hex": "#7B766E"},
+          "$description": "The disc of a done check, a lit chip: the list color stone.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["things that carry a list's color"],
+              "avoid": "States such as danger or success: use their own tokens."
+            }
+          }
+        }
+      },
+      "indigo": {
+        "text": {
+          "$value": {"colorSpace": "oklch", "components": [0.7876, 0.11155, 284.12], "hex": "#B1B0FF"},
+          "$description": "Text and glyphs in the list color indigo: a section title, the glyph on the list's tile.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {"kind": "text", "on": ["color.background.canvas", "color.background.muted", "color.background.surface"]},
+              {
+                "kind": "non-text",
+                "on": [
+                  ["color.category.indigo.background", "color.background.canvas"],
+                  ["color.category.indigo.background", "color.background.surface"],
+                  ["color.category.indigo.background", "color.background.sidebar"],
+                  ["color.category.indigo.background", "color.background.muted"],
+                  ["color.category.indigo.background", "color.background.selected"]
+                ]
+              }
+            ]
+          }
+        },
+        "border": {
+          "$value": {"colorSpace": "oklch", "components": [0.6398, 0.15811, 282.64], "hex": "#807CE8"},
+          "$description": "The ring of an open check in the list color indigo.",
+          "$extensions": {
+            "dev.westron.contrast": [{"kind": "non-text", "on": ["color.background.canvas", "color.background.surface"]}]
+          }
+        }
+      },
+      "teal": {
+        "text": {
+          "$value": {"colorSpace": "oklch", "components": [0.7714, 0.07897, 192.55], "hex": "#75C5C2"},
+          "$description": "Text and glyphs in the list color teal: a section title, the glyph on the list's tile.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {"kind": "text", "on": ["color.background.canvas", "color.background.muted", "color.background.surface"]},
+              {
+                "kind": "non-text",
+                "on": [
+                  ["color.category.teal.background", "color.background.canvas"],
+                  ["color.category.teal.background", "color.background.surface"],
+                  ["color.category.teal.background", "color.background.sidebar"],
+                  ["color.category.teal.background", "color.background.muted"],
+                  ["color.category.teal.background", "color.background.selected"]
+                ]
+              }
+            ]
+          }
+        },
+        "fill": {
+          "$value": {"colorSpace": "oklch", "components": [0.5562, 0.09197, 192.91], "hex": "#118482"},
+          "$description": "The disc of a done check, a lit chip: the list color teal.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["things that carry a list's color"],
+              "avoid": "States such as danger or success: use their own tokens."
+            }
+          }
+        }
+      },
+      "pink": {
+        "text": {
+          "$value": {"colorSpace": "oklch", "components": [0.795, 0.11525, 349.63], "hex": "#F49DC7"},
+          "$description": "Text and glyphs in the list color pink: a section title, the glyph on the list's tile.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {"kind": "text", "on": ["color.background.canvas", "color.background.muted", "color.background.surface"]},
+              {
+                "kind": "non-text",
+                "on": [
+                  ["color.category.pink.background", "color.background.canvas"],
+                  ["color.category.pink.background", "color.background.surface"],
+                  ["color.category.pink.background", "color.background.sidebar"],
+                  ["color.category.pink.background", "color.background.muted"],
+                  ["color.category.pink.background", "color.background.selected"]
+                ]
+              }
+            ]
+          }
+        },
+        "fill": {
+          "$value": {"colorSpace": "oklch", "components": [0.5879, 0.15478, 351.49], "hex": "#BE4F87"},
+          "$description": "The disc of a done check, a lit chip: the list color pink.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["things that carry a list's color"],
+              "avoid": "States such as danger or success: use their own tokens."
+            }
+          }
+        }
+      },
+      "orange": {
+        "text": {
+          "$value": {"colorSpace": "oklch", "components": [0.7892, 0.11109, 47.48], "hex": "#F5A47B"},
+          "$description": "Text and glyphs in the list color orange: a section title, the glyph on the list's tile.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {"kind": "text", "on": ["color.background.canvas", "color.background.muted", "color.background.surface"]},
+              {
+                "kind": "non-text",
+                "on": [
+                  ["color.category.orange.background", "color.background.canvas"],
+                  ["color.category.orange.background", "color.background.surface"],
+                  ["color.category.orange.background", "color.background.sidebar"],
+                  ["color.category.orange.background", "color.background.muted"],
+                  ["color.category.orange.background", "color.background.selected"]
+                ]
+              }
+            ]
+          }
+        },
+        "fill": {
+          "$value": {"colorSpace": "oklch", "components": [0.5807, 0.14774, 45.04], "hex": "#BF5821"},
+          "$description": "The disc of a done check, a lit chip: the list color orange.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["things that carry a list's color"],
+              "avoid": "States such as danger or success: use their own tokens."
+            }
+          }
+        }
+      },
+      "violet": {
+        "text": {
+          "$value": {"colorSpace": "oklch", "components": [0.7902, 0.12313, 302.6], "hex": "#CAA7FC"},
+          "$description": "Text and glyphs in the list color violet: a section title, the glyph on the list's tile.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {"kind": "text", "on": ["color.background.canvas", "color.background.muted", "color.background.surface"]},
+              {
+                "kind": "non-text",
+                "on": [
+                  ["color.category.violet.background", "color.background.canvas"],
+                  ["color.category.violet.background", "color.background.surface"],
+                  ["color.category.violet.background", "color.background.sidebar"],
+                  ["color.category.violet.background", "color.background.muted"],
+                  ["color.category.violet.background", "color.background.selected"]
+                ]
+              }
+            ]
+          }
+        },
+        "border": {
+          "$value": {"colorSpace": "oklch", "components": [0.6432, 0.14558, 301.97], "hex": "#9E75D6"},
+          "$description": "The ring of an open check in the list color violet.",
+          "$extensions": {
+            "dev.westron.contrast": [{"kind": "non-text", "on": ["color.background.canvas", "color.background.surface"]}]
+          }
+        },
+        "fill": {
+          "$value": {"colorSpace": "oklch", "components": [0.5833, 0.16305, 301.17], "hex": "#8D5FCB"},
+          "$description": "The disc of a done check, a lit chip: the list color violet.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["things that carry a list's color"],
+              "avoid": "States such as danger or success: use their own tokens."
+            }
+          }
+        }
+      },
+      "sky": {
+        "text": {
+          "$value": {"colorSpace": "oklch", "components": [0.7741, 0.08391, 233.62], "hex": "#7EBFE3"},
+          "$description": "Text and glyphs in the list color sky: a section title, the glyph on the list's tile.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {"kind": "text", "on": ["color.background.canvas", "color.background.muted", "color.background.surface"]},
+              {
+                "kind": "non-text",
+                "on": [
+                  ["color.category.sky.background", "color.background.canvas"],
+                  ["color.category.sky.background", "color.background.surface"],
+                  ["color.category.sky.background", "color.background.sidebar"],
+                  ["color.category.sky.background", "color.background.muted"],
+                  ["color.category.sky.background", "color.background.selected"]
+                ]
+              }
+            ]
+          }
+        },
+        "fill": {
+          "$value": {"colorSpace": "oklch", "components": [0.5634, 0.10727, 236.56], "hex": "#267EAC"},
+          "$description": "The disc of a done check, a lit chip: the list color sky.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["things that carry a list's color"],
+              "avoid": "States such as danger or success: use their own tokens."
+            }
+          }
+        }
+      }
+    }
+  }
+}
