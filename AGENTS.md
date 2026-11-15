@@ -4,10 +4,10 @@ westron is a design system for technical products: a single source (tokens, comp
 design language) and a native library on each platform. The pilot platform is Apple (SwiftUI),
 the pilot product is [todo-app](https://github.com/maldrakar/todo-app) (decisions/0006).
 
-Phase 0 "Scaffold" is in progress; phases are GitHub milestones, tasks are issues. Order matters more than speed:
-tokens first (phase 1), then the contract schema and the end-to-end Button slice (phase 2). Until API generation
-and the parity lint work on Button, no second component starts: otherwise drift would appear before the mechanism
-that catches it (`reports/`, section "Work plan").
+Phase 1 "Design language and tokens" is in progress; phases are GitHub milestones, tasks are issues. Order matters
+more than speed: tokens first (phase 1), then the contract schema and the end-to-end Button slice (phase 2). Until
+API generation and the parity lint work on Button, no second component starts: otherwise drift would appear before
+the mechanism that catches it (`reports/`, section "Work plan").
 
 ## Where things are
 
@@ -15,9 +15,11 @@ that catches it (`reports/`, section "Work plan").
 |---|---|
 | `decisions/` | Accepted decisions (ADR). Read them before you change the approach |
 | `design-language/` | Design language, chapters `00–09` (phase 1) |
-| `tokens/` | DTCG 2025.10 tokens and the mode resolver (phase 1) |
+| `tokens/` | DTCG 2025.10 tokens and the mode resolver `westron.resolver.json` (decisions/0010) |
 | `spec/components/<id>/` | Component contract `<id>.spec.yaml`, its decisions and reference screenshots (phase 2) |
-| `platforms/apple/Sources/WestronUI/` | SwiftUI styles and components: what products import |
+| `spec/icons/icons.yaml` | Icon registry: westron's icon names, what each glyph draws, its SF Symbol, the default (decisions/0011) |
+| `platforms/apple/Sources/WestronTokens/` | Token values as plain Swift with no imports, generated (decisions/0010) |
+| `platforms/apple/Sources/WestronUI/` | SwiftUI styles, components and token accessors: what products import |
 | `platforms/apple/Sources/WestronCatalog/` | Registry of catalog entries and its host; snapshot tests reuse them too |
 | `platforms/apple/Catalog/` | Catalog app (iOS + macOS) and the screenshot UI test; the project is `project.xcproj` in Xcode 27 format, not `project.pbxproj` |
 | `tools/` | Generators and checks: a separate SwiftPM package with the `westron` executable, and scripts for Apple |
@@ -39,16 +41,19 @@ tools/apple/check.sh all          # everything at once
 tools/apple/catalog-screenshot.sh ios   --entry environment --appearance dark   # prints the path to the PNG
 tools/apple/catalog-screenshot.sh macos --entry environment                     # the same on macOS
 
-tools/check.sh                    # build and test tools/, then the two checks below (CI runs it on Linux)
+tools/check.sh                    # build and test tools/, then the checks below (CI runs it on Linux)
 tools/westron lint raw-values     # no raw values in WestronUI
 tools/westron generate            # regenerate code from the sources
 tools/westron generate --check    # generated code matches a fresh generation
+tools/westron icons check         # the icon registry spec/icons/icons.yaml is valid
+tools/westron tokens check        # token files and the resolver: schema, subset, every mode combination
+tools/westron tokens contrast     # WCAG 2 contrast of every declared pair in every theme (--all for the table)
 ```
 
 A screenshot is how you see your work: open the PNG and look at it before you say "done".
-Parameters: `--entry <id>` (default `environment`), `--appearance light|dark`,
+Parameters: `--entry <id>` (default `environment`), `--appearance light|dark`, `--contrast standard|high`,
 `--dynamic-type xSmall…accessibility5`, `--device "<simulator>"` (default `iPhone 17` or `$WESTRON_SIM_DEVICE`),
-`--out <file.png>`. Without `--out` the PNG goes to `.build/screenshots/<platform>-<id>[-<theme>][-<size>].png`,
+`--out <file.png>`. Without `--out` the PNG goes to `.build/screenshots/<platform>-<id>[-<theme>][-hc][-<size>].png`,
 the log to `.build/logs/`. On macOS, screenshots need Automation Mode enabled once (`platforms/apple/README.md`).
 
 ## Rules
@@ -81,5 +86,9 @@ the log to `.build/logs/`. On macOS, screenshots need Automation Mode enabled on
 - [0007](decisions/0007-license.md) licenses
 - [0008](decisions/0008-apple-toolchain-and-catalog.md) Apple: versions, toolchain, catalog and screenshots
 - [0009](decisions/0009-tools-in-swift.md) tools in Swift
+- [0010](decisions/0010-token-structure-and-modes.md) token structure, modes and the Apple output
+- [0011](decisions/0011-icons-and-fonts.md) icons and fonts
+- [0012](decisions/0012-color.md) color (proposed)
+- [0013](decisions/0013-typography-space-shape-motion.md) typography, space, shape and motion (proposed)
 
 The final research report, with sources: `reports/`.
