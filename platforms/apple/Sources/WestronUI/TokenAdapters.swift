@@ -2,6 +2,7 @@
 // Generated/Tokens+SwiftUI.swift call them: `Color.textSecondary` is `Color(Westron.Color.textSecondary)`. An icon
 // draws the SF Symbol that Generated/Icons+SwiftUI.swift names for it.
 
+import CoreText
 import SwiftUI
 import WestronTokens
 
@@ -28,12 +29,37 @@ extension Color.RGBColorSpace {
 }
 
 extension Font {
-    /// A text role as the system font in the role's text style, design and weight, so that it follows Dynamic Type
-    /// (decisions/0011): `Font.system(_:design:weight:)`, never `Font.custom`.
+    /// A text role in its text style, so that it follows Dynamic Type (decisions/0011): a font westron ships as
+    /// `Font.custom(_:size:relativeTo:)`, and the system font as `Font.system(_:design:weight:)`.
     public init(_ role: Westron.TextRole) {
-        self = .system(
-            Font.TextStyle(role.textStyle), design: Font.Design(role.design), weight: Font.Weight(role.weight))
+        if let font = role.font, BundledFonts.registered {
+            self = .custom(font, size: CGFloat(role.size), relativeTo: Font.TextStyle(role.textStyle))
+        } else {
+            self = .system(
+                Font.TextStyle(role.textStyle), design: Font.Design(role.design), weight: Font.Weight(role.weight))
+        }
     }
+}
+
+/// The fonts westron ships, in WestronUI's `Fonts` folder with their licenses. They are registered for the process
+/// the first time a text role needs one, so a product has nothing to set up.
+enum BundledFonts {
+    /// Whether the fonts are registered. A failure leaves the roles on the system font, which every one of them
+    /// names as its fallback.
+    static let registered: Bool = {
+        guard let urls = Bundle.module.urls(forResourcesWithExtension: "ttf", subdirectory: "Fonts"), !urls.isEmpty
+        else { return false }
+        var failed = false
+        for url in urls {
+            var error: Unmanaged<CFError>?
+            // A font that is already registered, by an earlier test run or by the app itself, is not a failure.
+            if !CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error), let error {
+                let code = CFErrorGetCode(error.takeRetainedValue())
+                failed = failed || code != CTFontManagerError.alreadyRegistered.rawValue
+            }
+        }
+        return !failed
+    }()
 }
 
 extension Font.TextStyle {
@@ -104,12 +130,39 @@ extension CGFloat {
 }
 
 extension View {
-    /// Casts a shadow token: its color, its radius (half the CSS blur) and its offset (decisions/0013).
+    /// Casts a shadow token in the theme of the environment: each layer's color, its radius (half the CSS blur) and
+    /// its offset (decisions/0013). A theme without layers casts none.
     ///
     ///     card.shadow(.raised)
     public func shadow(_ shadow: Westron.Shadow) -> some View {
-        self.shadow(
-            color: Color(shadow.color), radius: CGFloat(shadow.radius), x: CGFloat(shadow.x), y: CGFloat(shadow.y))
+        modifier(ShadowModifier(shadow: shadow))
+    }
+}
+
+private struct ShadowModifier: ViewModifier {
+    let shadow: Westron.Shadow
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var contrast
+
+    func body(content: Content) -> some View {
+        let theme = Westron.Theme(colorScheme: colorScheme, contrast: contrast)
+        return shadow[theme].reduce(AnyView(content)) { view, layer in
+            AnyView(
+                view.shadow(
+                    color: Color(layer.color), radius: CGFloat(layer.radius), x: CGFloat(layer.x), y: CGFloat(layer.y)))
+        }
+    }
+}
+
+extension Westron.Theme {
+    /// The theme of a SwiftUI environment: its color scheme and its contrast.
+    public init(colorScheme: ColorScheme, contrast: ColorSchemeContrast) {
+        switch (colorScheme, contrast) {
+        case (.dark, .increased): self = .darkHighContrast
+        case (.dark, _): self = .dark
+        case (_, .increased): self = .lightHighContrast
+        default: self = .light
+        }
     }
 }
 

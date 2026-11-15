@@ -14,6 +14,7 @@ suits them better.
 |---|---|---|
 | Everything except `design-language/`: code, tokens, contracts, generators, decisions, documentation | MIT | `LICENSE` |
 | Design language texts and illustrations in `design-language/` | CC BY 4.0 | `design-language/LICENSE` |
+| The fonts westron ships, Onest and Geist Mono, in `platforms/apple/Sources/WestronUI/Fonts/` (added 2026-11-15, decisions/0011) | SIL OFL 1.1 | `<font>-OFL.txt` beside them |
 
 ## Why
 

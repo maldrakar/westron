@@ -1650,162 +1650,194 @@ extension Westron {
 }
 
 extension Westron.TextRole {
-    /// The title of a screen. The size follows the largeTitle text style (the pilot's largeTitle).
+    /// The title of a screen. Onest Bold at the size of the largeTitle text style, tracked in by 1 % of its size.
     public static let headingLarge = Westron.TextRole(
         name: "typography.heading.large",
         textStyle: .largeTitle,
-        design: .rounded,
-        weight: .heavy,
+        design: .default,
+        weight: .bold,
+        font: "Onest-Bold",
         size: 34,
         lineHeight: 1.206,
-        letterSpacing: 0)
+        letterSpacing: -0.34)
 
-    /// The title of an empty state or a short standalone message. The size follows the title3 text style (the pilot's
-    /// emptyScreenTitle).
+    /// The title of a card, a section of a screen or an empty state. Onest Bold at the size of the title3 text style.
     public static let headingMedium = Westron.TextRole(
         name: "typography.heading.medium",
         textStyle: .title3,
-        design: .rounded,
-        weight: .heavy,
+        design: .default,
+        weight: .bold,
+        font: "Onest-Bold",
         size: 20,
         lineHeight: 1.25,
-        letterSpacing: 0)
+        letterSpacing: -0.2)
 
-    /// The title of a section or a block inside a screen. The size follows the headline text style (the pilot's
-    /// sectionTitle).
+    /// The title of a block inside a card or a list. Onest SemiBold at the size of the headline text style.
     public static let headingSmall = Westron.TextRole(
         name: "typography.heading.small",
         textStyle: .headline,
-        design: .rounded,
-        weight: .heavy,
+        design: .default,
+        weight: .semibold,
+        font: "Onest-SemiBold",
         size: 17,
         lineHeight: 1.294,
-        letterSpacing: 0)
+        letterSpacing: -0.17)
 
-    /// A short label above a group, written in capitals by the product, such as an area's name in a sidebar. The size
-    /// follows the caption text style (the pilot's areaCaption).
+    /// A short label above a group, written in capitals by the product, such as a sidebar section. Onest SemiBold at
+    /// the size of the caption text style, tracked out by 6 % of its size.
     public static let headingOverline = Westron.TextRole(
         name: "typography.heading.overline",
         textStyle: .caption,
-        design: .rounded,
-        weight: .heavy,
+        design: .default,
+        weight: .semibold,
+        font: "Onest-SemiBold",
         size: 12,
         lineHeight: 1.333,
-        letterSpacing: 0)
+        letterSpacing: 0.72)
 
-    /// Main text: a row's title, a field's text, a search field. The size follows the body text style (the pilot's
-    /// rowTitle, search).
+    /// Main text: a row's title, a field's text, a paragraph. The size follows the body text style.
     public static let bodyRegular = Westron.TextRole(
         name: "typography.body.regular",
         textStyle: .body,
         design: .default,
         weight: .regular,
+        font: nil,
         size: 17,
         lineHeight: 1.294,
         letterSpacing: 0)
 
-    /// Main text that needs emphasis: a row with children, the selected row, a card's title. The size follows the body
-    /// text style (the pilot's rowTitleEmphasized).
+    /// Main text that needs emphasis: the selected row, a row with children. The size follows the body text style.
     public static let bodyStrong = Westron.TextRole(
         name: "typography.body.strong",
         textStyle: .body,
         design: .default,
         weight: .semibold,
+        font: nil,
         size: 17,
         lineHeight: 1.294,
         letterSpacing: 0)
 
     /// Text one step below the main text: a nested row's title, a card in a column. The size follows the callout text
-    /// style (the pilot's nestedRowTitle).
+    /// style.
     public static let calloutRegular = Westron.TextRole(
         name: "typography.callout.regular",
         textStyle: .callout,
         design: .default,
         weight: .regular,
+        font: nil,
         size: 16,
         lineHeight: 1.312,
         letterSpacing: 0)
 
-    /// `callout.regular` with emphasis. The size follows the callout text style (the pilot's nestedRowTitleEmphasized).
+    /// `callout.regular` with emphasis. The size follows the callout text style.
     public static let calloutStrong = Westron.TextRole(
         name: "typography.callout.strong",
         textStyle: .callout,
         design: .default,
         weight: .semibold,
+        font: nil,
         size: 16,
         lineHeight: 1.312,
         letterSpacing: 0)
 
-    /// Supporting text: counts, a subtitle, notes, a subtask's title. The size follows the subheadline text style (the
-    /// pilot's count, notes).
+    /// Supporting text: a subtitle, notes, a count. The size follows the subheadline text style.
     public static let subheadlineRegular = Westron.TextRole(
         name: "typography.subheadline.regular",
         textStyle: .subheadline,
         design: .default,
         weight: .regular,
+        font: nil,
         size: 15,
         lineHeight: 1.333,
         letterSpacing: 0)
 
-    /// A row that adds something, such as "Add task". The size follows the subheadline text style (the pilot's addRow).
+    /// A row that adds something, such as "Add task". The size follows the subheadline text style.
     public static let subheadlineMedium = Westron.TextRole(
         name: "typography.subheadline.medium",
         textStyle: .subheadline,
         design: .default,
         weight: .medium,
+        font: nil,
         size: 15,
         lineHeight: 1.333,
         letterSpacing: 0)
 
-    /// A word on a bar or a button beside a glyph. The size follows the subheadline text style (the pilot's barLabel).
+    /// The label of a button or of a bar item. The size follows the subheadline text style.
     public static let subheadlineStrong = Westron.TextRole(
         name: "typography.subheadline.strong",
         textStyle: .subheadline,
         design: .default,
         weight: .semibold,
+        font: nil,
         size: 15,
         lineHeight: 1.333,
         letterSpacing: 0)
 
-    /// A hint under a title that says what to do. The size follows the footnote text style (the pilot's hint).
+    /// Secondary detail: a hint, a cell in a dense table, a line under a title. The size follows the footnote text
+    /// style.
     public static let footnoteRegular = Westron.TextRole(
         name: "typography.footnote.regular",
         textStyle: .footnote,
         design: .default,
         weight: .regular,
+        font: nil,
         size: 13,
         lineHeight: 1.385,
         letterSpacing: 0)
 
-    /// A small label: an area's name, a date, a tag's name. The size follows the footnote text style (the pilot's
-    /// areaLabel).
+    /// A small label: a column header, a date, a tag's name. The size follows the footnote text style.
     public static let footnoteMedium = Westron.TextRole(
         name: "typography.footnote.medium",
         textStyle: .footnote,
         design: .default,
         weight: .medium,
+        font: nil,
         size: 13,
         lineHeight: 1.385,
         letterSpacing: 0)
 
-    /// The words on a chip or a pill. The size follows the footnote text style (the pilot's pill).
+    /// The words on a chip, a pill or a small button. The size follows the footnote text style.
     public static let footnoteStrong = Westron.TextRole(
         name: "typography.footnote.strong",
         textStyle: .footnote,
         design: .default,
         weight: .semibold,
+        font: nil,
         size: 13,
         lineHeight: 1.385,
         letterSpacing: 0)
 
-    /// A line of metadata under a title. The size follows the caption text style (the pilot's meta).
+    /// Metadata and badges: a status badge, a line of metadata under a title. The size follows the caption text style.
     public static let captionMedium = Westron.TextRole(
         name: "typography.caption.medium",
         textStyle: .caption,
         design: .default,
         weight: .medium,
+        font: nil,
         size: 12,
         lineHeight: 1.333,
+        letterSpacing: 0)
+
+    /// Code, logs, identifiers and hashes: Geist Mono at the size of the footnote text style.
+    public static let codeRegular = Westron.TextRole(
+        name: "typography.code.regular",
+        textStyle: .footnote,
+        design: .monospaced,
+        weight: .regular,
+        font: "GeistMono-Regular",
+        size: 13,
+        lineHeight: 1.385,
+        letterSpacing: 0)
+
+    /// Emphasis inside code or a log: a keyword, a level. Geist Mono SemiBold at the size of the footnote text style.
+    public static let codeStrong = Westron.TextRole(
+        name: "typography.code.strong",
+        textStyle: .footnote,
+        design: .monospaced,
+        weight: .semibold,
+        font: "GeistMono-SemiBold",
+        size: 13,
+        lineHeight: 1.385,
         letterSpacing: 0)
 
     /// Every text role in token order.
@@ -1825,259 +1857,230 @@ extension Westron.TextRole {
         footnoteMedium,
         footnoteStrong,
         captionMedium,
+        codeRegular,
+        codeStrong,
     ]
 }
 
 extension Westron.Transition {
-    /// A check popping as a task is done.
-    public static let check = Westron.Transition(
-        name: "motion.check",
-        duration: 0.45,
-        delay: 0,
-        curve: Curve(x1: 0.34, y1: 1.56, x2: 0.64, y2: 1),
-        spring: Spring(duration: 0.45, bounce: 0))
-
-    /// A check's ring and fill changing color.
-    public static let checkFill = Westron.Transition(
-        name: "motion.check-fill",
-        duration: 0.22,
-        delay: 0,
-        curve: Curve(x1: 0.25, y1: 0.1, x2: 0.25, y2: 1),
-        spring: nil)
-
-    /// A check's mark drawing itself in and out, after its colors start.
-    public static let checkMark = Westron.Transition(
-        name: "motion.check-mark",
-        duration: 0.26,
-        delay: 0.08,
-        curve: Curve(x1: 0.25, y1: 0.1, x2: 0.25, y2: 1),
-        spring: nil)
-
-    /// A title changing color as its task is checked.
-    public static let titleFade = Westron.Transition(
-        name: "motion.title-fade",
-        duration: 0.25,
-        delay: 0,
-        curve: Curve(x1: 0.25, y1: 0.1, x2: 0.25, y2: 1),
-        spring: nil)
-
-    /// A done row leaving, after a wait long enough to read its check.
-    public static let rowLeave = Westron.Transition(
-        name: "motion.row-leave",
-        duration: 0.32,
-        delay: 0.7,
-        curve: Curve(x1: 0.42, y1: 0, x2: 1, y2: 1),
-        spring: nil)
-
-    /// A deleted row leaving at once.
-    public static let rowDelete = Westron.Transition(
-        name: "motion.row-delete",
-        duration: 0.32,
-        delay: 0,
-        curve: Curve(x1: 0.42, y1: 0, x2: 1, y2: 1),
-        spring: nil)
-
-    /// A small element appearing or moving into place: a row, a chevron, a dragged item.
-    public static let popover = Westron.Transition(
-        name: "motion.popover",
+    /// A change of color or opacity: a hover tint, a selection, a fade in or out. It has no spring and no bounce.
+    public static let fade = Westron.Transition(
+        name: "motion.fade",
         duration: 0.2,
         delay: 0,
-        curve: Curve(x1: 0.34, y1: 1.4, x2: 0.64, y2: 1),
-        spring: Spring(duration: 0.2, bounce: 0))
-
-    /// A card opening in place of its row.
-    public static let cardOpen = Westron.Transition(
-        name: "motion.card-open",
-        duration: 0.26,
-        delay: 0,
-        curve: Curve(x1: 0.2, y1: 0.8, x2: 0.2, y2: 1),
+        curve: Curve(x1: 0.25, y1: 0.1, x2: 0.25, y2: 1),
         spring: nil)
 
-    /// Something landing where it was dropped.
-    public static let drop = Westron.Transition(
-        name: "motion.drop",
-        duration: 0.32,
+    /// A control answering a press: its tint, and its scale down to 98 %.
+    public static let press = Westron.Transition(
+        name: "motion.press",
+        duration: 0.15,
         delay: 0,
-        curve: Curve(x1: 0.34, y1: 1.56, x2: 0.64, y2: 1),
-        spring: Spring(duration: 0.32, bounce: 0))
+        curve: Curve(x1: 0.2, y1: 0, x2: 0, y2: 1),
+        spring: Spring(duration: 0.15, bounce: 0))
 
-    /// A row sliding aside for its actions and back.
-    public static let swipe = Westron.Transition(
-        name: "motion.swipe",
+    /// A small thing changing place: a switch's thumb, a segmented control's selection, a checkbox.
+    public static let toggle = Westron.Transition(
+        name: "motion.toggle",
         duration: 0.25,
         delay: 0,
-        curve: Curve(x1: 0.2, y1: 0.8, x2: 0.2, y2: 1),
+        curve: Curve(x1: 0.2, y1: 0, x2: 0, y2: 1),
+        spring: Spring(duration: 0.25, bounce: 0.1))
+
+    /// A check popping into a done task. The one motion with a visible overshoot.
+    public static let check = Westron.Transition(
+        name: "motion.check",
+        duration: 0.35,
+        delay: 0,
+        curve: Curve(x1: 0.2, y1: 0, x2: 0, y2: 1),
+        spring: Spring(duration: 0.35, bounce: 0.2))
+
+    /// Something moving to a new place: a reordered row, a dropped item, a section folding or unfolding.
+    public static let move = Westron.Transition(
+        name: "motion.move",
+        duration: 0.35,
+        delay: 0,
+        curve: Curve(x1: 0.2, y1: 0, x2: 0, y2: 1),
+        spring: Spring(duration: 0.35, bounce: 0.15))
+
+    /// Something appearing: a popover, a menu, an inserted row.
+    public static let enter = Westron.Transition(
+        name: "motion.enter",
+        duration: 0.35,
+        delay: 0,
+        curve: Curve(x1: 0, y1: 0, x2: 0, y2: 1),
+        spring: Spring(duration: 0.35, bounce: 0.15))
+
+    /// Something leaving: a deleted row, a closing popover. Leaving is quicker than entering and does not bounce.
+    public static let leave = Westron.Transition(
+        name: "motion.leave",
+        duration: 0.2,
+        delay: 0,
+        curve: Curve(x1: 0.3, y1: 0, x2: 1, y2: 1),
         spring: nil)
 
-    /// A chevron turning as a section folds or opens.
-    public static let fold = Westron.Transition(
-        name: "motion.fold",
-        duration: 0.22,
+    /// A large surface appearing: a sheet, a side panel, an opened card.
+    public static let reveal = Westron.Transition(
+        name: "motion.reveal",
+        duration: 0.5,
         delay: 0,
-        curve: Curve(x1: 0.25, y1: 0.1, x2: 0.25, y2: 1),
-        spring: nil)
-
-    /// The highlight under something just moved, fading out.
-    public static let highlightFade = Westron.Transition(
-        name: "motion.highlight-fade",
-        duration: 1.6,
-        delay: 0,
-        curve: Curve(x1: 0.25, y1: 0.1, x2: 0.25, y2: 1),
-        spring: nil)
-
-    /// A chip lighting and going out.
-    public static let chipToggle = Westron.Transition(
-        name: "motion.chip-toggle",
-        duration: 0.18,
-        delay: 0,
-        curve: Curve(x1: 0.25, y1: 0.1, x2: 0.25, y2: 1),
-        spring: nil)
-
-    /// A drop target tinting under a drag, a dragged item dimming.
-    public static let dropHighlight = Westron.Transition(
-        name: "motion.drop-highlight",
-        duration: 0.15,
-        delay: 0,
-        curve: Curve(x1: 0.25, y1: 0.1, x2: 0.25, y2: 1),
-        spring: nil)
-
-    /// A control's tint coming and going under the pointer.
-    public static let hoverTint = Westron.Transition(
-        name: "motion.hover-tint",
-        duration: 0.12,
-        delay: 0,
-        curve: Curve(x1: 0.25, y1: 0.1, x2: 0.25, y2: 1),
-        spring: nil)
-
-    /// A card's shadow deepening under the pointer and back.
-    public static let hoverShadow = Westron.Transition(
-        name: "motion.hover-shadow",
-        duration: 0.15,
-        delay: 0,
-        curve: Curve(x1: 0.25, y1: 0.1, x2: 0.25, y2: 1),
-        spring: nil)
+        curve: Curve(x1: 0.2, y1: 0, x2: 0, y2: 1),
+        spring: Spring(duration: 0.5, bounce: 0.1))
 
     /// Every motion in token order.
     public static let all: [Westron.Transition] = [
+        fade,
+        press,
+        toggle,
         check,
-        checkFill,
-        checkMark,
-        titleFade,
-        rowLeave,
-        rowDelete,
-        popover,
-        cardOpen,
-        drop,
-        swipe,
-        fold,
-        highlightFade,
-        chipToggle,
-        dropHighlight,
-        hoverTint,
-        hoverShadow,
+        move,
+        enter,
+        leave,
+        reveal,
     ]
 }
 
 extension Westron.Shadow {
-    /// A card at rest on a fill.
-    public static let resting = Westron.Shadow(
-        name: "shadow.resting",
-        color: Westron.RGB(hex: 0x000000, opacity: 0.06),
-        x: 0,
-        y: 1,
-        blur: 2,
-        spread: 0)
-
-    /// A card under the pointer.
-    public static let hovered = Westron.Shadow(
-        name: "shadow.hovered",
-        color: Westron.RGB(hex: 0x000000, opacity: 0.08),
-        x: 0,
-        y: 3,
-        blur: 10,
-        spread: 0)
-
-    /// A control raised off what it stands on: a floating button, an open card.
+    /// A card or a panel raised off the canvas.
     public static let raised = Westron.Shadow(
         name: "shadow.raised",
-        color: Westron.RGB(hex: 0x000000, opacity: 0.12),
-        x: 0,
-        y: 5,
-        blur: 24,
-        spread: 0)
+        light: [
+            Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.06), x: 0, y: 1, blur: 2, spread: 0),
+            Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.1), x: 0, y: 1, blur: 3, spread: 0),
+        ],
+        dark: [],
+        lightHighContrast: [
+            Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.06), x: 0, y: 1, blur: 2, spread: 0),
+            Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.1), x: 0, y: 1, blur: 3, spread: 0),
+        ],
+        darkHighContrast: [])
+
+    /// A popover, a menu or a floating button westron draws over the content.
+    public static let overlay = Westron.Shadow(
+        name: "shadow.overlay",
+        light: [
+            Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.08), x: 0, y: 4, blur: 12, spread: 0),
+            Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.12), x: 0, y: 12, blur: 32, spread: 0),
+        ],
+        dark: [
+            Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.24), x: 0, y: 4, blur: 12, spread: 0),
+            Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.36), x: 0, y: 12, blur: 32, spread: 0),
+        ],
+        lightHighContrast: [
+            Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.08), x: 0, y: 4, blur: 12, spread: 0),
+            Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.12), x: 0, y: 12, blur: 32, spread: 0),
+        ],
+        darkHighContrast: [
+            Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.24), x: 0, y: 4, blur: 12, spread: 0),
+            Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.36), x: 0, y: 12, blur: 32, spread: 0),
+        ])
 
     /// Something a drag carries.
-    public static let lifted = Westron.Shadow(
-        name: "shadow.lifted",
-        color: Westron.RGB(hex: 0x000000, opacity: 0.22),
-        x: 0,
-        y: 10,
-        blur: 36,
-        spread: 0)
+    public static let dragged = Westron.Shadow(
+        name: "shadow.dragged",
+        light: [
+            Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.1), x: 0, y: 8, blur: 16, spread: 0),
+            Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.16), x: 0, y: 16, blur: 40, spread: 0),
+        ],
+        dark: [
+            Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.3), x: 0, y: 8, blur: 16, spread: 0),
+            Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.48), x: 0, y: 16, blur: 40, spread: 0),
+        ],
+        lightHighContrast: [
+            Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.1), x: 0, y: 8, blur: 16, spread: 0),
+            Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.16), x: 0, y: 16, blur: 40, spread: 0),
+        ],
+        darkHighContrast: [
+            Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.3), x: 0, y: 8, blur: 16, spread: 0),
+            Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.48), x: 0, y: 16, blur: 40, spread: 0),
+        ])
 
     /// Every shadow in token order.
     public static let all: [Westron.Shadow] = [
-        resting,
-        hovered,
         raised,
-        lifted,
+        overlay,
+        dragged,
     ]
 }
 
 extension Westron.Dimension {
+    /// Step 25 of the radius ladder: 2 px.
+    public static let radius25 = Westron.Dimension(name: "radius.25", value: 2)
+
+    /// Step 50 of the radius ladder: 4 px.
+    public static let radius50 = Westron.Dimension(name: "radius.50", value: 4)
+
     /// Step 75 of the radius ladder: 6 px.
     public static let radius75 = Westron.Dimension(name: "radius.75", value: 6)
 
     /// Step 100 of the radius ladder: 8 px.
     public static let radius100 = Westron.Dimension(name: "radius.100", value: 8)
 
-    /// Step 125 of the radius ladder: 10 px.
-    public static let radius125 = Westron.Dimension(name: "radius.125", value: 10)
-
     /// Step 150 of the radius ladder: 12 px.
     public static let radius150 = Westron.Dimension(name: "radius.150", value: 12)
 
-    /// Step 175 of the radius ladder: 14 px.
-    public static let radius175 = Westron.Dimension(name: "radius.175", value: 14)
+    /// Step 200 of the radius ladder: 16 px.
+    public static let radius200 = Westron.Dimension(name: "radius.200", value: 16)
 
-    /// Step 225 of the radius ladder: 18 px.
-    public static let radius225 = Westron.Dimension(name: "radius.225", value: 18)
+    /// Step 300 of the radius ladder: 24 px.
+    public static let radius300 = Westron.Dimension(name: "radius.300", value: 24)
 
-    /// Step 25 of the space ladder: 2 px at the regular density.
+    /// Step 400 of the radius ladder: 32 px.
+    public static let radius400 = Westron.Dimension(name: "radius.400", value: 32)
+
+    /// A control westron draws: a button, a field, a segmented control. 8 px, a quarter of a 32 px control.
+    public static let radiusControl = Westron.Dimension(name: "radius.control", value: 8)
+
+    /// The highlight of a row under the pointer or selected.
+    public static let radiusRow = Westron.Dimension(name: "radius.row", value: 8)
+
+    /// A card or a panel on the canvas.
+    public static let radiusCard = Westron.Dimension(name: "radius.card", value: 12)
+
+    /// A popover or a menu westron draws; system ones keep their own.
+    public static let radiusOverlay = Westron.Dimension(name: "radius.overlay", value: 12)
+
+    /// A sheet or a dialog westron draws.
+    public static let radiusSheet = Westron.Dimension(name: "radius.sheet", value: 16)
+
+    /// Step 25 of the space ladder: 2 px.
     public static let space25 = Westron.Dimension(name: "space.25", value: 2)
 
-    /// Step 50 of the space ladder: 4 px at the regular density.
+    /// Step 50 of the space ladder: 4 px.
     public static let space50 = Westron.Dimension(name: "space.50", value: 4)
 
-    /// Step 75 of the space ladder: 6 px at the regular density.
+    /// Step 75 of the space ladder: 6 px.
     public static let space75 = Westron.Dimension(name: "space.75", value: 6)
 
-    /// Step 100 of the space ladder: 8 px at the regular density.
+    /// Step 100 of the space ladder: 8 px.
     public static let space100 = Westron.Dimension(name: "space.100", value: 8)
 
-    /// Step 125 of the space ladder: 10 px at the regular density.
+    /// Step 125 of the space ladder: 10 px.
     public static let space125 = Westron.Dimension(name: "space.125", value: 10)
 
-    /// Step 150 of the space ladder: 12 px at the regular density.
+    /// Step 150 of the space ladder: 12 px.
     public static let space150 = Westron.Dimension(name: "space.150", value: 12)
 
-    /// Step 175 of the space ladder: 14 px at the regular density.
-    public static let space175 = Westron.Dimension(name: "space.175", value: 14)
-
-    /// Step 200 of the space ladder: 16 px at the regular density.
+    /// Step 200 of the space ladder: 16 px.
     public static let space200 = Westron.Dimension(name: "space.200", value: 16)
 
-    /// Step 250 of the space ladder: 20 px at the regular density.
+    /// Step 250 of the space ladder: 20 px.
     public static let space250 = Westron.Dimension(name: "space.250", value: 20)
 
-    /// Step 300 of the space ladder: 24 px at the regular density.
+    /// Step 300 of the space ladder: 24 px.
     public static let space300 = Westron.Dimension(name: "space.300", value: 24)
 
-    /// Step 500 of the space ladder: 40 px at the regular density.
+    /// Step 400 of the space ladder: 32 px.
+    public static let space400 = Westron.Dimension(name: "space.400", value: 32)
+
+    /// Step 500 of the space ladder: 40 px.
     public static let space500 = Westron.Dimension(name: "space.500", value: 40)
 
-    /// Step 600 of the space ladder: 48 px at the regular density.
+    /// Step 600 of the space ladder: 48 px.
     public static let space600 = Westron.Dimension(name: "space.600", value: 48)
+
+    /// Step 800 of the space ladder: 64 px.
+    public static let space800 = Westron.Dimension(name: "space.800", value: 64)
 
     /// The edge of glass and of a card on a fill.
     public static let strokeHairline = Westron.Dimension(name: "stroke.hairline", value: 0.5)
@@ -2093,24 +2096,32 @@ extension Westron.Dimension {
 
     /// Every dimension in token order.
     public static let all: [Westron.Dimension] = [
+        radius25,
+        radius50,
         radius75,
         radius100,
-        radius125,
         radius150,
-        radius175,
-        radius225,
+        radius200,
+        radius300,
+        radius400,
+        radiusControl,
+        radiusRow,
+        radiusCard,
+        radiusOverlay,
+        radiusSheet,
         space25,
         space50,
         space75,
         space100,
         space125,
         space150,
-        space175,
         space200,
         space250,
         space300,
+        space400,
         space500,
         space600,
+        space800,
         strokeHairline,
         strokeThin,
         strokeRegular,

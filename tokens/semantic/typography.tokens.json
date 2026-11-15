@@ -1,49 +1,50 @@
 {
   "typography": {
     "$type": "typography",
+    "$description": "Text roles. Headings are Onest, body text and controls the system font, code Geist Mono. On Apple each role follows its text style, so it scales with Dynamic Type (decisions/0011, 0013).",
     "heading": {
       "large": {
         "$value": {
-          "fontFamily": "{font.family.rounded}",
+          "fontFamily": "{font.family.heading}",
           "fontSize": {"value": 34, "unit": "px"},
-          "fontWeight": "{font.weight.heavy}",
-          "letterSpacing": {"value": 0, "unit": "px"},
+          "fontWeight": "{font.weight.bold}",
+          "letterSpacing": {"value": -0.34, "unit": "px"},
           "lineHeight": 1.206
         },
-        "$description": "The title of a screen. The size follows the largeTitle text style (the pilot's largeTitle).",
+        "$description": "The title of a screen. Onest Bold at the size of the largeTitle text style, tracked in by 1 % of its size.",
         "$extensions": {"dev.westron.apple": {"textStyle": "largeTitle"}}
       },
       "medium": {
         "$value": {
-          "fontFamily": "{font.family.rounded}",
+          "fontFamily": "{font.family.heading}",
           "fontSize": {"value": 20, "unit": "px"},
-          "fontWeight": "{font.weight.heavy}",
-          "letterSpacing": {"value": 0, "unit": "px"},
+          "fontWeight": "{font.weight.bold}",
+          "letterSpacing": {"value": -0.2, "unit": "px"},
           "lineHeight": 1.25
         },
-        "$description": "The title of an empty state or a short standalone message. The size follows the title3 text style (the pilot's emptyScreenTitle).",
+        "$description": "The title of a card, a section of a screen or an empty state. Onest Bold at the size of the title3 text style.",
         "$extensions": {"dev.westron.apple": {"textStyle": "title3"}}
       },
       "small": {
         "$value": {
-          "fontFamily": "{font.family.rounded}",
+          "fontFamily": "{font.family.heading}",
           "fontSize": {"value": 17, "unit": "px"},
-          "fontWeight": "{font.weight.heavy}",
-          "letterSpacing": {"value": 0, "unit": "px"},
+          "fontWeight": "{font.weight.semibold}",
+          "letterSpacing": {"value": -0.17, "unit": "px"},
           "lineHeight": 1.294
         },
-        "$description": "The title of a section or a block inside a screen. The size follows the headline text style (the pilot's sectionTitle).",
+        "$description": "The title of a block inside a card or a list. Onest SemiBold at the size of the headline text style.",
         "$extensions": {"dev.westron.apple": {"textStyle": "headline"}}
       },
       "overline": {
         "$value": {
-          "fontFamily": "{font.family.rounded}",
+          "fontFamily": "{font.family.heading}",
           "fontSize": {"value": 12, "unit": "px"},
-          "fontWeight": "{font.weight.heavy}",
-          "letterSpacing": {"value": 0, "unit": "px"},
+          "fontWeight": "{font.weight.semibold}",
+          "letterSpacing": {"value": 0.72, "unit": "px"},
           "lineHeight": 1.333
         },
-        "$description": "A short label above a group, written in capitals by the product, such as an area's name in a sidebar. The size follows the caption text style (the pilot's areaCaption).",
+        "$description": "A short label above a group, written in capitals by the product, such as a sidebar section. Onest SemiBold at the size of the caption text style, tracked out by 6 % of its size.",
         "$extensions": {"dev.westron.apple": {"textStyle": "caption"}}
       }
     },
@@ -56,7 +57,7 @@
           "letterSpacing": {"value": 0, "unit": "px"},
           "lineHeight": 1.294
         },
-        "$description": "Main text: a row's title, a field's text, a search field. The size follows the body text style (the pilot's rowTitle, search).",
+        "$description": "Main text: a row's title, a field's text, a paragraph. The size follows the body text style.",
         "$extensions": {"dev.westron.apple": {"textStyle": "body"}}
       },
       "strong": {
@@ -67,7 +68,7 @@
           "letterSpacing": {"value": 0, "unit": "px"},
           "lineHeight": 1.294
         },
-        "$description": "Main text that needs emphasis: a row with children, the selected row, a card's title. The size follows the body text style (the pilot's rowTitleEmphasized).",
+        "$description": "Main text that needs emphasis: the selected row, a row with children. The size follows the body text style.",
         "$extensions": {"dev.westron.apple": {"textStyle": "body"}}
       }
     },
@@ -80,7 +81,7 @@
           "letterSpacing": {"value": 0, "unit": "px"},
           "lineHeight": 1.312
         },
-        "$description": "Text one step below the main text: a nested row's title, a card in a column. The size follows the callout text style (the pilot's nestedRowTitle).",
+        "$description": "Text one step below the main text: a nested row's title, a card in a column. The size follows the callout text style.",
         "$extensions": {"dev.westron.apple": {"textStyle": "callout"}}
       },
       "strong": {
@@ -91,7 +92,7 @@
           "letterSpacing": {"value": 0, "unit": "px"},
           "lineHeight": 1.312
         },
-        "$description": "`callout.regular` with emphasis. The size follows the callout text style (the pilot's nestedRowTitleEmphasized).",
+        "$description": "`callout.regular` with emphasis. The size follows the callout text style.",
         "$extensions": {"dev.westron.apple": {"textStyle": "callout"}}
       }
     },
@@ -104,7 +105,7 @@
           "letterSpacing": {"value": 0, "unit": "px"},
           "lineHeight": 1.333
         },
-        "$description": "Supporting text: counts, a subtitle, notes, a subtask's title. The size follows the subheadline text style (the pilot's count, notes).",
+        "$description": "Supporting text: a subtitle, notes, a count. The size follows the subheadline text style.",
         "$extensions": {"dev.westron.apple": {"textStyle": "subheadline"}}
       },
       "medium": {
@@ -115,7 +116,7 @@
           "letterSpacing": {"value": 0, "unit": "px"},
           "lineHeight": 1.333
         },
-        "$description": "A row that adds something, such as \"Add task\". The size follows the subheadline text style (the pilot's addRow).",
+        "$description": "A row that adds something, such as \"Add task\". The size follows the subheadline text style.",
         "$extensions": {"dev.westron.apple": {"textStyle": "subheadline"}}
       },
       "strong": {
@@ -126,7 +127,7 @@
           "letterSpacing": {"value": 0, "unit": "px"},
           "lineHeight": 1.333
         },
-        "$description": "A word on a bar or a button beside a glyph. The size follows the subheadline text style (the pilot's barLabel).",
+        "$description": "The label of a button or of a bar item. The size follows the subheadline text style.",
         "$extensions": {"dev.westron.apple": {"textStyle": "subheadline"}}
       }
     },
@@ -139,7 +140,7 @@
           "letterSpacing": {"value": 0, "unit": "px"},
           "lineHeight": 1.385
         },
-        "$description": "A hint under a title that says what to do. The size follows the footnote text style (the pilot's hint).",
+        "$description": "Secondary detail: a hint, a cell in a dense table, a line under a title. The size follows the footnote text style.",
         "$extensions": {"dev.westron.apple": {"textStyle": "footnote"}}
       },
       "medium": {
@@ -150,7 +151,7 @@
           "letterSpacing": {"value": 0, "unit": "px"},
           "lineHeight": 1.385
         },
-        "$description": "A small label: an area's name, a date, a tag's name. The size follows the footnote text style (the pilot's areaLabel).",
+        "$description": "A small label: a column header, a date, a tag's name. The size follows the footnote text style.",
         "$extensions": {"dev.westron.apple": {"textStyle": "footnote"}}
       },
       "strong": {
@@ -161,7 +162,7 @@
           "letterSpacing": {"value": 0, "unit": "px"},
           "lineHeight": 1.385
         },
-        "$description": "The words on a chip or a pill. The size follows the footnote text style (the pilot's pill).",
+        "$description": "The words on a chip, a pill or a small button. The size follows the footnote text style.",
         "$extensions": {"dev.westron.apple": {"textStyle": "footnote"}}
       }
     },
@@ -174,8 +175,32 @@
           "letterSpacing": {"value": 0, "unit": "px"},
           "lineHeight": 1.333
         },
-        "$description": "A line of metadata under a title. The size follows the caption text style (the pilot's meta).",
+        "$description": "Metadata and badges: a status badge, a line of metadata under a title. The size follows the caption text style.",
         "$extensions": {"dev.westron.apple": {"textStyle": "caption"}}
+      }
+    },
+    "code": {
+      "regular": {
+        "$value": {
+          "fontFamily": "{font.family.mono}",
+          "fontSize": {"value": 13, "unit": "px"},
+          "fontWeight": "{font.weight.regular}",
+          "letterSpacing": {"value": 0, "unit": "px"},
+          "lineHeight": 1.385
+        },
+        "$description": "Code, logs, identifiers and hashes: Geist Mono at the size of the footnote text style.",
+        "$extensions": {"dev.westron.apple": {"textStyle": "footnote"}}
+      },
+      "strong": {
+        "$value": {
+          "fontFamily": "{font.family.mono}",
+          "fontSize": {"value": 13, "unit": "px"},
+          "fontWeight": "{font.weight.semibold}",
+          "letterSpacing": {"value": 0, "unit": "px"},
+          "lineHeight": 1.385
+        },
+        "$description": "Emphasis inside code or a log: a keyword, a level. Geist Mono SemiBold at the size of the footnote text style.",
+        "$extensions": {"dev.westron.apple": {"textStyle": "footnote"}}
       }
     }
   }

@@ -88,7 +88,8 @@ enum AppleTokensSwift {
                     "public static let \(role.name) = Westron.TextRole(",
                     [
                         "name: \(literal(role.path.description))", "textStyle: .\(role.textStyle)",
-                        "design: .\(role.design)", "weight: .\(role.weight)", "size: \(number(role.size))",
+                        "design: .\(role.design)", "weight: .\(role.weight)",
+                        "font: \(role.font.map(literal) ?? "nil")", "size: \(number(role.size))",
                         "lineHeight: \(number(role.lineHeight))", "letterSpacing: \(number(role.letterSpacing))",
                     ], indent: 1)
                 out.append("")
@@ -122,13 +123,20 @@ enum AppleTokensSwift {
             out += ["", "extension Westron.Shadow {"]
             for shadow in model.shadows {
                 out += doc(shadow.doc, indent: 1)
+                let themes = ["light", "dark", "lightHighContrast", "darkHighContrast"]
+                let pad = String(repeating: "    ", count: 3)
+                let arguments = zip(themes, shadow.layers).map { theme, layers -> String in
+                    guard !layers.isEmpty else { return "\(theme): []" }
+                    let items = layers.map { layer in
+                        pad + "Layer(color: \(rgb(layer.color)), x: \(number(layer.x)), y: \(number(layer.y)), "
+                            + "blur: \(number(layer.blur)), spread: \(number(layer.spread))),"
+                    }
+                    return (["\(theme): ["] + items + [String(repeating: "    ", count: 2) + "]"]).joined(
+                        separator: "\n")
+                }
                 out += call(
                     "public static let \(shadow.name) = Westron.Shadow(",
-                    [
-                        "name: \(literal(shadow.path.description))", "color: \(rgb(shadow.color))",
-                        "x: \(number(shadow.x))", "y: \(number(shadow.y))", "blur: \(number(shadow.blur))",
-                        "spread: \(number(shadow.spread))",
-                    ], indent: 1)
+                    ["name: \(literal(shadow.path.description))"] + arguments, indent: 1)
                 out.append("")
             }
             out += allList("Westron.Shadow", "Every shadow in token order.", model.shadows.map(\.name))

@@ -684,173 +684,148 @@ extension ShapeStyle where Self == Color {
 }
 
 extension Font {
-    /// The title of a screen. The size follows the largeTitle text style (the pilot's largeTitle).
+    /// The title of a screen. Onest Bold at the size of the largeTitle text style, tracked in by 1 % of its size.
     public static var headingLarge: Font {
         Font(Westron.TextRole.headingLarge)
     }
 
-    /// The title of an empty state or a short standalone message. The size follows the title3 text style (the pilot's
-    /// emptyScreenTitle).
+    /// The title of a card, a section of a screen or an empty state. Onest Bold at the size of the title3 text style.
     public static var headingMedium: Font {
         Font(Westron.TextRole.headingMedium)
     }
 
-    /// The title of a section or a block inside a screen. The size follows the headline text style (the pilot's
-    /// sectionTitle).
+    /// The title of a block inside a card or a list. Onest SemiBold at the size of the headline text style.
     public static var headingSmall: Font {
         Font(Westron.TextRole.headingSmall)
     }
 
-    /// A short label above a group, written in capitals by the product, such as an area's name in a sidebar. The size
-    /// follows the caption text style (the pilot's areaCaption).
+    /// A short label above a group, written in capitals by the product, such as a sidebar section. Onest SemiBold at
+    /// the size of the caption text style, tracked out by 6 % of its size.
     public static var headingOverline: Font {
         Font(Westron.TextRole.headingOverline)
     }
 
-    /// Main text: a row's title, a field's text, a search field. The size follows the body text style (the pilot's
-    /// rowTitle, search).
+    /// Main text: a row's title, a field's text, a paragraph. The size follows the body text style.
     public static var bodyRegular: Font {
         Font(Westron.TextRole.bodyRegular)
     }
 
-    /// Main text that needs emphasis: a row with children, the selected row, a card's title. The size follows the body
-    /// text style (the pilot's rowTitleEmphasized).
+    /// Main text that needs emphasis: the selected row, a row with children. The size follows the body text style.
     public static var bodyStrong: Font {
         Font(Westron.TextRole.bodyStrong)
     }
 
     /// Text one step below the main text: a nested row's title, a card in a column. The size follows the callout text
-    /// style (the pilot's nestedRowTitle).
+    /// style.
     public static var calloutRegular: Font {
         Font(Westron.TextRole.calloutRegular)
     }
 
-    /// `callout.regular` with emphasis. The size follows the callout text style (the pilot's nestedRowTitleEmphasized).
+    /// `callout.regular` with emphasis. The size follows the callout text style.
     public static var calloutStrong: Font {
         Font(Westron.TextRole.calloutStrong)
     }
 
-    /// Supporting text: counts, a subtitle, notes, a subtask's title. The size follows the subheadline text style (the
-    /// pilot's count, notes).
+    /// Supporting text: a subtitle, notes, a count. The size follows the subheadline text style.
     public static var subheadlineRegular: Font {
         Font(Westron.TextRole.subheadlineRegular)
     }
 
-    /// A row that adds something, such as "Add task". The size follows the subheadline text style (the pilot's addRow).
+    /// A row that adds something, such as "Add task". The size follows the subheadline text style.
     public static var subheadlineMedium: Font {
         Font(Westron.TextRole.subheadlineMedium)
     }
 
-    /// A word on a bar or a button beside a glyph. The size follows the subheadline text style (the pilot's barLabel).
+    /// The label of a button or of a bar item. The size follows the subheadline text style.
     public static var subheadlineStrong: Font {
         Font(Westron.TextRole.subheadlineStrong)
     }
 
-    /// A hint under a title that says what to do. The size follows the footnote text style (the pilot's hint).
+    /// Secondary detail: a hint, a cell in a dense table, a line under a title. The size follows the footnote text
+    /// style.
     public static var footnoteRegular: Font {
         Font(Westron.TextRole.footnoteRegular)
     }
 
-    /// A small label: an area's name, a date, a tag's name. The size follows the footnote text style (the pilot's
-    /// areaLabel).
+    /// A small label: a column header, a date, a tag's name. The size follows the footnote text style.
     public static var footnoteMedium: Font {
         Font(Westron.TextRole.footnoteMedium)
     }
 
-    /// The words on a chip or a pill. The size follows the footnote text style (the pilot's pill).
+    /// The words on a chip, a pill or a small button. The size follows the footnote text style.
     public static var footnoteStrong: Font {
         Font(Westron.TextRole.footnoteStrong)
     }
 
-    /// A line of metadata under a title. The size follows the caption text style (the pilot's meta).
+    /// Metadata and badges: a status badge, a line of metadata under a title. The size follows the caption text style.
     public static var captionMedium: Font {
         Font(Westron.TextRole.captionMedium)
+    }
+
+    /// Code, logs, identifiers and hashes: Geist Mono at the size of the footnote text style.
+    public static var codeRegular: Font {
+        Font(Westron.TextRole.codeRegular)
+    }
+
+    /// Emphasis inside code or a log: a keyword, a level. Geist Mono SemiBold at the size of the footnote text style.
+    public static var codeStrong: Font {
+        Font(Westron.TextRole.codeStrong)
     }
 }
 
 extension Animation {
-    /// A check popping as a task is done.
+    /// A change of color or opacity: a hover tint, a selection, a fade in or out. It has no spring and no bounce.
+    public static var fade: Animation {
+        Animation(Westron.Transition.fade)
+    }
+
+    /// A control answering a press: its tint, and its scale down to 98 %.
+    public static var press: Animation {
+        Animation(Westron.Transition.press)
+    }
+
+    /// A small thing changing place: a switch's thumb, a segmented control's selection, a checkbox.
+    public static var toggle: Animation {
+        Animation(Westron.Transition.toggle)
+    }
+
+    /// A check popping into a done task. The one motion with a visible overshoot.
     public static var check: Animation {
         Animation(Westron.Transition.check)
     }
 
-    /// A check's ring and fill changing color.
-    public static var checkFill: Animation {
-        Animation(Westron.Transition.checkFill)
+    /// Something moving to a new place: a reordered row, a dropped item, a section folding or unfolding.
+    public static var move: Animation {
+        Animation(Westron.Transition.move)
     }
 
-    /// A check's mark drawing itself in and out, after its colors start.
-    public static var checkMark: Animation {
-        Animation(Westron.Transition.checkMark)
+    /// Something appearing: a popover, a menu, an inserted row.
+    public static var enter: Animation {
+        Animation(Westron.Transition.enter)
     }
 
-    /// A title changing color as its task is checked.
-    public static var titleFade: Animation {
-        Animation(Westron.Transition.titleFade)
+    /// Something leaving: a deleted row, a closing popover. Leaving is quicker than entering and does not bounce.
+    public static var leave: Animation {
+        Animation(Westron.Transition.leave)
     }
 
-    /// A done row leaving, after a wait long enough to read its check.
-    public static var rowLeave: Animation {
-        Animation(Westron.Transition.rowLeave)
-    }
-
-    /// A deleted row leaving at once.
-    public static var rowDelete: Animation {
-        Animation(Westron.Transition.rowDelete)
-    }
-
-    /// A small element appearing or moving into place: a row, a chevron, a dragged item.
-    public static var popover: Animation {
-        Animation(Westron.Transition.popover)
-    }
-
-    /// A card opening in place of its row.
-    public static var cardOpen: Animation {
-        Animation(Westron.Transition.cardOpen)
-    }
-
-    /// Something landing where it was dropped.
-    public static var drop: Animation {
-        Animation(Westron.Transition.drop)
-    }
-
-    /// A row sliding aside for its actions and back.
-    public static var swipe: Animation {
-        Animation(Westron.Transition.swipe)
-    }
-
-    /// A chevron turning as a section folds or opens.
-    public static var fold: Animation {
-        Animation(Westron.Transition.fold)
-    }
-
-    /// The highlight under something just moved, fading out.
-    public static var highlightFade: Animation {
-        Animation(Westron.Transition.highlightFade)
-    }
-
-    /// A chip lighting and going out.
-    public static var chipToggle: Animation {
-        Animation(Westron.Transition.chipToggle)
-    }
-
-    /// A drop target tinting under a drag, a dragged item dimming.
-    public static var dropHighlight: Animation {
-        Animation(Westron.Transition.dropHighlight)
-    }
-
-    /// A control's tint coming and going under the pointer.
-    public static var hoverTint: Animation {
-        Animation(Westron.Transition.hoverTint)
-    }
-
-    /// A card's shadow deepening under the pointer and back.
-    public static var hoverShadow: Animation {
-        Animation(Westron.Transition.hoverShadow)
+    /// A large surface appearing: a sheet, a side panel, an opened card.
+    public static var reveal: Animation {
+        Animation(Westron.Transition.reveal)
     }
 }
 
 extension CGFloat {
+    /// Step 25 of the radius ladder: 2 px.
+    public static var radius25: CGFloat {
+        CGFloat(Westron.Dimension.radius25)
+    }
+
+    /// Step 50 of the radius ladder: 4 px.
+    public static var radius50: CGFloat {
+        CGFloat(Westron.Dimension.radius50)
+    }
+
     /// Step 75 of the radius ladder: 6 px.
     public static var radius75: CGFloat {
         CGFloat(Westron.Dimension.radius75)
@@ -861,84 +836,114 @@ extension CGFloat {
         CGFloat(Westron.Dimension.radius100)
     }
 
-    /// Step 125 of the radius ladder: 10 px.
-    public static var radius125: CGFloat {
-        CGFloat(Westron.Dimension.radius125)
-    }
-
     /// Step 150 of the radius ladder: 12 px.
     public static var radius150: CGFloat {
         CGFloat(Westron.Dimension.radius150)
     }
 
-    /// Step 175 of the radius ladder: 14 px.
-    public static var radius175: CGFloat {
-        CGFloat(Westron.Dimension.radius175)
+    /// Step 200 of the radius ladder: 16 px.
+    public static var radius200: CGFloat {
+        CGFloat(Westron.Dimension.radius200)
     }
 
-    /// Step 225 of the radius ladder: 18 px.
-    public static var radius225: CGFloat {
-        CGFloat(Westron.Dimension.radius225)
+    /// Step 300 of the radius ladder: 24 px.
+    public static var radius300: CGFloat {
+        CGFloat(Westron.Dimension.radius300)
     }
 
-    /// Step 25 of the space ladder: 2 px at the regular density.
+    /// Step 400 of the radius ladder: 32 px.
+    public static var radius400: CGFloat {
+        CGFloat(Westron.Dimension.radius400)
+    }
+
+    /// A control westron draws: a button, a field, a segmented control. 8 px, a quarter of a 32 px control.
+    public static var radiusControl: CGFloat {
+        CGFloat(Westron.Dimension.radiusControl)
+    }
+
+    /// The highlight of a row under the pointer or selected.
+    public static var radiusRow: CGFloat {
+        CGFloat(Westron.Dimension.radiusRow)
+    }
+
+    /// A card or a panel on the canvas.
+    public static var radiusCard: CGFloat {
+        CGFloat(Westron.Dimension.radiusCard)
+    }
+
+    /// A popover or a menu westron draws; system ones keep their own.
+    public static var radiusOverlay: CGFloat {
+        CGFloat(Westron.Dimension.radiusOverlay)
+    }
+
+    /// A sheet or a dialog westron draws.
+    public static var radiusSheet: CGFloat {
+        CGFloat(Westron.Dimension.radiusSheet)
+    }
+
+    /// Step 25 of the space ladder: 2 px.
     public static var space25: CGFloat {
         CGFloat(Westron.Dimension.space25)
     }
 
-    /// Step 50 of the space ladder: 4 px at the regular density.
+    /// Step 50 of the space ladder: 4 px.
     public static var space50: CGFloat {
         CGFloat(Westron.Dimension.space50)
     }
 
-    /// Step 75 of the space ladder: 6 px at the regular density.
+    /// Step 75 of the space ladder: 6 px.
     public static var space75: CGFloat {
         CGFloat(Westron.Dimension.space75)
     }
 
-    /// Step 100 of the space ladder: 8 px at the regular density.
+    /// Step 100 of the space ladder: 8 px.
     public static var space100: CGFloat {
         CGFloat(Westron.Dimension.space100)
     }
 
-    /// Step 125 of the space ladder: 10 px at the regular density.
+    /// Step 125 of the space ladder: 10 px.
     public static var space125: CGFloat {
         CGFloat(Westron.Dimension.space125)
     }
 
-    /// Step 150 of the space ladder: 12 px at the regular density.
+    /// Step 150 of the space ladder: 12 px.
     public static var space150: CGFloat {
         CGFloat(Westron.Dimension.space150)
     }
 
-    /// Step 175 of the space ladder: 14 px at the regular density.
-    public static var space175: CGFloat {
-        CGFloat(Westron.Dimension.space175)
-    }
-
-    /// Step 200 of the space ladder: 16 px at the regular density.
+    /// Step 200 of the space ladder: 16 px.
     public static var space200: CGFloat {
         CGFloat(Westron.Dimension.space200)
     }
 
-    /// Step 250 of the space ladder: 20 px at the regular density.
+    /// Step 250 of the space ladder: 20 px.
     public static var space250: CGFloat {
         CGFloat(Westron.Dimension.space250)
     }
 
-    /// Step 300 of the space ladder: 24 px at the regular density.
+    /// Step 300 of the space ladder: 24 px.
     public static var space300: CGFloat {
         CGFloat(Westron.Dimension.space300)
     }
 
-    /// Step 500 of the space ladder: 40 px at the regular density.
+    /// Step 400 of the space ladder: 32 px.
+    public static var space400: CGFloat {
+        CGFloat(Westron.Dimension.space400)
+    }
+
+    /// Step 500 of the space ladder: 40 px.
     public static var space500: CGFloat {
         CGFloat(Westron.Dimension.space500)
     }
 
-    /// Step 600 of the space ladder: 48 px at the regular density.
+    /// Step 600 of the space ladder: 48 px.
     public static var space600: CGFloat {
         CGFloat(Westron.Dimension.space600)
+    }
+
+    /// Step 800 of the space ladder: 64 px.
+    public static var space800: CGFloat {
+        CGFloat(Westron.Dimension.space800)
     }
 
     /// The edge of glass and of a card on a fill.

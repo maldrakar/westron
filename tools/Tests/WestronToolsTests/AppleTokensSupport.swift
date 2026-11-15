@@ -96,9 +96,9 @@ enum AppleFixture {
             "heading": {
               "large": {
                 "$value": {
-                  "fontFamily": ["ui-rounded", "system-ui"],
+                  "fontFamily": ["Onest", "system-ui"],
                   "fontSize": { "value": 34, "unit": "px" },
-                  "fontWeight": 800,
+                  "fontWeight": 700,
                   "letterSpacing": { "value": 0, "unit": "px" },
                   "lineHeight": 1.206
                 },

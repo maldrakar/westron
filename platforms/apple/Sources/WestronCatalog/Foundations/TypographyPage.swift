@@ -12,8 +12,8 @@ private struct TypographyPage: View {
     var body: some View {
         TokenPage(
             title: "Text roles",
-            summary: "typography.*: the system font in a text style, so the size follows Dynamic Type and the "
-                + "platform; headings use the rounded design."
+            summary: "typography.*: headings in Onest, body text in the system font, code in Geist Mono, each in a "
+                + "text style, so the size follows Dynamic Type."
         ) {
             // A line per role where the window is wide enough, the sample above its name otherwise.
             ViewThatFits(in: .horizontal) {
@@ -45,14 +45,16 @@ private struct TypographyPage: View {
             .fixedSize()
     }
 
-    /// `typography.heading.large · largeTitle · rounded · heavy`.
+    /// `typography.heading.large · largeTitle · Onest-Bold`, or `… · default · regular` for the system font.
     static func detail(_ role: Westron.TextRole) -> String {
-        "\(role.name) · \(role.textStyle.rawValue) · \(role.design.rawValue) · \(role.weight)"
+        let font = role.font ?? "\(role.design.rawValue) · \(role.weight)"
+        return "\(role.name) · \(role.textStyle.rawValue) · \(font)"
     }
 
-    /// The role's name as words: `typography.heading.large` → "Heading large".
+    /// The role's name as words, `typography.heading.large` → "Heading large", and a word in Cyrillic, which
+    /// every font westron ships must have.
     static func sample(_ role: Westron.TextRole) -> String {
         let words = role.name.split(separator: ".").dropFirst().joined(separator: " ")
-        return words.prefix(1).uppercased() + words.dropFirst()
+        return words.prefix(1).uppercased() + words.dropFirst() + " · Задачи"
     }
 }

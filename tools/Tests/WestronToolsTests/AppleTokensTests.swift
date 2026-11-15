@@ -122,14 +122,50 @@ struct AppleTokensTests {
             ])
     }
 
-    @Test("a token other than a color that differs by theme fails: only colors switch with the theme")
+    @Test("a token other than a color or a shadow that differs by theme fails: only those switch with the theme")
     func themeGuard() {
         let dark = AppleFixture.dark.replacingOccurrences(
             of: #""color": {"#,
             with: #""space": { "100": { "$type": "dimension", "$value": { "value": 10, "unit": "px" } } }, "color": {"#)
         #expect(
             AppleFixture.problems(["dark.tokens.json": dark]) == [
-                "space.100: differs between theme light and theme dark; on Apple only colors switch with the theme"
+                "space.100: differs between theme light and theme dark; on Apple only colors and shadows switch with "
+                    + "the theme"
+            ])
+    }
+
+    @Test("a shadow switches with the theme, layer by layer; a transparent layer is left out, so a theme casts none")
+    func shadowByTheme() throws {
+        let layer =
+            #"{ "color": { "colorSpace": "srgb", "components": [0, 0, 0], "alpha": ALPHA }, "#
+            + #""offsetX": { "value": 0, "unit": "px" }, "offsetY": { "value": 1, "unit": "px" }, "#
+            + #""blur": { "value": 2, "unit": "px" }, "spread": { "value": 0, "unit": "px" } }"#
+        let dark = AppleFixture.dark.replacingOccurrences(
+            of: #""color": {"#,
+            with: #""shadow": { "$type": "shadow", "raised": { "$value": ["#
+                + layer.replacingOccurrences(of: "ALPHA", with: "0") + #"] } }, "color": {"#)
+        let light = AppleFixture.light.replacingOccurrences(
+            of: #""color": {"#,
+            with: #""shadow": { "$type": "shadow", "raised": { "$value": ["#
+                + layer.replacingOccurrences(of: "ALPHA", with: "0.06") + ", "
+                + layer.replacingOccurrences(of: "ALPHA", with: "0.1") + #"] } }, "color": {"#)
+        let files = try AppleTokens.files(
+            for: resolution(
+                AppleFixture.files().merging(["light.tokens.json": light, "dark.tokens.json": dark]) { $1 }))
+        let tokens = try #require(AppleFixture.file(files, AppleTokens.tokensFile))
+        #expect(tokens.contains("        dark: [],\n"))
+        #expect(
+            tokens.contains("Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.1), x: 0, y: 1, blur: 2, spread: 0)"))
+    }
+
+    @Test("a font westron ships needs a plain family name and a system family to fall back on")
+    func shippedFontFamily() {
+        let semantic = AppleFixture.semantic.replacingOccurrences(
+            of: #""fontFamily": ["Onest", "system-ui"]"#, with: #""fontFamily": ["Onest"]"#)
+        #expect(
+            AppleFixture.problems(["semantic.tokens.json": semantic]) == [
+                "typography.heading.large: font family Onest needs a plain name and a system family after it to fall "
+                    + "back on, such as [\"Onest\", \"system-ui\"] (decisions/0011)"
             ])
     }
 
@@ -302,8 +338,9 @@ struct AppleTokensTests {
             public static let headingLarge = Westron.TextRole(
                 name: "typography.heading.large",
                 textStyle: .largeTitle,
-                design: .rounded,
-                weight: .heavy,
+                design: .default,
+                weight: .bold,
+                font: "Onest-Bold",
                 size: 34,
                 lineHeight: 1.206,
                 letterSpacing: 0)
@@ -314,6 +351,7 @@ struct AppleTokensTests {
                 textStyle: .body,
                 design: .default,
                 weight: .regular,
+                font: nil,
                 size: 17,
                 lineHeight: 1.294,
                 letterSpacing: 0)
@@ -353,11 +391,18 @@ struct AppleTokensTests {
             /// A control raised off what it stands on.
             public static let raised = Westron.Shadow(
                 name: "shadow.raised",
-                color: Westron.RGB(hex: 0x000000, opacity: 0.12),
-                x: 0,
-                y: 5,
-                blur: 24,
-                spread: 0)
+                light: [
+                    Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.12), x: 0, y: 5, blur: 24, spread: 0),
+                ],
+                dark: [
+                    Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.12), x: 0, y: 5, blur: 24, spread: 0),
+                ],
+                lightHighContrast: [
+                    Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.12), x: 0, y: 5, blur: 24, spread: 0),
+                ],
+                darkHighContrast: [
+                    Layer(color: Westron.RGB(hex: 0x000000, opacity: 0.12), x: 0, y: 5, blur: 24, spread: 0),
+                ])
 
             /// Every shadow in token order.
             public static let all: [Westron.Shadow] = [

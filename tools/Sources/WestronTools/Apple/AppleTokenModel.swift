@@ -68,6 +68,8 @@ struct AppleTokenModel: Equatable {
         let textStyle: String
         let design: String
         let weight: String
+        /// The PostScript name of a font westron ships, `Onest-Bold`; nil for the system font.
+        let font: String?
         let size: Double
         let lineHeight: Double
         let letterSpacing: Double
@@ -85,14 +87,20 @@ struct AppleTokenModel: Equatable {
     }
 
     struct Shadow: Equatable {
+        struct Layer: Equatable {
+            let color: ColorValue
+            let x: Double
+            let y: Double
+            let blur: Double
+            let spread: Double
+        }
+
         let path: TokenPath
         let name: String
         let doc: Doc
-        let color: ColorValue
-        let x: Double
-        let y: Double
-        let blur: Double
-        let spread: Double
+        /// The layers of each theme, in the order of `themes`. A transparent layer is left out, so a theme without a
+        /// shadow has none.
+        let layers: [[Layer]]
     }
 
     struct Dimension: Equatable {
@@ -193,10 +201,10 @@ extension AppleTokenModel {
         let light = base[Self.themes[0]]!
         for name in Self.themes.dropFirst() {
             let other = base[name]!
-            for path in Self.differences(light, other, colorsMayDiffer: true) where reported.insert(path).inserted {
+            for path in Self.differences(light, other, themesMayDiffer: true) where reported.insert(path).inserted {
                 problems.append(
-                    "\(path): differs between theme \(Self.themes[0]) and theme \(name); on Apple only colors switch "
-                        + "with the theme")
+                    "\(path): differs between theme \(Self.themes[0]) and theme \(name); on Apple only colors and "
+                        + "shadows switch with the theme")
             }
         }
         guard problems.isEmpty else { throw AppleTokens.Failure(problems) }
@@ -229,7 +237,7 @@ extension AppleTokenModel {
                     }
                 case .typography: textRoles.append(try Self.textRole(token))
                 case .transition: transitions.append(try Self.transition(token))
-                case .shadow: shadows.append(try Self.shadow(token))
+                case .shadow: shadows.append(try Self.shadow(token, byTheme: byTheme))
                 case .dimension: dimensions.append(try Self.dimension(token))
                 case .number, .duration, .cubicBezier, .fontFamily, .fontWeight:
                     problems.append(
@@ -260,16 +268,16 @@ extension AppleTokenModel {
         guard problems.isEmpty else { throw AppleTokens.Failure(problems) }
     }
 
-    /// The paths whose tokens differ between two resolutions, in order. With `colorsMayDiffer`, two colors at the same
-    /// path may hold different values.
+    /// The paths whose tokens differ between two resolutions, in order. With `themesMayDiffer`, two colors or two
+    /// shadows at the same path may hold different values, as the theme switches them.
     static func differences(
-        _ first: [ResolvedToken], _ second: [ResolvedToken], colorsMayDiffer: Bool = false
+        _ first: [ResolvedToken], _ second: [ResolvedToken], themesMayDiffer: Bool = false
     ) -> [TokenPath] {
         let other = Dictionary(second.map { ($0.path, $0) }) { first, _ in first }
         let paths = Set(first.map(\.path))
         var result = first.compactMap { token -> TokenPath? in
             guard let match = other[token.path] else { return token.path }
-            if colorsMayDiffer && token.type == .color && match.type == .color { return nil }
+            if themesMayDiffer && token.type == match.type && [.color, .shadow].contains(token.type) { return nil }
             let same =
                 token.type == match.type && token.value == match.value && token.description == match.description
                 && token.westron == match.westron
@@ -410,12 +418,6 @@ extension AppleTokenModel {
         let designs = [
             "system-ui": "default", "ui-rounded": "rounded", "ui-monospace": "monospaced", "ui-serif": "serif",
         ]
-        guard let family = value.fontFamily.first, let design = designs[family] else {
-            throw SwiftName.Problem(
-                path: token.path,
-                "font family \(value.fontFamily.first ?? "none") is not a system design; westron ships no fonts and "
-                    + "Apple text roles use the system font (decisions/0011)")
-        }
         let weights = [
             100: "ultraLight", 200: "thin", 300: "light", 400: "regular", 500: "medium", 600: "semibold", 700: "bold",
             800: "heavy", 900: "black",
@@ -426,9 +428,32 @@ extension AppleTokenModel {
             throw SwiftName.Problem(
                 path: token.path, "font weight \(value.fontWeight.value) is not a hundred from 100 to 900")
         }
+        guard let family = value.fontFamily.first else {
+            throw SwiftName.Problem(path: token.path, "a text role needs a font family")
+        }
+        // A system design, or a font westron ships: then its static instance by PostScript name, the family without
+        // spaces and the weight's name (Onest-Bold), with the design of the system family that follows it.
+        let design: String
+        let font: String?
+        if let system = designs[family] {
+            design = system
+            font = nil
+        } else {
+            guard family.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == " ") }),
+                let fallback = value.fontFamily.dropFirst().first, let system = designs[fallback]
+            else {
+                throw SwiftName.Problem(
+                    path: token.path,
+                    "font family \(family) needs a plain name and a system family after it to fall back on, such as "
+                        + "[\"Onest\", \"system-ui\"] (decisions/0011)")
+            }
+            design = system
+            font =
+                family.replacingOccurrences(of: " ", with: "") + "-" + postScriptWeights[Int(value.fontWeight.value)]!
+        }
         return TextRole(
             path: token.path, name: try SwiftName.member(token.path, dropping: "typography"), doc: Doc(token),
-            textStyle: textStyle.rawValue, design: design, weight: weight,
+            textStyle: textStyle.rawValue, design: design, weight: weight, font: font,
             size: try points(value.fontSize, token.path), lineHeight: value.lineHeight,
             letterSpacing: try points(value.letterSpacing, token.path))
     }
@@ -441,21 +466,37 @@ extension AppleTokenModel {
             curve: value.timingFunction, spring: token.westron.spring)
     }
 
-    static func shadow(_ token: ResolvedToken) throws -> Shadow {
-        guard case .shadow(let layers) = token.value else { preconditionFailure("a shadow token") }
-        guard layers.count == 1, let layer = layers.first, !layer.inset else {
-            throw SwiftName.Problem(
-                path: token.path, "only a single drop shadow, not inset, is generated for Apple yet")
-        }
-        let spread = try points(layer.spread, token.path)
-        guard spread == 0 else {
-            throw SwiftName.Problem(path: token.path, "SwiftUI shadows have no spread; a spread is not generated yet")
+    /// The weight names of static font instances, as their PostScript names end: `Onest-SemiBold`.
+    static let postScriptWeights = [
+        100: "Thin", 200: "ExtraLight", 300: "Light", 400: "Regular", 500: "Medium", 600: "SemiBold", 700: "Bold",
+        800: "ExtraBold", 900: "Black",
+    ]
+
+    static func shadow(_ token: ResolvedToken, byTheme: [[TokenPath: ResolvedToken]]) throws -> Shadow {
+        let layers = try themes.indices.map { index -> [Shadow.Layer] in
+            guard case .shadow(let layers) = byTheme[index][token.path]!.value else {
+                throw SwiftName.Problem(path: token.path, "is not a shadow in every theme")
+            }
+            return try layers.compactMap { layer -> Shadow.Layer? in
+                guard !layer.inset else {
+                    throw SwiftName.Problem(path: token.path, "an inset shadow is not generated for Apple yet")
+                }
+                let spread = try points(layer.spread, token.path)
+                guard spread == 0 else {
+                    throw SwiftName.Problem(
+                        path: token.path, "SwiftUI shadows have no spread; a spread is not generated yet")
+                }
+                // A transparent layer draws nothing: a theme whose shadow is "none" has no layers.
+                guard layer.color.alpha > 0 else { return nil }
+                return Shadow.Layer(
+                    color: try colorValue(layer.color, path: token.path, theme: themes[index]),
+                    x: try points(layer.offsetX, token.path), y: try points(layer.offsetY, token.path),
+                    blur: try points(layer.blur, token.path), spread: spread)
+            }
         }
         return Shadow(
             path: token.path, name: try SwiftName.member(token.path, dropping: "shadow"), doc: Doc(token),
-            color: try colorValue(layer.color, path: token.path, theme: "every"),
-            x: try points(layer.offsetX, token.path), y: try points(layer.offsetY, token.path),
-            blur: try points(layer.blur, token.path), spread: spread)
+            layers: layers)
     }
 
     static func dimension(_ token: ResolvedToken) throws -> Dimension {

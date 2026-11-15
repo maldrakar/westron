@@ -12,12 +12,11 @@
       ]
     },
     "semantic": {
-      "description": "Roles that do not depend on a mode: colors (aliases of the ramps), motion, radii, shadows, spacing, strokes, text roles.",
+      "description": "Roles that do not depend on a mode: colors (aliases of the ramps), motion, radii, spacing, strokes, text roles.",
       "sources": [
         {"$ref": "semantic/color.tokens.json"},
         {"$ref": "semantic/motion.tokens.json"},
         {"$ref": "semantic/radius.tokens.json"},
-        {"$ref": "semantic/shadow.tokens.json"},
         {"$ref": "semantic/space.tokens.json"},
         {"$ref": "semantic/stroke.tokens.json"},
         {"$ref": "semantic/typography.tokens.json"}
@@ -26,12 +25,20 @@
   },
   "modifiers": {
     "theme": {
-      "description": "The color theme: the color ramps the palette generator solves for it. A high-contrast theme is its theme plus the colors that differ. Resolved at runtime, by the platform's own switching.",
+      "description": "The color theme: the color ramps the palette generator solves for it, and the shadows. A high-contrast theme is its theme plus the colors that differ. Resolved at runtime, by the platform's own switching.",
       "contexts": {
-        "light": [{"$ref": "primitive/color.light.tokens.json"}],
-        "dark": [{"$ref": "primitive/color.dark.tokens.json"}],
-        "light-hc": [{"$ref": "primitive/color.light.tokens.json"}, {"$ref": "primitive/color.light-hc.tokens.json"}],
-        "dark-hc": [{"$ref": "primitive/color.dark.tokens.json"}, {"$ref": "primitive/color.dark-hc.tokens.json"}]
+        "light": [{"$ref": "primitive/color.light.tokens.json"}, {"$ref": "semantic/shadow.light.tokens.json"}],
+        "dark": [{"$ref": "primitive/color.dark.tokens.json"}, {"$ref": "semantic/shadow.dark.tokens.json"}],
+        "light-hc": [
+          {"$ref": "primitive/color.light.tokens.json"},
+          {"$ref": "primitive/color.light-hc.tokens.json"},
+          {"$ref": "semantic/shadow.light.tokens.json"}
+        ],
+        "dark-hc": [
+          {"$ref": "primitive/color.dark.tokens.json"},
+          {"$ref": "primitive/color.dark-hc.tokens.json"},
+          {"$ref": "semantic/shadow.dark.tokens.json"}
+        ]
       },
       "default": "light"
     },

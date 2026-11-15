@@ -24,11 +24,13 @@ struct ResolverTests {
             theme.context(named: "light-hc")?.sources == [
                 .file(tokens + "/primitive/color.light.tokens.json"),
                 .file(tokens + "/primitive/color.light-hc.tokens.json"),
+                .file(tokens + "/semantic/shadow.light.tokens.json"),
             ])
         #expect(
             theme.context(named: "dark-hc")?.sources == [
                 .file(tokens + "/primitive/color.dark.tokens.json"),
                 .file(tokens + "/primitive/color.dark-hc.tokens.json"),
+                .file(tokens + "/semantic/shadow.dark.tokens.json"),
             ])
     }
 

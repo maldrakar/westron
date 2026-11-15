@@ -1,136 +1,44 @@
 {
   "motion": {
     "$type": "transition",
+    "$description": "Motions by what moves. Where a motion has a spring (`dev.westron.spring`, duration and bounce), platforms with springs use it; the others use its curve and duration. Under Reduce Motion a spring loses its bounce and travel becomes a fade of at most 150 ms (decisions/0013).",
+    "fade": {
+      "$value": {"duration": {"value": 200, "unit": "ms"}, "delay": {"value": 0, "unit": "ms"}, "timingFunction": "{easing.ease}"},
+      "$description": "A change of color or opacity: a hover tint, a selection, a fade in or out. It has no spring and no bounce."
+    },
+    "press": {
+      "$value": {"duration": {"value": 150, "unit": "ms"}, "delay": {"value": 0, "unit": "ms"}, "timingFunction": "{easing.standard}"},
+      "$description": "A control answering a press: its tint, and its scale down to 98 %.",
+      "$extensions": {"dev.westron.spring": {"duration": 0.15, "bounce": 0}}
+    },
+    "toggle": {
+      "$value": {"duration": {"value": 250, "unit": "ms"}, "delay": {"value": 0, "unit": "ms"}, "timingFunction": "{easing.standard}"},
+      "$description": "A small thing changing place: a switch's thumb, a segmented control's selection, a checkbox.",
+      "$extensions": {"dev.westron.spring": {"duration": 0.25, "bounce": 0.1}}
+    },
     "check": {
-      "$value": {
-        "duration": {"value": 450, "unit": "ms"},
-        "delay": {"value": 0, "unit": "ms"},
-        "timingFunction": "{easing.overshoot}"
-      },
-      "$description": "A check popping as a task is done.",
-      "$extensions": {"dev.westron.spring": {"duration": 0.45, "bounce": 0}}
+      "$value": {"duration": {"value": 350, "unit": "ms"}, "delay": {"value": 0, "unit": "ms"}, "timingFunction": "{easing.standard}"},
+      "$description": "A check popping into a done task. The one motion with a visible overshoot.",
+      "$extensions": {"dev.westron.spring": {"duration": 0.35, "bounce": 0.2}}
     },
-    "check-fill": {
-      "$value": {
-        "duration": {"value": 220, "unit": "ms"},
-        "delay": {"value": 0, "unit": "ms"},
-        "timingFunction": "{easing.standard}"
-      },
-      "$description": "A check's ring and fill changing color."
+    "move": {
+      "$value": {"duration": {"value": 350, "unit": "ms"}, "delay": {"value": 0, "unit": "ms"}, "timingFunction": "{easing.standard}"},
+      "$description": "Something moving to a new place: a reordered row, a dropped item, a section folding or unfolding.",
+      "$extensions": {"dev.westron.spring": {"duration": 0.35, "bounce": 0.15}}
     },
-    "check-mark": {
-      "$value": {
-        "duration": {"value": 260, "unit": "ms"},
-        "delay": {"value": 80, "unit": "ms"},
-        "timingFunction": "{easing.standard}"
-      },
-      "$description": "A check's mark drawing itself in and out, after its colors start."
+    "enter": {
+      "$value": {"duration": {"value": 350, "unit": "ms"}, "delay": {"value": 0, "unit": "ms"}, "timingFunction": "{easing.enter}"},
+      "$description": "Something appearing: a popover, a menu, an inserted row.",
+      "$extensions": {"dev.westron.spring": {"duration": 0.35, "bounce": 0.15}}
     },
-    "title-fade": {
-      "$value": {
-        "duration": {"value": 250, "unit": "ms"},
-        "delay": {"value": 0, "unit": "ms"},
-        "timingFunction": "{easing.standard}"
-      },
-      "$description": "A title changing color as its task is checked."
+    "leave": {
+      "$value": {"duration": {"value": 200, "unit": "ms"}, "delay": {"value": 0, "unit": "ms"}, "timingFunction": "{easing.exit}"},
+      "$description": "Something leaving: a deleted row, a closing popover. Leaving is quicker than entering and does not bounce."
     },
-    "row-leave": {
-      "$value": {
-        "duration": {"value": 320, "unit": "ms"},
-        "delay": {"value": 700, "unit": "ms"},
-        "timingFunction": "{easing.accelerate}"
-      },
-      "$description": "A done row leaving, after a wait long enough to read its check."
-    },
-    "row-delete": {
-      "$value": {
-        "duration": {"value": 320, "unit": "ms"},
-        "delay": {"value": 0, "unit": "ms"},
-        "timingFunction": "{easing.accelerate}"
-      },
-      "$description": "A deleted row leaving at once."
-    },
-    "popover": {
-      "$value": {
-        "duration": {"value": 200, "unit": "ms"},
-        "delay": {"value": 0, "unit": "ms"},
-        "timingFunction": "{easing.overshoot-soft}"
-      },
-      "$description": "A small element appearing or moving into place: a row, a chevron, a dragged item.",
-      "$extensions": {"dev.westron.spring": {"duration": 0.2, "bounce": 0}}
-    },
-    "card-open": {
-      "$value": {
-        "duration": {"value": 260, "unit": "ms"},
-        "delay": {"value": 0, "unit": "ms"},
-        "timingFunction": "{easing.settle}"
-      },
-      "$description": "A card opening in place of its row."
-    },
-    "drop": {
-      "$value": {
-        "duration": {"value": 320, "unit": "ms"},
-        "delay": {"value": 0, "unit": "ms"},
-        "timingFunction": "{easing.overshoot}"
-      },
-      "$description": "Something landing where it was dropped.",
-      "$extensions": {"dev.westron.spring": {"duration": 0.32, "bounce": 0}}
-    },
-    "swipe": {
-      "$value": {
-        "duration": {"value": 250, "unit": "ms"},
-        "delay": {"value": 0, "unit": "ms"},
-        "timingFunction": "{easing.settle}"
-      },
-      "$description": "A row sliding aside for its actions and back."
-    },
-    "fold": {
-      "$value": {
-        "duration": {"value": 220, "unit": "ms"},
-        "delay": {"value": 0, "unit": "ms"},
-        "timingFunction": "{easing.standard}"
-      },
-      "$description": "A chevron turning as a section folds or opens."
-    },
-    "highlight-fade": {
-      "$value": {
-        "duration": {"value": 1600, "unit": "ms"},
-        "delay": {"value": 0, "unit": "ms"},
-        "timingFunction": "{easing.standard}"
-      },
-      "$description": "The highlight under something just moved, fading out."
-    },
-    "chip-toggle": {
-      "$value": {
-        "duration": {"value": 180, "unit": "ms"},
-        "delay": {"value": 0, "unit": "ms"},
-        "timingFunction": "{easing.standard}"
-      },
-      "$description": "A chip lighting and going out."
-    },
-    "drop-highlight": {
-      "$value": {
-        "duration": {"value": 150, "unit": "ms"},
-        "delay": {"value": 0, "unit": "ms"},
-        "timingFunction": "{easing.standard}"
-      },
-      "$description": "A drop target tinting under a drag, a dragged item dimming."
-    },
-    "hover-tint": {
-      "$value": {
-        "duration": {"value": 120, "unit": "ms"},
-        "delay": {"value": 0, "unit": "ms"},
-        "timingFunction": "{easing.standard}"
-      },
-      "$description": "A control's tint coming and going under the pointer."
-    },
-    "hover-shadow": {
-      "$value": {
-        "duration": {"value": 150, "unit": "ms"},
-        "delay": {"value": 0, "unit": "ms"},
-        "timingFunction": "{easing.standard}"
-      },
-      "$description": "A card's shadow deepening under the pointer and back."
+    "reveal": {
+      "$value": {"duration": {"value": 500, "unit": "ms"}, "delay": {"value": 0, "unit": "ms"}, "timingFunction": "{easing.standard}"},
+      "$description": "A large surface appearing: a sheet, a side panel, an opened card.",
+      "$extensions": {"dev.westron.spring": {"duration": 0.5, "bounce": 0.1}}
     }
   }
 }

@@ -24,12 +24,13 @@ let package = Package(
             name: "WestronTokens",
             path: "platforms/apple/Sources/WestronTokens"
         ),
-        // Generated/ and Tokens.xcassets are written by `tools/westron generate`.
+        // Generated/ and Tokens.xcassets are written by `tools/westron generate`. Fonts/ holds the fonts westron
+        // ships, each with its license (decisions/0011).
         .target(
             name: "WestronUI",
             dependencies: ["WestronTokens"],
             path: "platforms/apple/Sources/WestronUI",
-            resources: [.process("Tokens.xcassets")]
+            resources: [.process("Tokens.xcassets"), .copy("Fonts")]
         ),
         .target(
             name: "WestronCatalog",

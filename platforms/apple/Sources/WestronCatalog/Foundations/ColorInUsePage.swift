@@ -46,12 +46,12 @@ private struct Card<Content: View>: View {
 
     var body: some View {
         content
-            .background(.backgroundSurface, in: RoundedRectangle(cornerRadius: .radius150))
-            .clipShape(RoundedRectangle(cornerRadius: .radius150))
-            .shadow(.resting)
+            .background(.backgroundSurface, in: RoundedRectangle(cornerRadius: .radiusCard))
+            .clipShape(RoundedRectangle(cornerRadius: .radiusCard))
+            .shadow(.raised)
             .overlay {
                 if contrast == .increased {
-                    RoundedRectangle(cornerRadius: .radius150)
+                    RoundedRectangle(cornerRadius: .radiusCard)
                         .strokeBorder(.borderDefault, lineWidth: .strokeThin)
                 }
             }
@@ -82,7 +82,7 @@ private struct TasksSample: View {
                     .padding(.horizontal, .space100)
                     .frame(maxWidth: .infinity, minHeight: Metrics.control, alignment: .leading)
                     .overlay {
-                        RoundedRectangle(cornerRadius: .radius100)
+                        RoundedRectangle(cornerRadius: .radiusControl)
                             .strokeBorder(.borderStrong, lineWidth: .strokeThin)
                     }
                 VStack(spacing: 0) {
@@ -139,7 +139,7 @@ private struct TaskRow<Meta: View>: View {
         }
         .padding(.horizontal, .space75)
         .padding(.vertical, .space50)
-        .background(selected ? Color.backgroundSelected : .clear, in: RoundedRectangle(cornerRadius: .radius100))
+        .background(selected ? Color.backgroundSelected : .clear, in: RoundedRectangle(cornerRadius: .radiusRow))
     }
 }
 
@@ -220,7 +220,7 @@ private struct DeploymentsSample: View {
                         Text(row.commit)
                             .foregroundStyle(.textAccent)
                     }
-                    .font(.footnoteRegular.monospaced())
+                    .font(.codeRegular)
                     .frame(height: Metrics.tableRow)
                 }
             }
@@ -249,9 +249,9 @@ private struct NoticesSample: View {
                     .foregroundStyle(.textPrimary)
                     .padding(.horizontal, .space150)
                     .frame(height: Metrics.control)
-                    .background(.backgroundSurface, in: RoundedRectangle(cornerRadius: .radius100))
+                    .background(.backgroundSurface, in: RoundedRectangle(cornerRadius: .radiusControl))
                     .overlay {
-                        RoundedRectangle(cornerRadius: .radius100)
+                        RoundedRectangle(cornerRadius: .radiusControl)
                             .strokeBorder(.borderStrong, lineWidth: .strokeThin)
                     }
                 FilledButton(title: "Delete", icon: .trash, fill: .statusDangerFill, label: .statusDangerOnFill)
@@ -285,7 +285,7 @@ private struct Notice: View {
             Spacer(minLength: 0)
         }
         .padding(.space100)
-        .background(status.background, in: RoundedRectangle(cornerRadius: .radius100))
+        .background(status.background, in: RoundedRectangle(cornerRadius: .radiusControl))
     }
 }
 
@@ -305,7 +305,7 @@ private struct FilledButton: View {
         .foregroundStyle(label)
         .padding(.horizontal, .space150)
         .frame(height: Metrics.control)
-        .background(fill, in: RoundedRectangle(cornerRadius: .radius100))
+        .background(fill, in: RoundedRectangle(cornerRadius: .radiusControl))
     }
 }
 

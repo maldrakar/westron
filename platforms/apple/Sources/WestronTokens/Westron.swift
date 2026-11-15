@@ -14,7 +14,7 @@
 ///     Westron.Color.textSecondary.dark          // the color in the dark theme
 ///     Westron.Category(rawValue: "amber")?.text // a list's color by the name the store keeps
 ///     Westron.TextRole.headingLarge.textStyle   // .largeTitle
-///     Westron.Transition.rowLeave.delay         // 0.7 seconds
+///     Westron.Transition.move.spring            // Spring(duration: 0.35, bounce: 0.15)
 ///     Westron.Icon(rawValue: "sun") ?? .fallback // a list's icon by the name the store keeps
 public enum Westron {}
 
@@ -124,7 +124,7 @@ extension Westron {
             case largeTitle, title1, title2, title3, headline, body, callout, subheadline, footnote, caption, caption2
         }
 
-        /// The design of the system font. westron ships no font files (decisions/0011).
+        /// The design of the system font, and of the system font a shipped font falls back on (decisions/0011).
         public enum Design: String, CaseIterable, Sendable {
             case `default`, rounded, monospaced, serif
         }
@@ -147,6 +147,9 @@ extension Westron {
         public let textStyle: TextStyle
         public let design: Design
         public let weight: Weight
+        /// The PostScript name of a font westron ships, `Onest-Bold`, at `weight`; nil for the system font in
+        /// `design` (decisions/0011).
+        public let font: String?
         /// The size at the default text size, in points (CSS px).
         public let size: Double
         /// The line height as a multiple of the size.
@@ -155,13 +158,14 @@ extension Westron {
         public let letterSpacing: Double
 
         init(
-            name: String, textStyle: TextStyle, design: Design, weight: Weight, size: Double, lineHeight: Double,
-            letterSpacing: Double
+            name: String, textStyle: TextStyle, design: Design, weight: Weight, font: String?, size: Double,
+            lineHeight: Double, letterSpacing: Double
         ) {
             self.name = name
             self.textStyle = textStyle
             self.design = design
             self.weight = weight
+            self.font = font
             self.size = size
             self.lineHeight = lineHeight
             self.letterSpacing = letterSpacing
@@ -217,28 +221,54 @@ extension Westron {
         }
     }
 
-    /// A drop shadow, the same in every theme: one layer, offset by `x` and `y` and blurred over `blur`, all in points
-    /// (CSS px).
+    /// A drop shadow: layers, each offset by `x` and `y` and blurred over `blur`, all in points (CSS px). The layers
+    /// differ by theme: a dark theme casts stronger shadows, or none where a lighter surface shows the height
+    /// (decisions/0013).
     public struct Shadow: Hashable, Sendable {
+        /// One layer of a shadow.
+        public struct Layer: Hashable, Sendable {
+            public let color: RGB
+            public let x: Double
+            public let y: Double
+            /// The CSS blur.
+            public let blur: Double
+            public let spread: Double
+
+            /// The radius Apple's shadows take: half the CSS blur (decisions/0013).
+            public var radius: Double { blur / 2 }
+
+            init(color: RGB, x: Double, y: Double, blur: Double, spread: Double) {
+                self.color = color
+                self.x = x
+                self.y = y
+                self.blur = blur
+                self.spread = spread
+            }
+        }
+
         /// The token's path, `shadow.raised`.
         public let name: String
-        public let color: RGB
-        public let x: Double
-        public let y: Double
-        /// The CSS blur.
-        public let blur: Double
-        public let spread: Double
+        public let light: [Layer]
+        public let dark: [Layer]
+        public let lightHighContrast: [Layer]
+        public let darkHighContrast: [Layer]
 
-        /// The radius Apple's shadows take: half the CSS blur (decisions/0013).
-        public var radius: Double { blur / 2 }
+        /// The layers of a theme, near ones first; none where the theme casts no shadow.
+        public subscript(theme: Theme) -> [Layer] {
+            switch theme {
+            case .light: light
+            case .dark: dark
+            case .lightHighContrast: lightHighContrast
+            case .darkHighContrast: darkHighContrast
+            }
+        }
 
-        init(name: String, color: RGB, x: Double, y: Double, blur: Double, spread: Double) {
+        init(name: String, light: [Layer], dark: [Layer], lightHighContrast: [Layer], darkHighContrast: [Layer]) {
             self.name = name
-            self.color = color
-            self.x = x
-            self.y = y
-            self.blur = blur
-            self.spread = spread
+            self.light = light
+            self.dark = dark
+            self.lightHighContrast = lightHighContrast
+            self.darkHighContrast = darkHighContrast
         }
     }
 

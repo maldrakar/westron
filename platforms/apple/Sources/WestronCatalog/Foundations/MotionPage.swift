@@ -13,7 +13,7 @@ private struct MotionPage: View {
         TokenPage(
             title: "Motion",
             summary: "motion.*: Apple runs the spring where a motion has one, otherwise the curve. The plot is the "
-                + "token's curve, progress over time."
+                + "token's curve, progress over time; under Reduce Motion a spring loses its bounce."
         ) {
             // The curve beside the numbers where the window is wide enough, under the name otherwise.
             ViewThatFits(in: .horizontal) {

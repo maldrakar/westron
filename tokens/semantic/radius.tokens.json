@@ -1,7 +1,15 @@
 {
   "radius": {
     "$type": "dimension",
-    "$description": "Corner radii, on the same ladder as `space`. A capsule uses the platform's capsule shape, not a radius.",
+    "$description": "Corner radii, on the same ladder as `space`, and the radius of each kind of shape. westron rounds corners at about a quarter of a control's height; a capsule uses the platform's capsule shape, not a radius. On Apple corners are continuous (decisions/0013).",
+    "25": {
+      "$value": {"value": 2, "unit": "px"},
+      "$description": "Step 25 of the radius ladder: 2 px."
+    },
+    "50": {
+      "$value": {"value": 4, "unit": "px"},
+      "$description": "Step 50 of the radius ladder: 4 px."
+    },
     "75": {
       "$value": {"value": 6, "unit": "px"},
       "$description": "Step 75 of the radius ladder: 6 px."
@@ -10,21 +18,41 @@
       "$value": {"value": 8, "unit": "px"},
       "$description": "Step 100 of the radius ladder: 8 px."
     },
-    "125": {
-      "$value": {"value": 10, "unit": "px"},
-      "$description": "Step 125 of the radius ladder: 10 px."
-    },
     "150": {
       "$value": {"value": 12, "unit": "px"},
       "$description": "Step 150 of the radius ladder: 12 px."
     },
-    "175": {
-      "$value": {"value": 14, "unit": "px"},
-      "$description": "Step 175 of the radius ladder: 14 px."
+    "200": {
+      "$value": {"value": 16, "unit": "px"},
+      "$description": "Step 200 of the radius ladder: 16 px."
     },
-    "225": {
-      "$value": {"value": 18, "unit": "px"},
-      "$description": "Step 225 of the radius ladder: 18 px."
+    "300": {
+      "$value": {"value": 24, "unit": "px"},
+      "$description": "Step 300 of the radius ladder: 24 px."
+    },
+    "400": {
+      "$value": {"value": 32, "unit": "px"},
+      "$description": "Step 400 of the radius ladder: 32 px."
+    },
+    "control": {
+      "$value": "{radius.100}",
+      "$description": "A control westron draws: a button, a field, a segmented control. 8 px, a quarter of a 32 px control."
+    },
+    "row": {
+      "$value": "{radius.100}",
+      "$description": "The highlight of a row under the pointer or selected."
+    },
+    "card": {
+      "$value": "{radius.150}",
+      "$description": "A card or a panel on the canvas."
+    },
+    "overlay": {
+      "$value": "{radius.150}",
+      "$description": "A popover or a menu westron draws; system ones keep their own."
+    },
+    "sheet": {
+      "$value": "{radius.200}",
+      "$description": "A sheet or a dialog westron draws."
     }
   }
 }

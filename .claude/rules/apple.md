@@ -27,10 +27,11 @@ paths:
   - colors: `Color.textSecondary`, `.foregroundStyle(.textSecondary)`, `Color(Westron.Color.textSecondary)`; they come
     from colorsets, so they switch with the theme and the contrast setting by themselves;
   - list colors: `Westron.Category(rawValue: name)` with `.background`, `.text`, … and `Color.categoryText(.amber)`;
-  - text: `.font(.headingLarge)`, which is `Font.system(textStyle, design:weight:)`, never `Font.custom`, so that
-    Dynamic Type works (decisions/0011);
-  - space, radius, stroke: `CGFloat.space100`, `.radius150`, `.strokeThin`; motion: `withAnimation(.rowLeave)`;
-    shadow: `.shadow(.raised)`.
+  - text: `.font(.headingLarge)`, a text role in its text style: headings in Onest and code in Geist Mono through
+    `Font.custom(_:size:relativeTo:)`, the rest `Font.system`. A view never calls either with a size of its own, so
+    that Dynamic Type works (decisions/0011);
+  - space, radius, stroke: `CGFloat.space100`, `.radiusCard`, `.strokeThin`; motion: `withAnimation(.move)`;
+    shadow: `.shadow(.raised)`, which picks the layers of the environment's theme.
   - icons: `Image(Westron.Icon.sun)`, `Label("Rename", icon: .pen)`, not `Image(systemName:)` with a symbol spelled
     out; a stored name reads as `Westron.Icon(rawValue: name) ?? .fallback`. The names and their SF Symbols are in
     `spec/icons/icons.yaml` (decisions/0011).

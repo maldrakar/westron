@@ -1,3 +1,4 @@
+import CoreText
 import SwiftUI
 import Testing
 import WestronUI
@@ -112,10 +113,14 @@ struct TokenAccessorTests {
         }
     }
 
-    @Test("a text role is the system font in its text style, design and weight")
+    @Test("a heading is Onest and code Geist Mono, in their text styles; other roles are the system font")
     func fonts() {
-        #expect(Font.headingLarge == .system(.largeTitle, design: .rounded, weight: .heavy))
-        #expect(Font.headingOverline == .system(.caption, design: .rounded, weight: .heavy))
+        #expect(Westron.TextRole.headingLarge.font == "Onest-Bold")
+        #expect(Westron.TextRole.headingSmall.font == "Onest-SemiBold")
+        #expect(Westron.TextRole.codeRegular.font == "GeistMono-Regular")
+        #expect(Font.headingLarge == .custom("Onest-Bold", size: 34, relativeTo: .largeTitle))
+        #expect(Font.headingOverline == .custom("Onest-SemiBold", size: 12, relativeTo: .caption))
+        #expect(Font.codeStrong == .custom("GeistMono-SemiBold", size: 13, relativeTo: .footnote))
         #expect(Font.bodyRegular == .system(.body, design: .default, weight: .regular))
         #expect(Font.subheadlineStrong == .system(.subheadline, design: .default, weight: .semibold))
         #expect(Font.captionMedium == .system(.caption, design: .default, weight: .medium))
@@ -123,14 +128,27 @@ struct TokenAccessorTests {
         #expect(Westron.TextRole.all.count == Set(Westron.TextRole.all.map(\.name)).count)
     }
 
-    @Test("a motion is its spring, or its curve and delay")
+    @Test("every font a text role names is registered from WestronUI's Fonts folder and draws Cyrillic")
+    func shippedFonts() {
+        for role in Westron.TextRole.all {
+            guard let name = role.font else { continue }
+            _ = Font(role)  // The first use registers the fonts.
+            let font = CTFontCreateWithName(name as CFString, 17, nil)
+            #expect(CTFontCopyPostScriptName(font) as String == name, "\(role.name): \(name) is not registered")
+            let characters = Array("Задачи".utf16)
+            var glyphs = [CGGlyph](repeating: 0, count: characters.count)
+            #expect(CTFontGetGlyphsForCharacters(font, characters, &glyphs, characters.count), "\(name): no Cyrillic")
+        }
+    }
+
+    @Test("a motion is its spring, or its curve")
     func animations() {
-        #expect(Animation.check == .spring(duration: 0.45, bounce: 0))
-        #expect(Animation.popover == .spring(duration: 0.2, bounce: 0))
-        #expect(Animation.fold == .timingCurve(0.25, 0.1, 0.25, 1, duration: 0.22))
-        #expect(Animation.checkMark == .timingCurve(0.25, 0.1, 0.25, 1, duration: 0.26).delay(0.08))
-        #expect(Animation.rowLeave == .timingCurve(0.42, 0, 1, 1, duration: 0.32).delay(0.7))
-        #expect(Animation.rowLeave != Animation.rowDelete)
+        #expect(Animation.move == .spring(duration: 0.35, bounce: 0.15))
+        #expect(Animation.check == .spring(duration: 0.35, bounce: 0.2))
+        #expect(Animation.press == .spring(duration: 0.15, bounce: 0))
+        #expect(Animation.fade == .timingCurve(0.25, 0.1, 0.25, 1, duration: 0.2))
+        #expect(Animation.leave == .timingCurve(0.3, 0, 1, 1, duration: 0.2))
+        #expect(Animation.enter != Animation.leave)
     }
 
     @Test("space, radius and stroke are points")
@@ -138,16 +156,23 @@ struct TokenAccessorTests {
         #expect(CGFloat.space25 == 2)
         #expect(CGFloat.space100 == 8)
         #expect(CGFloat.space600 == 48)
+        #expect(CGFloat.space800 == 64)
         #expect(CGFloat.radius150 == 12)
+        #expect(CGFloat.radiusControl == 8 && CGFloat.radiusCard == 12 && CGFloat.radiusSheet == 16)
         #expect(CGFloat.strokeHairline == 0.5)
         #expect(CGFloat.strokeThick == 2)
     }
 
-    @Test("a shadow's radius is half its CSS blur")
+    @Test("a shadow has two layers in light, three times as opaque in dark, none on a raised card in dark")
     func shadows() {
-        #expect(Westron.Shadow.raised.radius == 12)
-        #expect(Westron.Shadow.resting.radius == 1)
-        #expect(Westron.Shadow.lifted.color == Westron.RGB(hex: 0x000000, opacity: 0.22))
+        let overlay = Westron.Shadow.overlay
+        #expect(overlay.light.map(\.radius) == [6, 16])
+        #expect(overlay.light.map(\.color.opacity) == [0.08, 0.12])
+        #expect(overlay.dark.map(\.color.opacity) == [0.24, 0.36])
+        #expect(overlay[.lightHighContrast] == overlay.light && overlay[.darkHighContrast] == overlay.dark)
+        #expect(Westron.Shadow.raised.light.count == 2 && Westron.Shadow.raised.dark.isEmpty)
+        #expect(Westron.Theme(colorScheme: .dark, contrast: .increased) == .darkHighContrast)
+        #expect(Westron.Theme(colorScheme: .light, contrast: .standard) == .light)
     }
 
     @Test("the accessors read as SwiftUI's own")
@@ -160,7 +185,7 @@ struct TokenAccessorTests {
             .overlay(RoundedRectangle(cornerRadius: .radius150).stroke(.borderDefault, lineWidth: .strokeThin))
             .shadow(.raised)
             .tint(.categoryFill(.amber))
-            .animation(.fold, value: 0)
+            .animation(.move, value: 0)
         _ = view
         let stack = VStack(spacing: .space100) { Text("Today").foregroundColor(.categoryText(.blue)) }
         _ = stack
