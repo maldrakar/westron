@@ -1,78 +1,103 @@
 # 02. Color
 
-Date: 2026-11-15. Status: draft for the owner's approval (#8). The palette itself is proposed in
-[decisions/0012](../decisions/0012-color.md) and is approved on the catalog's samples (#10).
+Date: 2026-11-15. Status: accepted with [decisions/0012](../decisions/0012-color.md): the owner chose direction B
+with the cobalt palette.
 
-westron's color is a quiet ground and a few signals. This chapter says why the colors are what they are. The values,
-and the table of every change from the pilot, are in decisions/0012; the token layout and the four themes are in
+westron's color is a cool, quiet ground and a few signals. This chapter says why the colors are what they are. The
+values, the ramps and the rules that solve them are in decisions/0012; the token layout and the four themes are in
 [decisions/0010](../decisions/0010-token-structure-and-modes.md).
 
-## Warm neutrals
+## A cool ground with raised cards
 
-- **The ground is paper, not gray.** `color.background.canvas`, `surface`, `sidebar` and `muted` are the pilot's warm
-  neutrals: off-white with a trace of yellow in light, warm near-black in dark. That warmth is the most visible part of
-  the pilot's look, and it lives entirely in the content layer (chapter 00, principle 1).
-- **Surfaces differ by small steps.** `surface` is something raised off the canvas: a card, a field, a dragged item.
-  `muted` is a quiet fill inside content: a chip, a pill, a column, a highlighted row on a phone. `sidebar` is the
-  sidebar's own ground. The steps are small on purpose; type, space and a shadow carry the hierarchy (chapter 04).
-- **Two levels of ink for words, one for quiet glyphs.** `color.text.primary` and `text.secondary` serve words and
-  glyphs alike. `color.icon.tertiary` serves grips and strike-through lines and never words. The pilot had a third ink
-  for words too, but any ink light enough to look tertiary fails the text target, so words stop at secondary.
-- **Lines are quiet.** `color.border.default` draws rules and dividers, `border.guide` the guides down a tree.
-  In the standard themes they are decoration, since space and alignment also show the grouping.
-- **Overlays work on any ground.** `background.hover`, `pressed` and `highlight` are translucent and laid over whatever
-  is under them. `background.selected` and `accent-subtle` are mixed opaque, as in the pilot, so nothing behind a
-  selected row or a drop slot shows through.
+- **The ground is a faintly cool white, and cards are white on it.** `color.background.canvas` is off-white with a
+  trace of blue in light and a blue-black in dark. `surface` is a card, a sheet or a popover westron draws, raised off
+  the canvas. It is white in light and one step lighter than the canvas in dark: higher is lighter in every theme, as
+  on every platform. `sunken` is a well below the content: a sidebar, a code block, a log, a table header.
+- **The coolness is a choice for many products.** A cool ground sits naturally next to the faintly cool chrome of
+  Apple and GNOME. It suits a dense table as well as a calm list. Warm grays read as paper and fit long reading;
+  westron's products are mostly tools.
+- **Surfaces differ by small steps.** `muted` is a quiet fill inside content: the track of a segmented control, a tag
+  or a badge without a color. `hover` and `pressed` follow the pointer. Type, space and a soft shadow carry the
+  hierarchy (chapter 04), so the surface steps stay small.
+- **Two inks for words, one for quiet glyphs.** `color.text.primary` and `text.secondary` serve words and glyphs
+  alike. `color.icon.tertiary` serves chevrons, grips and strike-through lines, never words. Any ink light enough to
+  look tertiary fails the text target, so words stop at secondary.
+- **Lines are quiet, borders of controls are not.** `color.border.default` draws separators. In the standard themes
+  it is decoration, since space and alignment also show the grouping. `border.strong` draws the outline of something a
+  person must find, such as a field, a checkbox or a secondary button, and it meets 3:1.
 
-## One accent, used sparingly
+## One accent: cobalt
 
-- **One blue marks the primary action and the selection.** `background.accent` fills the primary action, such as the
-  floating "+" or Done. Its usage note asks agents to avoid large areas and more than one filled control on a screen
-  (chapter 00, principle 3; [HIG Branding](https://developer.apple.com/design/human-interface-guidelines/branding)).
-  `background.selected` and `accent-subtle` lay the accent lightly under a selected row or a drop slot.
-- **As a fill, it is the same in both themes.** The pilot uses one blue in light and dark, and westron keeps it
-  (decisions/0012). A fill carries white words, and white on that blue passes in either theme.
-- **As text and as a border, it is lifted in dark.** `text.accent` and `border.accent` sit on the canvas, not under
-  white words. On the dark canvas the fill's blue fails both as a word and as a focus ring, so in dark these two tokens
-  are a lighter blue of the same hue. The rule is one hue, with its lightness set by its job.
+- **One saturated blue marks the primary action and the selection.** `background.accent` fills the one primary action
+  on a screen, a checked box, a switch that is on. Its usage note asks agents to avoid large areas and more than one
+  filled control on a screen (chapter 00, principle 3; [HIG Branding](https://developer.apple.com/design/human-interface-guidelines/branding)).
+  `background.selected` and `accent-subtle` lay the accent lightly under a selected row or an empty state's tile.
+- **The accent also means "info".** A running job, a tip and a link share the blue. So a screen holds four hues at
+  most: the accent, and danger, warning and success when something needs them.
+- **As a fill, it is the same in light and dark.** White words on `#2863D7` pass in either theme. As text and as a
+  focus ring it is lifted in dark, so that it reads on the dark canvas: one hue, with its lightness set by its job.
 
-## Red only for warnings
+## Statuses come with an icon and a word
 
-- **Red warns and nothing else.** `text.danger` is for words that warn, such as a due deadline; `background.danger` is
-  the fill of a destructive action, such as a swipe's Delete. Red never decorates and never stands for identity.
-- **It splits like the accent.** In dark, red as text is light so that it reads on the canvas, and red as a fill is
-  darker so that white words read on it.
-- **It always comes with words.** A due task is red and says "Overdue 2 days" (chapter 08).
+- **Five statuses.**
+  - `danger`: something failed, or an action destroys data.
+  - `warning`: something needs attention but works.
+  - `success`: something finished well.
+  - `info`: news, or work in progress.
+  - `neutral`: no verdict, such as queued, skipped or cancelled.
+- **Six roles each.** `background` is the quiet ground of a badge, a banner or a row. `icon` is its glyph or dot,
+  `text` its words, and `border` the outline of a field in error. `fill` is a solid fill, such as a destructive
+  button, and `on-fill` the words on it.
+- **The hues are chosen to stay apart.** Danger is a dark red, warning a bright amber with dark words on it, and
+  success a bluish green. Red and green of the same lightness merge for people with deuteranopia; a darker red and a
+  bluer green do not (decisions/0012).
+- **Color is never the only signal.** A failed build shows a crossed circle and the word "Failed". Log levels and
+  pipeline states map to statuses:
+
+  | Statuses | Log levels | Pipeline states |
+  |---|---|---|
+  | danger | error | failed |
+  | warning | warn | — |
+  | info | info | running |
+  | success | — | succeeded |
+  | neutral | debug | queued, cancelled, skipped |
 
 ## List colors are identity
 
-- **Eleven names: blue, amber, rose, green, stone, indigo, teal, pink, orange, violet, sky.** `color.category.<name>`
-  belongs to a thing a person names and colors, such as a list. The product stores the name, and each platform owns
-  the shades, as in the pilot. A missing or unknown name draws stone.
-- **Six roles come from one base, by the pilot's rule.** `background` is the tile under a list's glyph: the base,
-  translucent. `background-subtle` is the fainter tint of a column a dragged item would drop into. `text` is the glyph
-  on the tile and the section title: the base moved toward ink in light and toward white in dark. `border` is the ring
-  of an open check. `fill` is a done check's disc and a lit chip: the base itself, lifted a little in dark. `on-fill` is
-  the mark on that fill: white, or the light ink where white stands out too little, which is only amber.
-- **Why a rule.** Eleven colors in six roles and four themes are too many to choose by hand and keep consistent. A rule
-  keeps them one family, and a twelfth color would need only its base. Where a derived shade misses its target, only
-  its lightness moves (below).
-- **Identity is not state.** A list color never means danger, success or "today". A meaning gets its own semantic
-  token, even when a product would like to borrow a list color for it. Color is also never a list's only identity:
-  every list has an icon and a name too.
+- **Twelve names.** blue, sky, teal, emerald, green, olive, amber, orange, red, pink, violet, indigo.
+  `color.category.<name>` belongs to a thing a person names and colors, such as a list, a project or a tag. The
+  product stores the name, and each platform owns the shades.
+- **Six roles, the same as a status's.** `background` is a tag's ground, `icon` a list's dot, `text` its title in
+  color, `border` an outlined tag, `fill` a lit tag, and `on-fill` the words on that fill.
+- **They come from the ramps.** Each list color is a ramp, so a new name needs only a hue and a chroma in the
+  palette.
+- **Identity is not state.** A list color never means danger, success or "today", even when a product would like to
+  borrow one. A list also never relies on its color alone: it has an icon and a name too.
+
+## Charts
+
+- **Eight series, in order.** `color.chart.1`–`8`. The first ones differ most, also for people with color
+  blindness, so a chart with three series uses the first three.
+- **Each series has 3:1 on every ground in every theme.** High contrast adds direct labels and markers to a chart,
+  not contrast.
+- **More than eight series need labels.** Eight colors are the limit of what a person can match to a legend.
+  Beyond that, label the series directly or use a sequential scale.
 
 ## Four themes
 
-`light`, `dark`, `light-hc` and `dark-hc`. The high-contrast files hold only what changes
-([decisions/0010](../decisions/0010-token-structure-and-modes.md)):
+`light`, `dark`, `light-hc` and `dark-hc`. Every color comes from a ramp of twelve steps that the palette generator
+solves for each theme (decisions/0012):
 
-- secondary text, placeholders and tertiary glyphs move further from the ground;
-- the accent and red, as text and as borders, move further from the ground;
-- rules and guides become real boundaries, at a contrast they do not need in the standard themes;
-- the accent and red fills, and some list colors' text, borders and fills, move a little.
+- **The dark themes are solved again, not inverted.** Their surfaces stay close to one another, their text is light
+  without glare, and their fills keep the light themes' white words.
+- **The high-contrast themes keep the canvas and the surfaces.** They make every quiet thing clear: separators,
+  borders, secondary text and colored text move further from the ground. A person who turns on Increase Contrast should
+  see the same product, not a different palette.
+- **In dark high contrast, solid fills turn light, with dark words on them.** It is the only way a filled button
+  reaches 7:1 with its words and still stands out from a dark screen.
+- **In high contrast, every raised surface gets a border.** A shadow alone does not mark its edge (chapter 04).
 
-The canvas, the surfaces and the primary text stay as they are. A person who turns on Increase Contrast should see the
-same product with every quiet thing made clear, not a different palette. watchOS always shows the dark themes.
+watchOS always shows the dark themes.
 
 ## Contrast
 
@@ -85,25 +110,19 @@ needs. The contrast check (#15) reads that list and fails the build when a pair 
 | `large-text` | Words that are large in WCAG's sense on every platform | 3:1 | 4.5:1 |
 | `non-text` | Glyphs, rings and indicators that carry meaning | 3:1 | 4.5:1 |
 | `separator` | Rules and guides | none | 3:1 |
+| `chart` | A series in a chart | 3:1 | 3:1 |
 
 - **A stack is measured as it is seen.** A translucent color is composited over what is under it, in gamma-encoded
-  sRGB as browsers and the pilot do, and a background can be written as a stack, top first.
-- **A failing color moves only its lightness**, by the least distance that passes, keeping its hue and chroma. A white
-  mark moves its fill instead, and a translucent color first becomes more opaque. This keeps the look as close to the
-  pilot as contrast allows. The changes this made to the pilot are listed in decisions/0012.
-- Targets, exemptions and the other checks are in chapter 08.
+  sRGB as browsers do, and a background can be written as a stack, top first.
+- **The targets hold by construction.** The generator solves each step for its job's contrast, and the check proves
+  every declared pair. Targets, exemptions and the other checks are in chapter 08.
 
 ## Open questions
 
-1. **The changes to the pilot.** decisions/0012 lists every shade that moved to pass contrast. They are approved on
-   the catalog's samples (#10).
-2. **The lit tag chip.** Its words in `on-fill` on a list color's `fill` stay under the text target for most colors.
-   0012 leaves this to the chip's contract (#32). Should the lit chip change its look, for example to `text` on
-   `background`, or keep the pilot's look with larger or heavier words?
-3. **The accent on system controls.** The pilot sets no app accent, so its alerts, menus and sheets show the system
-   blue, not westron's. Should westron set its accent as the app's tint, knowing the HIG asks to minimize it on
-   controls?
-4. **Status colors.** The pilot has red and nothing else. Technical products need success, warning and information
-   states (#33). Add them with the dense components?
-5. **One accent or a choice.** The canvas offers the accent as a setting with four options. Is the blue westron's
-   only accent, or may a product choose another?
+1. **The accent on system controls.** Should westron set its accent as the app's tint on Apple, so that alerts,
+   menus and sheets show cobalt instead of the system blue? The HIG asks to keep tint off most controls. On macOS the
+   app's accent applies only when the person has chosen "multicolor".
+2. **The person's accent on GNOME.** libadwaita lets a person choose an accent since GNOME 47, and an app that sets its
+   own overrides that choice. Does westron override it, or follow the person (phase 6)?
+3. **Display P3.** The ramps are sRGB today. Should the accent and the list colors gain P3 chroma on Apple and the
+   web, keeping the sRGB values as their fallback?

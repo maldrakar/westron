@@ -19,8 +19,10 @@ between the light and the dark theme, and a resolver context cannot depend on an
 | `density` | `regular`, `compact` | `regular` | spacing and control sizes | at runtime, through the environment |
 | `platform` | `ios`, `macos`, `watchos`; `web`, `gnome`, `android` arrive with their phases | — | values that differ by platform | at build time, by each platform's generator |
 
-- A high-contrast context is its theme plus a small file of overrides: `light-hc` is `semantic/color.light` and then
-  `semantic/color.light-hc`. So the high-contrast files hold only what changes.
+- A high-contrast context is its theme plus a small file of overrides: `light-hc` is `primitive/color.light` and then
+  `primitive/color.light-hc`. So the high-contrast files hold only what changes. Since 2026-11-15 these files are the
+  color ramps that the palette generator writes, and the semantic colors are one file for every theme
+  (decisions/0012).
 - `compact` has no values yet. It is filled when the dense components (#33) give it a consumer.
 - Modifiers stay orthogonal: no token path is set by two modifiers. The resolver checks this and fails the build
   otherwise, so the order of the modifiers never changes the result.
@@ -30,18 +32,20 @@ between the light and the dark theme, and a resolver context cannot depend on an
 ```
 tokens/
   westron.resolver.json             the sets, the modifiers and the resolution order
-  primitive/*.tokens.json           the palettes in OKLCH with a hex fallback, the raw scales
-  semantic/*.tokens.json            roles that do not depend on a mode: text roles, spacing, radii, motion
-  semantic/color.<theme>.tokens.json
+  palette.json                      the palette's anchors, which the generator solves into the color ramps
+  primitive/*.tokens.json           the raw scales
+  primitive/color.<theme>.tokens.json   the color ramps of a theme, generated
+  semantic/*.tokens.json            roles that do not depend on a mode: colors, text roles, spacing, radii, motion
   density/<density>.tokens.json
   platform/<platform>.tokens.json   only where a value differs by platform
 ```
 
 ### Tiers and names
 
-- Two authored tiers. Primitive tokens are raw values and are never used by components directly. Semantic tokens say
-  what a value is for and alias primitives; a value derived from a primitive is written in the semantic token itself
-  (decisions/0012). A component tier appears only when a component needs one (decisions/0004).
+- Two tiers. Primitive tokens are raw values and are never used by components directly. Semantic tokens say what a
+  value is for and alias primitives. A component tier appears only when a component needs one (decisions/0004).
+- The color ramps are primitives that differ by theme, so the theme contexts merge them in. Every file in
+  `tokens/primitive/` holds primitives, whichever set or context uses it, and the platform generators leave it out.
 - A name goes from the general to the particular (namespace, object, base, modifier), in lowercase kebab-case path
   segments: `color.text.secondary`, `color.background.surface`, `typography.body.strong`. Ladders are named by step
   (`space.100`, `radius.150`; decisions/0013). The default variant has no suffix.

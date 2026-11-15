@@ -29,6 +29,9 @@ public struct WestronExtensions: Equatable, Sendable {
             case largeText = "large-text"
             case nonText = "non-text"
             case separator
+            /// A series in a chart, which has 3:1 in every theme: high contrast adds labels and markers to a chart,
+            /// not contrast (decisions/0012).
+            case chart
         }
 
         public var kind: Kind

@@ -101,7 +101,7 @@ struct ContrastCheckTests {
     @Test("targets by kind and kind of theme, as decisions/0012 gives them")
     func targets() {
         let table: [(ContrastCheck.Kind, Double?, Double?)] = [
-            (.text, 4.5, 7), (.largeText, 3, 4.5), (.nonText, 3, 4.5), (.separator, nil, 3),
+            (.text, 4.5, 7), (.largeText, 3, 4.5), (.nonText, 3, 4.5), (.separator, nil, 3), (.chart, 3, 3),
         ]
         #expect(table.map(\.0) == ContrastCheck.Kind.allCases)
         for (kind, standard, high) in table {

@@ -1,0 +1,36 @@
+{
+  "neutral": {
+    "hue": 258,
+    "chroma": {"light": 0.007, "dark": 0.011},
+    "stepChroma": [1, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.6, 1.6, 1.6, 1.6, 1.6],
+    "canvas": {"light": 0.984, "dark": 0.186},
+    "raised": {"light": 1, "dark": 0.224},
+    "sunken": {"light": 0.963, "dark": 0.153},
+    "solid": 0.5,
+    "text": {"light": 0.27, "dark": 0.9}
+  },
+  "steps": {
+    "light": [1.06, 1.09, 1.11, 1.16, 1.27, 1.6],
+    "dark": [1.14, 1.18, 1.23, 1.36, 1.45, 1.8]
+  },
+  "stepChroma": [0.06, 0.19, 0.21, 0.23, 0.25, 0.32, 0.5, 0.8, 1, 1, 0.95, 0.45],
+  "text": {"light": 0.32, "dark": 0.93},
+  "hues": [
+    {"name": "blue", "hue": 262, "chroma": 0.189, "solid": 0.531, "label": "light"},
+    {"name": "sky", "hue": 232, "chroma": 0.13, "solid": 0.56, "label": "light"},
+    {"name": "teal", "hue": 195, "chroma": 0.11, "solid": 0.56, "label": "light"},
+    {"name": "emerald", "hue": 168, "chroma": 0.112, "solid": 0.554, "label": "light"},
+    {"name": "green", "hue": 145, "chroma": 0.14, "solid": 0.56, "label": "light"},
+    {"name": "olive", "hue": 112, "chroma": 0.12, "solid": 0.8, "label": "dark"},
+    {"name": "amber", "hue": 80, "chroma": 0.16, "solid": 0.8, "label": "dark"},
+    {"name": "orange", "hue": 50, "chroma": 0.16, "solid": 0.58, "label": "light"},
+    {"name": "red", "hue": 27, "chroma": 0.17, "solid": 0.475, "label": "light"},
+    {"name": "pink", "hue": 350, "chroma": 0.16, "solid": 0.56, "label": "light"},
+    {"name": "violet", "hue": 300, "chroma": 0.17, "solid": 0.54, "label": "light"},
+    {"name": "indigo", "hue": 280, "chroma": 0.16, "solid": 0.52, "label": "light"}
+  ],
+  "series": {
+    "light": ["#1E68BD", "#349D11", "#873D00", "#00A589", "#BA368C", "#9369EC", "#E36C66", "#816B00"],
+    "dark": ["#80B8FF", "#EDC700", "#E24947", "#9975EB", "#FF8025", "#00A78B", "#FF82CD", "#8EC682"]
+  }
+}

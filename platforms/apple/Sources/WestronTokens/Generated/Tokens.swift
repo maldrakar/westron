@@ -5,366 +5,773 @@
 // build can use them; their types are in Westron.swift, their SwiftUI accessors in WestronUI.
 
 extension Westron.Color {
-    /// The ground of a screen and of the rows on it.
+    /// The ground of a screen, a list or a table.
     ///
-    /// Use for: screen background, row background. Avoid: Cards and fields: use background.surface.
+    /// Use for: screen background, list background. Avoid: Cards and sheets: use background.surface.
     public static let backgroundCanvas = Westron.Color(
         name: "color.background.canvas",
-        light: Westron.RGB(hex: 0xFAF7F2),
-        dark: Westron.RGB(hex: 0x1A1917),
-        lightHighContrast: Westron.RGB(hex: 0xFAF7F2),
-        darkHighContrast: Westron.RGB(hex: 0x1A1917))
+        light: Westron.RGB(hex: 0xF7FAFF),
+        dark: Westron.RGB(hex: 0x101318),
+        lightHighContrast: Westron.RGB(hex: 0xF7FAFF),
+        darkHighContrast: Westron.RGB(hex: 0x101318))
 
-    /// Something raised off the canvas: a card, a field, a dragged item.
+    /// Something raised off the canvas: a card, a sheet or a popover westron draws, a dragged row. White in light; one
+    /// step lighter than the canvas in dark, where higher is lighter.
     ///
-    /// Use for: card, field, dragged item. Avoid: The ground of a whole screen: use background.canvas.
+    /// Use for: card, sheet, popover, dragged row. Avoid: A well below the content: use background.sunken.
     public static let backgroundSurface = Westron.Color(
         name: "color.background.surface",
         light: Westron.RGB(hex: 0xFFFFFF),
-        dark: Westron.RGB(hex: 0x24221F),
+        dark: Westron.RGB(hex: 0x181C21),
         lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
-        darkHighContrast: Westron.RGB(hex: 0x24221F))
+        darkHighContrast: Westron.RGB(hex: 0x181C21))
 
-    /// The sidebar column and its rows.
-    public static let backgroundSidebar = Westron.Color(
-        name: "color.background.sidebar",
-        light: Westron.RGB(hex: 0xF2EDE5),
-        dark: Westron.RGB(hex: 0x1F1E1B),
-        lightHighContrast: Westron.RGB(hex: 0xF2EDE5),
-        darkHighContrast: Westron.RGB(hex: 0x1F1E1B))
-
-    /// A quiet fill inside content: chips, pills, columns, a highlighted row on a phone.
+    /// A well below the canvas: a sidebar, a code block, a log, a table header.
     ///
-    /// Use for: chip, pill, column, highlighted row. Avoid: The selected row in a sidebar: use background.selected.
+    /// Use for: sidebar, code block, log, table header. Avoid: A control's fill: use background.muted.
+    public static let backgroundSunken = Westron.Color(
+        name: "color.background.sunken",
+        light: Westron.RGB(hex: 0xF0F3F8),
+        dark: Westron.RGB(hex: 0x090C10),
+        lightHighContrast: Westron.RGB(hex: 0xF0F3F8),
+        darkHighContrast: Westron.RGB(hex: 0x090C10))
+
+    /// A quiet fill inside content: the track of a segmented control, a tag or a badge without a color.
+    ///
+    /// Use for: segmented track, neutral tag, neutral badge. Avoid: A row under the pointer: use background.hover.
     public static let backgroundMuted = Westron.Color(
         name: "color.background.muted",
-        light: Westron.RGB(hex: 0xF0EBE3),
-        dark: Westron.RGB(hex: 0x2E2B27),
-        lightHighContrast: Westron.RGB(hex: 0xF0EBE3),
-        darkHighContrast: Westron.RGB(hex: 0x2E2B27))
+        light: Westron.RGB(hex: 0xEBEEF4),
+        dark: Westron.RGB(hex: 0x22272D),
+        lightHighContrast: Westron.RGB(hex: 0xEBEEF4),
+        darkHighContrast: Westron.RGB(hex: 0x22272D))
 
-    /// The selected row in a sidebar: the accent laid lightly over the sidebar, mixed opaque.
-    public static let backgroundSelected = Westron.Color(
-        name: "color.background.selected",
-        light: Westron.RGB(hex: 0xD8D7E1),
-        dark: Westron.RGB(hex: 0x323645),
-        lightHighContrast: Westron.RGB(hex: 0xD8D7E1),
-        darkHighContrast: Westron.RGB(hex: 0x323645))
-
-    /// Laid over a control or row under the pointer. Translucent.
-    ///
-    /// Use for: pointer hover. Avoid: Selection: use background.selected.
+    /// A row or a control under the pointer.
     public static let backgroundHover = Westron.Color(
         name: "color.background.hover",
-        light: Westron.RGB(hex: 0x1F1D1A, opacity: 0.05),
-        dark: Westron.RGB(hex: 0xFFFFFF, opacity: 0.05),
-        lightHighContrast: Westron.RGB(hex: 0x1F1D1A, opacity: 0.05),
-        darkHighContrast: Westron.RGB(hex: 0xFFFFFF, opacity: 0.05))
+        light: Westron.RGB(hex: 0xEDF0F6),
+        dark: Westron.RGB(hex: 0x1F232A),
+        lightHighContrast: Westron.RGB(hex: 0xEDF0F6),
+        darkHighContrast: Westron.RGB(hex: 0x1F232A))
 
-    /// Laid over a control while it is pressed. Translucent.
+    /// A row or a control while it is pressed.
     public static let backgroundPressed = Westron.Color(
         name: "color.background.pressed",
-        light: Westron.RGB(hex: 0x1F1D1A, opacity: 0.08),
-        dark: Westron.RGB(hex: 0xFFFFFF, opacity: 0.09),
-        lightHighContrast: Westron.RGB(hex: 0x1F1D1A, opacity: 0.08),
-        darkHighContrast: Westron.RGB(hex: 0xFFFFFF, opacity: 0.09))
+        light: Westron.RGB(hex: 0xE6E9EF),
+        dark: Westron.RGB(hex: 0x292E34),
+        lightHighContrast: Westron.RGB(hex: 0xE6E9EF),
+        darkHighContrast: Westron.RGB(hex: 0x292E34))
 
-    /// Laid under something that just moved, fading out. Translucent.
-    public static let backgroundHighlight = Westron.Color(
-        name: "color.background.highlight",
-        light: Westron.RGB(hex: 0x3653C9, opacity: 0.12),
-        dark: Westron.RGB(hex: 0xFFFFFF, opacity: 0.08),
-        lightHighContrast: Westron.RGB(hex: 0x3653C9, opacity: 0.12),
-        darkHighContrast: Westron.RGB(hex: 0xFFFFFF, opacity: 0.08))
+    /// A selected row or item, tinted with the accent.
+    ///
+    /// Use for: selected row, selected item. Avoid: Color alone: in high contrast a selected row also shows a check or
+    /// a border.focus outline.
+    public static let backgroundSelected = Westron.Color(
+        name: "color.background.selected",
+        light: Westron.RGB(hex: 0xDDEAFF),
+        dark: Westron.RGB(hex: 0x202E45),
+        lightHighContrast: Westron.RGB(hex: 0xDDEAFF),
+        darkHighContrast: Westron.RGB(hex: 0x202E45))
 
-    /// A quiet accent fill: the slot a dragged item will drop into. Opaque.
+    /// A quiet accent ground: the tile behind an empty state's icon, a highlighted tip.
     public static let backgroundAccentSubtle = Westron.Color(
         name: "color.background.accent-subtle",
-        light: Westron.RGB(hex: 0xE7EAF9),
-        dark: Westron.RGB(hex: 0x212742),
-        lightHighContrast: Westron.RGB(hex: 0xE7EAF9),
-        darkHighContrast: Westron.RGB(hex: 0x212742))
+        light: Westron.RGB(hex: 0xE8F0FF),
+        dark: Westron.RGB(hex: 0x182336),
+        lightHighContrast: Westron.RGB(hex: 0xE8F0FF),
+        darkHighContrast: Westron.RGB(hex: 0x182336))
 
-    /// The face of a floating control where the system has no glass of its own (before OS 26). Translucent; the
-    /// platform blurs what is under it.
+    /// The fill of the one primary action on a screen, a checked box, a switch that is on.
     ///
-    /// Use for: floating control before OS 26. Avoid: The content layer; on OS 26 and later use the system's glass.
-    public static let backgroundGlass = Westron.Color(
-        name: "color.background.glass",
-        light: Westron.RGB(hex: 0xFFFFFF, opacity: 0.72),
-        dark: Westron.RGB(hex: 0x322F2B, opacity: 0.72),
-        lightHighContrast: Westron.RGB(hex: 0xFFFFFF, opacity: 0.72),
-        darkHighContrast: Westron.RGB(hex: 0x322F2B, opacity: 0.72))
-
-    /// The fill of the primary action: a floating "+", Done. The accent, the same in light and dark.
-    ///
-    /// Use for: primary action fill. Avoid: Large areas, or more than one filled control on a screen; text and borders
-    /// in the accent use text.accent and border.accent.
+    /// Use for: primary button, checked box, switch on. Avoid: Status: use status.info.fill, even though info is the
+    /// accent's blue today.
     public static let backgroundAccent = Westron.Color(
         name: "color.background.accent",
-        light: Westron.RGB(hex: 0x3653C9),
-        dark: Westron.RGB(hex: 0x3653C9),
-        lightHighContrast: Westron.RGB(hex: 0x324DC3),
-        darkHighContrast: Westron.RGB(hex: 0x324DC3))
+        light: Westron.RGB(hex: 0x2863D7),
+        dark: Westron.RGB(hex: 0x2863D7),
+        lightHighContrast: Westron.RGB(hex: 0x1651C3),
+        darkHighContrast: Westron.RGB(hex: 0x6A9EFF))
 
-    /// The fill of a destructive action, such as a swipe's Delete.
-    public static let backgroundDanger = Westron.Color(
-        name: "color.background.danger",
-        light: Westron.RGB(hex: 0xC2362B),
-        dark: Westron.RGB(hex: 0xC75046),
-        lightHighContrast: Westron.RGB(hex: 0xAD1F17),
-        darkHighContrast: Westron.RGB(hex: 0xA32E28))
+    /// The accent fill under the pointer.
+    public static let backgroundAccentHover = Westron.Color(
+        name: "color.background.accent-hover",
+        light: Westron.RGB(hex: 0x1C56C9),
+        dark: Westron.RGB(hex: 0x1C56C9),
+        lightHighContrast: Westron.RGB(hex: 0x0844B6),
+        darkHighContrast: Westron.RGB(hex: 0x7EACFF))
 
     /// Main text and glyphs.
     public static let textPrimary = Westron.Color(
         name: "color.text.primary",
-        light: Westron.RGB(hex: 0x1F1D1A),
-        dark: Westron.RGB(hex: 0xEEEAE3),
-        lightHighContrast: Westron.RGB(hex: 0x1F1D1A),
-        darkHighContrast: Westron.RGB(hex: 0xEEEAE3),
+        light: Westron.RGB(hex: 0x23272C),
+        dark: Westron.RGB(hex: 0xD7DFEA),
+        lightHighContrast: Westron.RGB(hex: 0x1A1E23),
+        darkHighContrast: Westron.RGB(hex: 0xE7EFFA),
         backgrounds: [
             ["color.background.canvas"],
             ["color.background.surface"],
-            ["color.background.sidebar"],
+            ["color.background.sunken"],
             ["color.background.muted"],
+            ["color.background.hover"],
+            ["color.background.pressed"],
             ["color.background.selected"],
-            ["color.background.hover", "color.background.canvas"],
-            ["color.background.hover", "color.background.muted"],
-            ["color.background.highlight", "color.background.canvas"],
-            ["color.background.glass", "color.background.canvas"],
             ["color.background.accent-subtle"],
         ])
 
-    /// Supporting text and glyphs: counts, dates, metadata, notes, a done task's title.
+    /// Text and glyphs that come second: captions, metadata, a row's details, timestamps.
     public static let textSecondary = Westron.Color(
         name: "color.text.secondary",
-        light: Westron.RGB(hex: 0x625C53),
-        dark: Westron.RGB(hex: 0xABA498),
-        lightHighContrast: Westron.RGB(hex: 0x474139),
-        darkHighContrast: Westron.RGB(hex: 0xCCC5B8),
+        light: Westron.RGB(hex: 0x656970),
+        dark: Westron.RGB(hex: 0x8E96A0),
+        lightHighContrast: Westron.RGB(hex: 0x484C52),
+        darkHighContrast: Westron.RGB(hex: 0xB4BBC6),
         backgrounds: [
             ["color.background.canvas"],
             ["color.background.surface"],
-            ["color.background.sidebar"],
+            ["color.background.sunken"],
             ["color.background.muted"],
+            ["color.background.hover"],
+            ["color.background.pressed"],
             ["color.background.selected"],
-            ["color.background.hover", "color.background.canvas"],
-            ["color.background.hover", "color.background.muted"],
-            ["color.background.highlight", "color.background.canvas"],
-            ["color.background.glass", "color.background.canvas"],
+            ["color.background.accent-subtle"],
         ])
 
-    /// What a field shows while it is empty. Translucent.
+    /// The placeholder of an empty field. It meets the text target, as all words do.
     public static let textPlaceholder = Westron.Color(
         name: "color.text.placeholder",
-        light: Westron.RGB(hex: 0x625C53, opacity: 0.87),
-        dark: Westron.RGB(hex: 0xABA498, opacity: 0.8),
-        lightHighContrast: Westron.RGB(hex: 0x5A544B),
-        darkHighContrast: Westron.RGB(hex: 0xB3ACA0),
-        backgrounds: [["color.background.surface"], ["color.background.canvas"]])
+        light: Westron.RGB(hex: 0x656970),
+        dark: Westron.RGB(hex: 0x8E96A0),
+        lightHighContrast: Westron.RGB(hex: 0x484C52),
+        darkHighContrast: Westron.RGB(hex: 0xB4BBC6),
+        backgrounds: [
+            ["color.background.canvas"],
+            ["color.background.surface"],
+            ["color.background.sunken"],
+            ["color.background.muted"],
+        ])
 
-    /// Text and glyphs on background.accent.
-    ///
-    /// Use for: on background.accent. Avoid: Any other background.
+    /// Text and glyphs on the accent fill: white, and the canvas's color in dark high contrast, where the fill turns
+    /// light.
     public static let textOnAccent = Westron.Color(
         name: "color.text.on-accent",
         light: Westron.RGB(hex: 0xFFFFFF),
         dark: Westron.RGB(hex: 0xFFFFFF),
         lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
-        darkHighContrast: Westron.RGB(hex: 0xFFFFFF),
-        backgrounds: [["color.background.accent"]])
+        darkHighContrast: Westron.RGB(hex: 0x101318),
+        backgrounds: [["color.background.accent"], ["color.background.accent-hover"]])
 
-    /// Text and glyphs on background.danger.
+    /// Links and accent text.
     ///
-    /// Use for: on background.danger. Avoid: Any other background.
-    public static let textOnDanger = Westron.Color(
-        name: "color.text.on-danger",
-        light: Westron.RGB(hex: 0xFFFFFF),
-        dark: Westron.RGB(hex: 0xFFFFFF),
-        lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
-        darkHighContrast: Westron.RGB(hex: 0xFFFFFF),
-        backgrounds: [["color.background.danger"]])
-
-    /// A word or glyph in the accent that acts, such as an action on an edit bar, or marks the chosen option.
-    ///
-    /// Use for: action word, chosen option's check. Avoid: Fills: use color.background.accent. Rings and indicators:
-    /// use color.border.accent.
+    /// Use for: link, accent text. Avoid: Status text: use status.<name>.text.
     public static let textAccent = Westron.Color(
         name: "color.text.accent",
-        light: Westron.RGB(hex: 0x3653C9),
-        dark: Westron.RGB(hex: 0x6488FF),
-        lightHighContrast: Westron.RGB(hex: 0x2A42B7),
-        darkHighContrast: Westron.RGB(hex: 0x97B2FF),
+        light: Westron.RGB(hex: 0x2C63D1),
+        dark: Westron.RGB(hex: 0x5992FF),
+        lightHighContrast: Westron.RGB(hex: 0x0C43AF),
+        darkHighContrast: Westron.RGB(hex: 0x96BCFF),
         backgrounds: [
             ["color.background.canvas"],
             ["color.background.surface"],
-            ["color.background.sidebar"],
-            ["color.background.glass", "color.background.canvas"],
-        ])
-
-    /// Text and glyphs that warn: a due deadline.
-    public static let textDanger = Westron.Color(
-        name: "color.text.danger",
-        light: Westron.RGB(hex: 0xC2362B),
-        dark: Westron.RGB(hex: 0xF07468),
-        lightHighContrast: Westron.RGB(hex: 0x9F0706),
-        darkHighContrast: Westron.RGB(hex: 0xFF9D91),
-        backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.muted"]])
-
-    /// Quiet glyphs and decorations: a grip, a strike-through line. Meets 3:1, not 4.5:1.
-    ///
-    /// Use for: grip, strike-through. Avoid: Words of any size: use text.secondary.
-    public static let iconTertiary = Westron.Color(
-        name: "color.icon.tertiary",
-        light: Westron.RGB(hex: 0x80796E),
-        dark: Westron.RGB(hex: 0x847F76),
-        lightHighContrast: Westron.RGB(hex: 0x645E53),
-        darkHighContrast: Westron.RGB(hex: 0xA39E94),
-        backgrounds: [
-            ["color.background.canvas"],
-            ["color.background.surface"],
-            ["color.background.sidebar"],
-            ["color.background.muted"],
-            ["color.background.selected"],
-        ])
-
-    /// Rules, dividers and outlines.
-    public static let borderDefault = Westron.Color(
-        name: "color.border.default",
-        light: Westron.RGB(hex: 0xE8E2D8),
-        dark: Westron.RGB(hex: 0x35322D),
-        lightHighContrast: Westron.RGB(hex: 0x8E887F),
-        darkHighContrast: Westron.RGB(hex: 0x6F6C66),
-        backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sidebar"]])
-
-    /// The guides down the branches of a tree in a sidebar.
-    public static let borderGuide = Westron.Color(
-        name: "color.border.guide",
-        light: Westron.RGB(hex: 0xE0D9CC),
-        dark: Westron.RGB(hex: 0x36332E),
-        lightHighContrast: Westron.RGB(hex: 0x8F887C),
-        darkHighContrast: Westron.RGB(hex: 0x6B6862),
-        backgrounds: [["color.background.sidebar"]])
-
-    /// The hairline round glass and round a card on a fill. Translucent.
-    public static let borderGlass = Westron.Color(
-        name: "color.border.glass",
-        light: Westron.RGB(hex: 0x1F1D1A, opacity: 0.08),
-        dark: Westron.RGB(hex: 0xFFFFFF, opacity: 0.08),
-        lightHighContrast: Westron.RGB(hex: 0x1F1D1A, opacity: 0.49),
-        darkHighContrast: Westron.RGB(hex: 0xFFFFFF, opacity: 0.35),
-        backgrounds: [["color.background.canvas"], ["color.background.muted"]])
-
-    /// A focus ring, a drop indicator, the outline of a drop slot.
-    ///
-    /// Use for: focus ring, drop indicator. Avoid: Text: use text.accent. Fills: use background.accent.
-    public static let borderAccent = Westron.Color(
-        name: "color.border.accent",
-        light: Westron.RGB(hex: 0x3653C9),
-        dark: Westron.RGB(hex: 0x5377F0),
-        lightHighContrast: Westron.RGB(hex: 0x3653C9),
-        darkHighContrast: Westron.RGB(hex: 0x789BFF),
-        backgrounds: [
-            ["color.background.canvas"],
-            ["color.background.surface"],
-            ["color.background.sidebar"],
-            ["color.background.muted"],
+            ["color.background.sunken"],
+            ["color.background.hover"],
             ["color.background.selected"],
             ["color.background.accent-subtle"],
         ])
+
+    /// Glyphs that carry no words and need only 3:1: a chevron, a grip, a disclosure triangle.
+    ///
+    /// Use for: chevron, grip, disclosure. Avoid: Words: words are text.secondary at least.
+    public static let iconTertiary = Westron.Color(
+        name: "color.icon.tertiary",
+        light: Westron.RGB(hex: 0x81868D),
+        dark: Westron.RGB(hex: 0x717781),
+        lightHighContrast: Westron.RGB(hex: 0x656970),
+        darkHighContrast: Westron.RGB(hex: 0x8E96A0),
+        backgrounds: [
+            ["color.background.canvas"],
+            ["color.background.surface"],
+            ["color.background.sunken"],
+            ["color.background.hover"],
+            ["color.background.selected"],
+        ])
+
+    /// Separators and the outline of a card: decorative in standard themes, 3:1 in high contrast, where every raised
+    /// surface gets one.
+    public static let borderDefault = Westron.Color(
+        name: "color.border.default",
+        light: Westron.RGB(hex: 0xDCDFE5),
+        dark: Westron.RGB(hex: 0x2E3339),
+        lightHighContrast: Westron.RGB(hex: 0x898D92),
+        darkHighContrast: Westron.RGB(hex: 0x656B72),
+        backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
+
+    /// The border of a control that must be seen: a field, a checkbox, a radio ring, a secondary button.
+    public static let borderStrong = Westron.Color(
+        name: "color.border.strong",
+        light: Westron.RGB(hex: 0x81868D),
+        dark: Westron.RGB(hex: 0x717781),
+        lightHighContrast: Westron.RGB(hex: 0x656970),
+        darkHighContrast: Westron.RGB(hex: 0x8E96A0),
+        backgrounds: [
+            ["color.background.canvas"],
+            ["color.background.surface"],
+            ["color.background.sunken"],
+            ["color.background.muted"],
+        ])
+
+    /// The focus ring, and the outline of a selected item in high contrast.
+    public static let borderFocus = Westron.Color(
+        name: "color.border.focus",
+        light: Westron.RGB(hex: 0x5283E1),
+        dark: Westron.RGB(hex: 0x4474D0),
+        lightHighContrast: Westron.RGB(hex: 0x3765C0),
+        darkHighContrast: Westron.RGB(hex: 0x6194F2),
+        backgrounds: [
+            ["color.background.canvas"],
+            ["color.background.surface"],
+            ["color.background.sunken"],
+            ["color.background.hover"],
+            ["color.background.selected"],
+        ])
+
+    /// The quiet ground of a badge, a banner or a row in the status danger.
+    public static let statusDangerBackground = Westron.Color(
+        name: "color.status.danger.background",
+        light: Westron.RGB(hex: 0xFFEFED),
+        dark: Westron.RGB(hex: 0x2F1B18),
+        lightHighContrast: Westron.RGB(hex: 0xFFEFED),
+        darkHighContrast: Westron.RGB(hex: 0x2F1B18))
+
+    /// The border of a field or a banner in the status danger.
+    public static let statusDangerBorder = Westron.Color(
+        name: "color.status.danger.border",
+        light: Westron.RGB(hex: 0xCF665C),
+        dark: Westron.RGB(hex: 0xBF564D),
+        lightHighContrast: Westron.RGB(hex: 0xAE4840),
+        darkHighContrast: Westron.RGB(hex: 0xE1766B),
+        backgrounds: [
+            ["color.background.canvas"],
+            ["color.background.surface"],
+            ["color.background.sunken"],
+            ["color.status.danger.background"],
+        ])
+
+    /// The icon or dot of the status danger.
+    public static let statusDangerIcon = Westron.Color(
+        name: "color.status.danger.icon",
+        light: Westron.RGB(hex: 0xCF665C),
+        dark: Westron.RGB(hex: 0xBF564D),
+        lightHighContrast: Westron.RGB(hex: 0xAE4840),
+        darkHighContrast: Westron.RGB(hex: 0xE1766B),
+        backgrounds: [
+            ["color.background.canvas"],
+            ["color.background.surface"],
+            ["color.background.sunken"],
+            ["color.status.danger.background"],
+        ])
+
+    /// Text in the status danger.
+    public static let statusDangerText = Westron.Color(
+        name: "color.status.danger.text",
+        light: Westron.RGB(hex: 0xBA3D37),
+        dark: Westron.RGB(hex: 0xEE6D62),
+        lightHighContrast: Westron.RGB(hex: 0x961818),
+        darkHighContrast: Westron.RGB(hex: 0xFFA297),
+        backgrounds: [
+            ["color.background.canvas"],
+            ["color.background.surface"],
+            ["color.background.sunken"],
+            ["color.status.danger.background"],
+        ])
+
+    /// The solid fill of the status danger: a button or a count badge.
+    public static let statusDangerFill = Westron.Color(
+        name: "color.status.danger.fill",
+        light: Westron.RGB(hex: 0xA72120),
+        dark: Westron.RGB(hex: 0xA72120),
+        lightHighContrast: Westron.RGB(hex: 0xA72120),
+        darkHighContrast: Westron.RGB(hex: 0xFE7469))
+
+    /// Text and glyphs on the danger fill.
+    public static let statusDangerOnFill = Westron.Color(
+        name: "color.status.danger.on-fill",
+        light: Westron.RGB(hex: 0xFFFFFF),
+        dark: Westron.RGB(hex: 0xFFFFFF),
+        lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+        darkHighContrast: Westron.RGB(hex: 0x101318),
+        backgrounds: [["color.status.danger.fill"]])
+
+    /// The quiet ground of a badge, a banner or a row in the status warning.
+    public static let statusWarningBackground = Westron.Color(
+        name: "color.status.warning.background",
+        light: Westron.RGB(hex: 0xFEF1DD),
+        dark: Westron.RGB(hex: 0x281F0F),
+        lightHighContrast: Westron.RGB(hex: 0xFEF1DD),
+        darkHighContrast: Westron.RGB(hex: 0x281F0F))
+
+    /// The border of a field or a banner in the status warning.
+    public static let statusWarningBorder = Westron.Color(
+        name: "color.status.warning.border",
+        light: Westron.RGB(hex: 0xAF7C04),
+        dark: Westron.RGB(hex: 0x9C6F00),
+        lightHighContrast: Westron.RGB(hex: 0x8A6100),
+        darkHighContrast: Westron.RGB(hex: 0xBF8C24),
+        backgrounds: [
+            ["color.background.canvas"],
+            ["color.background.surface"],
+            ["color.background.sunken"],
+            ["color.status.warning.background"],
+        ])
+
+    /// The icon or dot of the status warning.
+    public static let statusWarningIcon = Westron.Color(
+        name: "color.status.warning.icon",
+        light: Westron.RGB(hex: 0xAF7C04),
+        dark: Westron.RGB(hex: 0x9C6F00),
+        lightHighContrast: Westron.RGB(hex: 0x8A6100),
+        darkHighContrast: Westron.RGB(hex: 0xBF8C24),
+        backgrounds: [
+            ["color.background.canvas"],
+            ["color.background.surface"],
+            ["color.background.sunken"],
+            ["color.status.warning.background"],
+        ])
+
+    /// Text in the status warning.
+    public static let statusWarningText = Westron.Color(
+        name: "color.status.warning.text",
+        light: Westron.RGB(hex: 0x8A6100),
+        dark: Westron.RGB(hex: 0xC28B00),
+        lightHighContrast: Westron.RGB(hex: 0x654700),
+        darkHighContrast: Westron.RGB(hex: 0xEFB02E),
+        backgrounds: [
+            ["color.background.canvas"],
+            ["color.background.surface"],
+            ["color.background.sunken"],
+            ["color.status.warning.background"],
+        ])
+
+    /// The solid fill of the status warning: a button or a count badge.
+    public static let statusWarningFill = Westron.Color(
+        name: "color.status.warning.fill",
+        light: Westron.RGB(hex: 0xF3B01D),
+        dark: Westron.RGB(hex: 0xF3B01D),
+        lightHighContrast: Westron.RGB(hex: 0xF3B01D),
+        darkHighContrast: Westron.RGB(hex: 0xF3B01D))
+
+    /// Text and glyphs on the warning fill.
+    public static let statusWarningOnFill = Westron.Color(
+        name: "color.status.warning.on-fill",
+        light: Westron.RGB(hex: 0x191610),
+        dark: Westron.RGB(hex: 0x191610),
+        lightHighContrast: Westron.RGB(hex: 0x191610),
+        darkHighContrast: Westron.RGB(hex: 0x191610),
+        backgrounds: [["color.status.warning.fill"]])
+
+    /// The quiet ground of a badge, a banner or a row in the status success.
+    public static let statusSuccessBackground = Westron.Color(
+        name: "color.status.success.background",
+        light: Westron.RGB(hex: 0xE6F7F0),
+        dark: Westron.RGB(hex: 0x15231D),
+        lightHighContrast: Westron.RGB(hex: 0xE6F7F0),
+        darkHighContrast: Westron.RGB(hex: 0x15231D))
+
+    /// The border of a field or a banner in the status success.
+    public static let statusSuccessBorder = Westron.Color(
+        name: "color.status.success.border",
+        light: Westron.RGB(hex: 0x449378),
+        dark: Westron.RGB(hex: 0x348469),
+        lightHighContrast: Westron.RGB(hex: 0x23765C),
+        darkHighContrast: Westron.RGB(hex: 0x55A387),
+        backgrounds: [
+            ["color.background.canvas"],
+            ["color.background.surface"],
+            ["color.background.sunken"],
+            ["color.status.success.background"],
+        ])
+
+    /// The icon or dot of the status success.
+    public static let statusSuccessIcon = Westron.Color(
+        name: "color.status.success.icon",
+        light: Westron.RGB(hex: 0x449378),
+        dark: Westron.RGB(hex: 0x348469),
+        lightHighContrast: Westron.RGB(hex: 0x23765C),
+        darkHighContrast: Westron.RGB(hex: 0x55A387),
+        backgrounds: [
+            ["color.background.canvas"],
+            ["color.background.surface"],
+            ["color.background.sunken"],
+            ["color.status.success.background"],
+        ])
+
+    /// Text in the status success.
+    public static let statusSuccessText = Westron.Color(
+        name: "color.status.success.text",
+        light: Westron.RGB(hex: 0x00775A),
+        dark: Westron.RGB(hex: 0x41A684),
+        lightHighContrast: Westron.RGB(hex: 0x005741),
+        darkHighContrast: Westron.RGB(hex: 0x6BCDAA),
+        backgrounds: [
+            ["color.background.canvas"],
+            ["color.background.surface"],
+            ["color.background.sunken"],
+            ["color.status.success.background"],
+        ])
+
+    /// The solid fill of the status success: a button or a count badge.
+    public static let statusSuccessFill = Westron.Color(
+        name: "color.status.success.fill",
+        light: Westron.RGB(hex: 0x018766),
+        dark: Westron.RGB(hex: 0x018766),
+        lightHighContrast: Westron.RGB(hex: 0x00654C),
+        darkHighContrast: Westron.RGB(hex: 0x46B18D))
+
+    /// Text and glyphs on the success fill.
+    public static let statusSuccessOnFill = Westron.Color(
+        name: "color.status.success.on-fill",
+        light: Westron.RGB(hex: 0xFFFFFF),
+        dark: Westron.RGB(hex: 0xFFFFFF),
+        lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+        darkHighContrast: Westron.RGB(hex: 0x101318),
+        backgrounds: [["color.status.success.fill"]])
+
+    /// The quiet ground of a badge, a banner or a row in the status info.
+    public static let statusInfoBackground = Westron.Color(
+        name: "color.status.info.background",
+        light: Westron.RGB(hex: 0xEDF3FF),
+        dark: Westron.RGB(hex: 0x172031),
+        lightHighContrast: Westron.RGB(hex: 0xEDF3FF),
+        darkHighContrast: Westron.RGB(hex: 0x172031))
+
+    /// The border of a field or a banner in the status info.
+    public static let statusInfoBorder = Westron.Color(
+        name: "color.status.info.border",
+        light: Westron.RGB(hex: 0x5283E1),
+        dark: Westron.RGB(hex: 0x4474D0),
+        lightHighContrast: Westron.RGB(hex: 0x3765C0),
+        darkHighContrast: Westron.RGB(hex: 0x6194F2),
+        backgrounds: [
+            ["color.background.canvas"],
+            ["color.background.surface"],
+            ["color.background.sunken"],
+            ["color.status.info.background"],
+        ])
+
+    /// The icon or dot of the status info.
+    public static let statusInfoIcon = Westron.Color(
+        name: "color.status.info.icon",
+        light: Westron.RGB(hex: 0x5283E1),
+        dark: Westron.RGB(hex: 0x4474D0),
+        lightHighContrast: Westron.RGB(hex: 0x3765C0),
+        darkHighContrast: Westron.RGB(hex: 0x6194F2),
+        backgrounds: [
+            ["color.background.canvas"],
+            ["color.background.surface"],
+            ["color.background.sunken"],
+            ["color.status.info.background"],
+        ])
+
+    /// Text in the status info.
+    public static let statusInfoText = Westron.Color(
+        name: "color.status.info.text",
+        light: Westron.RGB(hex: 0x2C63D1),
+        dark: Westron.RGB(hex: 0x5992FF),
+        lightHighContrast: Westron.RGB(hex: 0x0C43AF),
+        darkHighContrast: Westron.RGB(hex: 0x96BCFF),
+        backgrounds: [
+            ["color.background.canvas"],
+            ["color.background.surface"],
+            ["color.background.sunken"],
+            ["color.status.info.background"],
+        ])
+
+    /// The solid fill of the status info: a button or a count badge.
+    public static let statusInfoFill = Westron.Color(
+        name: "color.status.info.fill",
+        light: Westron.RGB(hex: 0x2863D7),
+        dark: Westron.RGB(hex: 0x2863D7),
+        lightHighContrast: Westron.RGB(hex: 0x1651C3),
+        darkHighContrast: Westron.RGB(hex: 0x6A9EFF))
+
+    /// Text and glyphs on the info fill.
+    public static let statusInfoOnFill = Westron.Color(
+        name: "color.status.info.on-fill",
+        light: Westron.RGB(hex: 0xFFFFFF),
+        dark: Westron.RGB(hex: 0xFFFFFF),
+        lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+        darkHighContrast: Westron.RGB(hex: 0x101318),
+        backgrounds: [["color.status.info.fill"]])
+
+    /// The quiet ground of a badge, a banner or a row in the status neutral.
+    public static let statusNeutralBackground = Westron.Color(
+        name: "color.status.neutral.background",
+        light: Westron.RGB(hex: 0xEBEEF4),
+        dark: Westron.RGB(hex: 0x22272D),
+        lightHighContrast: Westron.RGB(hex: 0xEBEEF4),
+        darkHighContrast: Westron.RGB(hex: 0x22272D))
+
+    /// The border of a field or a banner in the status neutral.
+    public static let statusNeutralBorder = Westron.Color(
+        name: "color.status.neutral.border",
+        light: Westron.RGB(hex: 0x81868D),
+        dark: Westron.RGB(hex: 0x717781),
+        lightHighContrast: Westron.RGB(hex: 0x656970),
+        darkHighContrast: Westron.RGB(hex: 0x8E96A0),
+        backgrounds: [
+            ["color.background.canvas"],
+            ["color.background.surface"],
+            ["color.background.sunken"],
+            ["color.status.neutral.background"],
+        ])
+
+    /// The icon or dot of the status neutral.
+    public static let statusNeutralIcon = Westron.Color(
+        name: "color.status.neutral.icon",
+        light: Westron.RGB(hex: 0x81868D),
+        dark: Westron.RGB(hex: 0x717781),
+        lightHighContrast: Westron.RGB(hex: 0x656970),
+        darkHighContrast: Westron.RGB(hex: 0x8E96A0),
+        backgrounds: [
+            ["color.background.canvas"],
+            ["color.background.surface"],
+            ["color.background.sunken"],
+            ["color.status.neutral.background"],
+        ])
+
+    /// Text in the status neutral.
+    public static let statusNeutralText = Westron.Color(
+        name: "color.status.neutral.text",
+        light: Westron.RGB(hex: 0x656970),
+        dark: Westron.RGB(hex: 0x8E96A0),
+        lightHighContrast: Westron.RGB(hex: 0x484C52),
+        darkHighContrast: Westron.RGB(hex: 0xB4BBC6),
+        backgrounds: [
+            ["color.background.canvas"],
+            ["color.background.surface"],
+            ["color.background.sunken"],
+            ["color.status.neutral.background"],
+        ])
+
+    /// The solid fill of the status neutral: a button or a count badge.
+    public static let statusNeutralFill = Westron.Color(
+        name: "color.status.neutral.fill",
+        light: Westron.RGB(hex: 0x5F646A),
+        dark: Westron.RGB(hex: 0x5D646E),
+        lightHighContrast: Westron.RGB(hex: 0x555960),
+        darkHighContrast: Westron.RGB(hex: 0x98A0AA))
+
+    /// Text and glyphs on the neutral fill.
+    public static let statusNeutralOnFill = Westron.Color(
+        name: "color.status.neutral.on-fill",
+        light: Westron.RGB(hex: 0xFFFFFF),
+        dark: Westron.RGB(hex: 0xFFFFFF),
+        lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+        darkHighContrast: Westron.RGB(hex: 0x101318),
+        backgrounds: [["color.status.neutral.fill"]])
+
+    /// Series 1 of a chart.
+    public static let chart1 = Westron.Color(
+        name: "color.chart.1",
+        light: Westron.RGB(hex: 0x1E68BD),
+        dark: Westron.RGB(hex: 0x80B8FF),
+        lightHighContrast: Westron.RGB(hex: 0x1E68BD),
+        darkHighContrast: Westron.RGB(hex: 0x80B8FF),
+        backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
+
+    /// Series 2 of a chart.
+    public static let chart2 = Westron.Color(
+        name: "color.chart.2",
+        light: Westron.RGB(hex: 0x349D11),
+        dark: Westron.RGB(hex: 0xEDC700),
+        lightHighContrast: Westron.RGB(hex: 0x349D11),
+        darkHighContrast: Westron.RGB(hex: 0xEDC700),
+        backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
+
+    /// Series 3 of a chart.
+    public static let chart3 = Westron.Color(
+        name: "color.chart.3",
+        light: Westron.RGB(hex: 0x873D00),
+        dark: Westron.RGB(hex: 0xE24947),
+        lightHighContrast: Westron.RGB(hex: 0x873D00),
+        darkHighContrast: Westron.RGB(hex: 0xE24947),
+        backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
+
+    /// Series 4 of a chart.
+    public static let chart4 = Westron.Color(
+        name: "color.chart.4",
+        light: Westron.RGB(hex: 0x009F84),
+        dark: Westron.RGB(hex: 0x9975EB),
+        lightHighContrast: Westron.RGB(hex: 0x009F84),
+        darkHighContrast: Westron.RGB(hex: 0x9975EB),
+        backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
+
+    /// Series 5 of a chart.
+    public static let chart5 = Westron.Color(
+        name: "color.chart.5",
+        light: Westron.RGB(hex: 0xBA368C),
+        dark: Westron.RGB(hex: 0xFF8025),
+        lightHighContrast: Westron.RGB(hex: 0xBA368C),
+        darkHighContrast: Westron.RGB(hex: 0xFF8025),
+        backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
+
+    /// Series 6 of a chart.
+    public static let chart6 = Westron.Color(
+        name: "color.chart.6",
+        light: Westron.RGB(hex: 0x9369EC),
+        dark: Westron.RGB(hex: 0x00A78B),
+        lightHighContrast: Westron.RGB(hex: 0x9369EC),
+        darkHighContrast: Westron.RGB(hex: 0x00A78B),
+        backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
+
+    /// Series 7 of a chart.
+    public static let chart7 = Westron.Color(
+        name: "color.chart.7",
+        light: Westron.RGB(hex: 0xDE6862),
+        dark: Westron.RGB(hex: 0xFF82CD),
+        lightHighContrast: Westron.RGB(hex: 0xDE6862),
+        darkHighContrast: Westron.RGB(hex: 0xFF82CD),
+        backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
+
+    /// Series 8 of a chart.
+    public static let chart8 = Westron.Color(
+        name: "color.chart.8",
+        light: Westron.RGB(hex: 0x816B00),
+        dark: Westron.RGB(hex: 0x8EC682),
+        lightHighContrast: Westron.RGB(hex: 0x816B00),
+        darkHighContrast: Westron.RGB(hex: 0x8EC682),
+        backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
 
     /// Every semantic color in token order, the list colors included.
     public static let all: [Westron.Color] = [
         backgroundCanvas,
         backgroundSurface,
-        backgroundSidebar,
+        backgroundSunken,
         backgroundMuted,
-        backgroundSelected,
         backgroundHover,
         backgroundPressed,
-        backgroundHighlight,
+        backgroundSelected,
         backgroundAccentSubtle,
-        backgroundGlass,
         backgroundAccent,
-        backgroundDanger,
+        backgroundAccentHover,
         textPrimary,
         textSecondary,
         textPlaceholder,
         textOnAccent,
-        textOnDanger,
         textAccent,
-        textDanger,
         iconTertiary,
         borderDefault,
-        borderGuide,
-        borderGlass,
-        borderAccent,
+        borderStrong,
+        borderFocus,
+        statusDangerBackground,
+        statusDangerBorder,
+        statusDangerIcon,
+        statusDangerText,
+        statusDangerFill,
+        statusDangerOnFill,
+        statusWarningBackground,
+        statusWarningBorder,
+        statusWarningIcon,
+        statusWarningText,
+        statusWarningFill,
+        statusWarningOnFill,
+        statusSuccessBackground,
+        statusSuccessBorder,
+        statusSuccessIcon,
+        statusSuccessText,
+        statusSuccessFill,
+        statusSuccessOnFill,
+        statusInfoBackground,
+        statusInfoBorder,
+        statusInfoIcon,
+        statusInfoText,
+        statusInfoFill,
+        statusInfoOnFill,
+        statusNeutralBackground,
+        statusNeutralBorder,
+        statusNeutralIcon,
+        statusNeutralText,
+        statusNeutralFill,
+        statusNeutralOnFill,
         Westron.Category.blue.background,
-        Westron.Category.blue.backgroundSubtle,
-        Westron.Category.blue.text,
         Westron.Category.blue.border,
+        Westron.Category.blue.icon,
+        Westron.Category.blue.text,
         Westron.Category.blue.fill,
         Westron.Category.blue.onFill,
-        Westron.Category.amber.background,
-        Westron.Category.amber.backgroundSubtle,
-        Westron.Category.amber.text,
-        Westron.Category.amber.border,
-        Westron.Category.amber.fill,
-        Westron.Category.amber.onFill,
-        Westron.Category.rose.background,
-        Westron.Category.rose.backgroundSubtle,
-        Westron.Category.rose.text,
-        Westron.Category.rose.border,
-        Westron.Category.rose.fill,
-        Westron.Category.rose.onFill,
-        Westron.Category.green.background,
-        Westron.Category.green.backgroundSubtle,
-        Westron.Category.green.text,
-        Westron.Category.green.border,
-        Westron.Category.green.fill,
-        Westron.Category.green.onFill,
-        Westron.Category.stone.background,
-        Westron.Category.stone.backgroundSubtle,
-        Westron.Category.stone.text,
-        Westron.Category.stone.border,
-        Westron.Category.stone.fill,
-        Westron.Category.stone.onFill,
-        Westron.Category.indigo.background,
-        Westron.Category.indigo.backgroundSubtle,
-        Westron.Category.indigo.text,
-        Westron.Category.indigo.border,
-        Westron.Category.indigo.fill,
-        Westron.Category.indigo.onFill,
-        Westron.Category.teal.background,
-        Westron.Category.teal.backgroundSubtle,
-        Westron.Category.teal.text,
-        Westron.Category.teal.border,
-        Westron.Category.teal.fill,
-        Westron.Category.teal.onFill,
-        Westron.Category.pink.background,
-        Westron.Category.pink.backgroundSubtle,
-        Westron.Category.pink.text,
-        Westron.Category.pink.border,
-        Westron.Category.pink.fill,
-        Westron.Category.pink.onFill,
-        Westron.Category.orange.background,
-        Westron.Category.orange.backgroundSubtle,
-        Westron.Category.orange.text,
-        Westron.Category.orange.border,
-        Westron.Category.orange.fill,
-        Westron.Category.orange.onFill,
-        Westron.Category.violet.background,
-        Westron.Category.violet.backgroundSubtle,
-        Westron.Category.violet.text,
-        Westron.Category.violet.border,
-        Westron.Category.violet.fill,
-        Westron.Category.violet.onFill,
         Westron.Category.sky.background,
-        Westron.Category.sky.backgroundSubtle,
-        Westron.Category.sky.text,
         Westron.Category.sky.border,
+        Westron.Category.sky.icon,
+        Westron.Category.sky.text,
         Westron.Category.sky.fill,
         Westron.Category.sky.onFill,
+        Westron.Category.teal.background,
+        Westron.Category.teal.border,
+        Westron.Category.teal.icon,
+        Westron.Category.teal.text,
+        Westron.Category.teal.fill,
+        Westron.Category.teal.onFill,
+        Westron.Category.emerald.background,
+        Westron.Category.emerald.border,
+        Westron.Category.emerald.icon,
+        Westron.Category.emerald.text,
+        Westron.Category.emerald.fill,
+        Westron.Category.emerald.onFill,
+        Westron.Category.green.background,
+        Westron.Category.green.border,
+        Westron.Category.green.icon,
+        Westron.Category.green.text,
+        Westron.Category.green.fill,
+        Westron.Category.green.onFill,
+        Westron.Category.olive.background,
+        Westron.Category.olive.border,
+        Westron.Category.olive.icon,
+        Westron.Category.olive.text,
+        Westron.Category.olive.fill,
+        Westron.Category.olive.onFill,
+        Westron.Category.amber.background,
+        Westron.Category.amber.border,
+        Westron.Category.amber.icon,
+        Westron.Category.amber.text,
+        Westron.Category.amber.fill,
+        Westron.Category.amber.onFill,
+        Westron.Category.orange.background,
+        Westron.Category.orange.border,
+        Westron.Category.orange.icon,
+        Westron.Category.orange.text,
+        Westron.Category.orange.fill,
+        Westron.Category.orange.onFill,
+        Westron.Category.red.background,
+        Westron.Category.red.border,
+        Westron.Category.red.icon,
+        Westron.Category.red.text,
+        Westron.Category.red.fill,
+        Westron.Category.red.onFill,
+        Westron.Category.pink.background,
+        Westron.Category.pink.border,
+        Westron.Category.pink.icon,
+        Westron.Category.pink.text,
+        Westron.Category.pink.fill,
+        Westron.Category.pink.onFill,
+        Westron.Category.violet.background,
+        Westron.Category.violet.border,
+        Westron.Category.violet.icon,
+        Westron.Category.violet.text,
+        Westron.Category.violet.fill,
+        Westron.Category.violet.onFill,
+        Westron.Category.indigo.background,
+        Westron.Category.indigo.border,
+        Westron.Category.indigo.icon,
+        Westron.Category.indigo.text,
+        Westron.Category.indigo.fill,
+        Westron.Category.indigo.onFill,
+        chart1,
+        chart2,
+        chart3,
+        chart4,
+        chart5,
+        chart6,
+        chart7,
+        chart8,
     ]
 }
 
@@ -373,805 +780,872 @@ extension Westron {
     /// name in the tokens, and reads it back with `init(rawValue:)`.
     public enum Category: String, CaseIterable, Sendable {
         case blue
-        case amber
-        case rose
-        case green
-        case stone
-        case indigo
-        case teal
-        case pink
-        case orange
-        case violet
         case sky
+        case teal
+        case emerald
+        case green
+        case olive
+        case amber
+        case orange
+        case red
+        case pink
+        case violet
+        case indigo
 
-        /// The tile under a list's glyph: the list color, translucent.
+        /// The quiet ground of a tag or a row in the list color.
         public var background: Westron.Color {
             switch self {
             case .blue: Self.blueBackground
-            case .amber: Self.amberBackground
-            case .rose: Self.roseBackground
-            case .green: Self.greenBackground
-            case .stone: Self.stoneBackground
-            case .indigo: Self.indigoBackground
-            case .teal: Self.tealBackground
-            case .pink: Self.pinkBackground
-            case .orange: Self.orangeBackground
-            case .violet: Self.violetBackground
             case .sky: Self.skyBackground
+            case .teal: Self.tealBackground
+            case .emerald: Self.emeraldBackground
+            case .green: Self.greenBackground
+            case .olive: Self.oliveBackground
+            case .amber: Self.amberBackground
+            case .orange: Self.orangeBackground
+            case .red: Self.redBackground
+            case .pink: Self.pinkBackground
+            case .violet: Self.violetBackground
+            case .indigo: Self.indigoBackground
             }
         }
 
-        /// A column or block tinted while something would drop into it: the list color, translucent.
-        public var backgroundSubtle: Westron.Color {
-            switch self {
-            case .blue: Self.blueBackgroundSubtle
-            case .amber: Self.amberBackgroundSubtle
-            case .rose: Self.roseBackgroundSubtle
-            case .green: Self.greenBackgroundSubtle
-            case .stone: Self.stoneBackgroundSubtle
-            case .indigo: Self.indigoBackgroundSubtle
-            case .teal: Self.tealBackgroundSubtle
-            case .pink: Self.pinkBackgroundSubtle
-            case .orange: Self.orangeBackgroundSubtle
-            case .violet: Self.violetBackgroundSubtle
-            case .sky: Self.skyBackgroundSubtle
-            }
-        }
-
-        /// Text and glyphs in the list color: a section title, the glyph on the list's tile.
-        public var text: Westron.Color {
-            switch self {
-            case .blue: Self.blueText
-            case .amber: Self.amberText
-            case .rose: Self.roseText
-            case .green: Self.greenText
-            case .stone: Self.stoneText
-            case .indigo: Self.indigoText
-            case .teal: Self.tealText
-            case .pink: Self.pinkText
-            case .orange: Self.orangeText
-            case .violet: Self.violetText
-            case .sky: Self.skyText
-            }
-        }
-
-        /// The ring of an open check in the list color.
+        /// The border of an outlined tag in the list color.
         public var border: Westron.Color {
             switch self {
             case .blue: Self.blueBorder
-            case .amber: Self.amberBorder
-            case .rose: Self.roseBorder
-            case .green: Self.greenBorder
-            case .stone: Self.stoneBorder
-            case .indigo: Self.indigoBorder
-            case .teal: Self.tealBorder
-            case .pink: Self.pinkBorder
-            case .orange: Self.orangeBorder
-            case .violet: Self.violetBorder
             case .sky: Self.skyBorder
+            case .teal: Self.tealBorder
+            case .emerald: Self.emeraldBorder
+            case .green: Self.greenBorder
+            case .olive: Self.oliveBorder
+            case .amber: Self.amberBorder
+            case .orange: Self.orangeBorder
+            case .red: Self.redBorder
+            case .pink: Self.pinkBorder
+            case .violet: Self.violetBorder
+            case .indigo: Self.indigoBorder
             }
         }
 
-        /// The disc of a done check, a lit chip: the list color.
-        ///
-        /// Use for: things that carry a list's color. Avoid: States such as danger or success: use their own tokens.
+        /// A dot or an icon in the list color.
+        public var icon: Westron.Color {
+            switch self {
+            case .blue: Self.blueIcon
+            case .sky: Self.skyIcon
+            case .teal: Self.tealIcon
+            case .emerald: Self.emeraldIcon
+            case .green: Self.greenIcon
+            case .olive: Self.oliveIcon
+            case .amber: Self.amberIcon
+            case .orange: Self.orangeIcon
+            case .red: Self.redIcon
+            case .pink: Self.pinkIcon
+            case .violet: Self.violetIcon
+            case .indigo: Self.indigoIcon
+            }
+        }
+
+        /// Text in the list color.
+        public var text: Westron.Color {
+            switch self {
+            case .blue: Self.blueText
+            case .sky: Self.skyText
+            case .teal: Self.tealText
+            case .emerald: Self.emeraldText
+            case .green: Self.greenText
+            case .olive: Self.oliveText
+            case .amber: Self.amberText
+            case .orange: Self.orangeText
+            case .red: Self.redText
+            case .pink: Self.pinkText
+            case .violet: Self.violetText
+            case .indigo: Self.indigoText
+            }
+        }
+
+        /// The solid fill of a lit tag in the list color.
         public var fill: Westron.Color {
             switch self {
             case .blue: Self.blueFill
-            case .amber: Self.amberFill
-            case .rose: Self.roseFill
-            case .green: Self.greenFill
-            case .stone: Self.stoneFill
-            case .indigo: Self.indigoFill
-            case .teal: Self.tealFill
-            case .pink: Self.pinkFill
-            case .orange: Self.orangeFill
-            case .violet: Self.violetFill
             case .sky: Self.skyFill
+            case .teal: Self.tealFill
+            case .emerald: Self.emeraldFill
+            case .green: Self.greenFill
+            case .olive: Self.oliveFill
+            case .amber: Self.amberFill
+            case .orange: Self.orangeFill
+            case .red: Self.redFill
+            case .pink: Self.pinkFill
+            case .violet: Self.violetFill
+            case .indigo: Self.indigoFill
             }
         }
 
-        /// The mark on category fill: white, or the light ink where white would not stand out (amber).
+        /// Text and glyphs on the fill of the list color.
         public var onFill: Westron.Color {
             switch self {
             case .blue: Self.blueOnFill
-            case .amber: Self.amberOnFill
-            case .rose: Self.roseOnFill
-            case .green: Self.greenOnFill
-            case .stone: Self.stoneOnFill
-            case .indigo: Self.indigoOnFill
-            case .teal: Self.tealOnFill
-            case .pink: Self.pinkOnFill
-            case .orange: Self.orangeOnFill
-            case .violet: Self.violetOnFill
             case .sky: Self.skyOnFill
+            case .teal: Self.tealOnFill
+            case .emerald: Self.emeraldOnFill
+            case .green: Self.greenOnFill
+            case .olive: Self.oliveOnFill
+            case .amber: Self.amberOnFill
+            case .orange: Self.orangeOnFill
+            case .red: Self.redOnFill
+            case .pink: Self.pinkOnFill
+            case .violet: Self.violetOnFill
+            case .indigo: Self.indigoOnFill
             }
         }
 
         /// The colors of the category, one per role, in token order.
-        public var colors: [Westron.Color] { [background, backgroundSubtle, text, border, fill, onFill] }
+        public var colors: [Westron.Color] { [background, border, icon, text, fill, onFill] }
 
-        /// The tile under a list's glyph: the list color blue, translucent.
+        /// The quiet ground of a tag or a row in the list color blue.
         private static let blueBackground = Westron.Color(
             name: "color.category.blue.background",
-            light: Westron.RGB(hex: 0x3E6EC5, opacity: 0.15),
-            dark: Westron.RGB(hex: 0x3E6EC5, opacity: 0.24),
-            lightHighContrast: Westron.RGB(hex: 0x3E6EC5, opacity: 0.15),
-            darkHighContrast: Westron.RGB(hex: 0x3E6EC5, opacity: 0.24))
+            light: Westron.RGB(hex: 0xE8F0FF),
+            dark: Westron.RGB(hex: 0x182336),
+            lightHighContrast: Westron.RGB(hex: 0xE8F0FF),
+            darkHighContrast: Westron.RGB(hex: 0x182336))
 
-        /// A column or block tinted while something would drop into it: the list color blue, translucent.
-        private static let blueBackgroundSubtle = Westron.Color(
-            name: "color.category.blue.background-subtle",
-            light: Westron.RGB(hex: 0x3E6EC5, opacity: 0.1),
-            dark: Westron.RGB(hex: 0x3E6EC5, opacity: 0.2),
-            lightHighContrast: Westron.RGB(hex: 0x3E6EC5, opacity: 0.1),
-            darkHighContrast: Westron.RGB(hex: 0x3E6EC5, opacity: 0.2))
-
-        /// Text and glyphs in the list color blue: a section title, the glyph on the list's tile.
-        private static let blueText = Westron.Color(
-            name: "color.category.blue.text",
-            light: Westron.RGB(hex: 0x385EA3),
-            dark: Westron.RGB(hex: 0x789AD6),
-            lightHighContrast: Westron.RGB(hex: 0x284C90),
-            darkHighContrast: Westron.RGB(hex: 0x95B8F6),
-            backgrounds: [
-                ["color.background.canvas"],
-                ["color.background.muted"],
-                ["color.background.surface"],
-                ["color.category.blue.background", "color.background.canvas"],
-                ["color.category.blue.background", "color.background.surface"],
-                ["color.category.blue.background", "color.background.sidebar"],
-                ["color.category.blue.background", "color.background.muted"],
-                ["color.category.blue.background", "color.background.selected"],
-            ])
-
-        /// The ring of an open check in the list color blue.
+        /// The border of an outlined tag in the list color blue.
         private static let blueBorder = Westron.Color(
             name: "color.category.blue.border",
-            light: Westron.RGB(hex: 0x385EA3),
-            dark: Westron.RGB(hex: 0x6188CF),
-            lightHighContrast: Westron.RGB(hex: 0x385EA3),
-            darkHighContrast: Westron.RGB(hex: 0x6289D0),
-            backgrounds: [["color.background.canvas"], ["color.background.surface"]])
+            light: Westron.RGB(hex: 0x5283E1),
+            dark: Westron.RGB(hex: 0x4474D0),
+            lightHighContrast: Westron.RGB(hex: 0x3765C0),
+            darkHighContrast: Westron.RGB(hex: 0x6194F2),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.blue.background"],
+            ])
 
-        /// The disc of a done check, a lit chip: the list color blue.
-        ///
-        /// Use for: things that carry a list's color. Avoid: States such as danger or success: use their own tokens.
+        /// A dot or an icon in the list color blue.
+        private static let blueIcon = Westron.Color(
+            name: "color.category.blue.icon",
+            light: Westron.RGB(hex: 0x5283E1),
+            dark: Westron.RGB(hex: 0x4474D0),
+            lightHighContrast: Westron.RGB(hex: 0x3765C0),
+            darkHighContrast: Westron.RGB(hex: 0x6194F2),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.blue.background"],
+            ])
+
+        /// Text in the list color blue.
+        private static let blueText = Westron.Color(
+            name: "color.category.blue.text",
+            light: Westron.RGB(hex: 0x2C63D1),
+            dark: Westron.RGB(hex: 0x5992FF),
+            lightHighContrast: Westron.RGB(hex: 0x0C43AF),
+            darkHighContrast: Westron.RGB(hex: 0x96BCFF),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.blue.background"],
+            ])
+
+        /// The solid fill of a lit tag in the list color blue.
         private static let blueFill = Westron.Color(
             name: "color.category.blue.fill",
-            light: Westron.RGB(hex: 0x3E6EC5),
-            dark: Westron.RGB(hex: 0x4D7ACA),
-            lightHighContrast: Westron.RGB(hex: 0x3E6EC5),
-            darkHighContrast: Westron.RGB(hex: 0x4975C5))
+            light: Westron.RGB(hex: 0x2863D7),
+            dark: Westron.RGB(hex: 0x2863D7),
+            lightHighContrast: Westron.RGB(hex: 0x1651C3),
+            darkHighContrast: Westron.RGB(hex: 0x6A9EFF))
 
-        /// The mark on category fill: white, or the light ink where white would not stand out (amber).
+        /// Text and glyphs on the fill of the list color blue.
         private static let blueOnFill = Westron.Color(
             name: "color.category.blue.on-fill",
             light: Westron.RGB(hex: 0xFFFFFF),
             dark: Westron.RGB(hex: 0xFFFFFF),
             lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
-            darkHighContrast: Westron.RGB(hex: 0xFFFFFF),
+            darkHighContrast: Westron.RGB(hex: 0x101318),
             backgrounds: [["color.category.blue.fill"]])
 
-        /// The tile under a list's glyph: the list color amber, translucent.
-        private static let amberBackground = Westron.Color(
-            name: "color.category.amber.background",
-            light: Westron.RGB(hex: 0xD49408, opacity: 0.15),
-            dark: Westron.RGB(hex: 0xD49408, opacity: 0.24),
-            lightHighContrast: Westron.RGB(hex: 0xD49408, opacity: 0.15),
-            darkHighContrast: Westron.RGB(hex: 0xD49408, opacity: 0.24))
-
-        /// A column or block tinted while something would drop into it: the list color amber, translucent.
-        private static let amberBackgroundSubtle = Westron.Color(
-            name: "color.category.amber.background-subtle",
-            light: Westron.RGB(hex: 0xD49408, opacity: 0.1),
-            dark: Westron.RGB(hex: 0xD49408, opacity: 0.2),
-            lightHighContrast: Westron.RGB(hex: 0xD49408, opacity: 0.1),
-            darkHighContrast: Westron.RGB(hex: 0xD49408, opacity: 0.2))
-
-        /// Text and glyphs in the list color amber: a section title, the glyph on the list's tile.
-        private static let amberText = Westron.Color(
-            name: "color.category.amber.text",
-            light: Westron.RGB(hex: 0x8E6200),
-            dark: Westron.RGB(hex: 0xE1B452),
-            lightHighContrast: Westron.RGB(hex: 0x694800),
-            darkHighContrast: Westron.RGB(hex: 0xE6B957),
-            backgrounds: [
-                ["color.background.canvas"],
-                ["color.background.muted"],
-                ["color.background.surface"],
-                ["color.category.amber.background", "color.background.canvas"],
-                ["color.category.amber.background", "color.background.surface"],
-                ["color.category.amber.background", "color.background.sidebar"],
-                ["color.category.amber.background", "color.background.muted"],
-                ["color.category.amber.background", "color.background.selected"],
-            ])
-
-        /// The ring of an open check in the list color amber.
-        private static let amberBorder = Westron.Color(
-            name: "color.category.amber.border",
-            light: Westron.RGB(hex: 0xB07C0C),
-            dark: Westron.RGB(hex: 0xDCA734),
-            lightHighContrast: Westron.RGB(hex: 0x986900),
-            darkHighContrast: Westron.RGB(hex: 0xDCA734),
-            backgrounds: [["color.background.canvas"], ["color.background.surface"]])
-
-        /// The disc of a done check, a lit chip: the list color amber.
-        ///
-        /// Use for: things that carry a list's color. Avoid: States such as danger or success: use their own tokens.
-        private static let amberFill = Westron.Color(
-            name: "color.category.amber.fill",
-            light: Westron.RGB(hex: 0xD49408),
-            dark: Westron.RGB(hex: 0xD79D1C),
-            lightHighContrast: Westron.RGB(hex: 0xD49408),
-            darkHighContrast: Westron.RGB(hex: 0xD79D1C))
-
-        /// The mark on category fill: white, or the light ink where white would not stand out (amber).
-        private static let amberOnFill = Westron.Color(
-            name: "color.category.amber.on-fill",
-            light: Westron.RGB(hex: 0x1F1D1A),
-            dark: Westron.RGB(hex: 0x1F1D1A),
-            lightHighContrast: Westron.RGB(hex: 0x1F1D1A),
-            darkHighContrast: Westron.RGB(hex: 0x1F1D1A),
-            backgrounds: [["color.category.amber.fill"]])
-
-        /// The tile under a list's glyph: the list color rose, translucent.
-        private static let roseBackground = Westron.Color(
-            name: "color.category.rose.background",
-            light: Westron.RGB(hex: 0xD2455A, opacity: 0.15),
-            dark: Westron.RGB(hex: 0xD2455A, opacity: 0.24),
-            lightHighContrast: Westron.RGB(hex: 0xD2455A, opacity: 0.15),
-            darkHighContrast: Westron.RGB(hex: 0xD2455A, opacity: 0.24))
-
-        /// A column or block tinted while something would drop into it: the list color rose, translucent.
-        private static let roseBackgroundSubtle = Westron.Color(
-            name: "color.category.rose.background-subtle",
-            light: Westron.RGB(hex: 0xD2455A, opacity: 0.1),
-            dark: Westron.RGB(hex: 0xD2455A, opacity: 0.2),
-            lightHighContrast: Westron.RGB(hex: 0xD2455A, opacity: 0.1),
-            darkHighContrast: Westron.RGB(hex: 0xD2455A, opacity: 0.2))
-
-        /// Text and glyphs in the list color rose: a section title, the glyph on the list's tile.
-        private static let roseText = Westron.Color(
-            name: "color.category.rose.text",
-            light: Westron.RGB(hex: 0xAE3D4D),
-            dark: Westron.RGB(hex: 0xE07D8C),
-            lightHighContrast: Westron.RGB(hex: 0x932237),
-            darkHighContrast: Westron.RGB(hex: 0xFF9AA8),
-            backgrounds: [
-                ["color.background.canvas"],
-                ["color.background.muted"],
-                ["color.background.surface"],
-                ["color.category.rose.background", "color.background.canvas"],
-                ["color.category.rose.background", "color.background.surface"],
-                ["color.category.rose.background", "color.background.sidebar"],
-                ["color.category.rose.background", "color.background.muted"],
-                ["color.category.rose.background", "color.background.selected"],
-            ])
-
-        /// The ring of an open check in the list color rose.
-        private static let roseBorder = Westron.Color(
-            name: "color.category.rose.border",
-            light: Westron.RGB(hex: 0xAE3D4D),
-            dark: Westron.RGB(hex: 0xDA6678),
-            lightHighContrast: Westron.RGB(hex: 0xAE3D4D),
-            darkHighContrast: Westron.RGB(hex: 0xDA6678),
-            backgrounds: [["color.background.canvas"], ["color.background.surface"]])
-
-        /// The disc of a done check, a lit chip: the list color rose.
-        ///
-        /// Use for: things that carry a list's color. Avoid: States such as danger or success: use their own tokens.
-        private static let roseFill = Westron.Color(
-            name: "color.category.rose.fill",
-            light: Westron.RGB(hex: 0xD2455A),
-            dark: Westron.RGB(hex: 0xD65467),
-            lightHighContrast: Westron.RGB(hex: 0xD04359),
-            darkHighContrast: Westron.RGB(hex: 0xCA495E))
-
-        /// The mark on category fill: white, or the light ink where white would not stand out (amber).
-        private static let roseOnFill = Westron.Color(
-            name: "color.category.rose.on-fill",
-            light: Westron.RGB(hex: 0xFFFFFF),
-            dark: Westron.RGB(hex: 0xFFFFFF),
-            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
-            darkHighContrast: Westron.RGB(hex: 0xFFFFFF),
-            backgrounds: [["color.category.rose.fill"]])
-
-        /// The tile under a list's glyph: the list color green, translucent.
-        private static let greenBackground = Westron.Color(
-            name: "color.category.green.background",
-            light: Westron.RGB(hex: 0x36925C, opacity: 0.15),
-            dark: Westron.RGB(hex: 0x36925C, opacity: 0.24),
-            lightHighContrast: Westron.RGB(hex: 0x36925C, opacity: 0.15),
-            darkHighContrast: Westron.RGB(hex: 0x36925C, opacity: 0.24))
-
-        /// A column or block tinted while something would drop into it: the list color green, translucent.
-        private static let greenBackgroundSubtle = Westron.Color(
-            name: "color.category.green.background-subtle",
-            light: Westron.RGB(hex: 0x36925C, opacity: 0.1),
-            dark: Westron.RGB(hex: 0x36925C, opacity: 0.2),
-            lightHighContrast: Westron.RGB(hex: 0x36925C, opacity: 0.1),
-            darkHighContrast: Westron.RGB(hex: 0x36925C, opacity: 0.2))
-
-        /// Text and glyphs in the list color green: a section title, the glyph on the list's tile.
-        private static let greenText = Westron.Color(
-            name: "color.category.green.text",
-            light: Westron.RGB(hex: 0x2E784C),
-            dark: Westron.RGB(hex: 0x72B38D),
-            lightHighContrast: Westron.RGB(hex: 0x035A30),
-            darkHighContrast: Westron.RGB(hex: 0x83C59E),
-            backgrounds: [
-                ["color.background.canvas"],
-                ["color.background.muted"],
-                ["color.background.surface"],
-                ["color.category.green.background", "color.background.canvas"],
-                ["color.category.green.background", "color.background.surface"],
-                ["color.category.green.background", "color.background.sidebar"],
-                ["color.category.green.background", "color.background.muted"],
-                ["color.category.green.background", "color.background.selected"],
-            ])
-
-        /// The ring of an open check in the list color green.
-        private static let greenBorder = Westron.Color(
-            name: "color.category.green.border",
-            light: Westron.RGB(hex: 0x317B4F),
-            dark: Westron.RGB(hex: 0x5AA679),
-            lightHighContrast: Westron.RGB(hex: 0x317B4F),
-            darkHighContrast: Westron.RGB(hex: 0x5AA679),
-            backgrounds: [["color.background.canvas"], ["color.background.surface"]])
-
-        /// The disc of a done check, a lit chip: the list color green.
-        ///
-        /// Use for: things that carry a list's color. Avoid: States such as danger or success: use their own tokens.
-        private static let greenFill = Westron.Color(
-            name: "color.category.green.fill",
-            light: Westron.RGB(hex: 0x36925C),
-            dark: Westron.RGB(hex: 0x469B69),
-            lightHighContrast: Westron.RGB(hex: 0x288651),
-            darkHighContrast: Westron.RGB(hex: 0x2F8656))
-
-        /// The mark on category fill: white, or the light ink where white would not stand out (amber).
-        private static let greenOnFill = Westron.Color(
-            name: "color.category.green.on-fill",
-            light: Westron.RGB(hex: 0xFFFFFF),
-            dark: Westron.RGB(hex: 0xFFFFFF),
-            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
-            darkHighContrast: Westron.RGB(hex: 0xFFFFFF),
-            backgrounds: [["color.category.green.fill"]])
-
-        /// The tile under a list's glyph: the list color stone, translucent.
-        private static let stoneBackground = Westron.Color(
-            name: "color.category.stone.background",
-            light: Westron.RGB(hex: 0x8A847A, opacity: 0.15),
-            dark: Westron.RGB(hex: 0x8A847A, opacity: 0.24),
-            lightHighContrast: Westron.RGB(hex: 0x8A847A, opacity: 0.15),
-            darkHighContrast: Westron.RGB(hex: 0x8A847A, opacity: 0.24))
-
-        /// A column or block tinted while something would drop into it: the list color stone, translucent.
-        private static let stoneBackgroundSubtle = Westron.Color(
-            name: "color.category.stone.background-subtle",
-            light: Westron.RGB(hex: 0x8A847A, opacity: 0.1),
-            dark: Westron.RGB(hex: 0x8A847A, opacity: 0.2),
-            lightHighContrast: Westron.RGB(hex: 0x8A847A, opacity: 0.1),
-            darkHighContrast: Westron.RGB(hex: 0x8A847A, opacity: 0.2))
-
-        /// Text and glyphs in the list color stone: a section title, the glyph on the list's tile.
-        private static let stoneText = Westron.Color(
-            name: "color.category.stone.text",
-            light: Westron.RGB(hex: 0x706A62),
-            dark: Westron.RGB(hex: 0xADA9A2),
-            lightHighContrast: Westron.RGB(hex: 0x534D46),
-            darkHighContrast: Westron.RGB(hex: 0xBBB7B0),
-            backgrounds: [
-                ["color.background.canvas"],
-                ["color.background.muted"],
-                ["color.background.surface"],
-                ["color.category.stone.background", "color.background.canvas"],
-                ["color.category.stone.background", "color.background.surface"],
-                ["color.category.stone.background", "color.background.sidebar"],
-                ["color.category.stone.background", "color.background.muted"],
-                ["color.category.stone.background", "color.background.selected"],
-            ])
-
-        /// The ring of an open check in the list color stone.
-        private static let stoneBorder = Westron.Color(
-            name: "color.category.stone.border",
-            light: Westron.RGB(hex: 0x756F67),
-            dark: Westron.RGB(hex: 0x9F9A92),
-            lightHighContrast: Westron.RGB(hex: 0x756F67),
-            darkHighContrast: Westron.RGB(hex: 0x9F9A92),
-            backgrounds: [["color.background.canvas"], ["color.background.surface"]])
-
-        /// The disc of a done check, a lit chip: the list color stone.
-        ///
-        /// Use for: things that carry a list's color. Avoid: States such as danger or success: use their own tokens.
-        private static let stoneFill = Westron.Color(
-            name: "color.category.stone.fill",
-            light: Westron.RGB(hex: 0x8A847A),
-            dark: Westron.RGB(hex: 0x938E85),
-            lightHighContrast: Westron.RGB(hex: 0x7C766C),
-            darkHighContrast: Westron.RGB(hex: 0x7B766E))
-
-        /// The mark on category fill: white, or the light ink where white would not stand out (amber).
-        private static let stoneOnFill = Westron.Color(
-            name: "color.category.stone.on-fill",
-            light: Westron.RGB(hex: 0xFFFFFF),
-            dark: Westron.RGB(hex: 0xFFFFFF),
-            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
-            darkHighContrast: Westron.RGB(hex: 0xFFFFFF),
-            backgrounds: [["color.category.stone.fill"]])
-
-        /// The tile under a list's glyph: the list color indigo, translucent.
-        private static let indigoBackground = Westron.Color(
-            name: "color.category.indigo.background",
-            light: Westron.RGB(hex: 0x5B55D8, opacity: 0.15),
-            dark: Westron.RGB(hex: 0x5B55D8, opacity: 0.24),
-            lightHighContrast: Westron.RGB(hex: 0x5B55D8, opacity: 0.15),
-            darkHighContrast: Westron.RGB(hex: 0x5B55D8, opacity: 0.24))
-
-        /// A column or block tinted while something would drop into it: the list color indigo, translucent.
-        private static let indigoBackgroundSubtle = Westron.Color(
-            name: "color.category.indigo.background-subtle",
-            light: Westron.RGB(hex: 0x5B55D8, opacity: 0.1),
-            dark: Westron.RGB(hex: 0x5B55D8, opacity: 0.2),
-            lightHighContrast: Westron.RGB(hex: 0x5B55D8, opacity: 0.1),
-            darkHighContrast: Westron.RGB(hex: 0x5B55D8, opacity: 0.2))
-
-        /// Text and glyphs in the list color indigo: a section title, the glyph on the list's tile.
-        private static let indigoText = Westron.Color(
-            name: "color.category.indigo.text",
-            light: Westron.RGB(hex: 0x4F4AB2),
-            dark: Westron.RGB(hex: 0x8C88E4),
-            lightHighContrast: Westron.RGB(hex: 0x463FA6),
-            darkHighContrast: Westron.RGB(hex: 0xB1B0FF),
-            backgrounds: [
-                ["color.background.canvas"],
-                ["color.background.muted"],
-                ["color.background.surface"],
-                ["color.category.indigo.background", "color.background.canvas"],
-                ["color.category.indigo.background", "color.background.surface"],
-                ["color.category.indigo.background", "color.background.sidebar"],
-                ["color.category.indigo.background", "color.background.muted"],
-                ["color.category.indigo.background", "color.background.selected"],
-            ])
-
-        /// The ring of an open check in the list color indigo.
-        private static let indigoBorder = Westron.Color(
-            name: "color.category.indigo.border",
-            light: Westron.RGB(hex: 0x4F4AB2),
-            dark: Westron.RGB(hex: 0x7974DF),
-            lightHighContrast: Westron.RGB(hex: 0x4F4AB2),
-            darkHighContrast: Westron.RGB(hex: 0x807CE8),
-            backgrounds: [["color.background.canvas"], ["color.background.surface"]])
-
-        /// The disc of a done check, a lit chip: the list color indigo.
-        ///
-        /// Use for: things that carry a list's color. Avoid: States such as danger or success: use their own tokens.
-        private static let indigoFill = Westron.Color(
-            name: "color.category.indigo.fill",
-            light: Westron.RGB(hex: 0x5B55D8),
-            dark: Westron.RGB(hex: 0x6863DB),
-            lightHighContrast: Westron.RGB(hex: 0x5B55D8),
-            darkHighContrast: Westron.RGB(hex: 0x6863DB))
-
-        /// The mark on category fill: white, or the light ink where white would not stand out (amber).
-        private static let indigoOnFill = Westron.Color(
-            name: "color.category.indigo.on-fill",
-            light: Westron.RGB(hex: 0xFFFFFF),
-            dark: Westron.RGB(hex: 0xFFFFFF),
-            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
-            darkHighContrast: Westron.RGB(hex: 0xFFFFFF),
-            backgrounds: [["color.category.indigo.fill"]])
-
-        /// The tile under a list's glyph: the list color teal, translucent.
-        private static let tealBackground = Westron.Color(
-            name: "color.category.teal.background",
-            light: Westron.RGB(hex: 0x168985, opacity: 0.15),
-            dark: Westron.RGB(hex: 0x168985, opacity: 0.24),
-            lightHighContrast: Westron.RGB(hex: 0x168985, opacity: 0.15),
-            darkHighContrast: Westron.RGB(hex: 0x168985, opacity: 0.24))
-
-        /// A column or block tinted while something would drop into it: the list color teal, translucent.
-        private static let tealBackgroundSubtle = Westron.Color(
-            name: "color.category.teal.background-subtle",
-            light: Westron.RGB(hex: 0x168985, opacity: 0.1),
-            dark: Westron.RGB(hex: 0x168985, opacity: 0.2),
-            lightHighContrast: Westron.RGB(hex: 0x168985, opacity: 0.1),
-            darkHighContrast: Westron.RGB(hex: 0x168985, opacity: 0.2))
-
-        /// Text and glyphs in the list color teal: a section title, the glyph on the list's tile.
-        private static let tealText = Westron.Color(
-            name: "color.category.teal.text",
-            light: Westron.RGB(hex: 0x187370),
-            dark: Westron.RGB(hex: 0x5CACAA),
-            lightHighContrast: Westron.RGB(hex: 0x005855),
-            darkHighContrast: Westron.RGB(hex: 0x75C5C2),
-            backgrounds: [
-                ["color.background.canvas"],
-                ["color.background.muted"],
-                ["color.background.surface"],
-                ["color.category.teal.background", "color.background.canvas"],
-                ["color.category.teal.background", "color.background.surface"],
-                ["color.category.teal.background", "color.background.sidebar"],
-                ["color.category.teal.background", "color.background.muted"],
-                ["color.category.teal.background", "color.background.selected"],
-            ])
-
-        /// The ring of an open check in the list color teal.
-        private static let tealBorder = Westron.Color(
-            name: "color.category.teal.border",
-            light: Westron.RGB(hex: 0x187370),
-            dark: Westron.RGB(hex: 0x409E9B),
-            lightHighContrast: Westron.RGB(hex: 0x187370),
-            darkHighContrast: Westron.RGB(hex: 0x409E9B),
-            backgrounds: [["color.background.canvas"], ["color.background.surface"]])
-
-        /// The disc of a done check, a lit chip: the list color teal.
-        ///
-        /// Use for: things that carry a list's color. Avoid: States such as danger or success: use their own tokens.
-        private static let tealFill = Westron.Color(
-            name: "color.category.teal.fill",
-            light: Westron.RGB(hex: 0x168985),
-            dark: Westron.RGB(hex: 0x29928F),
-            lightHighContrast: Westron.RGB(hex: 0x0B8481),
-            darkHighContrast: Westron.RGB(hex: 0x118482))
-
-        /// The mark on category fill: white, or the light ink where white would not stand out (amber).
-        private static let tealOnFill = Westron.Color(
-            name: "color.category.teal.on-fill",
-            light: Westron.RGB(hex: 0xFFFFFF),
-            dark: Westron.RGB(hex: 0xFFFFFF),
-            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
-            darkHighContrast: Westron.RGB(hex: 0xFFFFFF),
-            backgrounds: [["color.category.teal.fill"]])
-
-        /// The tile under a list's glyph: the list color pink, translucent.
-        private static let pinkBackground = Westron.Color(
-            name: "color.category.pink.background",
-            light: Westron.RGB(hex: 0xC64C88, opacity: 0.15),
-            dark: Westron.RGB(hex: 0xC64C88, opacity: 0.24),
-            lightHighContrast: Westron.RGB(hex: 0xC64C88, opacity: 0.15),
-            darkHighContrast: Westron.RGB(hex: 0xC64C88, opacity: 0.24))
-
-        /// A column or block tinted while something would drop into it: the list color pink, translucent.
-        private static let pinkBackgroundSubtle = Westron.Color(
-            name: "color.category.pink.background-subtle",
-            light: Westron.RGB(hex: 0xC64C88, opacity: 0.1),
-            dark: Westron.RGB(hex: 0xC64C88, opacity: 0.2),
-            lightHighContrast: Westron.RGB(hex: 0xC64C88, opacity: 0.1),
-            darkHighContrast: Westron.RGB(hex: 0xC64C88, opacity: 0.2))
-
-        /// Text and glyphs in the list color pink: a section title, the glyph on the list's tile.
-        private static let pinkText = Westron.Color(
-            name: "color.category.pink.text",
-            light: Westron.RGB(hex: 0xA54372),
-            dark: Westron.RGB(hex: 0xD782AC),
-            lightHighContrast: Westron.RGB(hex: 0x882859),
-            darkHighContrast: Westron.RGB(hex: 0xF49DC7),
-            backgrounds: [
-                ["color.background.canvas"],
-                ["color.background.muted"],
-                ["color.background.surface"],
-                ["color.category.pink.background", "color.background.canvas"],
-                ["color.category.pink.background", "color.background.surface"],
-                ["color.category.pink.background", "color.background.sidebar"],
-                ["color.category.pink.background", "color.background.muted"],
-                ["color.category.pink.background", "color.background.selected"],
-            ])
-
-        /// The ring of an open check in the list color pink.
-        private static let pinkBorder = Westron.Color(
-            name: "color.category.pink.border",
-            light: Westron.RGB(hex: 0xA54372),
-            dark: Westron.RGB(hex: 0xD06C9D),
-            lightHighContrast: Westron.RGB(hex: 0xA54372),
-            darkHighContrast: Westron.RGB(hex: 0xD06C9D),
-            backgrounds: [["color.background.canvas"], ["color.background.surface"]])
-
-        /// The disc of a done check, a lit chip: the list color pink.
-        ///
-        /// Use for: things that carry a list's color. Avoid: States such as danger or success: use their own tokens.
-        private static let pinkFill = Westron.Color(
-            name: "color.category.pink.fill",
-            light: Westron.RGB(hex: 0xC64C88),
-            dark: Westron.RGB(hex: 0xCB5A92),
-            lightHighContrast: Westron.RGB(hex: 0xC34986),
-            darkHighContrast: Westron.RGB(hex: 0xBE4F87))
-
-        /// The mark on category fill: white, or the light ink where white would not stand out (amber).
-        private static let pinkOnFill = Westron.Color(
-            name: "color.category.pink.on-fill",
-            light: Westron.RGB(hex: 0xFFFFFF),
-            dark: Westron.RGB(hex: 0xFFFFFF),
-            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
-            darkHighContrast: Westron.RGB(hex: 0xFFFFFF),
-            backgrounds: [["color.category.pink.fill"]])
-
-        /// The tile under a list's glyph: the list color orange, translucent.
-        private static let orangeBackground = Westron.Color(
-            name: "color.category.orange.background",
-            light: Westron.RGB(hex: 0xD7652C, opacity: 0.15),
-            dark: Westron.RGB(hex: 0xD7652C, opacity: 0.24),
-            lightHighContrast: Westron.RGB(hex: 0xD7652C, opacity: 0.15),
-            darkHighContrast: Westron.RGB(hex: 0xD7652C, opacity: 0.24))
-
-        /// A column or block tinted while something would drop into it: the list color orange, translucent.
-        private static let orangeBackgroundSubtle = Westron.Color(
-            name: "color.category.orange.background-subtle",
-            light: Westron.RGB(hex: 0xD7652C, opacity: 0.1),
-            dark: Westron.RGB(hex: 0xD7652C, opacity: 0.2),
-            lightHighContrast: Westron.RGB(hex: 0xD7652C, opacity: 0.1),
-            darkHighContrast: Westron.RGB(hex: 0xD7652C, opacity: 0.2))
-
-        /// Text and glyphs in the list color orange: a section title, the glyph on the list's tile.
-        private static let orangeText = Westron.Color(
-            name: "color.category.orange.text",
-            light: Westron.RGB(hex: 0xAB5121),
-            dark: Westron.RGB(hex: 0xE3936B),
-            lightHighContrast: Westron.RGB(hex: 0x863500),
-            darkHighContrast: Westron.RGB(hex: 0xF5A47B),
-            backgrounds: [
-                ["color.background.canvas"],
-                ["color.background.muted"],
-                ["color.background.surface"],
-                ["color.category.orange.background", "color.background.canvas"],
-                ["color.category.orange.background", "color.background.surface"],
-                ["color.category.orange.background", "color.background.sidebar"],
-                ["color.category.orange.background", "color.background.muted"],
-                ["color.category.orange.background", "color.background.selected"],
-            ])
-
-        /// The ring of an open check in the list color orange.
-        private static let orangeBorder = Westron.Color(
-            name: "color.category.orange.border",
-            light: Westron.RGB(hex: 0xB25728),
-            dark: Westron.RGB(hex: 0xDE8152),
-            lightHighContrast: Westron.RGB(hex: 0xB25728),
-            darkHighContrast: Westron.RGB(hex: 0xDE8152),
-            backgrounds: [["color.background.canvas"], ["color.background.surface"]])
-
-        /// The disc of a done check, a lit chip: the list color orange.
-        ///
-        /// Use for: things that carry a list's color. Avoid: States such as danger or success: use their own tokens.
-        private static let orangeFill = Westron.Color(
-            name: "color.category.orange.fill",
-            light: Westron.RGB(hex: 0xD7652C),
-            dark: Westron.RGB(hex: 0xDA713D),
-            lightHighContrast: Westron.RGB(hex: 0xC55416),
-            darkHighContrast: Westron.RGB(hex: 0xBF5821))
-
-        /// The mark on category fill: white, or the light ink where white would not stand out (amber).
-        private static let orangeOnFill = Westron.Color(
-            name: "color.category.orange.on-fill",
-            light: Westron.RGB(hex: 0xFFFFFF),
-            dark: Westron.RGB(hex: 0xFFFFFF),
-            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
-            darkHighContrast: Westron.RGB(hex: 0xFFFFFF),
-            backgrounds: [["color.category.orange.fill"]])
-
-        /// The tile under a list's glyph: the list color violet, translucent.
-        private static let violetBackground = Westron.Color(
-            name: "color.category.violet.background",
-            light: Westron.RGB(hex: 0x8452C8, opacity: 0.15),
-            dark: Westron.RGB(hex: 0x8452C8, opacity: 0.24),
-            lightHighContrast: Westron.RGB(hex: 0x8452C8, opacity: 0.15),
-            darkHighContrast: Westron.RGB(hex: 0x8452C8, opacity: 0.24))
-
-        /// A column or block tinted while something would drop into it: the list color violet, translucent.
-        private static let violetBackgroundSubtle = Westron.Color(
-            name: "color.category.violet.background-subtle",
-            light: Westron.RGB(hex: 0x8452C8, opacity: 0.1),
-            dark: Westron.RGB(hex: 0x8452C8, opacity: 0.2),
-            lightHighContrast: Westron.RGB(hex: 0x8452C8, opacity: 0.1),
-            darkHighContrast: Westron.RGB(hex: 0x8452C8, opacity: 0.2))
-
-        /// Text and glyphs in the list color violet: a section title, the glyph on the list's tile.
-        private static let violetText = Westron.Color(
-            name: "color.category.violet.text",
-            light: Westron.RGB(hex: 0x7047A5),
-            dark: Westron.RGB(hex: 0xA986D8),
-            lightHighContrast: Westron.RGB(hex: 0x623895),
-            darkHighContrast: Westron.RGB(hex: 0xCAA7FC),
-            backgrounds: [
-                ["color.background.canvas"],
-                ["color.background.muted"],
-                ["color.background.surface"],
-                ["color.category.violet.background", "color.background.canvas"],
-                ["color.category.violet.background", "color.background.surface"],
-                ["color.category.violet.background", "color.background.sidebar"],
-                ["color.category.violet.background", "color.background.muted"],
-                ["color.category.violet.background", "color.background.selected"],
-            ])
-
-        /// The ring of an open check in the list color violet.
-        private static let violetBorder = Westron.Color(
-            name: "color.category.violet.border",
-            light: Westron.RGB(hex: 0x7047A5),
-            dark: Westron.RGB(hex: 0x9A71D2),
-            lightHighContrast: Westron.RGB(hex: 0x7047A5),
-            darkHighContrast: Westron.RGB(hex: 0x9E75D6),
-            backgrounds: [["color.background.canvas"], ["color.background.surface"]])
-
-        /// The disc of a done check, a lit chip: the list color violet.
-        ///
-        /// Use for: things that carry a list's color. Avoid: States such as danger or success: use their own tokens.
-        private static let violetFill = Westron.Color(
-            name: "color.category.violet.fill",
-            light: Westron.RGB(hex: 0x8452C8),
-            dark: Westron.RGB(hex: 0x8E60CC),
-            lightHighContrast: Westron.RGB(hex: 0x8452C8),
-            darkHighContrast: Westron.RGB(hex: 0x8D5FCB))
-
-        /// The mark on category fill: white, or the light ink where white would not stand out (amber).
-        private static let violetOnFill = Westron.Color(
-            name: "color.category.violet.on-fill",
-            light: Westron.RGB(hex: 0xFFFFFF),
-            dark: Westron.RGB(hex: 0xFFFFFF),
-            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
-            darkHighContrast: Westron.RGB(hex: 0xFFFFFF),
-            backgrounds: [["color.category.violet.fill"]])
-
-        /// The tile under a list's glyph: the list color sky, translucent.
+        /// The quiet ground of a tag or a row in the list color sky.
         private static let skyBackground = Westron.Color(
             name: "color.category.sky.background",
-            light: Westron.RGB(hex: 0x2A86B9, opacity: 0.15),
-            dark: Westron.RGB(hex: 0x2A86B9, opacity: 0.24),
-            lightHighContrast: Westron.RGB(hex: 0x2A86B9, opacity: 0.15),
-            darkHighContrast: Westron.RGB(hex: 0x2A86B9, opacity: 0.24))
+            light: Westron.RGB(hex: 0xDFF3FF),
+            dark: Westron.RGB(hex: 0x14252D),
+            lightHighContrast: Westron.RGB(hex: 0xDFF3FF),
+            darkHighContrast: Westron.RGB(hex: 0x14252D))
 
-        /// A column or block tinted while something would drop into it: the list color sky, translucent.
-        private static let skyBackgroundSubtle = Westron.Color(
-            name: "color.category.sky.background-subtle",
-            light: Westron.RGB(hex: 0x2A86B9, opacity: 0.1),
-            dark: Westron.RGB(hex: 0x2A86B9, opacity: 0.2),
-            lightHighContrast: Westron.RGB(hex: 0x2A86B9, opacity: 0.1),
-            darkHighContrast: Westron.RGB(hex: 0x2A86B9, opacity: 0.2))
-
-        /// Text and glyphs in the list color sky: a section title, the glyph on the list's tile.
-        private static let skyText = Westron.Color(
-            name: "color.category.sky.text",
-            light: Westron.RGB(hex: 0x287199),
-            dark: Westron.RGB(hex: 0x6AAACE),
-            lightHighContrast: Westron.RGB(hex: 0x005378),
-            darkHighContrast: Westron.RGB(hex: 0x7EBFE3),
-            backgrounds: [
-                ["color.background.canvas"],
-                ["color.background.muted"],
-                ["color.background.surface"],
-                ["color.category.sky.background", "color.background.canvas"],
-                ["color.category.sky.background", "color.background.surface"],
-                ["color.category.sky.background", "color.background.sidebar"],
-                ["color.category.sky.background", "color.background.muted"],
-                ["color.category.sky.background", "color.background.selected"],
-            ])
-
-        /// The ring of an open check in the list color sky.
+        /// The border of an outlined tag in the list color sky.
         private static let skyBorder = Westron.Color(
             name: "color.category.sky.border",
-            light: Westron.RGB(hex: 0x287199),
-            dark: Westron.RGB(hex: 0x509CC6),
-            lightHighContrast: Westron.RGB(hex: 0x287199),
-            darkHighContrast: Westron.RGB(hex: 0x509CC6),
-            backgrounds: [["color.background.canvas"], ["color.background.surface"]])
+            light: Westron.RGB(hex: 0x358EB8),
+            dark: Westron.RGB(hex: 0x207FA7),
+            lightHighContrast: Westron.RGB(hex: 0x047198),
+            darkHighContrast: Westron.RGB(hex: 0x469EC7),
+            backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.category.sky.background"]])
 
-        /// The disc of a done check, a lit chip: the list color sky.
-        ///
-        /// Use for: things that carry a list's color. Avoid: States such as danger or success: use their own tokens.
+        /// A dot or an icon in the list color sky.
+        private static let skyIcon = Westron.Color(
+            name: "color.category.sky.icon",
+            light: Westron.RGB(hex: 0x358EB8),
+            dark: Westron.RGB(hex: 0x207FA7),
+            lightHighContrast: Westron.RGB(hex: 0x047198),
+            darkHighContrast: Westron.RGB(hex: 0x469EC7),
+            backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.category.sky.background"]])
+
+        /// Text in the list color sky.
+        private static let skyText = Westron.Color(
+            name: "color.category.sky.text",
+            light: Westron.RGB(hex: 0x007099),
+            dark: Westron.RGB(hex: 0x2A9FD1),
+            lightHighContrast: Westron.RGB(hex: 0x005271),
+            darkHighContrast: Westron.RGB(hex: 0x58C6F9),
+            backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.category.sky.background"]])
+
+        /// The solid fill of a lit tag in the list color sky.
         private static let skyFill = Westron.Color(
             name: "color.category.sky.fill",
-            light: Westron.RGB(hex: 0x2A86B9),
-            dark: Westron.RGB(hex: 0x3B90BF),
-            lightHighContrast: Westron.RGB(hex: 0x1E7DB0),
-            darkHighContrast: Westron.RGB(hex: 0x267EAC))
+            light: Westron.RGB(hex: 0x007FAC),
+            dark: Westron.RGB(hex: 0x007FAC),
+            lightHighContrast: Westron.RGB(hex: 0x006082),
+            darkHighContrast: Westron.RGB(hex: 0x2BAADF))
 
-        /// The mark on category fill: white, or the light ink where white would not stand out (amber).
+        /// Text and glyphs on the fill of the list color sky.
         private static let skyOnFill = Westron.Color(
             name: "color.category.sky.on-fill",
             light: Westron.RGB(hex: 0xFFFFFF),
             dark: Westron.RGB(hex: 0xFFFFFF),
             lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
-            darkHighContrast: Westron.RGB(hex: 0xFFFFFF),
+            darkHighContrast: Westron.RGB(hex: 0x101318),
             backgrounds: [["color.category.sky.fill"]])
+
+        /// The quiet ground of a tag or a row in the list color teal.
+        private static let tealBackground = Westron.Color(
+            name: "color.category.teal.background",
+            light: Westron.RGB(hex: 0xDEF4F4),
+            dark: Westron.RGB(hex: 0x142625),
+            lightHighContrast: Westron.RGB(hex: 0xDEF4F4),
+            darkHighContrast: Westron.RGB(hex: 0x142625))
+
+        /// The border of an outlined tag in the list color teal.
+        private static let tealBorder = Westron.Color(
+            name: "color.category.teal.border",
+            light: Westron.RGB(hex: 0x329393),
+            dark: Westron.RGB(hex: 0x1D8484),
+            lightHighContrast: Westron.RGB(hex: 0x007576),
+            darkHighContrast: Westron.RGB(hex: 0x44A3A2),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.teal.background"],
+            ])
+
+        /// A dot or an icon in the list color teal.
+        private static let tealIcon = Westron.Color(
+            name: "color.category.teal.icon",
+            light: Westron.RGB(hex: 0x329393),
+            dark: Westron.RGB(hex: 0x1D8484),
+            lightHighContrast: Westron.RGB(hex: 0x007576),
+            darkHighContrast: Westron.RGB(hex: 0x44A3A2),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.teal.background"],
+            ])
+
+        /// Text in the list color teal.
+        private static let tealText = Westron.Color(
+            name: "color.category.teal.text",
+            light: Westron.RGB(hex: 0x007576),
+            dark: Westron.RGB(hex: 0x24A5A5),
+            lightHighContrast: Westron.RGB(hex: 0x005556),
+            darkHighContrast: Westron.RGB(hex: 0x57CCCB),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.teal.background"],
+            ])
+
+        /// The solid fill of a lit tag in the list color teal.
+        private static let tealFill = Westron.Color(
+            name: "color.category.teal.fill",
+            light: Westron.RGB(hex: 0x008485),
+            dark: Westron.RGB(hex: 0x008485),
+            lightHighContrast: Westron.RGB(hex: 0x006364),
+            darkHighContrast: Westron.RGB(hex: 0x26B0B0))
+
+        /// Text and glyphs on the fill of the list color teal.
+        private static let tealOnFill = Westron.Color(
+            name: "color.category.teal.on-fill",
+            light: Westron.RGB(hex: 0xFFFFFF),
+            dark: Westron.RGB(hex: 0xFFFFFF),
+            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+            darkHighContrast: Westron.RGB(hex: 0x101318),
+            backgrounds: [["color.category.teal.fill"]])
+
+        /// The quiet ground of a tag or a row in the list color emerald.
+        private static let emeraldBackground = Westron.Color(
+            name: "color.category.emerald.background",
+            light: Westron.RGB(hex: 0xE1F4EC),
+            dark: Westron.RGB(hex: 0x162620),
+            lightHighContrast: Westron.RGB(hex: 0xE1F4EC),
+            darkHighContrast: Westron.RGB(hex: 0x162620))
+
+        /// The border of an outlined tag in the list color emerald.
+        private static let emeraldBorder = Westron.Color(
+            name: "color.category.emerald.border",
+            light: Westron.RGB(hex: 0x449378),
+            dark: Westron.RGB(hex: 0x348469),
+            lightHighContrast: Westron.RGB(hex: 0x23765C),
+            darkHighContrast: Westron.RGB(hex: 0x55A387),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.emerald.background"],
+            ])
+
+        /// A dot or an icon in the list color emerald.
+        private static let emeraldIcon = Westron.Color(
+            name: "color.category.emerald.icon",
+            light: Westron.RGB(hex: 0x449378),
+            dark: Westron.RGB(hex: 0x348469),
+            lightHighContrast: Westron.RGB(hex: 0x23765C),
+            darkHighContrast: Westron.RGB(hex: 0x55A387),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.emerald.background"],
+            ])
+
+        /// Text in the list color emerald.
+        private static let emeraldText = Westron.Color(
+            name: "color.category.emerald.text",
+            light: Westron.RGB(hex: 0x00775A),
+            dark: Westron.RGB(hex: 0x41A684),
+            lightHighContrast: Westron.RGB(hex: 0x005741),
+            darkHighContrast: Westron.RGB(hex: 0x6BCDAA),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.emerald.background"],
+            ])
+
+        /// The solid fill of a lit tag in the list color emerald.
+        private static let emeraldFill = Westron.Color(
+            name: "color.category.emerald.fill",
+            light: Westron.RGB(hex: 0x018766),
+            dark: Westron.RGB(hex: 0x018766),
+            lightHighContrast: Westron.RGB(hex: 0x00654C),
+            darkHighContrast: Westron.RGB(hex: 0x46B18D))
+
+        /// Text and glyphs on the fill of the list color emerald.
+        private static let emeraldOnFill = Westron.Color(
+            name: "color.category.emerald.on-fill",
+            light: Westron.RGB(hex: 0xFFFFFF),
+            dark: Westron.RGB(hex: 0xFFFFFF),
+            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+            darkHighContrast: Westron.RGB(hex: 0x101318),
+            backgrounds: [["color.category.emerald.fill"]])
+
+        /// The quiet ground of a tag or a row in the list color green.
+        private static let greenBackground = Westron.Color(
+            name: "color.category.green.background",
+            light: Westron.RGB(hex: 0xE3F4E3),
+            dark: Westron.RGB(hex: 0x192619),
+            lightHighContrast: Westron.RGB(hex: 0xE3F4E3),
+            darkHighContrast: Westron.RGB(hex: 0x192619))
+
+        /// The border of an outlined tag in the list color green.
+        private static let greenBorder = Westron.Color(
+            name: "color.category.green.border",
+            light: Westron.RGB(hex: 0x549357),
+            dark: Westron.RGB(hex: 0x458548),
+            lightHighContrast: Westron.RGB(hex: 0x37763B),
+            darkHighContrast: Westron.RGB(hex: 0x63A466),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.green.background"],
+            ])
+
+        /// A dot or an icon in the list color green.
+        private static let greenIcon = Westron.Color(
+            name: "color.category.green.icon",
+            light: Westron.RGB(hex: 0x549357),
+            dark: Westron.RGB(hex: 0x458548),
+            lightHighContrast: Westron.RGB(hex: 0x37763B),
+            darkHighContrast: Westron.RGB(hex: 0x63A466),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.green.background"],
+            ])
+
+        /// Text in the list color green.
+        private static let greenText = Westron.Color(
+            name: "color.category.green.text",
+            light: Westron.RGB(hex: 0x287830),
+            dark: Westron.RGB(hex: 0x57A65B),
+            lightHighContrast: Westron.RGB(hex: 0x005913),
+            darkHighContrast: Westron.RGB(hex: 0x7DCD80),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.green.background"],
+            ])
+
+        /// The solid fill of a lit tag in the list color green.
+        private static let greenFill = Westron.Color(
+            name: "color.category.green.fill",
+            light: Westron.RGB(hex: 0x32873A),
+            dark: Westron.RGB(hex: 0x32873A),
+            lightHighContrast: Westron.RGB(hex: 0x03681A),
+            darkHighContrast: Westron.RGB(hex: 0x5DB161))
+
+        /// Text and glyphs on the fill of the list color green.
+        private static let greenOnFill = Westron.Color(
+            name: "color.category.green.on-fill",
+            light: Westron.RGB(hex: 0xFFFFFF),
+            dark: Westron.RGB(hex: 0xFFFFFF),
+            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+            darkHighContrast: Westron.RGB(hex: 0x101318),
+            backgrounds: [["color.category.green.fill"]])
+
+        /// The quiet ground of a tag or a row in the list color olive.
+        private static let oliveBackground = Westron.Color(
+            name: "color.category.olive.background",
+            light: Westron.RGB(hex: 0xEFF1DE),
+            dark: Westron.RGB(hex: 0x232415),
+            lightHighContrast: Westron.RGB(hex: 0xEFF1DE),
+            darkHighContrast: Westron.RGB(hex: 0x232415))
+
+        /// The border of an outlined tag in the list color olive.
+        private static let oliveBorder = Westron.Color(
+            name: "color.category.olive.border",
+            light: Westron.RGB(hex: 0x868A42),
+            dark: Westron.RGB(hex: 0x777B32),
+            lightHighContrast: Westron.RGB(hex: 0x696D23),
+            darkHighContrast: Westron.RGB(hex: 0x959A51),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.olive.background"],
+            ])
+
+        /// A dot or an icon in the list color olive.
+        private static let oliveIcon = Westron.Color(
+            name: "color.category.olive.icon",
+            light: Westron.RGB(hex: 0x868A42),
+            dark: Westron.RGB(hex: 0x777B32),
+            lightHighContrast: Westron.RGB(hex: 0x696D23),
+            darkHighContrast: Westron.RGB(hex: 0x959A51),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.olive.background"],
+            ])
+
+        /// Text in the list color olive.
+        private static let oliveText = Westron.Color(
+            name: "color.category.olive.text",
+            light: Westron.RGB(hex: 0x6A6D01),
+            dark: Westron.RGB(hex: 0x969A40),
+            lightHighContrast: Westron.RGB(hex: 0x4D4F00),
+            darkHighContrast: Westron.RGB(hex: 0xBBC167),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.olive.background"],
+            ])
+
+        /// The solid fill of a lit tag in the list color olive.
+        private static let oliveFill = Westron.Color(
+            name: "color.category.olive.fill",
+            light: Westron.RGB(hex: 0xBFC566),
+            dark: Westron.RGB(hex: 0xBFC566),
+            lightHighContrast: Westron.RGB(hex: 0xBFC566),
+            darkHighContrast: Westron.RGB(hex: 0xBFC566))
+
+        /// Text and glyphs on the fill of the list color olive.
+        private static let oliveOnFill = Westron.Color(
+            name: "color.category.olive.on-fill",
+            light: Westron.RGB(hex: 0x161710),
+            dark: Westron.RGB(hex: 0x161710),
+            lightHighContrast: Westron.RGB(hex: 0x161710),
+            darkHighContrast: Westron.RGB(hex: 0x161710),
+            backgrounds: [["color.category.olive.fill"]])
+
+        /// The quiet ground of a tag or a row in the list color amber.
+        private static let amberBackground = Westron.Color(
+            name: "color.category.amber.background",
+            light: Westron.RGB(hex: 0xFDEED8),
+            dark: Westron.RGB(hex: 0x2C210F),
+            lightHighContrast: Westron.RGB(hex: 0xFDEED8),
+            darkHighContrast: Westron.RGB(hex: 0x2C210F))
+
+        /// The border of an outlined tag in the list color amber.
+        private static let amberBorder = Westron.Color(
+            name: "color.category.amber.border",
+            light: Westron.RGB(hex: 0xAF7C04),
+            dark: Westron.RGB(hex: 0x9C6F00),
+            lightHighContrast: Westron.RGB(hex: 0x8A6100),
+            darkHighContrast: Westron.RGB(hex: 0xBF8C24),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.amber.background"],
+            ])
+
+        /// A dot or an icon in the list color amber.
+        private static let amberIcon = Westron.Color(
+            name: "color.category.amber.icon",
+            light: Westron.RGB(hex: 0xAF7C04),
+            dark: Westron.RGB(hex: 0x9C6F00),
+            lightHighContrast: Westron.RGB(hex: 0x8A6100),
+            darkHighContrast: Westron.RGB(hex: 0xBF8C24),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.amber.background"],
+            ])
+
+        /// Text in the list color amber.
+        private static let amberText = Westron.Color(
+            name: "color.category.amber.text",
+            light: Westron.RGB(hex: 0x8A6100),
+            dark: Westron.RGB(hex: 0xC28B00),
+            lightHighContrast: Westron.RGB(hex: 0x654700),
+            darkHighContrast: Westron.RGB(hex: 0xEFB02E),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.amber.background"],
+            ])
+
+        /// The solid fill of a lit tag in the list color amber.
+        private static let amberFill = Westron.Color(
+            name: "color.category.amber.fill",
+            light: Westron.RGB(hex: 0xF3B01D),
+            dark: Westron.RGB(hex: 0xF3B01D),
+            lightHighContrast: Westron.RGB(hex: 0xF3B01D),
+            darkHighContrast: Westron.RGB(hex: 0xF3B01D))
+
+        /// Text and glyphs on the fill of the list color amber.
+        private static let amberOnFill = Westron.Color(
+            name: "color.category.amber.on-fill",
+            light: Westron.RGB(hex: 0x191610),
+            dark: Westron.RGB(hex: 0x191610),
+            lightHighContrast: Westron.RGB(hex: 0x191610),
+            darkHighContrast: Westron.RGB(hex: 0x191610),
+            backgrounds: [["color.category.amber.fill"]])
+
+        /// The quiet ground of a tag or a row in the list color orange.
+        private static let orangeBackground = Westron.Color(
+            name: "color.category.orange.background",
+            light: Westron.RGB(hex: 0xFFECE3),
+            dark: Westron.RGB(hex: 0x311F14),
+            lightHighContrast: Westron.RGB(hex: 0xFFECE3),
+            darkHighContrast: Westron.RGB(hex: 0x311F14))
+
+        /// The border of an outlined tag in the list color orange.
+        private static let orangeBorder = Westron.Color(
+            name: "color.category.orange.border",
+            light: Westron.RGB(hex: 0xC56F3B),
+            dark: Westron.RGB(hex: 0xB5602A),
+            lightHighContrast: Westron.RGB(hex: 0xA55219),
+            darkHighContrast: Westron.RGB(hex: 0xD67F4A),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.orange.background"],
+            ])
+
+        /// A dot or an icon in the list color orange.
+        private static let orangeIcon = Westron.Color(
+            name: "color.category.orange.icon",
+            light: Westron.RGB(hex: 0xC56F3B),
+            dark: Westron.RGB(hex: 0xB5602A),
+            lightHighContrast: Westron.RGB(hex: 0xA55219),
+            darkHighContrast: Westron.RGB(hex: 0xD67F4A),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.orange.background"],
+            ])
+
+        /// Text in the list color orange.
+        private static let orangeText = Westron.Color(
+            name: "color.category.orange.text",
+            light: Westron.RGB(hex: 0xAB4E00),
+            dark: Westron.RGB(hex: 0xE17935),
+            lightHighContrast: Westron.RGB(hex: 0x7E3800),
+            darkHighContrast: Westron.RGB(hex: 0xFFA571),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.orange.background"],
+            ])
+
+        /// The solid fill of a lit tag in the list color orange.
+        private static let orangeFill = Westron.Color(
+            name: "color.category.orange.fill",
+            light: Westron.RGB(hex: 0xBF5900),
+            dark: Westron.RGB(hex: 0xBF5900),
+            lightHighContrast: Westron.RGB(hex: 0x914200),
+            darkHighContrast: Westron.RGB(hex: 0xF08139))
+
+        /// Text and glyphs on the fill of the list color orange.
+        private static let orangeOnFill = Westron.Color(
+            name: "color.category.orange.on-fill",
+            light: Westron.RGB(hex: 0xFFFFFF),
+            dark: Westron.RGB(hex: 0xFFFFFF),
+            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+            darkHighContrast: Westron.RGB(hex: 0x101318),
+            backgrounds: [["color.category.orange.fill"]])
+
+        /// The quiet ground of a tag or a row in the list color red.
+        private static let redBackground = Westron.Color(
+            name: "color.category.red.background",
+            light: Westron.RGB(hex: 0xFFEBE9),
+            dark: Westron.RGB(hex: 0x331D1B),
+            lightHighContrast: Westron.RGB(hex: 0xFFEBE9),
+            darkHighContrast: Westron.RGB(hex: 0x331D1B))
+
+        /// The border of an outlined tag in the list color red.
+        private static let redBorder = Westron.Color(
+            name: "color.category.red.border",
+            light: Westron.RGB(hex: 0xCF665C),
+            dark: Westron.RGB(hex: 0xBF564D),
+            lightHighContrast: Westron.RGB(hex: 0xAE4840),
+            darkHighContrast: Westron.RGB(hex: 0xE1766B),
+            backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.category.red.background"]])
+
+        /// A dot or an icon in the list color red.
+        private static let redIcon = Westron.Color(
+            name: "color.category.red.icon",
+            light: Westron.RGB(hex: 0xCF665C),
+            dark: Westron.RGB(hex: 0xBF564D),
+            lightHighContrast: Westron.RGB(hex: 0xAE4840),
+            darkHighContrast: Westron.RGB(hex: 0xE1766B),
+            backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.category.red.background"]])
+
+        /// Text in the list color red.
+        private static let redText = Westron.Color(
+            name: "color.category.red.text",
+            light: Westron.RGB(hex: 0xBA3D37),
+            dark: Westron.RGB(hex: 0xEE6D62),
+            lightHighContrast: Westron.RGB(hex: 0x961818),
+            darkHighContrast: Westron.RGB(hex: 0xFFA297),
+            backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.category.red.background"]])
+
+        /// The solid fill of a lit tag in the list color red.
+        private static let redFill = Westron.Color(
+            name: "color.category.red.fill",
+            light: Westron.RGB(hex: 0xA72120),
+            dark: Westron.RGB(hex: 0xA72120),
+            lightHighContrast: Westron.RGB(hex: 0xA72120),
+            darkHighContrast: Westron.RGB(hex: 0xFE7469))
+
+        /// Text and glyphs on the fill of the list color red.
+        private static let redOnFill = Westron.Color(
+            name: "color.category.red.on-fill",
+            light: Westron.RGB(hex: 0xFFFFFF),
+            dark: Westron.RGB(hex: 0xFFFFFF),
+            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+            darkHighContrast: Westron.RGB(hex: 0x101318),
+            backgrounds: [["color.category.red.fill"]])
+
+        /// The quiet ground of a tag or a row in the list color pink.
+        private static let pinkBackground = Westron.Color(
+            name: "color.category.pink.background",
+            light: Westron.RGB(hex: 0xFFEAF3),
+            dark: Westron.RGB(hex: 0x311D26),
+            lightHighContrast: Westron.RGB(hex: 0xFFEAF3),
+            darkHighContrast: Westron.RGB(hex: 0x311D26))
+
+        /// The border of an outlined tag in the list color pink.
+        private static let pinkBorder = Westron.Color(
+            name: "color.category.pink.border",
+            light: Westron.RGB(hex: 0xC36795),
+            dark: Westron.RGB(hex: 0xB25986),
+            lightHighContrast: Westron.RGB(hex: 0xA34A78),
+            darkHighContrast: Westron.RGB(hex: 0xD477A5),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.pink.background"],
+            ])
+
+        /// A dot or an icon in the list color pink.
+        private static let pinkIcon = Westron.Color(
+            name: "color.category.pink.icon",
+            light: Westron.RGB(hex: 0xC36795),
+            dark: Westron.RGB(hex: 0xB25986),
+            lightHighContrast: Westron.RGB(hex: 0xA34A78),
+            darkHighContrast: Westron.RGB(hex: 0xD477A5),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.pink.background"],
+            ])
+
+        /// Text in the list color pink.
+        private static let pinkText = Westron.Color(
+            name: "color.category.pink.text",
+            light: Westron.RGB(hex: 0xAC427B),
+            dark: Westron.RGB(hex: 0xDF6FA8),
+            lightHighContrast: Westron.RGB(hex: 0x8A215D),
+            darkHighContrast: Westron.RGB(hex: 0xFF9CCC),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.pink.background"],
+            ])
+
+        /// The solid fill of a lit tag in the list color pink.
+        private static let pinkFill = Westron.Color(
+            name: "color.category.pink.fill",
+            light: Westron.RGB(hex: 0xB54481),
+            dark: Westron.RGB(hex: 0xB54481),
+            lightHighContrast: Westron.RGB(hex: 0x9C2C6C),
+            darkHighContrast: Westron.RGB(hex: 0xEE77B3))
+
+        /// Text and glyphs on the fill of the list color pink.
+        private static let pinkOnFill = Westron.Color(
+            name: "color.category.pink.on-fill",
+            light: Westron.RGB(hex: 0xFFFFFF),
+            dark: Westron.RGB(hex: 0xFFFFFF),
+            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+            darkHighContrast: Westron.RGB(hex: 0x101318),
+            backgrounds: [["color.category.pink.fill"]])
+
+        /// The quiet ground of a tag or a row in the list color violet.
+        private static let violetBackground = Westron.Color(
+            name: "color.category.violet.background",
+            light: Westron.RGB(hex: 0xF3EDFF),
+            dark: Westron.RGB(hex: 0x262032),
+            lightHighContrast: Westron.RGB(hex: 0xF3EDFF),
+            darkHighContrast: Westron.RGB(hex: 0x262032))
+
+        /// The border of an outlined tag in the list color violet.
+        private static let violetBorder = Westron.Color(
+            name: "color.category.violet.border",
+            light: Westron.RGB(hex: 0x9774CF),
+            dark: Westron.RGB(hex: 0x8865BE),
+            lightHighContrast: Westron.RGB(hex: 0x7A57AF),
+            darkHighContrast: Westron.RGB(hex: 0xA684DF),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.violet.background"],
+            ])
+
+        /// A dot or an icon in the list color violet.
+        private static let violetIcon = Westron.Color(
+            name: "color.category.violet.icon",
+            light: Westron.RGB(hex: 0x9774CF),
+            dark: Westron.RGB(hex: 0x8865BE),
+            lightHighContrast: Westron.RGB(hex: 0x7A57AF),
+            darkHighContrast: Westron.RGB(hex: 0xA684DF),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.violet.background"],
+            ])
+
+        /// Text in the list color violet.
+        private static let violetText = Westron.Color(
+            name: "color.category.violet.text",
+            light: Westron.RGB(hex: 0x7E52BC),
+            dark: Westron.RGB(hex: 0xAA7FEE),
+            lightHighContrast: Westron.RGB(hex: 0x61339B),
+            darkHighContrast: Westron.RGB(hex: 0xCAACFF),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.violet.background"],
+            ])
+
+        /// The solid fill of a lit tag in the list color violet.
+        private static let violetFill = Westron.Color(
+            name: "color.category.violet.fill",
+            light: Westron.RGB(hex: 0x7F51C1),
+            dark: Westron.RGB(hex: 0x7F51C1),
+            lightHighContrast: Westron.RGB(hex: 0x6F3FAE),
+            darkHighContrast: Westron.RGB(hex: 0xB588FD))
+
+        /// Text and glyphs on the fill of the list color violet.
+        private static let violetOnFill = Westron.Color(
+            name: "color.category.violet.on-fill",
+            light: Westron.RGB(hex: 0xFFFFFF),
+            dark: Westron.RGB(hex: 0xFFFFFF),
+            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+            darkHighContrast: Westron.RGB(hex: 0x101318),
+            backgrounds: [["color.category.violet.fill"]])
+
+        /// The quiet ground of a tag or a row in the list color indigo.
+        private static let indigoBackground = Westron.Color(
+            name: "color.category.indigo.background",
+            light: Westron.RGB(hex: 0xEDEFFF),
+            dark: Westron.RGB(hex: 0x202233),
+            lightHighContrast: Westron.RGB(hex: 0xEDEFFF),
+            darkHighContrast: Westron.RGB(hex: 0x202233))
+
+        /// The border of an outlined tag in the list color indigo.
+        private static let indigoBorder = Westron.Color(
+            name: "color.category.indigo.border",
+            light: Westron.RGB(hex: 0x7A7DD3),
+            dark: Westron.RGB(hex: 0x6B6FC3),
+            lightHighContrast: Westron.RGB(hex: 0x5E60B3),
+            darkHighContrast: Westron.RGB(hex: 0x888DE4),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.indigo.background"],
+            ])
+
+        /// A dot or an icon in the list color indigo.
+        private static let indigoIcon = Westron.Color(
+            name: "color.category.indigo.icon",
+            light: Westron.RGB(hex: 0x7A7DD3),
+            dark: Westron.RGB(hex: 0x6B6FC3),
+            lightHighContrast: Westron.RGB(hex: 0x5E60B3),
+            darkHighContrast: Westron.RGB(hex: 0x888DE4),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.indigo.background"],
+            ])
+
+        /// Text in the list color indigo.
+        private static let indigoText = Westron.Color(
+            name: "color.category.indigo.text",
+            light: Westron.RGB(hex: 0x5E5DC1),
+            dark: Westron.RGB(hex: 0x878BF3),
+            lightHighContrast: Westron.RGB(hex: 0x433F9F),
+            darkHighContrast: Westron.RGB(hex: 0xAEB5FF),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.category.indigo.background"],
+            ])
+
+        /// The solid fill of a lit tag in the list color indigo.
+        private static let indigoFill = Westron.Color(
+            name: "color.category.indigo.fill",
+            light: Westron.RGB(hex: 0x5A58C2),
+            dark: Westron.RGB(hex: 0x5A58C2),
+            lightHighContrast: Westron.RGB(hex: 0x4F4BB3),
+            darkHighContrast: Westron.RGB(hex: 0x9095FF))
+
+        /// Text and glyphs on the fill of the list color indigo.
+        private static let indigoOnFill = Westron.Color(
+            name: "color.category.indigo.on-fill",
+            light: Westron.RGB(hex: 0xFFFFFF),
+            dark: Westron.RGB(hex: 0xFFFFFF),
+            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+            darkHighContrast: Westron.RGB(hex: 0x101318),
+            backgrounds: [["color.category.indigo.fill"]])
     }
 }
 

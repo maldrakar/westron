@@ -59,9 +59,9 @@ func lintRawValues(_ paths: [String]) throws -> Int32 {
 }
 
 func generate(check: Bool) throws -> Int32 {
-    let output = try Generate.run(Generate.generators)
     let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
     if check {
+        let output = try Generate.run(Generate.generators)
         let drift = Generate.check(output, root: root)
         for d in drift {
             let reason =
@@ -76,10 +76,13 @@ func generate(check: Bool) throws -> Int32 {
         print("generate --check: files: \(output.files.count), all match")
         return 0
     }
+    // The platform generators read what the source generators write, so those files go to disk first.
+    let sources = try Generate.write(try Generate.run(Generate.sourceGenerators), root: root)
+    let output = try Generate.run(Generate.generators)
     let result = try Generate.write(output, root: root)
+    let written = sources.written + result.written.filter { !sources.written.contains($0) }
     for path in result.removed { print("generate: removed \(path)") }
-    print(
-        "generate: files: \(output.files.count), written: \(result.written.count), removed: \(result.removed.count)")
+    print("generate: files: \(output.files.count), written: \(written.count), removed: \(result.removed.count)")
     return 0
 }
 

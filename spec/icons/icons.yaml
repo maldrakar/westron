@@ -115,3 +115,17 @@ icons:
   - name: chevronLeft
     description: A chevron pointing left.
     apple: chevron.left
+
+  # The glyphs of the statuses: a status always shows an icon beside its word (decisions/0012).
+  - name: checkCircleFill
+    description: A check mark cut out of a filled circle.
+    apple: checkmark.circle.fill
+  - name: xmarkCircleFill
+    description: An x cut out of a filled circle.
+    apple: xmark.circle.fill
+  - name: exclamationTriangleFill
+    description: An exclamation mark cut out of a filled triangle.
+    apple: exclamationmark.triangle.fill
+  - name: infoCircleFill
+    description: A lowercase i cut out of a filled circle.
+    apple: info.circle.fill

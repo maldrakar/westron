@@ -72,8 +72,9 @@ across all entries. With `-WestronEntry <id>`, it shows one entry full screen; t
 
 The Foundations section holds the token samples, each fitting one screenshot on an iPhone 17 and in the macOS window:
 `color-backgrounds` and `color-foregrounds` draw every color in the four themes side by side, each cell under its own
-color scheme and contrast; `color-categories` draws the list colors in the catalog's theme; `color-in-use` draws the
-pilot's sidebar and list screen with the semantic colors, the page the owner approves the palette on; `typography`,
+color scheme and contrast; `color-categories` draws the list colors and `color-status` the statuses and the chart
+series in the catalog's theme; `color-in-use` draws a task list, a table of deployments, notices and buttons with the
+semantic colors, the page the owner approves the palette on; `typography`,
 `space`, `shape` and `motion` show the rest, and `icons` draws every icon with its name at the size of body text. To
 review the colors in every mode:
 

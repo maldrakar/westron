@@ -7,6 +7,7 @@ public enum Catalog {
         .colorBackgrounds,
         .colorForegrounds,
         .colorCategories,
+        .colorStatus,
         .colorInUse,
         .typography,
         .space,

@@ -161,6 +161,7 @@ extension WestronExtensions.Contrast.Kind {
         case (.largeText, .highContrast), (.nonText, .highContrast): 4.5
         case (.separator, .standard): nil
         case (.separator, .highContrast): 3
+        case (.chart, _): 3
         }
     }
 }

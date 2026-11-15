@@ -8,78 +8,69 @@ import SwiftUI
 import WestronTokens
 
 extension Color {
-    /// The ground of a screen and of the rows on it.
+    /// The ground of a screen, a list or a table.
     ///
-    /// Use for: screen background, row background. Avoid: Cards and fields: use background.surface.
+    /// Use for: screen background, list background. Avoid: Cards and sheets: use background.surface.
     public static var backgroundCanvas: Color {
         Color(Westron.Color.backgroundCanvas)
     }
 
-    /// Something raised off the canvas: a card, a field, a dragged item.
+    /// Something raised off the canvas: a card, a sheet or a popover westron draws, a dragged row. White in light; one
+    /// step lighter than the canvas in dark, where higher is lighter.
     ///
-    /// Use for: card, field, dragged item. Avoid: The ground of a whole screen: use background.canvas.
+    /// Use for: card, sheet, popover, dragged row. Avoid: A well below the content: use background.sunken.
     public static var backgroundSurface: Color {
         Color(Westron.Color.backgroundSurface)
     }
 
-    /// The sidebar column and its rows.
-    public static var backgroundSidebar: Color {
-        Color(Westron.Color.backgroundSidebar)
+    /// A well below the canvas: a sidebar, a code block, a log, a table header.
+    ///
+    /// Use for: sidebar, code block, log, table header. Avoid: A control's fill: use background.muted.
+    public static var backgroundSunken: Color {
+        Color(Westron.Color.backgroundSunken)
     }
 
-    /// A quiet fill inside content: chips, pills, columns, a highlighted row on a phone.
+    /// A quiet fill inside content: the track of a segmented control, a tag or a badge without a color.
     ///
-    /// Use for: chip, pill, column, highlighted row. Avoid: The selected row in a sidebar: use background.selected.
+    /// Use for: segmented track, neutral tag, neutral badge. Avoid: A row under the pointer: use background.hover.
     public static var backgroundMuted: Color {
         Color(Westron.Color.backgroundMuted)
     }
 
-    /// The selected row in a sidebar: the accent laid lightly over the sidebar, mixed opaque.
-    public static var backgroundSelected: Color {
-        Color(Westron.Color.backgroundSelected)
-    }
-
-    /// Laid over a control or row under the pointer. Translucent.
-    ///
-    /// Use for: pointer hover. Avoid: Selection: use background.selected.
+    /// A row or a control under the pointer.
     public static var backgroundHover: Color {
         Color(Westron.Color.backgroundHover)
     }
 
-    /// Laid over a control while it is pressed. Translucent.
+    /// A row or a control while it is pressed.
     public static var backgroundPressed: Color {
         Color(Westron.Color.backgroundPressed)
     }
 
-    /// Laid under something that just moved, fading out. Translucent.
-    public static var backgroundHighlight: Color {
-        Color(Westron.Color.backgroundHighlight)
+    /// A selected row or item, tinted with the accent.
+    ///
+    /// Use for: selected row, selected item. Avoid: Color alone: in high contrast a selected row also shows a check or
+    /// a border.focus outline.
+    public static var backgroundSelected: Color {
+        Color(Westron.Color.backgroundSelected)
     }
 
-    /// A quiet accent fill: the slot a dragged item will drop into. Opaque.
+    /// A quiet accent ground: the tile behind an empty state's icon, a highlighted tip.
     public static var backgroundAccentSubtle: Color {
         Color(Westron.Color.backgroundAccentSubtle)
     }
 
-    /// The face of a floating control where the system has no glass of its own (before OS 26). Translucent; the
-    /// platform blurs what is under it.
+    /// The fill of the one primary action on a screen, a checked box, a switch that is on.
     ///
-    /// Use for: floating control before OS 26. Avoid: The content layer; on OS 26 and later use the system's glass.
-    public static var backgroundGlass: Color {
-        Color(Westron.Color.backgroundGlass)
-    }
-
-    /// The fill of the primary action: a floating "+", Done. The accent, the same in light and dark.
-    ///
-    /// Use for: primary action fill. Avoid: Large areas, or more than one filled control on a screen; text and borders
-    /// in the accent use text.accent and border.accent.
+    /// Use for: primary button, checked box, switch on. Avoid: Status: use status.info.fill, even though info is the
+    /// accent's blue today.
     public static var backgroundAccent: Color {
         Color(Westron.Color.backgroundAccent)
     }
 
-    /// The fill of a destructive action, such as a swipe's Delete.
-    public static var backgroundDanger: Color {
-        Color(Westron.Color.backgroundDanger)
+    /// The accent fill under the pointer.
+    public static var backgroundAccentHover: Color {
+        Color(Westron.Color.backgroundAccentHover)
     }
 
     /// Main text and glyphs.
@@ -87,178 +78,337 @@ extension Color {
         Color(Westron.Color.textPrimary)
     }
 
-    /// Supporting text and glyphs: counts, dates, metadata, notes, a done task's title.
+    /// Text and glyphs that come second: captions, metadata, a row's details, timestamps.
     public static var textSecondary: Color {
         Color(Westron.Color.textSecondary)
     }
 
-    /// What a field shows while it is empty. Translucent.
+    /// The placeholder of an empty field. It meets the text target, as all words do.
     public static var textPlaceholder: Color {
         Color(Westron.Color.textPlaceholder)
     }
 
-    /// Text and glyphs on background.accent.
-    ///
-    /// Use for: on background.accent. Avoid: Any other background.
+    /// Text and glyphs on the accent fill: white, and the canvas's color in dark high contrast, where the fill turns
+    /// light.
     public static var textOnAccent: Color {
         Color(Westron.Color.textOnAccent)
     }
 
-    /// Text and glyphs on background.danger.
+    /// Links and accent text.
     ///
-    /// Use for: on background.danger. Avoid: Any other background.
-    public static var textOnDanger: Color {
-        Color(Westron.Color.textOnDanger)
-    }
-
-    /// A word or glyph in the accent that acts, such as an action on an edit bar, or marks the chosen option.
-    ///
-    /// Use for: action word, chosen option's check. Avoid: Fills: use color.background.accent. Rings and indicators:
-    /// use color.border.accent.
+    /// Use for: link, accent text. Avoid: Status text: use status.<name>.text.
     public static var textAccent: Color {
         Color(Westron.Color.textAccent)
     }
 
-    /// Text and glyphs that warn: a due deadline.
-    public static var textDanger: Color {
-        Color(Westron.Color.textDanger)
-    }
-
-    /// Quiet glyphs and decorations: a grip, a strike-through line. Meets 3:1, not 4.5:1.
+    /// Glyphs that carry no words and need only 3:1: a chevron, a grip, a disclosure triangle.
     ///
-    /// Use for: grip, strike-through. Avoid: Words of any size: use text.secondary.
+    /// Use for: chevron, grip, disclosure. Avoid: Words: words are text.secondary at least.
     public static var iconTertiary: Color {
         Color(Westron.Color.iconTertiary)
     }
 
-    /// Rules, dividers and outlines.
+    /// Separators and the outline of a card: decorative in standard themes, 3:1 in high contrast, where every raised
+    /// surface gets one.
     public static var borderDefault: Color {
         Color(Westron.Color.borderDefault)
     }
 
-    /// The guides down the branches of a tree in a sidebar.
-    public static var borderGuide: Color {
-        Color(Westron.Color.borderGuide)
+    /// The border of a control that must be seen: a field, a checkbox, a radio ring, a secondary button.
+    public static var borderStrong: Color {
+        Color(Westron.Color.borderStrong)
     }
 
-    /// The hairline round glass and round a card on a fill. Translucent.
-    public static var borderGlass: Color {
-        Color(Westron.Color.borderGlass)
+    /// The focus ring, and the outline of a selected item in high contrast.
+    public static var borderFocus: Color {
+        Color(Westron.Color.borderFocus)
     }
 
-    /// A focus ring, a drop indicator, the outline of a drop slot.
-    ///
-    /// Use for: focus ring, drop indicator. Avoid: Text: use text.accent. Fills: use background.accent.
-    public static var borderAccent: Color {
-        Color(Westron.Color.borderAccent)
+    /// The quiet ground of a badge, a banner or a row in the status danger.
+    public static var statusDangerBackground: Color {
+        Color(Westron.Color.statusDangerBackground)
     }
 
-    /// The tile under a list's glyph: the list color, translucent.
+    /// The border of a field or a banner in the status danger.
+    public static var statusDangerBorder: Color {
+        Color(Westron.Color.statusDangerBorder)
+    }
+
+    /// The icon or dot of the status danger.
+    public static var statusDangerIcon: Color {
+        Color(Westron.Color.statusDangerIcon)
+    }
+
+    /// Text in the status danger.
+    public static var statusDangerText: Color {
+        Color(Westron.Color.statusDangerText)
+    }
+
+    /// The solid fill of the status danger: a button or a count badge.
+    public static var statusDangerFill: Color {
+        Color(Westron.Color.statusDangerFill)
+    }
+
+    /// Text and glyphs on the danger fill.
+    public static var statusDangerOnFill: Color {
+        Color(Westron.Color.statusDangerOnFill)
+    }
+
+    /// The quiet ground of a badge, a banner or a row in the status warning.
+    public static var statusWarningBackground: Color {
+        Color(Westron.Color.statusWarningBackground)
+    }
+
+    /// The border of a field or a banner in the status warning.
+    public static var statusWarningBorder: Color {
+        Color(Westron.Color.statusWarningBorder)
+    }
+
+    /// The icon or dot of the status warning.
+    public static var statusWarningIcon: Color {
+        Color(Westron.Color.statusWarningIcon)
+    }
+
+    /// Text in the status warning.
+    public static var statusWarningText: Color {
+        Color(Westron.Color.statusWarningText)
+    }
+
+    /// The solid fill of the status warning: a button or a count badge.
+    public static var statusWarningFill: Color {
+        Color(Westron.Color.statusWarningFill)
+    }
+
+    /// Text and glyphs on the warning fill.
+    public static var statusWarningOnFill: Color {
+        Color(Westron.Color.statusWarningOnFill)
+    }
+
+    /// The quiet ground of a badge, a banner or a row in the status success.
+    public static var statusSuccessBackground: Color {
+        Color(Westron.Color.statusSuccessBackground)
+    }
+
+    /// The border of a field or a banner in the status success.
+    public static var statusSuccessBorder: Color {
+        Color(Westron.Color.statusSuccessBorder)
+    }
+
+    /// The icon or dot of the status success.
+    public static var statusSuccessIcon: Color {
+        Color(Westron.Color.statusSuccessIcon)
+    }
+
+    /// Text in the status success.
+    public static var statusSuccessText: Color {
+        Color(Westron.Color.statusSuccessText)
+    }
+
+    /// The solid fill of the status success: a button or a count badge.
+    public static var statusSuccessFill: Color {
+        Color(Westron.Color.statusSuccessFill)
+    }
+
+    /// Text and glyphs on the success fill.
+    public static var statusSuccessOnFill: Color {
+        Color(Westron.Color.statusSuccessOnFill)
+    }
+
+    /// The quiet ground of a badge, a banner or a row in the status info.
+    public static var statusInfoBackground: Color {
+        Color(Westron.Color.statusInfoBackground)
+    }
+
+    /// The border of a field or a banner in the status info.
+    public static var statusInfoBorder: Color {
+        Color(Westron.Color.statusInfoBorder)
+    }
+
+    /// The icon or dot of the status info.
+    public static var statusInfoIcon: Color {
+        Color(Westron.Color.statusInfoIcon)
+    }
+
+    /// Text in the status info.
+    public static var statusInfoText: Color {
+        Color(Westron.Color.statusInfoText)
+    }
+
+    /// The solid fill of the status info: a button or a count badge.
+    public static var statusInfoFill: Color {
+        Color(Westron.Color.statusInfoFill)
+    }
+
+    /// Text and glyphs on the info fill.
+    public static var statusInfoOnFill: Color {
+        Color(Westron.Color.statusInfoOnFill)
+    }
+
+    /// The quiet ground of a badge, a banner or a row in the status neutral.
+    public static var statusNeutralBackground: Color {
+        Color(Westron.Color.statusNeutralBackground)
+    }
+
+    /// The border of a field or a banner in the status neutral.
+    public static var statusNeutralBorder: Color {
+        Color(Westron.Color.statusNeutralBorder)
+    }
+
+    /// The icon or dot of the status neutral.
+    public static var statusNeutralIcon: Color {
+        Color(Westron.Color.statusNeutralIcon)
+    }
+
+    /// Text in the status neutral.
+    public static var statusNeutralText: Color {
+        Color(Westron.Color.statusNeutralText)
+    }
+
+    /// The solid fill of the status neutral: a button or a count badge.
+    public static var statusNeutralFill: Color {
+        Color(Westron.Color.statusNeutralFill)
+    }
+
+    /// Text and glyphs on the neutral fill.
+    public static var statusNeutralOnFill: Color {
+        Color(Westron.Color.statusNeutralOnFill)
+    }
+
+    /// Series 1 of a chart.
+    public static var chart1: Color {
+        Color(Westron.Color.chart1)
+    }
+
+    /// Series 2 of a chart.
+    public static var chart2: Color {
+        Color(Westron.Color.chart2)
+    }
+
+    /// Series 3 of a chart.
+    public static var chart3: Color {
+        Color(Westron.Color.chart3)
+    }
+
+    /// Series 4 of a chart.
+    public static var chart4: Color {
+        Color(Westron.Color.chart4)
+    }
+
+    /// Series 5 of a chart.
+    public static var chart5: Color {
+        Color(Westron.Color.chart5)
+    }
+
+    /// Series 6 of a chart.
+    public static var chart6: Color {
+        Color(Westron.Color.chart6)
+    }
+
+    /// Series 7 of a chart.
+    public static var chart7: Color {
+        Color(Westron.Color.chart7)
+    }
+
+    /// Series 8 of a chart.
+    public static var chart8: Color {
+        Color(Westron.Color.chart8)
+    }
+
+    /// The quiet ground of a tag or a row in the list color.
     public static func categoryBackground(_ category: Westron.Category) -> Color {
         Color(category.background)
     }
 
-    /// A column or block tinted while something would drop into it: the list color, translucent.
-    public static func categoryBackgroundSubtle(_ category: Westron.Category) -> Color {
-        Color(category.backgroundSubtle)
-    }
-
-    /// Text and glyphs in the list color: a section title, the glyph on the list's tile.
-    public static func categoryText(_ category: Westron.Category) -> Color {
-        Color(category.text)
-    }
-
-    /// The ring of an open check in the list color.
+    /// The border of an outlined tag in the list color.
     public static func categoryBorder(_ category: Westron.Category) -> Color {
         Color(category.border)
     }
 
-    /// The disc of a done check, a lit chip: the list color.
-    ///
-    /// Use for: things that carry a list's color. Avoid: States such as danger or success: use their own tokens.
+    /// A dot or an icon in the list color.
+    public static func categoryIcon(_ category: Westron.Category) -> Color {
+        Color(category.icon)
+    }
+
+    /// Text in the list color.
+    public static func categoryText(_ category: Westron.Category) -> Color {
+        Color(category.text)
+    }
+
+    /// The solid fill of a lit tag in the list color.
     public static func categoryFill(_ category: Westron.Category) -> Color {
         Color(category.fill)
     }
 
-    /// The mark on category fill: white, or the light ink where white would not stand out (amber).
+    /// Text and glyphs on the fill of the list color.
     public static func categoryOnFill(_ category: Westron.Category) -> Color {
         Color(category.onFill)
     }
 }
 
 extension ShapeStyle where Self == Color {
-    /// The ground of a screen and of the rows on it.
+    /// The ground of a screen, a list or a table.
     ///
-    /// Use for: screen background, row background. Avoid: Cards and fields: use background.surface.
+    /// Use for: screen background, list background. Avoid: Cards and sheets: use background.surface.
     public static var backgroundCanvas: Color {
         Color(Westron.Color.backgroundCanvas)
     }
 
-    /// Something raised off the canvas: a card, a field, a dragged item.
+    /// Something raised off the canvas: a card, a sheet or a popover westron draws, a dragged row. White in light; one
+    /// step lighter than the canvas in dark, where higher is lighter.
     ///
-    /// Use for: card, field, dragged item. Avoid: The ground of a whole screen: use background.canvas.
+    /// Use for: card, sheet, popover, dragged row. Avoid: A well below the content: use background.sunken.
     public static var backgroundSurface: Color {
         Color(Westron.Color.backgroundSurface)
     }
 
-    /// The sidebar column and its rows.
-    public static var backgroundSidebar: Color {
-        Color(Westron.Color.backgroundSidebar)
+    /// A well below the canvas: a sidebar, a code block, a log, a table header.
+    ///
+    /// Use for: sidebar, code block, log, table header. Avoid: A control's fill: use background.muted.
+    public static var backgroundSunken: Color {
+        Color(Westron.Color.backgroundSunken)
     }
 
-    /// A quiet fill inside content: chips, pills, columns, a highlighted row on a phone.
+    /// A quiet fill inside content: the track of a segmented control, a tag or a badge without a color.
     ///
-    /// Use for: chip, pill, column, highlighted row. Avoid: The selected row in a sidebar: use background.selected.
+    /// Use for: segmented track, neutral tag, neutral badge. Avoid: A row under the pointer: use background.hover.
     public static var backgroundMuted: Color {
         Color(Westron.Color.backgroundMuted)
     }
 
-    /// The selected row in a sidebar: the accent laid lightly over the sidebar, mixed opaque.
-    public static var backgroundSelected: Color {
-        Color(Westron.Color.backgroundSelected)
-    }
-
-    /// Laid over a control or row under the pointer. Translucent.
-    ///
-    /// Use for: pointer hover. Avoid: Selection: use background.selected.
+    /// A row or a control under the pointer.
     public static var backgroundHover: Color {
         Color(Westron.Color.backgroundHover)
     }
 
-    /// Laid over a control while it is pressed. Translucent.
+    /// A row or a control while it is pressed.
     public static var backgroundPressed: Color {
         Color(Westron.Color.backgroundPressed)
     }
 
-    /// Laid under something that just moved, fading out. Translucent.
-    public static var backgroundHighlight: Color {
-        Color(Westron.Color.backgroundHighlight)
+    /// A selected row or item, tinted with the accent.
+    ///
+    /// Use for: selected row, selected item. Avoid: Color alone: in high contrast a selected row also shows a check or
+    /// a border.focus outline.
+    public static var backgroundSelected: Color {
+        Color(Westron.Color.backgroundSelected)
     }
 
-    /// A quiet accent fill: the slot a dragged item will drop into. Opaque.
+    /// A quiet accent ground: the tile behind an empty state's icon, a highlighted tip.
     public static var backgroundAccentSubtle: Color {
         Color(Westron.Color.backgroundAccentSubtle)
     }
 
-    /// The face of a floating control where the system has no glass of its own (before OS 26). Translucent; the
-    /// platform blurs what is under it.
+    /// The fill of the one primary action on a screen, a checked box, a switch that is on.
     ///
-    /// Use for: floating control before OS 26. Avoid: The content layer; on OS 26 and later use the system's glass.
-    public static var backgroundGlass: Color {
-        Color(Westron.Color.backgroundGlass)
-    }
-
-    /// The fill of the primary action: a floating "+", Done. The accent, the same in light and dark.
-    ///
-    /// Use for: primary action fill. Avoid: Large areas, or more than one filled control on a screen; text and borders
-    /// in the accent use text.accent and border.accent.
+    /// Use for: primary button, checked box, switch on. Avoid: Status: use status.info.fill, even though info is the
+    /// accent's blue today.
     public static var backgroundAccent: Color {
         Color(Westron.Color.backgroundAccent)
     }
 
-    /// The fill of a destructive action, such as a swipe's Delete.
-    public static var backgroundDanger: Color {
-        Color(Westron.Color.backgroundDanger)
+    /// The accent fill under the pointer.
+    public static var backgroundAccentHover: Color {
+        Color(Westron.Color.backgroundAccentHover)
     }
 
     /// Main text and glyphs.
@@ -266,100 +416,268 @@ extension ShapeStyle where Self == Color {
         Color(Westron.Color.textPrimary)
     }
 
-    /// Supporting text and glyphs: counts, dates, metadata, notes, a done task's title.
+    /// Text and glyphs that come second: captions, metadata, a row's details, timestamps.
     public static var textSecondary: Color {
         Color(Westron.Color.textSecondary)
     }
 
-    /// What a field shows while it is empty. Translucent.
+    /// The placeholder of an empty field. It meets the text target, as all words do.
     public static var textPlaceholder: Color {
         Color(Westron.Color.textPlaceholder)
     }
 
-    /// Text and glyphs on background.accent.
-    ///
-    /// Use for: on background.accent. Avoid: Any other background.
+    /// Text and glyphs on the accent fill: white, and the canvas's color in dark high contrast, where the fill turns
+    /// light.
     public static var textOnAccent: Color {
         Color(Westron.Color.textOnAccent)
     }
 
-    /// Text and glyphs on background.danger.
+    /// Links and accent text.
     ///
-    /// Use for: on background.danger. Avoid: Any other background.
-    public static var textOnDanger: Color {
-        Color(Westron.Color.textOnDanger)
-    }
-
-    /// A word or glyph in the accent that acts, such as an action on an edit bar, or marks the chosen option.
-    ///
-    /// Use for: action word, chosen option's check. Avoid: Fills: use color.background.accent. Rings and indicators:
-    /// use color.border.accent.
+    /// Use for: link, accent text. Avoid: Status text: use status.<name>.text.
     public static var textAccent: Color {
         Color(Westron.Color.textAccent)
     }
 
-    /// Text and glyphs that warn: a due deadline.
-    public static var textDanger: Color {
-        Color(Westron.Color.textDanger)
-    }
-
-    /// Quiet glyphs and decorations: a grip, a strike-through line. Meets 3:1, not 4.5:1.
+    /// Glyphs that carry no words and need only 3:1: a chevron, a grip, a disclosure triangle.
     ///
-    /// Use for: grip, strike-through. Avoid: Words of any size: use text.secondary.
+    /// Use for: chevron, grip, disclosure. Avoid: Words: words are text.secondary at least.
     public static var iconTertiary: Color {
         Color(Westron.Color.iconTertiary)
     }
 
-    /// Rules, dividers and outlines.
+    /// Separators and the outline of a card: decorative in standard themes, 3:1 in high contrast, where every raised
+    /// surface gets one.
     public static var borderDefault: Color {
         Color(Westron.Color.borderDefault)
     }
 
-    /// The guides down the branches of a tree in a sidebar.
-    public static var borderGuide: Color {
-        Color(Westron.Color.borderGuide)
+    /// The border of a control that must be seen: a field, a checkbox, a radio ring, a secondary button.
+    public static var borderStrong: Color {
+        Color(Westron.Color.borderStrong)
     }
 
-    /// The hairline round glass and round a card on a fill. Translucent.
-    public static var borderGlass: Color {
-        Color(Westron.Color.borderGlass)
+    /// The focus ring, and the outline of a selected item in high contrast.
+    public static var borderFocus: Color {
+        Color(Westron.Color.borderFocus)
     }
 
-    /// A focus ring, a drop indicator, the outline of a drop slot.
-    ///
-    /// Use for: focus ring, drop indicator. Avoid: Text: use text.accent. Fills: use background.accent.
-    public static var borderAccent: Color {
-        Color(Westron.Color.borderAccent)
+    /// The quiet ground of a badge, a banner or a row in the status danger.
+    public static var statusDangerBackground: Color {
+        Color(Westron.Color.statusDangerBackground)
     }
 
-    /// The tile under a list's glyph: the list color, translucent.
+    /// The border of a field or a banner in the status danger.
+    public static var statusDangerBorder: Color {
+        Color(Westron.Color.statusDangerBorder)
+    }
+
+    /// The icon or dot of the status danger.
+    public static var statusDangerIcon: Color {
+        Color(Westron.Color.statusDangerIcon)
+    }
+
+    /// Text in the status danger.
+    public static var statusDangerText: Color {
+        Color(Westron.Color.statusDangerText)
+    }
+
+    /// The solid fill of the status danger: a button or a count badge.
+    public static var statusDangerFill: Color {
+        Color(Westron.Color.statusDangerFill)
+    }
+
+    /// Text and glyphs on the danger fill.
+    public static var statusDangerOnFill: Color {
+        Color(Westron.Color.statusDangerOnFill)
+    }
+
+    /// The quiet ground of a badge, a banner or a row in the status warning.
+    public static var statusWarningBackground: Color {
+        Color(Westron.Color.statusWarningBackground)
+    }
+
+    /// The border of a field or a banner in the status warning.
+    public static var statusWarningBorder: Color {
+        Color(Westron.Color.statusWarningBorder)
+    }
+
+    /// The icon or dot of the status warning.
+    public static var statusWarningIcon: Color {
+        Color(Westron.Color.statusWarningIcon)
+    }
+
+    /// Text in the status warning.
+    public static var statusWarningText: Color {
+        Color(Westron.Color.statusWarningText)
+    }
+
+    /// The solid fill of the status warning: a button or a count badge.
+    public static var statusWarningFill: Color {
+        Color(Westron.Color.statusWarningFill)
+    }
+
+    /// Text and glyphs on the warning fill.
+    public static var statusWarningOnFill: Color {
+        Color(Westron.Color.statusWarningOnFill)
+    }
+
+    /// The quiet ground of a badge, a banner or a row in the status success.
+    public static var statusSuccessBackground: Color {
+        Color(Westron.Color.statusSuccessBackground)
+    }
+
+    /// The border of a field or a banner in the status success.
+    public static var statusSuccessBorder: Color {
+        Color(Westron.Color.statusSuccessBorder)
+    }
+
+    /// The icon or dot of the status success.
+    public static var statusSuccessIcon: Color {
+        Color(Westron.Color.statusSuccessIcon)
+    }
+
+    /// Text in the status success.
+    public static var statusSuccessText: Color {
+        Color(Westron.Color.statusSuccessText)
+    }
+
+    /// The solid fill of the status success: a button or a count badge.
+    public static var statusSuccessFill: Color {
+        Color(Westron.Color.statusSuccessFill)
+    }
+
+    /// Text and glyphs on the success fill.
+    public static var statusSuccessOnFill: Color {
+        Color(Westron.Color.statusSuccessOnFill)
+    }
+
+    /// The quiet ground of a badge, a banner or a row in the status info.
+    public static var statusInfoBackground: Color {
+        Color(Westron.Color.statusInfoBackground)
+    }
+
+    /// The border of a field or a banner in the status info.
+    public static var statusInfoBorder: Color {
+        Color(Westron.Color.statusInfoBorder)
+    }
+
+    /// The icon or dot of the status info.
+    public static var statusInfoIcon: Color {
+        Color(Westron.Color.statusInfoIcon)
+    }
+
+    /// Text in the status info.
+    public static var statusInfoText: Color {
+        Color(Westron.Color.statusInfoText)
+    }
+
+    /// The solid fill of the status info: a button or a count badge.
+    public static var statusInfoFill: Color {
+        Color(Westron.Color.statusInfoFill)
+    }
+
+    /// Text and glyphs on the info fill.
+    public static var statusInfoOnFill: Color {
+        Color(Westron.Color.statusInfoOnFill)
+    }
+
+    /// The quiet ground of a badge, a banner or a row in the status neutral.
+    public static var statusNeutralBackground: Color {
+        Color(Westron.Color.statusNeutralBackground)
+    }
+
+    /// The border of a field or a banner in the status neutral.
+    public static var statusNeutralBorder: Color {
+        Color(Westron.Color.statusNeutralBorder)
+    }
+
+    /// The icon or dot of the status neutral.
+    public static var statusNeutralIcon: Color {
+        Color(Westron.Color.statusNeutralIcon)
+    }
+
+    /// Text in the status neutral.
+    public static var statusNeutralText: Color {
+        Color(Westron.Color.statusNeutralText)
+    }
+
+    /// The solid fill of the status neutral: a button or a count badge.
+    public static var statusNeutralFill: Color {
+        Color(Westron.Color.statusNeutralFill)
+    }
+
+    /// Text and glyphs on the neutral fill.
+    public static var statusNeutralOnFill: Color {
+        Color(Westron.Color.statusNeutralOnFill)
+    }
+
+    /// Series 1 of a chart.
+    public static var chart1: Color {
+        Color(Westron.Color.chart1)
+    }
+
+    /// Series 2 of a chart.
+    public static var chart2: Color {
+        Color(Westron.Color.chart2)
+    }
+
+    /// Series 3 of a chart.
+    public static var chart3: Color {
+        Color(Westron.Color.chart3)
+    }
+
+    /// Series 4 of a chart.
+    public static var chart4: Color {
+        Color(Westron.Color.chart4)
+    }
+
+    /// Series 5 of a chart.
+    public static var chart5: Color {
+        Color(Westron.Color.chart5)
+    }
+
+    /// Series 6 of a chart.
+    public static var chart6: Color {
+        Color(Westron.Color.chart6)
+    }
+
+    /// Series 7 of a chart.
+    public static var chart7: Color {
+        Color(Westron.Color.chart7)
+    }
+
+    /// Series 8 of a chart.
+    public static var chart8: Color {
+        Color(Westron.Color.chart8)
+    }
+
+    /// The quiet ground of a tag or a row in the list color.
     public static func categoryBackground(_ category: Westron.Category) -> Color {
         Color(category.background)
     }
 
-    /// A column or block tinted while something would drop into it: the list color, translucent.
-    public static func categoryBackgroundSubtle(_ category: Westron.Category) -> Color {
-        Color(category.backgroundSubtle)
-    }
-
-    /// Text and glyphs in the list color: a section title, the glyph on the list's tile.
-    public static func categoryText(_ category: Westron.Category) -> Color {
-        Color(category.text)
-    }
-
-    /// The ring of an open check in the list color.
+    /// The border of an outlined tag in the list color.
     public static func categoryBorder(_ category: Westron.Category) -> Color {
         Color(category.border)
     }
 
-    /// The disc of a done check, a lit chip: the list color.
-    ///
-    /// Use for: things that carry a list's color. Avoid: States such as danger or success: use their own tokens.
+    /// A dot or an icon in the list color.
+    public static func categoryIcon(_ category: Westron.Category) -> Color {
+        Color(category.icon)
+    }
+
+    /// Text in the list color.
+    public static func categoryText(_ category: Westron.Category) -> Color {
+        Color(category.text)
+    }
+
+    /// The solid fill of a lit tag in the list color.
     public static func categoryFill(_ category: Westron.Category) -> Color {
         Color(category.fill)
     }
 
-    /// The mark on category fill: white, or the light ink where white would not stand out (amber).
+    /// Text and glyphs on the fill of the list color.
     public static func categoryOnFill(_ category: Westron.Category) -> Color {
         Color(category.onFill)
     }

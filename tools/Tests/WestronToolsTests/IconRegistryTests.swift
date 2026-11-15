@@ -59,18 +59,19 @@ struct IconRegistryTests {
                     fallback: "bullets"))
     }
 
-    @Test("westron's registry: the pilot's 32 names and symbols, in its order, with bullets for an unknown name")
+    @Test("westron's registry: the pilot's 32 names, then the four statuses, with bullets for an unknown name")
     func realRegistry() throws {
         let file = repositoryRoot.appendingPathComponent(IconRegistry.defaultFile).path
         let registry = try IconRegistry.load(file: file)
-        #expect(registry.icons.count == 32)
+        #expect(registry.icons.count == 36)
         #expect(registry.fallback == "bullets")
         #expect(
             registry.icons.map(\.name) == [
                 "tray", "sun", "calendar", "week", "logbook", "trash", "briefcase", "house", "hourglass", "pen", "bag",
                 "wrench", "book", "folder", "list", "bullets", "ellipsis", "plus", "check", "chevron", "grip",
                 "magnifier", "microphone", "newWindow", "checkCircle", "divider", "flag", "hash", "note", "expand",
-                "columns", "chevronLeft",
+                "columns", "chevronLeft", "checkCircleFill", "xmarkCircleFill", "exclamationTriangleFill",
+                "infoCircleFill",
             ])
         #expect(
             registry.icons.map(\.apple) == [
@@ -80,7 +81,8 @@ struct IconRegistryTests {
                 "plus",
                 "checkmark", "chevron.down", "line.3.horizontal", "magnifyingglass", "mic", "macwindow.badge.plus",
                 "checkmark.circle", "rectangle.split.1x2", "flag", "number", "note.text",
-                "arrow.up.left.and.arrow.down.right", "rectangle.split.3x1", "chevron.left",
+                "arrow.up.left.and.arrow.down.right", "rectangle.split.3x1", "chevron.left", "checkmark.circle.fill",
+                "xmark.circle.fill", "exclamationmark.triangle.fill", "info.circle.fill",
             ])
     }
 

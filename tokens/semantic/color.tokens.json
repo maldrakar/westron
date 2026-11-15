@@ -1,0 +1,1249 @@
+{
+  "color": {
+    "$type": "color",
+    "$description": "Semantic colors: what each color is for. They alias the color ramps, which the palette generator solves for each theme, so one file serves the four themes (decisions/0012).",
+    "background": {
+      "canvas": {
+        "$value": "{color.neutral.1}",
+        "$description": "The ground of a screen, a list or a table.",
+        "$extensions": {
+          "dev.westron.usage": {
+            "use": ["screen background", "list background"],
+            "avoid": "Cards and sheets: use background.surface."
+          }
+        }
+      },
+      "surface": {
+        "$value": "{color.neutral.raised}",
+        "$description": "Something raised off the canvas: a card, a sheet or a popover westron draws, a dragged row. White in light; one step lighter than the canvas in dark, where higher is lighter.",
+        "$extensions": {
+          "dev.westron.usage": {
+            "use": ["card", "sheet", "popover", "dragged row"],
+            "avoid": "A well below the content: use background.sunken."
+          }
+        }
+      },
+      "sunken": {
+        "$value": "{color.neutral.sunken}",
+        "$description": "A well below the canvas: a sidebar, a code block, a log, a table header.",
+        "$extensions": {
+          "dev.westron.usage": {
+            "use": ["sidebar", "code block", "log", "table header"],
+            "avoid": "A control's fill: use background.muted."
+          }
+        }
+      },
+      "muted": {
+        "$value": "{color.neutral.4}",
+        "$description": "A quiet fill inside content: the track of a segmented control, a tag or a badge without a color.",
+        "$extensions": {
+          "dev.westron.usage": {
+            "use": ["segmented track", "neutral tag", "neutral badge"],
+            "avoid": "A row under the pointer: use background.hover."
+          }
+        }
+      },
+      "hover": {"$value": "{color.neutral.3}", "$description": "A row or a control under the pointer."},
+      "pressed": {"$value": "{color.neutral.5}", "$description": "A row or a control while it is pressed."},
+      "selected": {
+        "$value": "{color.blue.5}",
+        "$description": "A selected row or item, tinted with the accent.",
+        "$extensions": {
+          "dev.westron.usage": {
+            "use": ["selected row", "selected item"],
+            "avoid": "Color alone: in high contrast a selected row also shows a check or a border.focus outline."
+          }
+        }
+      },
+      "accent-subtle": {
+        "$value": "{color.blue.3}",
+        "$description": "A quiet accent ground: the tile behind an empty state's icon, a highlighted tip."
+      },
+      "accent": {
+        "$value": "{color.blue.9}",
+        "$description": "The fill of the one primary action on a screen, a checked box, a switch that is on.",
+        "$extensions": {
+          "dev.westron.usage": {
+            "use": ["primary button", "checked box", "switch on"],
+            "avoid": "Status: use status.info.fill, even though info is the accent's blue today."
+          }
+        }
+      },
+      "accent-hover": {"$value": "{color.blue.10}", "$description": "The accent fill under the pointer."}
+    },
+    "text": {
+      "primary": {
+        "$value": "{color.neutral.12}",
+        "$description": "Main text and glyphs.",
+        "$extensions": {
+          "dev.westron.contrast": [
+            {
+              "kind": "text",
+              "on": [
+                "color.background.canvas",
+                "color.background.surface",
+                "color.background.sunken",
+                "color.background.muted",
+                "color.background.hover",
+                "color.background.pressed",
+                "color.background.selected",
+                "color.background.accent-subtle"
+              ]
+            }
+          ]
+        }
+      },
+      "secondary": {
+        "$value": "{color.neutral.11}",
+        "$description": "Text and glyphs that come second: captions, metadata, a row's details, timestamps.",
+        "$extensions": {
+          "dev.westron.contrast": [
+            {
+              "kind": "text",
+              "on": [
+                "color.background.canvas",
+                "color.background.surface",
+                "color.background.sunken",
+                "color.background.muted",
+                "color.background.hover",
+                "color.background.pressed",
+                "color.background.selected",
+                "color.background.accent-subtle"
+              ]
+            }
+          ]
+        }
+      },
+      "placeholder": {
+        "$value": "{color.neutral.11}",
+        "$description": "The placeholder of an empty field. It meets the text target, as all words do.",
+        "$extensions": {
+          "dev.westron.contrast": [
+            {
+              "kind": "text",
+              "on": [
+                "color.background.canvas",
+                "color.background.surface",
+                "color.background.sunken",
+                "color.background.muted"
+              ]
+            }
+          ]
+        }
+      },
+      "on-accent": {
+        "$value": "{color.blue.contrast}",
+        "$description": "Text and glyphs on the accent fill: white, and the canvas's color in dark high contrast, where the fill turns light.",
+        "$extensions": {
+          "dev.westron.contrast": [{"kind": "text", "on": ["color.background.accent", "color.background.accent-hover"]}]
+        }
+      },
+      "accent": {
+        "$value": "{color.blue.11}",
+        "$description": "Links and accent text.",
+        "$extensions": {
+          "dev.westron.usage": {
+            "use": ["link", "accent text"],
+            "avoid": "Status text: use status.<name>.text."
+          },
+          "dev.westron.contrast": [
+            {
+              "kind": "text",
+              "on": [
+                "color.background.canvas",
+                "color.background.surface",
+                "color.background.sunken",
+                "color.background.hover",
+                "color.background.selected",
+                "color.background.accent-subtle"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "icon": {
+      "tertiary": {
+        "$value": "{color.neutral.8}",
+        "$description": "Glyphs that carry no words and need only 3:1: a chevron, a grip, a disclosure triangle.",
+        "$extensions": {
+          "dev.westron.usage": {
+            "use": ["chevron", "grip", "disclosure"],
+            "avoid": "Words: words are text.secondary at least."
+          },
+          "dev.westron.contrast": [
+            {
+              "kind": "non-text",
+              "on": [
+                "color.background.canvas",
+                "color.background.surface",
+                "color.background.sunken",
+                "color.background.hover",
+                "color.background.selected"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "border": {
+      "default": {
+        "$value": "{color.neutral.6}",
+        "$description": "Separators and the outline of a card: decorative in standard themes, 3:1 in high contrast, where every raised surface gets one.",
+        "$extensions": {
+          "dev.westron.contrast": [
+            {
+              "kind": "separator",
+              "on": ["color.background.canvas", "color.background.surface", "color.background.sunken"]
+            }
+          ]
+        }
+      },
+      "strong": {
+        "$value": "{color.neutral.8}",
+        "$description": "The border of a control that must be seen: a field, a checkbox, a radio ring, a secondary button.",
+        "$extensions": {
+          "dev.westron.contrast": [
+            {
+              "kind": "non-text",
+              "on": [
+                "color.background.canvas",
+                "color.background.surface",
+                "color.background.sunken",
+                "color.background.muted"
+              ]
+            }
+          ]
+        }
+      },
+      "focus": {
+        "$value": "{color.blue.8}",
+        "$description": "The focus ring, and the outline of a selected item in high contrast.",
+        "$extensions": {
+          "dev.westron.contrast": [
+            {
+              "kind": "non-text",
+              "on": [
+                "color.background.canvas",
+                "color.background.surface",
+                "color.background.sunken",
+                "color.background.hover",
+                "color.background.selected"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "status": {
+      "danger": {
+        "$description": "The status danger. Something failed or will destroy data: an error, a failed build, a destructive action. A status always comes with an icon and a word, never color alone.",
+        "background": {
+          "$value": "{color.red.2}",
+          "$description": "The quiet ground of a badge, a banner or a row in the status danger."
+        },
+        "border": {
+          "$value": "{color.red.8}",
+          "$description": "The border of a field or a banner in the status danger.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": [
+                  "color.background.canvas",
+                  "color.background.surface",
+                  "color.background.sunken",
+                  "color.status.danger.background"
+                ]
+              }
+            ]
+          }
+        },
+        "icon": {
+          "$value": "{color.red.8}",
+          "$description": "The icon or dot of the status danger.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": [
+                  "color.background.canvas",
+                  "color.background.surface",
+                  "color.background.sunken",
+                  "color.status.danger.background"
+                ]
+              }
+            ]
+          }
+        },
+        "text": {
+          "$value": "{color.red.11}",
+          "$description": "Text in the status danger.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "text",
+                "on": [
+                  "color.background.canvas",
+                  "color.background.surface",
+                  "color.background.sunken",
+                  "color.status.danger.background"
+                ]
+              }
+            ]
+          }
+        },
+        "fill": {"$value": "{color.red.9}", "$description": "The solid fill of the status danger: a button or a count badge."},
+        "on-fill": {
+          "$value": "{color.red.contrast}",
+          "$description": "Text and glyphs on the danger fill.",
+          "$extensions": {
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.status.danger.fill"]}]
+          }
+        }
+      },
+      "warning": {
+        "$description": "The status warning. Something needs attention but works: a slow job, a quota near its limit. A status always comes with an icon and a word, never color alone.",
+        "background": {
+          "$value": "{color.amber.2}",
+          "$description": "The quiet ground of a badge, a banner or a row in the status warning."
+        },
+        "border": {
+          "$value": "{color.amber.8}",
+          "$description": "The border of a field or a banner in the status warning.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": [
+                  "color.background.canvas",
+                  "color.background.surface",
+                  "color.background.sunken",
+                  "color.status.warning.background"
+                ]
+              }
+            ]
+          }
+        },
+        "icon": {
+          "$value": "{color.amber.8}",
+          "$description": "The icon or dot of the status warning.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": [
+                  "color.background.canvas",
+                  "color.background.surface",
+                  "color.background.sunken",
+                  "color.status.warning.background"
+                ]
+              }
+            ]
+          }
+        },
+        "text": {
+          "$value": "{color.amber.11}",
+          "$description": "Text in the status warning.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "text",
+                "on": [
+                  "color.background.canvas",
+                  "color.background.surface",
+                  "color.background.sunken",
+                  "color.status.warning.background"
+                ]
+              }
+            ]
+          }
+        },
+        "fill": {
+          "$value": "{color.amber.9}",
+          "$description": "The solid fill of the status warning: a button or a count badge."
+        },
+        "on-fill": {
+          "$value": "{color.amber.contrast}",
+          "$description": "Text and glyphs on the warning fill.",
+          "$extensions": {
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.status.warning.fill"]}]
+          }
+        }
+      },
+      "success": {
+        "$description": "The status success. Something finished well: a passed build, a saved change. Bluish green, so that it stays apart from danger for people with color blindness. A status always comes with an icon and a word, never color alone.",
+        "background": {
+          "$value": "{color.emerald.2}",
+          "$description": "The quiet ground of a badge, a banner or a row in the status success."
+        },
+        "border": {
+          "$value": "{color.emerald.8}",
+          "$description": "The border of a field or a banner in the status success.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": [
+                  "color.background.canvas",
+                  "color.background.surface",
+                  "color.background.sunken",
+                  "color.status.success.background"
+                ]
+              }
+            ]
+          }
+        },
+        "icon": {
+          "$value": "{color.emerald.8}",
+          "$description": "The icon or dot of the status success.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": [
+                  "color.background.canvas",
+                  "color.background.surface",
+                  "color.background.sunken",
+                  "color.status.success.background"
+                ]
+              }
+            ]
+          }
+        },
+        "text": {
+          "$value": "{color.emerald.11}",
+          "$description": "Text in the status success.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "text",
+                "on": [
+                  "color.background.canvas",
+                  "color.background.surface",
+                  "color.background.sunken",
+                  "color.status.success.background"
+                ]
+              }
+            ]
+          }
+        },
+        "fill": {
+          "$value": "{color.emerald.9}",
+          "$description": "The solid fill of the status success: a button or a count badge."
+        },
+        "on-fill": {
+          "$value": "{color.emerald.contrast}",
+          "$description": "Text and glyphs on the success fill.",
+          "$extensions": {
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.status.success.fill"]}]
+          }
+        }
+      },
+      "info": {
+        "$description": "The status info. Neutral news and work in progress: a running job, a tip. It shares the accent's blue. A status always comes with an icon and a word, never color alone.",
+        "background": {
+          "$value": "{color.blue.2}",
+          "$description": "The quiet ground of a badge, a banner or a row in the status info."
+        },
+        "border": {
+          "$value": "{color.blue.8}",
+          "$description": "The border of a field or a banner in the status info.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": [
+                  "color.background.canvas",
+                  "color.background.surface",
+                  "color.background.sunken",
+                  "color.status.info.background"
+                ]
+              }
+            ]
+          }
+        },
+        "icon": {
+          "$value": "{color.blue.8}",
+          "$description": "The icon or dot of the status info.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": [
+                  "color.background.canvas",
+                  "color.background.surface",
+                  "color.background.sunken",
+                  "color.status.info.background"
+                ]
+              }
+            ]
+          }
+        },
+        "text": {
+          "$value": "{color.blue.11}",
+          "$description": "Text in the status info.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "text",
+                "on": [
+                  "color.background.canvas",
+                  "color.background.surface",
+                  "color.background.sunken",
+                  "color.status.info.background"
+                ]
+              }
+            ]
+          }
+        },
+        "fill": {"$value": "{color.blue.9}", "$description": "The solid fill of the status info: a button or a count badge."},
+        "on-fill": {
+          "$value": "{color.blue.contrast}",
+          "$description": "Text and glyphs on the info fill.",
+          "$extensions": {
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.status.info.fill"]}]
+          }
+        }
+      },
+      "neutral": {
+        "$description": "The status neutral. No verdict: queued, skipped, cancelled, unknown. A status always comes with an icon and a word, never color alone.",
+        "background": {
+          "$value": "{color.neutral.4}",
+          "$description": "The quiet ground of a badge, a banner or a row in the status neutral."
+        },
+        "border": {
+          "$value": "{color.neutral.8}",
+          "$description": "The border of a field or a banner in the status neutral.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": [
+                  "color.background.canvas",
+                  "color.background.surface",
+                  "color.background.sunken",
+                  "color.status.neutral.background"
+                ]
+              }
+            ]
+          }
+        },
+        "icon": {
+          "$value": "{color.neutral.8}",
+          "$description": "The icon or dot of the status neutral.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": [
+                  "color.background.canvas",
+                  "color.background.surface",
+                  "color.background.sunken",
+                  "color.status.neutral.background"
+                ]
+              }
+            ]
+          }
+        },
+        "text": {
+          "$value": "{color.neutral.11}",
+          "$description": "Text in the status neutral.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "text",
+                "on": [
+                  "color.background.canvas",
+                  "color.background.surface",
+                  "color.background.sunken",
+                  "color.status.neutral.background"
+                ]
+              }
+            ]
+          }
+        },
+        "fill": {
+          "$value": "{color.neutral.9}",
+          "$description": "The solid fill of the status neutral: a button or a count badge."
+        },
+        "on-fill": {
+          "$value": "{color.neutral.contrast}",
+          "$description": "Text and glyphs on the neutral fill.",
+          "$extensions": {
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.status.neutral.fill"]}]
+          }
+        }
+      }
+    },
+    "category": {
+      "$description": "The list colors: twelve named identity colors for lists, projects and tags. A list color names a thing; it never means a status.",
+      "blue": {
+        "background": {"$value": "{color.blue.3}", "$description": "The quiet ground of a tag or a row in the list color blue."},
+        "border": {
+          "$value": "{color.blue.8}",
+          "$description": "The border of an outlined tag in the list color blue.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.blue.background"]
+              }
+            ]
+          }
+        },
+        "icon": {
+          "$value": "{color.blue.8}",
+          "$description": "A dot or an icon in the list color blue.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.blue.background"]
+              }
+            ]
+          }
+        },
+        "text": {
+          "$value": "{color.blue.11}",
+          "$description": "Text in the list color blue.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.blue.background"]
+              }
+            ]
+          }
+        },
+        "fill": {"$value": "{color.blue.9}", "$description": "The solid fill of a lit tag in the list color blue."},
+        "on-fill": {
+          "$value": "{color.blue.contrast}",
+          "$description": "Text and glyphs on the fill of the list color blue.",
+          "$extensions": {
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.blue.fill"]}]
+          }
+        }
+      },
+      "sky": {
+        "background": {"$value": "{color.sky.3}", "$description": "The quiet ground of a tag or a row in the list color sky."},
+        "border": {
+          "$value": "{color.sky.8}",
+          "$description": "The border of an outlined tag in the list color sky.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.sky.background"]
+              }
+            ]
+          }
+        },
+        "icon": {
+          "$value": "{color.sky.8}",
+          "$description": "A dot or an icon in the list color sky.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.sky.background"]
+              }
+            ]
+          }
+        },
+        "text": {
+          "$value": "{color.sky.11}",
+          "$description": "Text in the list color sky.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.sky.background"]
+              }
+            ]
+          }
+        },
+        "fill": {"$value": "{color.sky.9}", "$description": "The solid fill of a lit tag in the list color sky."},
+        "on-fill": {
+          "$value": "{color.sky.contrast}",
+          "$description": "Text and glyphs on the fill of the list color sky.",
+          "$extensions": {
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.sky.fill"]}]
+          }
+        }
+      },
+      "teal": {
+        "background": {"$value": "{color.teal.3}", "$description": "The quiet ground of a tag or a row in the list color teal."},
+        "border": {
+          "$value": "{color.teal.8}",
+          "$description": "The border of an outlined tag in the list color teal.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.teal.background"]
+              }
+            ]
+          }
+        },
+        "icon": {
+          "$value": "{color.teal.8}",
+          "$description": "A dot or an icon in the list color teal.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.teal.background"]
+              }
+            ]
+          }
+        },
+        "text": {
+          "$value": "{color.teal.11}",
+          "$description": "Text in the list color teal.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.teal.background"]
+              }
+            ]
+          }
+        },
+        "fill": {"$value": "{color.teal.9}", "$description": "The solid fill of a lit tag in the list color teal."},
+        "on-fill": {
+          "$value": "{color.teal.contrast}",
+          "$description": "Text and glyphs on the fill of the list color teal.",
+          "$extensions": {
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.teal.fill"]}]
+          }
+        }
+      },
+      "emerald": {
+        "background": {
+          "$value": "{color.emerald.3}",
+          "$description": "The quiet ground of a tag or a row in the list color emerald."
+        },
+        "border": {
+          "$value": "{color.emerald.8}",
+          "$description": "The border of an outlined tag in the list color emerald.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.emerald.background"]
+              }
+            ]
+          }
+        },
+        "icon": {
+          "$value": "{color.emerald.8}",
+          "$description": "A dot or an icon in the list color emerald.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.emerald.background"]
+              }
+            ]
+          }
+        },
+        "text": {
+          "$value": "{color.emerald.11}",
+          "$description": "Text in the list color emerald.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.emerald.background"]
+              }
+            ]
+          }
+        },
+        "fill": {"$value": "{color.emerald.9}", "$description": "The solid fill of a lit tag in the list color emerald."},
+        "on-fill": {
+          "$value": "{color.emerald.contrast}",
+          "$description": "Text and glyphs on the fill of the list color emerald.",
+          "$extensions": {
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.emerald.fill"]}]
+          }
+        }
+      },
+      "green": {
+        "background": {"$value": "{color.green.3}", "$description": "The quiet ground of a tag or a row in the list color green."},
+        "border": {
+          "$value": "{color.green.8}",
+          "$description": "The border of an outlined tag in the list color green.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.green.background"]
+              }
+            ]
+          }
+        },
+        "icon": {
+          "$value": "{color.green.8}",
+          "$description": "A dot or an icon in the list color green.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.green.background"]
+              }
+            ]
+          }
+        },
+        "text": {
+          "$value": "{color.green.11}",
+          "$description": "Text in the list color green.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.green.background"]
+              }
+            ]
+          }
+        },
+        "fill": {"$value": "{color.green.9}", "$description": "The solid fill of a lit tag in the list color green."},
+        "on-fill": {
+          "$value": "{color.green.contrast}",
+          "$description": "Text and glyphs on the fill of the list color green.",
+          "$extensions": {
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.green.fill"]}]
+          }
+        }
+      },
+      "olive": {
+        "background": {"$value": "{color.olive.3}", "$description": "The quiet ground of a tag or a row in the list color olive."},
+        "border": {
+          "$value": "{color.olive.8}",
+          "$description": "The border of an outlined tag in the list color olive.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.olive.background"]
+              }
+            ]
+          }
+        },
+        "icon": {
+          "$value": "{color.olive.8}",
+          "$description": "A dot or an icon in the list color olive.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.olive.background"]
+              }
+            ]
+          }
+        },
+        "text": {
+          "$value": "{color.olive.11}",
+          "$description": "Text in the list color olive.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.olive.background"]
+              }
+            ]
+          }
+        },
+        "fill": {"$value": "{color.olive.9}", "$description": "The solid fill of a lit tag in the list color olive."},
+        "on-fill": {
+          "$value": "{color.olive.contrast}",
+          "$description": "Text and glyphs on the fill of the list color olive.",
+          "$extensions": {
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.olive.fill"]}]
+          }
+        }
+      },
+      "amber": {
+        "background": {"$value": "{color.amber.3}", "$description": "The quiet ground of a tag or a row in the list color amber."},
+        "border": {
+          "$value": "{color.amber.8}",
+          "$description": "The border of an outlined tag in the list color amber.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.amber.background"]
+              }
+            ]
+          }
+        },
+        "icon": {
+          "$value": "{color.amber.8}",
+          "$description": "A dot or an icon in the list color amber.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.amber.background"]
+              }
+            ]
+          }
+        },
+        "text": {
+          "$value": "{color.amber.11}",
+          "$description": "Text in the list color amber.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.amber.background"]
+              }
+            ]
+          }
+        },
+        "fill": {"$value": "{color.amber.9}", "$description": "The solid fill of a lit tag in the list color amber."},
+        "on-fill": {
+          "$value": "{color.amber.contrast}",
+          "$description": "Text and glyphs on the fill of the list color amber.",
+          "$extensions": {
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.amber.fill"]}]
+          }
+        }
+      },
+      "orange": {
+        "background": {"$value": "{color.orange.3}", "$description": "The quiet ground of a tag or a row in the list color orange."},
+        "border": {
+          "$value": "{color.orange.8}",
+          "$description": "The border of an outlined tag in the list color orange.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.orange.background"]
+              }
+            ]
+          }
+        },
+        "icon": {
+          "$value": "{color.orange.8}",
+          "$description": "A dot or an icon in the list color orange.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.orange.background"]
+              }
+            ]
+          }
+        },
+        "text": {
+          "$value": "{color.orange.11}",
+          "$description": "Text in the list color orange.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.orange.background"]
+              }
+            ]
+          }
+        },
+        "fill": {"$value": "{color.orange.9}", "$description": "The solid fill of a lit tag in the list color orange."},
+        "on-fill": {
+          "$value": "{color.orange.contrast}",
+          "$description": "Text and glyphs on the fill of the list color orange.",
+          "$extensions": {
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.orange.fill"]}]
+          }
+        }
+      },
+      "red": {
+        "background": {"$value": "{color.red.3}", "$description": "The quiet ground of a tag or a row in the list color red."},
+        "border": {
+          "$value": "{color.red.8}",
+          "$description": "The border of an outlined tag in the list color red.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.red.background"]
+              }
+            ]
+          }
+        },
+        "icon": {
+          "$value": "{color.red.8}",
+          "$description": "A dot or an icon in the list color red.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.red.background"]
+              }
+            ]
+          }
+        },
+        "text": {
+          "$value": "{color.red.11}",
+          "$description": "Text in the list color red.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.red.background"]
+              }
+            ]
+          }
+        },
+        "fill": {"$value": "{color.red.9}", "$description": "The solid fill of a lit tag in the list color red."},
+        "on-fill": {
+          "$value": "{color.red.contrast}",
+          "$description": "Text and glyphs on the fill of the list color red.",
+          "$extensions": {
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.red.fill"]}]
+          }
+        }
+      },
+      "pink": {
+        "background": {"$value": "{color.pink.3}", "$description": "The quiet ground of a tag or a row in the list color pink."},
+        "border": {
+          "$value": "{color.pink.8}",
+          "$description": "The border of an outlined tag in the list color pink.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.pink.background"]
+              }
+            ]
+          }
+        },
+        "icon": {
+          "$value": "{color.pink.8}",
+          "$description": "A dot or an icon in the list color pink.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.pink.background"]
+              }
+            ]
+          }
+        },
+        "text": {
+          "$value": "{color.pink.11}",
+          "$description": "Text in the list color pink.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.pink.background"]
+              }
+            ]
+          }
+        },
+        "fill": {"$value": "{color.pink.9}", "$description": "The solid fill of a lit tag in the list color pink."},
+        "on-fill": {
+          "$value": "{color.pink.contrast}",
+          "$description": "Text and glyphs on the fill of the list color pink.",
+          "$extensions": {
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.pink.fill"]}]
+          }
+        }
+      },
+      "violet": {
+        "background": {"$value": "{color.violet.3}", "$description": "The quiet ground of a tag or a row in the list color violet."},
+        "border": {
+          "$value": "{color.violet.8}",
+          "$description": "The border of an outlined tag in the list color violet.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.violet.background"]
+              }
+            ]
+          }
+        },
+        "icon": {
+          "$value": "{color.violet.8}",
+          "$description": "A dot or an icon in the list color violet.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.violet.background"]
+              }
+            ]
+          }
+        },
+        "text": {
+          "$value": "{color.violet.11}",
+          "$description": "Text in the list color violet.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.violet.background"]
+              }
+            ]
+          }
+        },
+        "fill": {"$value": "{color.violet.9}", "$description": "The solid fill of a lit tag in the list color violet."},
+        "on-fill": {
+          "$value": "{color.violet.contrast}",
+          "$description": "Text and glyphs on the fill of the list color violet.",
+          "$extensions": {
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.violet.fill"]}]
+          }
+        }
+      },
+      "indigo": {
+        "background": {"$value": "{color.indigo.3}", "$description": "The quiet ground of a tag or a row in the list color indigo."},
+        "border": {
+          "$value": "{color.indigo.8}",
+          "$description": "The border of an outlined tag in the list color indigo.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.indigo.background"]
+              }
+            ]
+          }
+        },
+        "icon": {
+          "$value": "{color.indigo.8}",
+          "$description": "A dot or an icon in the list color indigo.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "non-text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.indigo.background"]
+              }
+            ]
+          }
+        },
+        "text": {
+          "$value": "{color.indigo.11}",
+          "$description": "Text in the list color indigo.",
+          "$extensions": {
+            "dev.westron.contrast": [
+              {
+                "kind": "text",
+                "on": ["color.background.canvas", "color.background.surface", "color.category.indigo.background"]
+              }
+            ]
+          }
+        },
+        "fill": {"$value": "{color.indigo.9}", "$description": "The solid fill of a lit tag in the list color indigo."},
+        "on-fill": {
+          "$value": "{color.indigo.contrast}",
+          "$description": "Text and glyphs on the fill of the list color indigo.",
+          "$extensions": {
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.indigo.fill"]}]
+          }
+        }
+      }
+    },
+    "chart": {
+      "$description": "The chart series, in order: the first ones differ most, also for people with color blindness. Each has 3:1 on every ground in every theme; high contrast adds labels and markers, not contrast. More than eight series need direct labels.",
+      "1": {
+        "$value": "{color.series.1}",
+        "$description": "Series 1 of a chart.",
+        "$extensions": {
+          "dev.westron.contrast": [
+            {
+              "kind": "chart",
+              "on": ["color.background.canvas", "color.background.surface", "color.background.sunken"]
+            }
+          ]
+        }
+      },
+      "2": {
+        "$value": "{color.series.2}",
+        "$description": "Series 2 of a chart.",
+        "$extensions": {
+          "dev.westron.contrast": [
+            {
+              "kind": "chart",
+              "on": ["color.background.canvas", "color.background.surface", "color.background.sunken"]
+            }
+          ]
+        }
+      },
+      "3": {
+        "$value": "{color.series.3}",
+        "$description": "Series 3 of a chart.",
+        "$extensions": {
+          "dev.westron.contrast": [
+            {
+              "kind": "chart",
+              "on": ["color.background.canvas", "color.background.surface", "color.background.sunken"]
+            }
+          ]
+        }
+      },
+      "4": {
+        "$value": "{color.series.4}",
+        "$description": "Series 4 of a chart.",
+        "$extensions": {
+          "dev.westron.contrast": [
+            {
+              "kind": "chart",
+              "on": ["color.background.canvas", "color.background.surface", "color.background.sunken"]
+            }
+          ]
+        }
+      },
+      "5": {
+        "$value": "{color.series.5}",
+        "$description": "Series 5 of a chart.",
+        "$extensions": {
+          "dev.westron.contrast": [
+            {
+              "kind": "chart",
+              "on": ["color.background.canvas", "color.background.surface", "color.background.sunken"]
+            }
+          ]
+        }
+      },
+      "6": {
+        "$value": "{color.series.6}",
+        "$description": "Series 6 of a chart.",
+        "$extensions": {
+          "dev.westron.contrast": [
+            {
+              "kind": "chart",
+              "on": ["color.background.canvas", "color.background.surface", "color.background.sunken"]
+            }
+          ]
+        }
+      },
+      "7": {
+        "$value": "{color.series.7}",
+        "$description": "Series 7 of a chart.",
+        "$extensions": {
+          "dev.westron.contrast": [
+            {
+              "kind": "chart",
+              "on": ["color.background.canvas", "color.background.surface", "color.background.sunken"]
+            }
+          ]
+        }
+      },
+      "8": {
+        "$value": "{color.series.8}",
+        "$description": "Series 8 of a chart.",
+        "$extensions": {
+          "dev.westron.contrast": [
+            {
+              "kind": "chart",
+              "on": ["color.background.canvas", "color.background.surface", "color.background.sunken"]
+            }
+          ]
+        }
+      }
+    }
+  }
+}

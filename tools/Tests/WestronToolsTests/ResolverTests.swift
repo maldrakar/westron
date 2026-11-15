@@ -22,13 +22,13 @@ struct ResolverTests {
         let theme = resolution.modifiers[0]
         #expect(
             theme.context(named: "light-hc")?.sources == [
-                .file(tokens + "/semantic/color.light.tokens.json"),
-                .file(tokens + "/semantic/color.light-hc.tokens.json"),
+                .file(tokens + "/primitive/color.light.tokens.json"),
+                .file(tokens + "/primitive/color.light-hc.tokens.json"),
             ])
         #expect(
             theme.context(named: "dark-hc")?.sources == [
-                .file(tokens + "/semantic/color.dark.tokens.json"),
-                .file(tokens + "/semantic/color.dark-hc.tokens.json"),
+                .file(tokens + "/primitive/color.dark.tokens.json"),
+                .file(tokens + "/primitive/color.dark-hc.tokens.json"),
             ])
     }
 

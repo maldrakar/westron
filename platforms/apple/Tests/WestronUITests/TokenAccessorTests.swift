@@ -83,11 +83,12 @@ struct TokenAccessorTests {
         #expect(resolved.green > 1, "a Display P3 green is outside sRGB")
     }
 
-    @Test("a list color is found by the name the pilot keeps, and each role is its colorset")
+    @Test("a list color is found by its name, and each role is its colorset")
     func categories() {
         #expect(
-            Set(Westron.Category.allCases.map(\.rawValue)) == [
-                "blue", "amber", "rose", "green", "stone", "indigo", "teal", "pink", "orange", "violet", "sky",
+            Westron.Category.allCases.map(\.rawValue) == [
+                "blue", "sky", "teal", "emerald", "green", "olive", "amber", "orange", "red", "pink", "violet",
+                "indigo",
             ])
         #expect(Westron.Category(rawValue: "amber") == .amber)
         #expect(Westron.Category.amber.text.name == "color.category.amber.text")
@@ -96,8 +97,8 @@ struct TokenAccessorTests {
             for category in Westron.Category.allCases {
                 let pairs: [(Color, Westron.Color)] = [
                     (.categoryBackground(category), category.background),
-                    (.categoryBackgroundSubtle(category), category.backgroundSubtle),
                     (.categoryBorder(category), category.border),
+                    (.categoryIcon(category), category.icon),
                     (.categoryFill(category), category.fill),
                     (.categoryOnFill(category), category.onFill),
                     (.categoryText(category), category.text),

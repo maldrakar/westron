@@ -99,8 +99,8 @@ struct CatalogRegistryTests {
     func foundations() {
         #expect(
             Catalog.entries(in: .foundations).map(\.id) == [
-                "color-backgrounds", "color-foregrounds", "color-categories", "color-in-use", "typography", "space",
-                "shape", "motion", "icons",
+                "color-backgrounds", "color-foregrounds", "color-categories", "color-status", "color-in-use",
+                "typography", "space", "shape", "motion", "icons",
             ])
     }
 

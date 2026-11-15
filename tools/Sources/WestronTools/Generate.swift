@@ -31,8 +31,11 @@ extension Generator {
 /// Generated code is committed (decisions/0001), and CI runs `--check`: a mismatch means that someone changed
 /// the source but did not rerun generation, or edited a generated file by hand.
 public enum Generate {
-    /// The generator registry. Next: the API from the contracts (phase 2, #20).
-    public static let generators: [any Generator] = [AppleTokens(), AppleIcons()]
+    /// The generators that write sources other generators read: the palette writes the color ramps into `tokens/`.
+    /// `generate` writes their files before it runs the rest.
+    public static let sourceGenerators: [any Generator] = [PaletteTokens()]
+    /// The generator registry, in order. Next: the API from the contracts (phase 2, #20).
+    public static let generators: [any Generator] = sourceGenerators + [AppleTokens(), AppleIcons()]
 
     /// The files of all generators and the directories they own.
     public struct Output: Equatable, Sendable {

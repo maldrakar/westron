@@ -123,6 +123,9 @@ extension AppleTokenModel {
     static let platforms = ["ios", "macos", "watchos"]
     /// The set whose tokens are primitives, which the generator leaves out (decisions/0010).
     static let primitiveSet = "primitive"
+    /// The directory of primitive token files, relative to the resolver: a file there holds primitives even when a
+    /// modifier's context merges it in, as the themes do with the color ramps (decisions/0012).
+    static let primitiveDirectory = "primitive/"
     /// The group of the list colors.
     static let categoryGroup: TokenPath = "color.category"
 
@@ -159,8 +162,16 @@ extension AppleTokenModel {
                 guard case .set(let name, let sources) = step, name == Self.primitiveSet else { return [] }
                 return sources.map { $0.name(resolver: resolution.document.source) }
             })
+        // The color ramps differ by theme, so the theme contexts merge them in; their files are primitives too.
+        let directory =
+            resolution.document.source.lastIndex(of: "/").map {
+                String(resolution.document.source[...$0])
+            } ?? ""
+        func isPrimitive(_ source: String) -> Bool {
+            primitives.contains(source) || source.hasPrefix(directory + Self.primitiveDirectory)
+        }
         func semantic(_ input: [String: String]) throws -> [ResolvedToken] {
-            try resolution.resolve(input).tokens.filter { !primitives.contains($0.source) }
+            try resolution.resolve(input).tokens.filter { !isPrimitive($0.source) }
         }
         func baseInput(_ theme: String) -> [String: String] {
             platform == nil ? [Self.themeModifier: theme] : [Self.themeModifier: theme, Self.platformModifier: "ios"]

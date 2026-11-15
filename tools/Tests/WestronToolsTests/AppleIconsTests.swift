@@ -30,11 +30,11 @@ struct AppleIconsTests {
         #expect(try Self.generate()[1].contents == Self.swiftUI)
     }
 
-    @Test("westron's registry generates an enum of 32 icons with bullets as the fallback")
+    @Test("westron's registry generates an enum of 36 icons with bullets as the fallback")
     func realRegistry() throws {
         let file = repositoryRoot.appendingPathComponent(IconRegistry.defaultFile).path
         let files = AppleIcons.files(for: try IconRegistry.load(file: file), source: IconRegistry.defaultFile)
-        #expect(files[0].contents.split(separator: "\n").filter { $0.hasPrefix("        case ") }.count == 32)
+        #expect(files[0].contents.split(separator: "\n").filter { $0.hasPrefix("        case ") }.count == 36)
         #expect(files[0].contents.contains("public static let fallback = Westron.Icon.bullets"))
         #expect(files[1].contents.contains(#"case .newWindow: "macwindow.badge.plus""#))
     }

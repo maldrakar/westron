@@ -35,7 +35,7 @@ private struct IconsPage: View {
                 .overlay {
                     RoundedRectangle(cornerRadius: .radius100)
                         .strokeBorder(
-                            icon == .fallback ? Color.borderAccent : Color.borderDefault, lineWidth: .strokeThin)
+                            icon == .fallback ? Color.borderFocus : Color.borderDefault, lineWidth: .strokeThin)
                 }
                 .overlay {
                     Image(icon)

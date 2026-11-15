@@ -42,6 +42,10 @@ extension Westron.Icon {
         case .expand: "arrow.up.left.and.arrow.down.right"
         case .columns: "rectangle.split.3x1"
         case .chevronLeft: "chevron.left"
+        case .checkCircleFill: "checkmark.circle.fill"
+        case .xmarkCircleFill: "xmark.circle.fill"
+        case .exclamationTriangleFill: "exclamationmark.triangle.fill"
+        case .infoCircleFill: "info.circle.fill"
         }
     }
 }

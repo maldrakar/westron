@@ -30,7 +30,7 @@ extension CatalogEntry {
             sample: .foreground)
     }
 
-    /// The eleven list colors with their six roles, in the catalog's theme.
+    /// The twelve list colors with their six roles, in the catalog's theme.
     static let colorCategories = CatalogEntry(
         id: "color-categories", title: "Colors: list colors", section: .foundations
     ) {
@@ -130,8 +130,7 @@ private struct ForegroundSample: View {
     /// The stroke the border is drawn with where it is used (decisions/0013).
     private var lineWidth: CGFloat {
         switch color.name {
-        case Westron.Color.borderAccent.name: .strokeThick
-        case Westron.Color.borderGlass.name: .strokeHairline
+        case Westron.Color.borderFocus.name: .strokeThick
         default: .strokeThin
         }
     }
@@ -140,13 +139,13 @@ private struct ForegroundSample: View {
 /// The list colors in the catalog's own theme: a row per color, a column per role, each drawn as it is used.
 private struct CategoryColorsPage: View {
     /// The roles in the order of the columns.
-    private static let roles = ["background", "background-subtle", "text", "border", "fill", "on-fill"]
+    private static let roles = ["background", "border", "icon", "text", "fill", "on-fill"]
 
     var body: some View {
         TokenPage(
             title: "List colors",
             summary: "color.category.<name>.<role> in this screenshot's theme, each drawn as it is used: a tile with "
-                + "its glyph, a tint, text, a check's ring, a done check."
+                + "its glyph, an outline, a dot, text, a fill, a lit check."
         ) {
             Grid(alignment: .center, horizontalSpacing: .space75, verticalSpacing: SampleMetrics.rowSpacing) {
                 GridRow {
@@ -166,15 +165,15 @@ private struct CategoryColorsPage: View {
                         TokenName(category.rawValue)
                             .gridColumnAlignment(.leading)
                         tile(category)
-                        RoundedRectangle(cornerRadius: .radius75)
-                            .fill(.categoryBackgroundSubtle(category))
-                            .frame(width: Size.cell, height: SampleMetrics.mark)
-                        Text("Aa")
-                            .font(.bodyStrong)
-                            .foregroundStyle(.categoryText(category))
                         Circle()
                             .strokeBorder(.categoryBorder(category), lineWidth: .strokeRegular)
                             .frame(width: SampleMetrics.mark, height: SampleMetrics.mark)
+                        Circle()
+                            .fill(.categoryIcon(category))
+                            .frame(width: Size.dot, height: Size.dot)
+                        Text("Aa")
+                            .font(.bodyStrong)
+                            .foregroundStyle(.categoryText(category))
                         Circle()
                             .fill(.categoryFill(category))
                             .frame(width: SampleMetrics.mark, height: SampleMetrics.mark)
@@ -211,7 +210,7 @@ private struct CategoryColorsPage: View {
         RoundedRectangle(cornerRadius: .radius100)
             .fill(.categoryBackground(category))
             .overlay {
-                Image(systemName: "tray.fill")
+                Image(Westron.Icon.tray)
                     .font(.footnoteMedium)
                     .foregroundStyle(.categoryText(category))
             }
@@ -221,5 +220,6 @@ private struct CategoryColorsPage: View {
     private enum Size {
         static let cell: CGFloat = 44
         static let header: CGFloat = 14
+        static let dot: CGFloat = 10
     }
 }

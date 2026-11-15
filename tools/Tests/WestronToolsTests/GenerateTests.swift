@@ -135,8 +135,9 @@ struct GenerateTests {
         }
     }
 
-    @Test("the registry holds the Apple token and icon generators")
+    @Test("the registry holds the palette, then the Apple token and icon generators")
     func registry() {
-        #expect(Generate.generators.map(\.name) == ["tokens-apple", "icons-apple"])
+        #expect(Generate.sourceGenerators.map(\.name) == ["tokens-palette"])
+        #expect(Generate.generators.map(\.name) == ["tokens-palette", "tokens-apple", "icons-apple"])
     }
 }

@@ -11,8 +11,8 @@
         "components" : {
           "alpha" : "1.000",
           "blue" : "0x85",
-          "green" : "0x89",
-          "red" : "0x16"
+          "green" : "0x84",
+          "red" : "0x00"
         }
       },
       "idiom" : "universal"
@@ -28,9 +28,9 @@
         "color-space" : "srgb",
         "components" : {
           "alpha" : "1.000",
-          "blue" : "0x8F",
-          "green" : "0x92",
-          "red" : "0x29"
+          "blue" : "0x85",
+          "green" : "0x84",
+          "red" : "0x00"
         }
       },
       "idiom" : "universal"
@@ -46,9 +46,9 @@
         "color-space" : "srgb",
         "components" : {
           "alpha" : "1.000",
-          "blue" : "0x81",
-          "green" : "0x84",
-          "red" : "0x0B"
+          "blue" : "0x64",
+          "green" : "0x63",
+          "red" : "0x00"
         }
       },
       "idiom" : "universal"
@@ -68,9 +68,9 @@
         "color-space" : "srgb",
         "components" : {
           "alpha" : "1.000",
-          "blue" : "0x82",
-          "green" : "0x84",
-          "red" : "0x11"
+          "blue" : "0xB0",
+          "green" : "0xB0",
+          "red" : "0x26"
         }
       },
       "idiom" : "universal"
@@ -80,9 +80,9 @@
         "color-space" : "srgb",
         "components" : {
           "alpha" : "1.000",
-          "blue" : "0x8F",
-          "green" : "0x92",
-          "red" : "0x29"
+          "blue" : "0x85",
+          "green" : "0x84",
+          "red" : "0x00"
         }
       },
       "idiom" : "watch"

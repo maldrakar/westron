@@ -11,8 +11,8 @@
         "components" : {
           "alpha" : "1.000",
           "blue" : "0x99",
-          "green" : "0x71",
-          "red" : "0x28"
+          "green" : "0x70",
+          "red" : "0x00"
         }
       },
       "idiom" : "universal"
@@ -28,9 +28,9 @@
         "color-space" : "srgb",
         "components" : {
           "alpha" : "1.000",
-          "blue" : "0xCE",
-          "green" : "0xAA",
-          "red" : "0x6A"
+          "blue" : "0xD1",
+          "green" : "0x9F",
+          "red" : "0x2A"
         }
       },
       "idiom" : "universal"
@@ -46,8 +46,8 @@
         "color-space" : "srgb",
         "components" : {
           "alpha" : "1.000",
-          "blue" : "0x78",
-          "green" : "0x53",
+          "blue" : "0x71",
+          "green" : "0x52",
           "red" : "0x00"
         }
       },
@@ -68,9 +68,9 @@
         "color-space" : "srgb",
         "components" : {
           "alpha" : "1.000",
-          "blue" : "0xE3",
-          "green" : "0xBF",
-          "red" : "0x7E"
+          "blue" : "0xF9",
+          "green" : "0xC6",
+          "red" : "0x58"
         }
       },
       "idiom" : "universal"
@@ -80,9 +80,9 @@
         "color-space" : "srgb",
         "components" : {
           "alpha" : "1.000",
-          "blue" : "0xCE",
-          "green" : "0xAA",
-          "red" : "0x6A"
+          "blue" : "0xD1",
+          "green" : "0x9F",
+          "red" : "0x2A"
         }
       },
       "idiom" : "watch"

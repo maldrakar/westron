@@ -28,7 +28,7 @@ struct IconTests {
 
     @Test("every icon reads back from its raw value")
     func rawValuesRoundTrip() {
-        #expect(Westron.Icon.allCases.count == 32)
+        #expect(Westron.Icon.allCases.count == 36)
         for icon in Westron.Icon.allCases {
             #expect(Westron.Icon(rawValue: icon.rawValue) == icon, "\(icon)")
         }

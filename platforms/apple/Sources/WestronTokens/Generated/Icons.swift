@@ -109,6 +109,18 @@ extension Westron {
         /// A chevron pointing left.
         case chevronLeft
 
+        /// A check mark cut out of a filled circle.
+        case checkCircleFill
+
+        /// An x cut out of a filled circle.
+        case xmarkCircleFill
+
+        /// An exclamation mark cut out of a filled triangle.
+        case exclamationTriangleFill
+
+        /// A lowercase i cut out of a filled circle.
+        case infoCircleFill
+
         /// The icon to draw for a name this version does not know: `bullets`.
         public static let fallback = Westron.Icon.bullets
     }
