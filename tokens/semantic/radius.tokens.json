@@ -1,0 +1,30 @@
+{
+  "radius": {
+    "$type": "dimension",
+    "$description": "Corner radii, on the same ladder as `space`. A capsule uses the platform's capsule shape, not a radius.",
+    "75": {
+      "$value": {"value": 6, "unit": "px"},
+      "$description": "Step 75 of the radius ladder: 6 px."
+    },
+    "100": {
+      "$value": {"value": 8, "unit": "px"},
+      "$description": "Step 100 of the radius ladder: 8 px."
+    },
+    "125": {
+      "$value": {"value": 10, "unit": "px"},
+      "$description": "Step 125 of the radius ladder: 10 px."
+    },
+    "150": {
+      "$value": {"value": 12, "unit": "px"},
+      "$description": "Step 150 of the radius ladder: 12 px."
+    },
+    "175": {
+      "$value": {"value": 14, "unit": "px"},
+      "$description": "Step 175 of the radius ladder: 14 px."
+    },
+    "225": {
+      "$value": {"value": 18, "unit": "px"},
+      "$description": "Step 225 of the radius ladder: 18 px."
+    }
+  }
+}

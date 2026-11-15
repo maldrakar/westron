@@ -1,0 +1,22 @@
+{
+  "font": {
+    "family": {
+      "$type": "fontFamily",
+      "system": {
+        "$value": ["system-ui"],
+        "$description": "The platform's system font: SF Pro on Apple, Adwaita Sans on GNOME, Roboto on Android (decisions/0011)."
+      },
+      "rounded": {
+        "$value": ["ui-rounded", "system-ui"],
+        "$description": "The system's rounded design where the platform has one (SF Pro Rounded on Apple), otherwise the system font (decisions/0011)."
+      }
+    },
+    "weight": {
+      "$type": "fontWeight",
+      "regular": {"$value": 400},
+      "medium": {"$value": 500},
+      "semibold": {"$value": 600},
+      "heavy": {"$value": 800}
+    }
+  }
+}

@@ -1,0 +1,182 @@
+{
+  "typography": {
+    "$type": "typography",
+    "heading": {
+      "large": {
+        "$value": {
+          "fontFamily": "{font.family.rounded}",
+          "fontSize": {"value": 34, "unit": "px"},
+          "fontWeight": "{font.weight.heavy}",
+          "letterSpacing": {"value": 0, "unit": "px"},
+          "lineHeight": 1.206
+        },
+        "$description": "The title of a screen. The size follows the largeTitle text style (the pilot's largeTitle).",
+        "$extensions": {"dev.westron.apple": {"textStyle": "largeTitle"}}
+      },
+      "medium": {
+        "$value": {
+          "fontFamily": "{font.family.rounded}",
+          "fontSize": {"value": 20, "unit": "px"},
+          "fontWeight": "{font.weight.heavy}",
+          "letterSpacing": {"value": 0, "unit": "px"},
+          "lineHeight": 1.25
+        },
+        "$description": "The title of an empty state or a short standalone message. The size follows the title3 text style (the pilot's emptyScreenTitle).",
+        "$extensions": {"dev.westron.apple": {"textStyle": "title3"}}
+      },
+      "small": {
+        "$value": {
+          "fontFamily": "{font.family.rounded}",
+          "fontSize": {"value": 17, "unit": "px"},
+          "fontWeight": "{font.weight.heavy}",
+          "letterSpacing": {"value": 0, "unit": "px"},
+          "lineHeight": 1.294
+        },
+        "$description": "The title of a section or a block inside a screen. The size follows the headline text style (the pilot's sectionTitle).",
+        "$extensions": {"dev.westron.apple": {"textStyle": "headline"}}
+      },
+      "overline": {
+        "$value": {
+          "fontFamily": "{font.family.rounded}",
+          "fontSize": {"value": 12, "unit": "px"},
+          "fontWeight": "{font.weight.heavy}",
+          "letterSpacing": {"value": 0, "unit": "px"},
+          "lineHeight": 1.333
+        },
+        "$description": "A short label above a group, written in capitals by the product, such as an area's name in a sidebar. The size follows the caption text style (the pilot's areaCaption).",
+        "$extensions": {"dev.westron.apple": {"textStyle": "caption"}}
+      }
+    },
+    "body": {
+      "regular": {
+        "$value": {
+          "fontFamily": "{font.family.system}",
+          "fontSize": {"value": 17, "unit": "px"},
+          "fontWeight": "{font.weight.regular}",
+          "letterSpacing": {"value": 0, "unit": "px"},
+          "lineHeight": 1.294
+        },
+        "$description": "Main text: a row's title, a field's text, a search field. The size follows the body text style (the pilot's rowTitle, search).",
+        "$extensions": {"dev.westron.apple": {"textStyle": "body"}}
+      },
+      "strong": {
+        "$value": {
+          "fontFamily": "{font.family.system}",
+          "fontSize": {"value": 17, "unit": "px"},
+          "fontWeight": "{font.weight.semibold}",
+          "letterSpacing": {"value": 0, "unit": "px"},
+          "lineHeight": 1.294
+        },
+        "$description": "Main text that needs emphasis: a row with children, the selected row, a card's title. The size follows the body text style (the pilot's rowTitleEmphasized).",
+        "$extensions": {"dev.westron.apple": {"textStyle": "body"}}
+      }
+    },
+    "callout": {
+      "regular": {
+        "$value": {
+          "fontFamily": "{font.family.system}",
+          "fontSize": {"value": 16, "unit": "px"},
+          "fontWeight": "{font.weight.regular}",
+          "letterSpacing": {"value": 0, "unit": "px"},
+          "lineHeight": 1.312
+        },
+        "$description": "Text one step below the main text: a nested row's title, a card in a column. The size follows the callout text style (the pilot's nestedRowTitle).",
+        "$extensions": {"dev.westron.apple": {"textStyle": "callout"}}
+      },
+      "strong": {
+        "$value": {
+          "fontFamily": "{font.family.system}",
+          "fontSize": {"value": 16, "unit": "px"},
+          "fontWeight": "{font.weight.semibold}",
+          "letterSpacing": {"value": 0, "unit": "px"},
+          "lineHeight": 1.312
+        },
+        "$description": "`callout.regular` with emphasis. The size follows the callout text style (the pilot's nestedRowTitleEmphasized).",
+        "$extensions": {"dev.westron.apple": {"textStyle": "callout"}}
+      }
+    },
+    "subheadline": {
+      "regular": {
+        "$value": {
+          "fontFamily": "{font.family.system}",
+          "fontSize": {"value": 15, "unit": "px"},
+          "fontWeight": "{font.weight.regular}",
+          "letterSpacing": {"value": 0, "unit": "px"},
+          "lineHeight": 1.333
+        },
+        "$description": "Supporting text: counts, a subtitle, notes, a subtask's title. The size follows the subheadline text style (the pilot's count, notes).",
+        "$extensions": {"dev.westron.apple": {"textStyle": "subheadline"}}
+      },
+      "medium": {
+        "$value": {
+          "fontFamily": "{font.family.system}",
+          "fontSize": {"value": 15, "unit": "px"},
+          "fontWeight": "{font.weight.medium}",
+          "letterSpacing": {"value": 0, "unit": "px"},
+          "lineHeight": 1.333
+        },
+        "$description": "A row that adds something, such as \"Add task\". The size follows the subheadline text style (the pilot's addRow).",
+        "$extensions": {"dev.westron.apple": {"textStyle": "subheadline"}}
+      },
+      "strong": {
+        "$value": {
+          "fontFamily": "{font.family.system}",
+          "fontSize": {"value": 15, "unit": "px"},
+          "fontWeight": "{font.weight.semibold}",
+          "letterSpacing": {"value": 0, "unit": "px"},
+          "lineHeight": 1.333
+        },
+        "$description": "A word on a bar or a button beside a glyph. The size follows the subheadline text style (the pilot's barLabel).",
+        "$extensions": {"dev.westron.apple": {"textStyle": "subheadline"}}
+      }
+    },
+    "footnote": {
+      "regular": {
+        "$value": {
+          "fontFamily": "{font.family.system}",
+          "fontSize": {"value": 13, "unit": "px"},
+          "fontWeight": "{font.weight.regular}",
+          "letterSpacing": {"value": 0, "unit": "px"},
+          "lineHeight": 1.385
+        },
+        "$description": "A hint under a title that says what to do. The size follows the footnote text style (the pilot's hint).",
+        "$extensions": {"dev.westron.apple": {"textStyle": "footnote"}}
+      },
+      "medium": {
+        "$value": {
+          "fontFamily": "{font.family.system}",
+          "fontSize": {"value": 13, "unit": "px"},
+          "fontWeight": "{font.weight.medium}",
+          "letterSpacing": {"value": 0, "unit": "px"},
+          "lineHeight": 1.385
+        },
+        "$description": "A small label: an area's name, a date, a tag's name. The size follows the footnote text style (the pilot's areaLabel).",
+        "$extensions": {"dev.westron.apple": {"textStyle": "footnote"}}
+      },
+      "strong": {
+        "$value": {
+          "fontFamily": "{font.family.system}",
+          "fontSize": {"value": 13, "unit": "px"},
+          "fontWeight": "{font.weight.semibold}",
+          "letterSpacing": {"value": 0, "unit": "px"},
+          "lineHeight": 1.385
+        },
+        "$description": "The words on a chip or a pill. The size follows the footnote text style (the pilot's pill).",
+        "$extensions": {"dev.westron.apple": {"textStyle": "footnote"}}
+      }
+    },
+    "caption": {
+      "medium": {
+        "$value": {
+          "fontFamily": "{font.family.system}",
+          "fontSize": {"value": 12, "unit": "px"},
+          "fontWeight": "{font.weight.medium}",
+          "letterSpacing": {"value": 0, "unit": "px"},
+          "lineHeight": 1.333
+        },
+        "$description": "A line of metadata under a title. The size follows the caption text style (the pilot's meta).",
+        "$extensions": {"dev.westron.apple": {"textStyle": "caption"}}
+      }
+    }
+  }
+}

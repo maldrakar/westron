@@ -1,0 +1,136 @@
+{
+  "motion": {
+    "$type": "transition",
+    "check": {
+      "$value": {
+        "duration": {"value": 450, "unit": "ms"},
+        "delay": {"value": 0, "unit": "ms"},
+        "timingFunction": "{easing.overshoot}"
+      },
+      "$description": "A check popping as a task is done.",
+      "$extensions": {"dev.westron.spring": {"duration": 0.45, "bounce": 0}}
+    },
+    "check-fill": {
+      "$value": {
+        "duration": {"value": 220, "unit": "ms"},
+        "delay": {"value": 0, "unit": "ms"},
+        "timingFunction": "{easing.standard}"
+      },
+      "$description": "A check's ring and fill changing color."
+    },
+    "check-mark": {
+      "$value": {
+        "duration": {"value": 260, "unit": "ms"},
+        "delay": {"value": 80, "unit": "ms"},
+        "timingFunction": "{easing.standard}"
+      },
+      "$description": "A check's mark drawing itself in and out, after its colors start."
+    },
+    "title-fade": {
+      "$value": {
+        "duration": {"value": 250, "unit": "ms"},
+        "delay": {"value": 0, "unit": "ms"},
+        "timingFunction": "{easing.standard}"
+      },
+      "$description": "A title changing color as its task is checked."
+    },
+    "row-leave": {
+      "$value": {
+        "duration": {"value": 320, "unit": "ms"},
+        "delay": {"value": 700, "unit": "ms"},
+        "timingFunction": "{easing.accelerate}"
+      },
+      "$description": "A done row leaving, after a wait long enough to read its check."
+    },
+    "row-delete": {
+      "$value": {
+        "duration": {"value": 320, "unit": "ms"},
+        "delay": {"value": 0, "unit": "ms"},
+        "timingFunction": "{easing.accelerate}"
+      },
+      "$description": "A deleted row leaving at once."
+    },
+    "popover": {
+      "$value": {
+        "duration": {"value": 200, "unit": "ms"},
+        "delay": {"value": 0, "unit": "ms"},
+        "timingFunction": "{easing.overshoot-soft}"
+      },
+      "$description": "A small element appearing or moving into place: a row, a chevron, a dragged item.",
+      "$extensions": {"dev.westron.spring": {"duration": 0.2, "bounce": 0}}
+    },
+    "card-open": {
+      "$value": {
+        "duration": {"value": 260, "unit": "ms"},
+        "delay": {"value": 0, "unit": "ms"},
+        "timingFunction": "{easing.settle}"
+      },
+      "$description": "A card opening in place of its row."
+    },
+    "drop": {
+      "$value": {
+        "duration": {"value": 320, "unit": "ms"},
+        "delay": {"value": 0, "unit": "ms"},
+        "timingFunction": "{easing.overshoot}"
+      },
+      "$description": "Something landing where it was dropped.",
+      "$extensions": {"dev.westron.spring": {"duration": 0.32, "bounce": 0}}
+    },
+    "swipe": {
+      "$value": {
+        "duration": {"value": 250, "unit": "ms"},
+        "delay": {"value": 0, "unit": "ms"},
+        "timingFunction": "{easing.settle}"
+      },
+      "$description": "A row sliding aside for its actions and back."
+    },
+    "fold": {
+      "$value": {
+        "duration": {"value": 220, "unit": "ms"},
+        "delay": {"value": 0, "unit": "ms"},
+        "timingFunction": "{easing.standard}"
+      },
+      "$description": "A chevron turning as a section folds or opens."
+    },
+    "highlight-fade": {
+      "$value": {
+        "duration": {"value": 1600, "unit": "ms"},
+        "delay": {"value": 0, "unit": "ms"},
+        "timingFunction": "{easing.standard}"
+      },
+      "$description": "The highlight under something just moved, fading out."
+    },
+    "chip-toggle": {
+      "$value": {
+        "duration": {"value": 180, "unit": "ms"},
+        "delay": {"value": 0, "unit": "ms"},
+        "timingFunction": "{easing.standard}"
+      },
+      "$description": "A chip lighting and going out."
+    },
+    "drop-highlight": {
+      "$value": {
+        "duration": {"value": 150, "unit": "ms"},
+        "delay": {"value": 0, "unit": "ms"},
+        "timingFunction": "{easing.standard}"
+      },
+      "$description": "A drop target tinting under a drag, a dragged item dimming."
+    },
+    "hover-tint": {
+      "$value": {
+        "duration": {"value": 120, "unit": "ms"},
+        "delay": {"value": 0, "unit": "ms"},
+        "timingFunction": "{easing.standard}"
+      },
+      "$description": "A control's tint coming and going under the pointer."
+    },
+    "hover-shadow": {
+      "$value": {
+        "duration": {"value": 150, "unit": "ms"},
+        "delay": {"value": 0, "unit": "ms"},
+        "timingFunction": "{easing.standard}"
+      },
+      "$description": "A card's shadow deepening under the pointer and back."
+    }
+  }
+}

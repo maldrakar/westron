@@ -1,0 +1,21 @@
+{
+  "stroke": {
+    "$type": "dimension",
+    "hairline": {
+      "$value": {"value": 0.5, "unit": "px"},
+      "$description": "The edge of glass and of a card on a fill."
+    },
+    "thin": {
+      "$value": {"value": 1, "unit": "px"},
+      "$description": "Rules, dividers, tree guides in a sidebar."
+    },
+    "regular": {
+      "$value": {"value": 1.5, "unit": "px"},
+      "$description": "Guides on a phone, a dashed outline, a small check's ring."
+    },
+    "thick": {
+      "$value": {"value": 2, "unit": "px"},
+      "$description": "A focus ring, a drop indicator, a selection ring."
+    }
+  }
+}
