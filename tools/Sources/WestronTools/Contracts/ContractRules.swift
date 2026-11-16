@@ -41,7 +41,11 @@ struct ContractRules {
         checkConstraints()
         checkTokens()
         checkPlatforms()
+        checkAccessibility()
     }
+
+    /// The key of a case's `when` that names states; no option may take it.
+    static let stateKey = "state"
 
     /// The contract of `button` is `button/button.spec.yaml`.
     mutating func checkFileName() {
@@ -74,7 +78,16 @@ struct ContractRules {
         }
         for (platform, path) in restrictions {
             lists.append(path.key("states"))
+            lists.append(path.key("keyboardIntents"))
             for member in platform["options"]?.members ?? [] { lists.append(path.key("options").key(member.key)) }
+        }
+        for member in document["tokens"]?.members ?? [] {
+            for (index, item) in (member.value["cases"]?.elements ?? []).enumerated() {
+                for condition in item["when"]?.members ?? [] {
+                    lists.append(
+                        root.key("tokens").key(member.key).key("cases").index(index).key("when").key(condition.key))
+                }
+            }
         }
         for path in lists {
             guard let elements = value(at: path)?.elements else { continue }
@@ -86,8 +99,13 @@ struct ContractRules {
         }
     }
 
-    /// An enum option's default is one of its values.
+    /// An enum option's default is one of its values; no option takes the name a case gives to states.
     mutating func checkOptions() {
+        for member in document["options"]?.members ?? [] where member.key == Self.stateKey {
+            report(
+                .root.key("options").key(member.key),
+                "\"\(Self.stateKey)\" names the states in a case of a token binding; give the option another name")
+        }
         for member in document["options"]?.members ?? [] where member.value["type"] == .string("enum") {
             guard let values = member.value["values"]?.elements?.compactMap(\.string),
                 let fallback = member.value["default"]?.string
@@ -126,35 +144,57 @@ struct ContractRules {
 
     /// Constraints name options that exist, with values those options have.
     mutating func checkConstraints() {
-        let enums = enumOptions
-        let bools = boolOptions
         for (index, constraint) in (document["constraints"]?.elements ?? []).enumerated() {
             for side in ["when", "require"] {
-                let path = DocumentPath.root.key("constraints").index(index).key(side)
-                for member in constraint[side]?.members ?? [] {
-                    let option = member.key
-                    let place = path.key(option)
-                    if bools.contains(option) {
-                        if case .bool = member.value { continue }
-                        report(place, "\(option) is a bool option: give true or false")
-                    } else if let values = enums[option] {
-                        let named: [(DocumentPath, JSON)] =
-                            if case .array(let elements) = member.value {
-                                elements.enumerated().map { (place.index($0.offset), $0.element) }
-                            } else {
-                                [(place, member.value)]
-                            }
-                        for (at, value) in named {
-                            if case .bool = value {
-                                report(at, "\(option) is an enum option: name its values, not true or false")
-                            } else if let name = value.string, !values.contains(name) {
-                                report(at, unknownValue(name, of: option, values))
-                            }
-                        }
-                    } else {
-                        report(place, unknownOption(option))
+                checkConditions(
+                    constraint[side]?.members ?? [], at: .root.key("constraints").index(index).key(side),
+                    states: false)
+            }
+        }
+    }
+
+    /// Conditions such as a constraint's `when`: options that exist, each with a value or values it has, true or
+    /// false for a bool option. With `states`, the key `state` names states from `states`.
+    private mutating func checkConditions(_ conditions: [JSON.Member], at path: DocumentPath, states: Bool) {
+        let enums = enumOptions
+        let bools = boolOptions
+        for member in conditions {
+            let option = member.key
+            let place = path.key(option)
+            let named: [(DocumentPath, JSON)] =
+                if case .array(let elements) = member.value {
+                    elements.enumerated().map { (place.index($0.offset), $0.element) }
+                } else {
+                    [(place, member.value)]
+                }
+            if states && option == Self.stateKey {
+                let declared = self.states ?? []
+                for (at, value) in named {
+                    guard let name = value.string else {
+                        report(at, "name a state, not true or false")
+                        continue
+                    }
+                    if !declared.contains(name) {
+                        report(
+                            at,
+                            declared.isEmpty
+                                ? "\"\(name)\": the contract declares no states"
+                                : "\"\(name)\" is not one of the states: \(declared.joined(separator: ", "))")
                     }
                 }
+            } else if bools.contains(option) {
+                if case .bool = member.value { continue }
+                report(place, "\(option) is a bool option: give true or false")
+            } else if let values = enums[option] {
+                for (at, value) in named {
+                    if case .bool = value {
+                        report(at, "\(option) is an enum option: name its values, not true or false")
+                    } else if let name = value.string, !values.contains(name) {
+                        report(at, unknownValue(name, of: option, values))
+                    }
+                }
+            } else {
+                report(place, unknownOption(option) + (states ? ", and the key state names states" : ""))
             }
         }
     }
@@ -168,6 +208,8 @@ struct ContractRules {
             switch member.value {
             case .string(let token):
                 checkToken(token, at: path)
+            case .object where member.value["cases"] != nil:
+                checkCases(member.value, at: path)
             case .object(let byValue):
                 let keys = byValue.map(\.key)
                 let owners = enums.keys.sorted().filter { option in keys.allSatisfy { enums[option]!.contains($0) } }
@@ -192,6 +234,47 @@ struct ContractRules {
                 continue
             }
         }
+    }
+
+    /// A case binding: each case's `when` names options, values and states that exist, its token can be bound, and
+    /// no case is shadowed by an earlier one, which would match everything it matches (cases apply first match).
+    private mutating func checkCases(_ binding: JSON, at path: DocumentPath) {
+        if let token = binding["token"]?.string { checkToken(token, at: path.key("token")) }
+        var earlier: [(index: Int, when: [String: Set<String>])] = []
+        for (index, item) in (binding["cases"]?.elements ?? []).enumerated() {
+            let place = path.key("cases").index(index)
+            if let token = item["token"]?.string { checkToken(token, at: place.key("token")) }
+            guard let conditions = item["when"]?.members else { continue }
+            checkConditions(conditions, at: place.key("when"), states: true)
+            let when = Self.conditionSets(conditions)
+            if let shadow = earlier.first(where: { Self.covers($0.when, when) }) {
+                report(
+                    place.key("when"),
+                    shadow.when == when
+                        ? "repeats the when of cases[\(shadow.index)], so this case is never used"
+                        : "cases[\(shadow.index)] matches everything this case matches, so it is never used: "
+                            + "put the narrower case first")
+            }
+            earlier.append((index, when))
+        }
+    }
+
+    /// Conditions as sets of the values each key accepts; `true` and `false` as text.
+    private static func conditionSets(_ conditions: [JSON.Member]) -> [String: Set<String>] {
+        func text(_ value: JSON) -> String? {
+            if case .bool(let flag) = value { return flag ? "true" : "false" }
+            return value.string
+        }
+        var result: [String: Set<String>] = [:]
+        for member in conditions {
+            result[member.key] = Set((member.value.elements ?? [member.value]).compactMap(text))
+        }
+        return result
+    }
+
+    /// Whether every combination `narrow` matches is also matched by `wide`.
+    private static func covers(_ wide: [String: Set<String>], _ narrow: [String: Set<String>]) -> Bool {
+        wide.allSatisfy { key, values in narrow[key].map { $0.isSubset(of: values) } ?? false }
     }
 
     private mutating func checkToken(_ token: String, at path: DocumentPath) {
@@ -229,6 +312,8 @@ struct ContractRules {
                     }
                 }
             }
+            checkFallbacks(platform, at: path, isAppleOS: isAppleOS)
+            checkKeyboardIntents(platform, at: path, isAppleOS: isAppleOS)
             guard let restricted = platform["states"]?.elements else { continue }
             let wider = isAppleOS ? value(at: apple.key("states"))?.elements?.compactMap(\.string) : nil
             for (index, element) in restricted.enumerated() {
@@ -243,6 +328,102 @@ struct ContractRules {
                     report(path.key("states").index(index), "\"\(name)\" is not among the states Apple enters")
                 }
             }
+        }
+    }
+
+    /// A fallback names an option this place restricts and maps the values it drops to values it keeps. On Apple,
+    /// whose OSes share one generated enum, every dropped value has one.
+    private mutating func checkFallbacks(_ platform: JSON, at path: DocumentPath, isAppleOS: Bool) {
+        let enums = enumOptions
+        let apple = DocumentPath.root.key("platforms").key("apple")
+        let onApple = path.segments.count >= 2 && path.segments[1] == .key("apple")
+        let fallbacks = platform["fallback"]?.members ?? []
+        // The values each restricted option keeps here and drops here, from what reaches this place.
+        var restricted: [String: (kept: [String], dropped: [String])] = [:]
+        for member in platform["options"]?.members ?? [] {
+            guard let declared = enums[member.key] else { continue }
+            let available =
+                isAppleOS
+                ? value(at: apple.key("options").key(member.key))?.elements?.compactMap(\.string) ?? declared
+                : declared
+            let kept = (member.value.elements ?? []).compactMap(\.string)
+            restricted[member.key] = (kept, available.filter { !kept.contains($0) })
+        }
+        for member in fallbacks {
+            let place = path.key("fallback").key(member.key)
+            guard let (kept, dropped) = restricted[member.key] else {
+                report(place, "\(member.key) is not restricted here: a fallback goes next to the option's restriction")
+                continue
+            }
+            let keptList = kept.joined(separator: ", ")
+            switch member.value {
+            case .string(let target):
+                if !kept.contains(target) {
+                    report(place, "\"\(target)\" is not among the values kept here: \(keptList)")
+                }
+            case .object(let map):
+                for entry in map {
+                    if !dropped.contains(entry.key) {
+                        report(
+                            place.key(entry.key),
+                            "\"\(entry.key)\" is not a value dropped here; dropped: \(dropped.joined(separator: ", "))")
+                    }
+                    if let target = entry.value.string, !kept.contains(target) {
+                        report(place.key(entry.key), "\"\(target)\" is not among the values kept here: \(keptList)")
+                    }
+                }
+            default:
+                continue
+            }
+        }
+        guard onApple else { return }
+        for (option, values) in restricted.sorted(by: { $0.key < $1.key }) where !values.dropped.isEmpty {
+            let fallback = fallbacks.first { $0.key == option }?.value
+            let missing: [String]
+            switch fallback {
+            case .string?: missing = []
+            case .object(let map)?: missing = values.dropped.filter { value in !map.contains { $0.key == value } }
+            default: missing = values.dropped
+            }
+            if !missing.isEmpty {
+                report(
+                    path.key("options").key(option),
+                    "on Apple every dropped value needs a fallback, since the OSes share one generated enum: "
+                        + "add fallback.\(option) for \(missing.joined(separator: ", "))")
+            }
+        }
+    }
+
+    /// A platform's keyboard intents add to the component's (and an Apple OS's to Apple's): none repeats one.
+    private mutating func checkKeyboardIntents(_ platform: JSON, at path: DocumentPath, isAppleOS: Bool) {
+        let component = document["accessibility"]?["keyboardIntents"]?.elements?.compactMap(\.string) ?? []
+        let apple =
+            isAppleOS
+            ? value(at: DocumentPath.root.key("platforms").key("apple").key("keyboardIntents"))?.elements?
+                .compactMap(\.string) ?? [] : []
+        for (index, element) in (platform["keyboardIntents"]?.elements ?? []).enumerated() {
+            guard let intent = element.string else { continue }
+            if component.contains(intent) {
+                report(
+                    path.key("keyboardIntents").index(index),
+                    "\"\(intent)\" is already in accessibility.keyboardIntents; list here only what this platform adds")
+            } else if apple.contains(intent) {
+                report(
+                    path.key("keyboardIntents").index(index),
+                    "\"\(intent)\" is already in Apple's keyboardIntents; list here only what this OS adds")
+            }
+        }
+    }
+
+    /// The states assistive technology announces are states of the contract.
+    mutating func checkAccessibility() {
+        let declared = states ?? []
+        for member in document["accessibility"]?["states"]?.members ?? [] where !declared.contains(member.key) {
+            report(
+                .root.key("accessibility").key("states").key(member.key),
+                declared.isEmpty
+                    ? "\"\(member.key)\": the contract declares no states"
+                    : "\"\(member.key)\" is not one of the states: \(declared.joined(separator: ", "))")
         }
     }
 

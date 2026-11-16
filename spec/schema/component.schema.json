@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "westron component contract",
-  "description": "One neutral contract per component, spec/components/<id>/<id>.spec.yaml, written in YAML (decisions/0004). Every platform implementation is generated from it and checked against it. `tools/westron spec check` validates a contract against this schema, then applies the rules a schema cannot express: the file name matches the id; option values are unique and a default is one of them; no value is the name of a system style of the base control (decisions/0003); constraints, token bindings and platform restrictions name only options, values and states that exist; every bound token exists in tokens/ and is not a primitive. Lists of names are checked for repeats there too, with a message that names the repeat.",
+  "description": "One neutral contract per component, spec/components/<id>/<id>.spec.yaml, written in YAML (decisions/0004). Every platform implementation is generated from it and checked against it. `tools/westron spec check` validates a contract against this schema, then applies the rules a schema cannot express: the file name matches the id; option values are unique and a default is one of them; no value is the name of a system style of the base control (decisions/0003); constraints, token bindings, platform restrictions and accessibility states name only options, values and states that exist; no option is named `state`; no case of a binding is shadowed by an earlier one; a fallback maps each value a platform drops to a value it keeps (on Apple every dropped value has one); every bound token exists in tokens/ and is not a primitive. Lists of names are checked for repeats there too, with a message that names the repeat.",
   "type": "object",
   "required": ["id", "status", "consumers", "accessibility", "platforms"],
   "additionalProperties": false,
@@ -50,7 +50,7 @@
       "items": { "$ref": "#/$defs/constraint" }
     },
     "tokens": {
-      "description": "Token bindings, by `<part>.<property>` of the component's anatomy, such as `container.background`: one token path, or a map from the values of one enum option to token paths.",
+      "description": "Token bindings, by `<part>.<property>` of the component's anatomy, such as `container.background`: one token path; a map from the values of one enum option to token paths; or cases, `{token, cases: [{when, token}]}`, for bindings that depend on several options or on a state.",
       "type": "object",
       "propertyNames": {
         "type": "string",
@@ -158,12 +158,45 @@
       }
     },
     "tokenBinding": {
-      "description": "A token path, or a map from the values of one enum option to token paths.",
+      "description": "A token path; a map from the values of one enum option to token paths; or, when the object has `cases`, a case binding.",
       "type": ["string", "object"],
       "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)+$",
-      "minProperties": 1,
-      "propertyNames": { "$ref": "#/$defs/name" },
-      "additionalProperties": { "$ref": "#/$defs/tokenPath" }
+      "if": { "type": "object", "required": ["cases"] },
+      "then": { "$ref": "#/$defs/caseBinding" },
+      "else": {
+        "minProperties": 1,
+        "propertyNames": { "$ref": "#/$defs/name" },
+        "additionalProperties": { "$ref": "#/$defs/tokenPath" }
+      }
+    },
+    "caseBinding": {
+      "description": "The first case whose `when` matches gives the token; when none matches, `token` does, and without `token` the part has no value. A case's `token: null` means the part has no value in that case.",
+      "type": "object",
+      "required": ["cases"],
+      "additionalProperties": false,
+      "properties": {
+        "token": { "$ref": "#/$defs/tokenPath" },
+        "cases": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/case" }
+        }
+      }
+    },
+    "case": {
+      "type": "object",
+      "required": ["when", "token"],
+      "additionalProperties": false,
+      "properties": {
+        "when": {
+          "description": "Values by option name, as in a constraint; the key `state` names one state or a list of states from `states`. A case matches when every key matches.",
+          "$ref": "#/$defs/optionValues"
+        },
+        "token": {
+          "type": ["string", "null"],
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)+$"
+        }
+      }
     },
     "accessibility": {
       "description": "Accessibility in abstract terms; each platform maps them to its own API.",
@@ -181,9 +214,19 @@
           "items": { "$ref": "#/$defs/name" }
         },
         "keyboardIntents": {
-          "description": "What the keyboard can do with the component, such as `activate`.",
+          "description": "What the keyboard can do with the component, such as `activate`. A platform or an Apple OS adds its own in `platforms`.",
           "type": "array",
           "items": { "$ref": "#/$defs/name" }
+        },
+        "label": {
+          "description": "required: every instance has an accessible label, even when none is visible (an icon-only presentation); optional: it may have none.",
+          "enum": ["required", "optional"]
+        },
+        "states": {
+          "description": "By state from `states`, the abstract state assistive technology announces in it, such as `loading: busy` or `disabled: disabled`.",
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/name" },
+          "additionalProperties": { "$ref": "#/$defs/name" }
         },
         "description": { "$ref": "#/$defs/text" }
       }
@@ -204,6 +247,24 @@
       "type": "array",
       "items": { "$ref": "#/$defs/name" }
     },
+    "fallback": {
+      "description": "By restricted option, what a value the platform drops becomes there: one kept value for every dropped one, or a map from each dropped value to a kept one. On Apple every dropped value needs one, since the OSes share one generated enum.",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/name" },
+      "additionalProperties": {
+        "type": ["string", "object"],
+        "pattern": "^[a-z][a-zA-Z0-9]*$",
+        "minProperties": 1,
+        "propertyNames": { "$ref": "#/$defs/name" },
+        "additionalProperties": { "$ref": "#/$defs/name" }
+      }
+    },
+    "platformKeyboardIntents": {
+      "description": "Keyboard intents this platform adds to `accessibility.keyboardIntents`, such as `defaultAction` and `cancelAction` on macOS.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/name" }
+    },
     "reason": {
       "description": "Why the platform differs from the contract.",
       "$ref": "#/$defs/text"
@@ -214,7 +275,9 @@
       "additionalProperties": false,
       "properties": {
         "options": { "$ref": "#/$defs/restrictedOptions" },
+        "fallback": { "$ref": "#/$defs/fallback" },
         "states": { "$ref": "#/$defs/restrictedStates" },
+        "keyboardIntents": { "$ref": "#/$defs/platformKeyboardIntents" },
         "description": { "$ref": "#/$defs/reason" }
       }
     },
@@ -259,7 +322,9 @@
           "strategy": { "$ref": "#/$defs/strategy" },
           "base": { "$ref": "#/$defs/base" },
           "options": { "$ref": "#/$defs/restrictedOptions" },
+          "fallback": { "$ref": "#/$defs/fallback" },
           "states": { "$ref": "#/$defs/restrictedStates" },
+          "keyboardIntents": { "$ref": "#/$defs/platformKeyboardIntents" },
           "description": { "$ref": "#/$defs/reason" }
         }
       }
@@ -277,7 +342,9 @@
           "strategy": { "$ref": "#/$defs/strategy" },
           "base": { "$ref": "#/$defs/base" },
           "options": { "$ref": "#/$defs/restrictedOptions" },
+          "fallback": { "$ref": "#/$defs/fallback" },
           "states": { "$ref": "#/$defs/restrictedStates" },
+          "keyboardIntents": { "$ref": "#/$defs/platformKeyboardIntents" },
           "description": { "$ref": "#/$defs/reason" },
           "ios": { "$ref": "#/$defs/appleTarget" },
           "macos": { "$ref": "#/$defs/appleTarget" },
