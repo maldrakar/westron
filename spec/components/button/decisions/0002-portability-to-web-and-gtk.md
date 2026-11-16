@@ -23,6 +23,12 @@ is specified, #26 checks Button with two short prototypes, in [`../prototypes/`]
   has no pointer and no keyboard; the CSS excludes the forced twin exactly where it excludes the pseudo-class.
   - Dark was selected by the real `prefers-color-scheme` (the web view's dark appearance). `light-hc` and `dark-hc`
     were forced with `data-theme`: `prefers-contrast` follows a system setting this run could not change.
+  - The evidence is committed in [`../prototypes/evidence/`](../prototypes/evidence/), downscaled to 2000 px wide:
+    [`web-light.png`](../prototypes/evidence/web-light.png),
+    [`web-dark-hc.png`](../prototypes/evidence/web-dark-hc.png),
+    [`web-hit-44.png`](../prototypes/evidence/web-hit-44.png) and the probe's output,
+    [`web-probe.txt`](../prototypes/evidence/web-probe.txt). The dark and light-hc captures are not committed; the
+    prototypes' README has the commands that render them again.
   - Not exercised: hover from pointer motion alone (synthetic `mouseMoved` did not set `:hover`; `mouseDown` did),
     a real `:focus-visible` (the off-screen window never became key, so `:focus` read false, although Space and
     Return still activated the focused button), `(pointer: coarse)`, the real
@@ -54,14 +60,14 @@ as written.
 | Part of the contract | Web | GTK | Verdict |
 |---|---|---|---|
 | `variant` | `data-variant`; verified | own class per variant; doc | carried over |
-| `role` | collides with HTML's `role`; `data-role` verified | `.destructive-action` is a tint, not a fill; doc | note |
+| `role` | collides with ARIA's `role` (reasoning); `data-role` verified | `.destructive-action` is a tint, not a fill; doc | note |
 | `size` | heights verified; no `web` token context; touch is an input, not a platform | no size classes, content-box `min-height`; doc | assumption |
 | `iconOnly` | `aria-label`, square verified | `set_icon_name`, tooltip, accessible label; unverified | carried over |
 | hover | exclusion verified with real `:hover`; motion-only hover not exercised | `:hover` flag; unverified | carried over |
 | focus | outline verified; no offset: ring 1.13–1.48 against the fill | the system's ring; doc | assumption |
 | pressed | real `:active`, pressed fill and 98 % scale verified | `transform` exists; doc | carried over |
 | disabled | whole control at 0.4 verified; WebKit matches `:hover` and `:active` while disabled | libadwaita's own dimming must be replaced; doc | note |
-| loading | indicator, width, exclusion verified; presses need a script; busy announcement unverified | no busy button, spinner swap, signal guard; doc and unverified | assumption |
+| loading | indicator, width, exclusion verified; presses need a script; busy announcement unverified | no busy button, spinner swap; refusing presses unsolved for action-bound buttons; doc and unverified | assumption |
 | slots `label`, `icon` | fixed inner markup needed | `AdwButtonContent` takes an icon name only; doc | note |
 | bindings: one token, by size | custom properties per size; verified | same; doc | carried over |
 | bindings: `cases` | translated by hand to selectors; verified | same; unverified | note |
@@ -83,13 +89,18 @@ as written.
 
 - **`variant`: carried over.**
   - Web, verified: `data-variant="primary|secondary|tertiary"` on the `<button>`; every value draws as the contract
-    binds it in four themes (`web-light.png`, `web-dark.png`, `web-light-hc.png`, `web-dark-hc.png`).
+    binds it in four themes ([`web-light.png`](../prototypes/evidence/web-light.png),
+    [`web-dark-hc.png`](../prototypes/evidence/web-dark-hc.png); dark and light-hc rendered the same way and not
+    committed).
   - GTK, doc: primary is `.suggested-action`; tertiary is `.flat`. libadwaita has **no outlined button** (no style
     class draws a border without a fill), so secondary needs westron's own class, `.westron-secondary`.
 - **`role`: note.**
-  - Web, verified: the option cannot be an attribute named `role`. On any HTML element `role` is the ARIA role, so
-    `role="destructive"` would replace the button's role. On a native element it is `data-role`; on a custom element
-    (#40) it would need another name. This is the web's twin of the `ButtonRole` collision the Apple entry records.
+  - Web, by reasoning, not run: the option cannot be an attribute named `role`. `role` is the ARIA attribute on
+    every HTML element, so an option of that name collides with it. `role="destructive"` is not an ARIA role, so a
+    user agent ignores it and the button keeps its implicit role, but the markup is invalid; and an option value that
+    happened to be a valid ARIA role would re-role the button. The prototype writes `data-role` (verified to draw);
+    a custom element (#40) would need another name. This is the web's twin of the `ButtonRole` collision the Apple
+    entry records.
   - GTK, doc: libadwaita's `.destructive-action` is **not a filled red button**. Its `_buttons.scss` sets
     `color: var(--accent-color)` with a 15 % `currentColor` tint, so it matches none of the contract's destructive
     variants. Combined with `.suggested-action` it is undocumented. A style class also carries no accessible meaning.
@@ -123,9 +134,14 @@ as written.
   - Web, verified with forced focus: an outline of `stroke.thick` in `color.border.focus` on `:focus-visible`. The
     contract gives **no offset**, so the ring is drawn against the button's own edge. The ring against the fill it
     touches measures 1.48 (light), 1.21 (dark), 1.26 (light-hc) and 1.13 (dark-hc) on primary, and 1.00–1.01 against
-    secondary's border; against the canvas it is 3.53–6.23. In `web-dark-hc.png` the ring on a primary button
-    disappears into the fill; with an offset of `stroke.thick` it sits on the canvas, as the "offset proposed"
-    column shows. On Apple and GTK the system ring brings its own offset, which the contract took for granted.
+    secondary's border; against the canvas it is 3.53–6.23. In
+    [`web-dark-hc.png`](../prototypes/evidence/web-dark-hc.png) the ring on a primary button disappears into the
+    fill; with an offset of `stroke.thick` it sits on the canvas, as the "offset proposed" column shows.
+  - Why the verdict is "assumption", and what it rests on: the contract binds the ring only on the web, where westron
+    draws it, and there the missing offset is verified above. That the system rings on Apple and GTK keep a gap from
+    the fill, so that nobody needed an offset, is **unverified**: Apple's ring was not looked at in this issue, and
+    for GTK only libadwaita's `_buttons.scss` was read, which passes `$outer: true, $offset: 1px` to its
+    `focus-ring` mixin for `.suggested-action`; the mixin's definition was not read.
   - GTK, doc: the system's ring; nothing to apply. Note that GTK sets `:focus-visible` on the focused widget and all
     its ancestors, unlike CSS.
 - **pressed: carried over.**
@@ -133,8 +149,9 @@ as written.
     (`rgb(15, 74, 188)`) and the transform `matrix(0.98, 0, 0, 0.98, 0, 0)`.
   - GTK, doc: `transform` and `transform-origin` are supported properties; the rule is unverified.
 - **disabled: note.**
-  - Web, verified: `opacity: 0.4` on the whole control (`web-light.png`, "disabled"). The browser's own disabled text
-    color is overridden by westron's. **WebKit matched `:hover` and `:active` on a disabled button** under the probe's
+  - Web, verified: `opacity: 0.4` on the whole control
+    ([`web-light.png`](../prototypes/evidence/web-light.png), "disabled"). The browser's own disabled text color is
+    overridden by westron's. **WebKit matched `:hover` and `:active` on a disabled button** under the probe's
     press, so the `platforms.web` text, which names only `:hover` while disabled, should name both. The click did not
     reach the page's handler.
   - GTK, doc: libadwaita dims a disabled button with `filter: opacity(var(--disabled-opacity))`, 50 % (40 % in high
@@ -151,8 +168,11 @@ as written.
        "style on a system control" needs a script for this state; that fits a custom element (#40) better than CSS
        alone.
      - GTK, unverified: a handler connected first stops the `clicked` emission while loading
-       (`button.py`, `_refuse_while_loading`). A button bound to a `GAction` cannot use the action's enabled state:
-       disabling it makes the button insensitive, which dims it.
+       (`button.py`, `_refuse_while_loading`). That stops the product's later `clicked` handlers at best. `clicked`
+       is likely a RUN_FIRST signal whose class handler activates the button's `action-name`; if so, the class
+       handler runs before any connected handler, and the guard does not stop an action-bound button, which is the
+       usual case in GNOME apps. Disabling the action instead makes the button insensitive, which dims it and
+       announces it as unavailable. So GTK has no known way yet to refuse a press without looking disabled.
      - On Apple, outside this issue and unverified: a `ButtonStyle` cannot cancel its button's action either; only a
        `PrimitiveButtonStyle` decides when to trigger. The SwiftUI implementation should check this before #24.
   2. **The indicator is the system's on Apple and GTK, and the web has none.**
@@ -167,7 +187,7 @@ as written.
        row (indicator, gap, label) overlays it. Measured in all 18 cases of the state matrix: every loading button
        kept its resting width to 0.01 px.
      - The consequence of P13 is visible: at size m, a label-only "Add list" reads "Ad…" and "Delete" reads "D…"
-       (`web-light.png`, "loading"). A two-word label keeps two letters.
+       ([`web-light.png`](../prototypes/evidence/web-light.png), "loading"). A two-word label keeps two letters.
      - GTK, unverified: the same needs a `GtkOverlay` whose overlay child is not measured
        (`set_measure_overlay(false)`), over the resting content made transparent. `AdwButtonContent` cannot hold a
        spinner (it takes an icon name only), so the content is rebuilt.
@@ -198,14 +218,14 @@ as written.
 - **"No value": assumption.** For secondary and tertiary at rest, `container.background` has no value, and for
   primary and tertiary `container.borderWidth` has none. A SwiftUI `ButtonStyle` starts from nothing, so no value
   draws nothing. A native `<button>` draws the browser's fill, border, font and color (reset in `web/button.css`), and
-  a libadwaita button draws a 10 % `currentColor` fill and its own hover overlays (replaced in `gtk/button.css`).
+  a libadwaita button draws a 10 % `currentColor` fill and its own hover fills (replaced in `gtk/button.css`).
   "No value" has to mean "nothing drawn", stated, not "leave the platform's look".
 - **`label.font`: note.**
   - Web, verified: the typography tokens hold px sizes, which do not follow the person's default font size (chapter
     08), so the script writes rem of 16 px. `font.family.system` is `system-ui`, a CSS keyword that works on the web.
   - GTK, doc: rem resolves against the initial font size, which comes from `gtk-font-name`, not 16 px; with GNOME's
-    default of 11 pt (about 14.7 px), 0.9375 rem would be about 13.75 px. `system-ui` is not documented in GTK CSS, so the GTK output leaves the
-    family out and the button keeps GNOME's font.
+    default of 11 pt (about 14.7 px), 0.9375 rem would be about 13.75 px. `system-ui` is not documented in GTK CSS,
+    so the GTK output leaves the family out and the button keeps GNOME's font.
   - Both sizes are Apple's text styles at their iOS default; the web and GNOME read them as fixed sizes.
 - **`icon.font`: assumption.** A text role as an icon's size is SF Symbols' model: a symbol is a glyph of the font.
   A web icon is an SVG and a GTK icon is an image with a pixel size (`-gtk-icon-size`). The prototypes read it as
@@ -218,10 +238,14 @@ as written.
 ### Motion
 
 - **`motion.fade` and `motion.press`: note.**
-  - Web, verified: `motion.press` has a spring (duration 0.15 s, bounce 0). The script samples it into `linear()`,
-    and the sampled spring takes 221 ms to settle within 0.1 %, against the token's 150 ms. CSS takes a transition's
-    timing from the state it goes to, so the release from pressed runs in `motion.fade` for the tint; SwiftUI's
-    `.animation(.press, value: isPressed)` runs both directions in `press`. The contract does not say which.
+  - Web, verified: `motion.press` has a spring (duration 0.15 s, bounce 0). The script samples it into `linear()`
+    with SwiftUI's model, stiffness (2π / 0.15)² and critically damped, so the web runs the same motion as SwiftUI's
+    `spring(duration: 0.15, bounce: 0)`. The spring's 0.15 s is a perceptual duration; the motion settles within
+    0.1 % at about 0.22 s on both, which is why the CSS transition lasts 221 ms. There is no gap
+    between the two, and no proposal rests on one (C11 is about the scale and the release).
+  - CSS takes a transition's timing from the state it goes to, so the release from pressed runs in `motion.fade`
+    for the tint; SwiftUI's `.animation(.press, value: isPressed)` runs both directions in `press`. The contract
+    does not say which.
   - The 98 % press scale is prose in chapter 05, not a token, so both prototypes write it as a raw value.
   - GTK, doc: the documentation does not list `linear()` among timing functions, so GTK takes the cubic curve and
     the duration, as chapter 05 expects.
@@ -243,8 +267,8 @@ as written.
     can wait; it is not a control's state, and screen readers are not known to announce it on a button. A reliable
     form is likely `aria-busy` plus text in a live region or the description. No screen reader was run.
   - GTK, doc: `GTK_ACCESSIBLE_STATE_BUSY` is "a busy state" with boolean values; what Orca says is unverified.
-  - On Apple, outside this issue and unverified: UIKit has no busy trait either. The abstract state may need a per-platform mapping
-    in the conventions rather than one word.
+  - On Apple, outside this issue and unverified: UIKit has no busy trait either. The abstract state may need a
+    per-platform mapping in the conventions rather than one word.
 - **`keyboardIntents` beyond activate: note.** macOS adds `defaultAction` and `cancelAction`. The web has a default
   action too, implicit form submission by Return, and GTK has a window's default widget. Neither entry records it.
 
@@ -269,16 +293,18 @@ as written.
   `size.control.m` happens to equal it on touch, and the rule rests on that. The web names two targets, 24 px (AA)
   and 44 px (AAA), and chapter 08 leaves the choice open (question 1); GNOME names none.
 - Web, verified: with 44 px, a pseudo-element extends each button's hit area. At size s, icon-only buttons 8 px apart
-  have extended areas that overlap their neighbours' (`web-hit-44.png`, the last row and every s cell). The contract
-  says nothing about neighbours.
+  have extended areas that overlap their neighbours'
+  ([`web-hit-44.png`](../prototypes/evidence/web-hit-44.png), the last row and every s cell). The contract says
+  nothing about neighbours.
 - GTK, unverified: the documentation does not say whether the input area is the border box or includes the margin,
   and names no way to make it larger than what is drawn.
 
 ### Themes and contrast modes: carried over
 
 - Web, verified: four themes from `prefers-color-scheme` and `prefers-contrast`; dark selected for real, the
-  high-contrast ones forced (`web-light-hc.png`, `web-dark-hc.png`). Forced colors (Windows) are not exercised: the
-  prototype keeps a transparent border so that every variant keeps an outline there.
+  high-contrast ones forced ([`web-dark-hc.png`](../prototypes/evidence/web-dark-hc.png); light-hc not committed).
+  Forced colors (Windows) are not exercised: the prototype keeps a transparent border so that every variant keeps an
+  outline there.
 - GTK, doc: media queries `prefers-color-scheme` and `prefers-contrast` since GTK 4.20; an application cannot disable
   high contrast.
 
@@ -293,14 +319,14 @@ Web and GTK cells of `spec/conventions.md` checked against the prototypes. Cells
 | Enum option: the variant | GTK | wrong in part | "The stock class where one exists": the stock classes do not draw the contract's look (`.destructive-action` is a tint), and the role is a class of its own that combines with the variant's |
 | Size option | Web | wrong in part | A native `<button>` has no `size` attribute: `data-size` or a class. The heights depend on the input at runtime, which the cell does not mention |
 | Size option | GTK | incomplete | GTK's `min-height` is the content box, with no `box-sizing` |
-| Bool option | GTK | wrong in part | A stock `GtkButton` gains no GObject property without a subclass: a style class, with the value kept by the extension trait |
+| Bool option | GTK | incomplete | The cell already allows a style class; it could add that a stock `GtkButton` gains no GObject property without a subclass, so a style class it is, with the value kept by the extension trait |
 | States the system control has | Web | incomplete | WebKit matches `:active` too while disabled, not only `:hover` |
 | States the system control has | GTK | note | `:focus-visible` is set on ancestors too (doc) |
 | States the system control lacks | Web | incomplete | `aria-busy` styles and labels the state but refuses no press; a script is needed, and the announcement is unverified |
-| States the system control lacks | GTK | incomplete | Besides the class and `Busy`: a spinner swap and a guard on `clicked` |
+| States the system control lacks | GTK | incomplete | Besides the class and `Busy`: a spinner swap, and a way to refuse presses that a guard on `clicked` likely does not give for action-bound buttons (unverified) |
 | Slots | Web | incomplete | westron's CSS needs a fixed inner structure, not any content |
 | Slots | GTK | incomplete | `adw::ButtonContent` cannot show a spinner |
-| Token bindings | GTK | wrong in part | Setting libadwaita's variables is not enough: hover is an overlay image, its helper variables should not be overridden, and westron sets backgrounds itself. "Rust constants for values outside CSS" is unverifiable here |
+| Token bindings | GTK | wrong in part | Setting libadwaita's variables is not enough: a regular button's hover is a `currentColor` mix in `background-color`, the opaque buttons' (`.suggested-action`) an overlay `background-image`, its helper variables should not be overridden, and westron sets backgrounds itself. "Rust constants for values outside CSS" is unverifiable here |
 | Accessibility: keyboard intents | Web, GTK | incomplete | A default action exists on both (implicit submission; the default widget) |
 | The `platforms` block | GTK | incomplete | The map is per option: the role's class too, not only the variant's |
 | Defaults | Web | unverifiable | Nothing makes an attribute required on a native element; without `data-variant` the browser's look shows |
@@ -316,12 +342,12 @@ None is applied. Each needs the owner's decision.
 | C1 | Contract `tokens` | Add `focusRing.offset` (the prototype used `stroke.thick`), so the ring always sits on the ground its contrast is declared against | Ring against the fill 1.13–1.48 |
 | C2 | Contract `platforms.web` | Name `:active` as well as `:hover` while disabled; record `data-role`; record that loading needs a script; record the offset | WebKit probe |
 | C3 | Contract, loading | Say what the indicator is where the platform has none: its size (the icon's), its stroke, its motion (a token), and its form under Reduce Motion | Raw values in `web/button.css` |
-| C4 | Conventions, states the system lacks | State that refusing presses is behavior: a script on the web, a signal guard on GTK, and check it on Apple | Probe; `button.py` |
+| C4 | Conventions, states the system lacks | State that refusing presses is behavior: a script on the web; on GTK a mechanism still to be found, since a signal guard likely misses action-bound buttons (unverified); and check it on Apple | [`web-probe.txt`](../prototypes/evidence/web-probe.txt); `button.py` |
 | C5 | Contract, P13 | Reconsider the fixed width without an icon: let it grow, or keep the width only when an icon slot exists | "Ad…" and "D…" at size m |
 | C6 | Contract `accessibility`, conventions | Map the abstract `busy` per platform rather than to one state | ARIA's definition of `aria-busy`; no busy trait on UIKit |
 | C7 | Conventions, token bindings | A rule for `icon.font` where icons are images: the icon's box is 1 em of the role, or an icon-size token per size | Both prototypes |
 | C8 | Contract `size`, tokens | Describe the heights by input ("a fine pointer", "touch"), and give the web a runtime switch: a `web` platform context with both sets, or an input modifier | `tokens.css`, `(pointer: coarse)` |
-| C9 | Tokens, chapter 08 | A target-size token per platform, decide the web's target, and add a rule that an extended hit area never crosses half the gap to a neighbour | `web-hit-44.png` |
+| C9 | Tokens, chapter 08 | A target-size token per platform, decide the web's target, and add a rule that an extended hit area never crosses half the gap to a neighbour | [`web-hit-44.png`](../prototypes/evidence/web-hit-44.png) |
 | C10 | Schema README, conventions | Define "no value" as "nothing drawn", and require a style on a system control to reset the platform's own look | The browser's and libadwaita's fills |
 | C11 | Tokens or chapter 05 | Make the 98 % press scale a token, and say whether `motion.press` also times the release | Raw `scale(0.98)` in both |
 | C12 | Contract `platforms.web`, `platforms.linux` | Add `keyboardIntents: [defaultAction]`, or decide it does not apply | Implicit submission; the default widget |

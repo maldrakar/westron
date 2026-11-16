@@ -54,9 +54,11 @@ def westron_button(variant, role="default", size="m", label="Add list", icon=Non
     else:
         button.set_label(label)
     button.westron = {"label": label, "icon": icon, "icon_only": icon_only, "loading": False, "resting": None}
-    # A handler connected first refuses presses while loading, before any of the product's handlers run. Keyboard
-    # activation emits the same signal. A button driven by a GAction would need the action left enabled: disabling
-    # it makes the button insensitive, which dims it and announces it as unavailable.
+    # A handler connected first refuses presses while loading, before the product's own `clicked` handlers run.
+    # Keyboard activation emits the same signal. Unverified, and likely not enough: `clicked` is probably a RUN_FIRST
+    # signal whose class handler activates the button's `action-name`, so it runs before this handler and stopping
+    # the emission would not stop an action-bound button, the usual case in GNOME apps. Disabling the action instead
+    # makes the button insensitive, which dims it and announces it as unavailable.
     button.connect("clicked", _refuse_while_loading)
     return button
 

@@ -17,6 +17,7 @@ do.
 | `gtk/button.py` | A GTK 4 + libadwaita window in Python (PyGObject): stock `GtkButton`s with style classes |
 | `gtk/button.css` | westron's CSS for those buttons, for GTK 4.20 CSS |
 | `gtk/tokens.css` | Generated: the same tokens for GTK CSS |
+| `evidence/` | Web screenshots downscaled to 2000 px wide (light, dark-hc, hit areas at 44 px) and the probe's output, which the findings cite |
 
 ## Run
 

@@ -126,9 +126,11 @@ button.westron:active:not(:disabled):not(.westron-loading) {
     transform var(--westron-motion-press-duration) var(--westron-motion-press-easing);
 }
 
-/* GTK's own value is `reduced`, not CSS's `reduce` (GtkReducedMotion, GTK 4.22). */
+/* GTK's own value is `reduced`, not CSS's `reduce` (GtkReducedMotion, GTK 4.22). A media query adds no specificity,
+   so the selector repeats the pressed rule's in full and wins by coming later. GTK's CSS documentation does not
+   mention !important, so the prototype does not rely on it. */
 @media (prefers-reduced-motion: reduced) {
-  button.westron:active {
+  button.westron:active:not(:disabled):not(.westron-loading) {
     transform: none;
   }
 }
