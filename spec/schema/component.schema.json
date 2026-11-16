@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "westron component contract",
-  "description": "One neutral contract per component, spec/components/<id>/<id>.spec.yaml, written in YAML (decisions/0004). Every platform implementation is generated from it and checked against it. `tools/westron spec check` validates a contract against this schema, then applies the rules a schema cannot express: the file name matches the id; option values are unique and a default is one of them; no value is the name of a system style of the base control (decisions/0003); constraints, token bindings, platform restrictions and accessibility states name only options, values and states that exist; no option is named `state`; no case of a binding is shadowed by an earlier one; a fallback maps each value a platform drops to a value it keeps (on Apple every dropped value has one); every bound token exists in tokens/ and is not a primitive. Lists of names are checked for repeats there too, with a message that names the repeat.",
+  "description": "One neutral contract per component, spec/components/<id>/<id>.spec.yaml, written in YAML (decisions/0004). Every platform implementation is generated from it and checked against it. `tools/westron spec check` validates a contract against this schema, then applies the rules a schema cannot express: the file name matches the id; option values are unique and a default is one of them; no value is the name of a system style of the base control (decisions/0003); constraints, token bindings, platform restrictions and accessibility states name only options, values and states that exist; no option is named `state`; no case of a binding is shadowed by an earlier one; a fallback maps each value a platform drops to a value it keeps (on Apple every dropped value has one); a platform's systemOptions name options that exist; every bound token exists in tokens/ and is not a primitive. Lists of names are checked for repeats there too, with a message that names the repeat.",
   "type": "object",
   "required": ["id", "status", "consumers", "accessibility", "platforms"],
   "additionalProperties": false,
@@ -260,6 +260,13 @@
         "additionalProperties": { "$ref": "#/$defs/name" }
       }
     },
+    "systemOptions": {
+      "description": "Options that are the platform's own API: by option name, the system type or member that carries it, such as `role: SwiftUI.ButtonRole`. The generators make no type for such an option and give the style overload no argument for it: a product sets it on the system control (`Button(role: .destructive)`), and the style reads it there (spec/conventions.md).",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/name" },
+      "additionalProperties": { "$ref": "#/$defs/base" }
+    },
     "platformKeyboardIntents": {
       "description": "Keyboard intents this platform adds to `accessibility.keyboardIntents`, such as `defaultAction` and `cancelAction` on macOS.",
       "type": "array",
@@ -321,6 +328,7 @@
         "properties": {
           "strategy": { "$ref": "#/$defs/strategy" },
           "base": { "$ref": "#/$defs/base" },
+          "systemOptions": { "$ref": "#/$defs/systemOptions" },
           "options": { "$ref": "#/$defs/restrictedOptions" },
           "fallback": { "$ref": "#/$defs/fallback" },
           "states": { "$ref": "#/$defs/restrictedStates" },
@@ -341,6 +349,7 @@
         "properties": {
           "strategy": { "$ref": "#/$defs/strategy" },
           "base": { "$ref": "#/$defs/base" },
+          "systemOptions": { "$ref": "#/$defs/systemOptions" },
           "options": { "$ref": "#/$defs/restrictedOptions" },
           "fallback": { "$ref": "#/$defs/fallback" },
           "states": { "$ref": "#/$defs/restrictedStates" },

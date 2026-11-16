@@ -50,6 +50,7 @@ platforms:                      # all four; each is `status: planned` or a strat
   apple:
     strategy: style-on-system-control   # or own-component, which has no base (decisions/0003)
     base: SwiftUI.Button
+    systemOptions: { role: SwiftUI.ButtonRole }   # options that are the system's own API: no type is generated
     macos: { keyboardIntents: [defaultAction, cancelAction] }   # added to accessibility.keyboardIntents
     watchos:
       options: { size: [m] }    # the values it offers
@@ -75,6 +76,18 @@ Names of options, values, slots, states and intents are lowerCamelCase: they bec
 - **Fallbacks.** `fallback` says what a dropped value becomes on that platform. On Apple every dropped value needs one,
   since the OSes share one generated enum; elsewhere it is optional.
 - **Keyboard intents.** A platform or an Apple OS lists in `keyboardIntents` only what it adds to the component's.
+- **System options.** A platform names in `systemOptions` the options its system control already carries in its own
+  API, each with the type that carries it, such as `role: SwiftUI.ButtonRole`. The generator makes no type and no
+  argument for them; the style reads them from the control (`spec/conventions.md`).
+
+## Generated API
+
+`tools/westron generate` writes, for every contract that is approved or later and whose Apple strategy is
+`style-on-system-control`, `platforms/apple/Sources/WestronUI/Generated/<Component>+Contract.swift`: the enums of its
+options (`ButtonVariant`, `ButtonSize`), the overload of the base control's style modifier
+(`.buttonStyle(.primary, size: .m)`), which applies the hand-written `<Component>VariantStyle`, and the tables that
+style reads (the `controlSize` mapping, each OS's fallbacks, the states). Its exact form is in
+[`spec/conventions.md`](../conventions.md). A draft contract and an own component generate nothing yet.
 
 ## Check
 
@@ -94,7 +107,8 @@ Besides the schema, the check enforces what a schema cannot:
 - a binding by value uses the values of one enum option; no case repeats or is covered by an earlier one;
 - every bound token exists in `tokens/` in every mode and is semantic, not primitive;
 - a platform's restrictions are subsets of the declared values and states, an Apple OS's of Apple's; a fallback
-  maps dropped values to kept ones, and on Apple every dropped value has one;
+  maps dropped values to kept ones, and on Apple every dropped value has one; `systemOptions` name options that
+  exist;
 - `accessibility.states` names states that exist; a platform's keyboard intents do not repeat the component's, an
   Apple OS's do not repeat Apple's.
 

@@ -34,8 +34,8 @@ public enum Generate {
     /// The generators that write sources other generators read: the palette writes the color ramps into `tokens/`.
     /// `generate` writes their files before it runs the rest.
     public static let sourceGenerators: [any Generator] = [PaletteTokens()]
-    /// The generator registry, in order. Next: the API from the contracts (phase 2, #20).
-    public static let generators: [any Generator] = sourceGenerators + [AppleTokens(), AppleIcons()]
+    /// The generator registry, in order.
+    public static let generators: [any Generator] = sourceGenerators + [AppleTokens(), AppleIcons(), AppleComponents()]
 
     /// The files of all generators and the directories they own.
     public struct Output: Equatable, Sendable {
