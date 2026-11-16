@@ -189,8 +189,10 @@ private struct Rule: View {
 }
 
 /// A table of deployments: a header on background.sunken, monospaced names, a status badge per row, commits in
-/// text.accent.
+/// text.accent. At an accessibility size the three columns do not fit across, and each deployment becomes a stack.
 private struct DeploymentsSample: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     private let rows: [(service: String, status: StatusSample, commit: String)] = [
         ("api-gateway", .success, "a1f3c9e"),
         ("billing-worker", .info, "7be02d1"),
@@ -201,36 +203,69 @@ private struct DeploymentsSample: View {
 
     var body: some View {
         Card {
-            Grid(alignment: .leading, horizontalSpacing: .space150, verticalSpacing: 0) {
-                GridRow {
-                    Text("Service")
-                    Text("Status")
-                    Text("Commit")
-                }
+            if dynamicTypeSize.isAccessibilitySize {
+                stacks
+            } else {
+                table
+            }
+        }
+    }
+
+    private var stacks: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Service, status, commit")
                 .textRole(.caption.medium)
                 .foregroundStyle(.text.secondary)
-                .frame(minHeight: Metrics.header)
-                ForEach(rows, id: \.service) { row in
-                    Rule()
-                        .gridCellColumns(3)
-                    GridRow {
-                        Text(row.service)
-                            .foregroundStyle(.text.primary)
-                        StatusBadge(status: row.status)
-                        Text(row.commit)
-                            .foregroundStyle(.text.accent)
-                    }
-                    .textRole(.code.regular)
-                    .frame(minHeight: Metrics.tableRow)
+                .padding(.horizontal, .space150)
+                .padding(.vertical, .space75)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.background.sunken)
+            ForEach(rows, id: \.service) { row in
+                Rule()
+                VStack(alignment: .leading, spacing: .space50) {
+                    Text(row.service)
+                        .foregroundStyle(.text.primary)
+                    StatusBadge(status: row.status)
+                    Text(row.commit)
+                        .foregroundStyle(.text.accent)
                 }
+                .textRole(.code.regular)
+                .padding(.horizontal, .space150)
+                .padding(.vertical, .space75)
             }
-            .padding(.horizontal, .space150)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(alignment: .top) {
-                Rectangle()
-                    .fill(.background.sunken)
-                    .frame(height: Metrics.header)
+        }
+    }
+
+    private var table: some View {
+        Grid(alignment: .leading, horizontalSpacing: .space150, verticalSpacing: 0) {
+            GridRow {
+                Text("Service")
+                Text("Status")
+                Text("Commit")
             }
+            .textRole(.caption.medium)
+            .foregroundStyle(.text.secondary)
+            .frame(minHeight: Metrics.header)
+            ForEach(rows, id: \.service) { row in
+                Rule()
+                    .gridCellColumns(3)
+                GridRow {
+                    Text(row.service)
+                        .foregroundStyle(.text.primary)
+                    StatusBadge(status: row.status)
+                    Text(row.commit)
+                        .foregroundStyle(.text.accent)
+                }
+                .textRole(.code.regular)
+                .frame(minHeight: Metrics.tableRow)
+            }
+        }
+        .padding(.horizontal, .space150)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .top) {
+            Rectangle()
+                .fill(.background.sunken)
+                .frame(height: Metrics.header)
         }
     }
 }

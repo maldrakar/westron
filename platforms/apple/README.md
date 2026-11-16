@@ -107,10 +107,18 @@ in the `apple` job. The log goes to `.build/logs/a11y-ios.log`, the result bundl
   would be cut at a larger size even in `testDefaultSettings`. `-WestronDynamicType` pins the size in the view tree,
   where the system size the audit sets cannot reach it, so the Dynamic Type audit does not run there.
 - The theme and the contrast change only colors, so their tests run the contrast audit alone.
-- The audit sees what is on screen. A page that scrolls at a large font size is audited down to the screen's edge.
+- The audit sees only what is on screen, so `testDefaultSettings` and `testAccessibilityDynamicType` audit a page a
+  screenful at a time: the test waits until the page is still, audits it, drags it up by about two thirds of the
+  screen without momentum, and stops when a drag no longer moves the page. The three theme tests audit the first
+  screenful only: the pages are laid out to fit one at the default text size, and scrolling every page in every
+  theme would take the run past 12 minutes.
+- The Dynamic Type and text clipped audits change the system's text size, and after them the page's accessibility
+  tree and its pixels disagree for a while: the next screenful's audit reads every text as failing contrast. In
+  `testDefaultSettings` they run in a pass of their own, on a fresh launch for each screenful.
 - The audit loses track of the cells of a lazy container (`LazyVGrid`, `List`, `Form`) when it changes the text
-  size, and reports their text as not following Dynamic Type. A sample page lays its cells out with `AdaptiveGrid`,
-  the same columns as an adaptive `LazyVGrid`, made eagerly.
+  size, and reports their text as not following Dynamic Type. A catalog page lays its content out eagerly: the
+  sample grids with `AdaptiveGrid`, the same columns as an adaptive `LazyVGrid`, and the environment page with
+  stacks in a scroll view rather than a `Form`.
 - An issue that is not the entry's fault, or that the catalog cannot fix, is suppressed one by one, with its reason,
   in `CatalogAccessibilityAuditTests.suppressions`; an audit type is never turned off as a whole.
 - `WESTRON_ENTRY=<id> tools/apple/check.sh a11y` audits one entry while its issues are being fixed.

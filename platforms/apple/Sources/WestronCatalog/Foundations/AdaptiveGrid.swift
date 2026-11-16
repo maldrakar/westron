@@ -12,7 +12,8 @@ struct AdaptiveGrid: Layout {
     let rowSpacing: CGFloat
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout Void) -> CGSize {
-        let width = proposal.width ?? naturalWidth(subviews.count)
+        // An infinite width (a horizontal scroll view, `fixedSize`) asks for the ideal size, as no width does.
+        let width = proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? naturalWidth(subviews.count)
         let rows = rows(subviews, width: width)
         let height = rows.map(\.height).reduce(0, +) + rowSpacing * CGFloat(max(rows.count - 1, 0))
         return CGSize(width: width, height: height)
@@ -35,6 +36,8 @@ struct AdaptiveGrid: Layout {
 
     /// The number of columns that fit the width and the width of each.
     private func columns(_ width: CGFloat) -> (count: Int, width: CGFloat) {
+        // One column when the width says nothing (zero, negative or not finite) or the cells have no width.
+        guard width.isFinite, width > 0, minimum + spacing > 0 else { return (1, max(minimum, 0)) }
         let count = max(1, Int((width + spacing) / (minimum + spacing)))
         return (count, (width - spacing * CGFloat(count - 1)) / CGFloat(count))
     }

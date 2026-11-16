@@ -53,7 +53,7 @@ a11y() {
     ios)
       # shellcheck source=tools/apple/simulator.sh
       source tools/apple/simulator.sh
-      udid="$(westron_simulator_udid "${WESTRON_SIM_DEVICE:-iPhone 17}")"
+      udid="$(westron_simulator_udid "${WESTRON_SIM_DEVICE:-iPhone 17}")" || return 1
       destination="id=$udid"
       ;;
     macos) destination="platform=macOS,arch=$(uname -m)" ;;

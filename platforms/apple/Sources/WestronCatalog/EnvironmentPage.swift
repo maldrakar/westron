@@ -1,4 +1,5 @@
 import SwiftUI
+import WestronUI
 
 extension CatalogEntry {
     /// A utility page: the conditions in which the catalog renders entries right now.
@@ -23,36 +24,61 @@ struct EnvironmentPage: View {
         @Environment(\.verticalSizeClass) private var verticalSizeClass
     #endif
 
+    /// A scroll view over stacks rather than a `Form`: a form is a lazy list, and the accessibility audit (#25) loses
+    /// its rows when it changes the text size.
     var body: some View {
-        Form {
-            Section("Platform") {
-                LabeledContent("System", value: Self.platform)
-                LabeledContent("Version", value: ProcessInfo.processInfo.operatingSystemVersionString)
-                #if os(iOS)
-                    LabeledContent(
-                        "Size class", value: "\(describe(horizontalSizeClass)) × \(describe(verticalSizeClass))")
-                #endif
+        ScrollView {
+            VStack(alignment: .leading, spacing: .space300) {
+                section("Platform") {
+                    row("System", Self.platform)
+                    row("Version", ProcessInfo.processInfo.operatingSystemVersionString)
+                    #if os(iOS)
+                        row("Size class", "\(describe(horizontalSizeClass)) × \(describe(verticalSizeClass))")
+                    #endif
+                }
+                section("Appearance") {
+                    row("Theme", colorScheme == .dark ? "dark" : "light")
+                    row("Contrast", contrast == .increased ? "increased" : "standard")
+                    row("Font size", String(describing: dynamicTypeSize))
+                    row("Bold text", legibilityWeight == .bold ? "yes" : "no")
+                }
+                section("Accessibility") {
+                    row("Reduce motion", reduceMotion ? "yes" : "no")
+                    row("Reduce transparency", reduceTransparency ? "yes" : "no")
+                    row("Differentiate without color", differentiateWithoutColor ? "yes" : "no")
+                }
+                section("Language") {
+                    row("Locale", locale.identifier)
+                    row("Direction", layoutDirection == .rightToLeft ? "right to left" : "left to right")
+                }
             }
-            Section("Appearance") {
-                LabeledContent("Theme", value: colorScheme == .dark ? "dark" : "light")
-                LabeledContent("Contrast", value: contrast == .increased ? "increased" : "standard")
-                LabeledContent("Font size", value: String(describing: dynamicTypeSize))
-                LabeledContent("Bold text", value: legibilityWeight == .bold ? "yes" : "no")
-            }
-            Section("Accessibility") {
-                LabeledContent("Reduce motion", value: reduceMotion ? "yes" : "no")
-                LabeledContent("Reduce transparency", value: reduceTransparency ? "yes" : "no")
-                LabeledContent("Differentiate without color", value: differentiateWithoutColor ? "yes" : "no")
-            }
-            Section("Language") {
-                LabeledContent("Locale", value: locale.identifier)
-                LabeledContent(
-                    "Direction", value: layoutDirection == .rightToLeft ? "right to left" : "left to right")
-            }
+            .padding(.space200)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        #if os(macOS)
-            .formStyle(.grouped)
-        #endif
+        .background(.background.canvas)
+    }
+
+    /// A setting and its value, two texts. Combined into one element (as `LabeledContent` does), the row made the
+    /// accessibility audit report text that no element represents.
+    private func row(_ title: String, _ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: .space100) {
+            Text(title)
+            Spacer(minLength: 0)
+            Text(value)
+                .multilineTextAlignment(.trailing)
+        }
+    }
+
+    private func section(_ title: String, @ViewBuilder rows: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: .space100) {
+            Text(title)
+                .textRole(.heading.small)
+                .foregroundStyle(.text.primary)
+                .accessibilityAddTraits(.isHeader)
+            rows()
+                .textRole(.body.regular)
+                .foregroundStyle(.text.primary)
+        }
     }
 
     private static var platform: String {

@@ -125,10 +125,20 @@ private struct ThemeColorsPage: View {
                 .frame(width: SampleMetrics.cell.width, height: SampleMetrics.cell.height)
         case .foreground:
             // No frame round the cell: it would read as part of a border sample.
-            ColorStack(names: ground(color).names)
-                .overlay { ForegroundSample(color: color) }
-                .clipShape(shape)
-                .frame(width: SampleMetrics.cell.width, height: SampleMetrics.cell.height)
+            if dynamicTypeSize.isAccessibilitySize {
+                // At an accessibility size the sample sets the cell's height and the cells share the width, so that
+                // the sample stays on its own ground instead of running past the cell.
+                ForegroundSample(color: color)
+                    .padding(.vertical, .space50)
+                    .frame(maxWidth: .infinity, minHeight: SampleMetrics.cell.height)
+                    .background { ColorStack(names: ground(color).names) }
+                    .clipShape(shape)
+            } else {
+                ColorStack(names: ground(color).names)
+                    .overlay { ForegroundSample(color: color) }
+                    .clipShape(shape)
+                    .frame(width: SampleMetrics.cell.width, height: SampleMetrics.cell.height)
+            }
         }
     }
 
