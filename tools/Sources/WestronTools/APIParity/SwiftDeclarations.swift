@@ -91,7 +91,8 @@ public struct SwiftDeclarations: Sendable {
         /// The result of a function or subscript, the type of a variable.
         public let resultType: String?
         /// Attributes, generic parameters and requirements, effects, `mutating`: what a signature has beyond its
-        /// parameters and result, as written.
+        /// parameters and result, as written; for a member of an extension, the extension's attributes, modifiers and
+        /// `where` clause first.
         public let extras: [String]
         /// The `#if` clauses around it, outermost first: `#if os(watchOS)`.
         public let conditions: [String]
@@ -99,7 +100,7 @@ public struct SwiftDeclarations: Sendable {
         public let line: Int
         /// The first line of the declaration's text, for messages.
         public let text: String
-        /// Marked `// westron-lint: allow <reason>` on its line or a comment line just above.
+        /// Marked `// westron-api-parity: allow <reason>` on its line or a comment line just above.
         public let allowed: Bool
 
         /// `CGFloat.radius.control`, `ButtonVariant`.
@@ -195,6 +196,9 @@ public struct SwiftDeclarations: Sendable {
             /// The access an extension's modifier gives its members, or a protocol's its requirements.
             let memberAccess: Access?
             let kind: Declaration.Kind
+            /// What an extension says of all its members: its attributes, its other modifiers and its `where` clause,
+            /// such as `@available(iOS 18, *)` or `where Self: Equatable`. Each member carries them in its extras.
+            var shared: [String] = []
         }
 
         let file: String
@@ -220,7 +224,7 @@ public struct SwiftDeclarations: Sendable {
         /// The marker on the line, or on a comment line just above it.
         func allowed(at line: Int) -> Bool {
             func marked(_ text: Substring) -> Bool {
-                guard let range = text.range(of: RawValues.allowMarker) else { return false }
+                guard let range = text.range(of: APIParity.allowMarker) else { return false }
                 return !text[range.upperBound...].trimmingCharacters(in: .whitespaces).isEmpty
             }
             guard line >= 1, line <= lines.count else { return false }
@@ -267,7 +271,8 @@ public struct SwiftDeclarations: Sendable {
                     takes = true
                 }
             }
-            var allExtras = attributes.map { $0.map { SwiftDeclarations.text($0) } } ?? []
+            var allExtras = scope.map { $0.isExtension ? $0.shared : [] } ?? []
+            allExtras += attributes.map { $0.map { SwiftDeclarations.text($0) } } ?? []
             allExtras += modifiers.map(otherModifiers) ?? []
             allExtras += extras
             let text = lines.indices.contains(line - 1) ? lines[line - 1].trimmingCharacters(in: .whitespaces) : ""
@@ -369,8 +374,13 @@ public struct SwiftDeclarations: Sendable {
                 attributes: node.attributes, inheritance: node.inheritanceClause,
                 extras: genericExtras(nil, node.genericWhereClause))
             scopes = saved
+            let shared =
+                node.attributes.map { SwiftDeclarations.text($0) } + otherModifiers(node.modifiers)
+                + genericExtras(nil, node.genericWhereClause)
             scopes.append(
-                Scope(name: extended, isExtension: true, memberAccess: access(node.modifiers), kind: .extension))
+                Scope(
+                    name: extended, isExtension: true, memberAccess: access(node.modifiers), kind: .extension,
+                    shared: shared))
             return .visitChildren
         }
         override func visitPost(_ node: ExtensionDeclSyntax) { scopes.removeLast() }

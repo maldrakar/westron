@@ -79,6 +79,7 @@ private let styleSwift = """
 
     """
 
+/// The hand-written adapters, as in TokenAdapters.swift.
 private let tokensSwift = """
     import SwiftUI
 
@@ -87,6 +88,24 @@ private let tokensSwift = """
             foregroundStyle(Color(color))
         }
     }
+
+    extension Label where Title == Text, Icon == Image {
+        public init(_ titleKey: LocalizedStringKey, icon: Westron.Icon) {
+            self.init(titleKey, systemImage: icon.systemName)
+        }
+    }
+
+    extension Westron.Theme {
+        public init(colorScheme: ColorScheme, contrast: ColorSchemeContrast) {
+            self = .light
+        }
+    }
+
+    """
+
+/// The generated accessors, as in Generated/Tokens+SwiftUI.swift.
+private let generatedTokensSwift = """
+    import SwiftUI
 
     extension CGFloat {
         public enum radius {
@@ -102,16 +121,17 @@ private let tokensSwift = """
 
     """
 
-/// The fixture module: the generated file, the shared states, the hand-written style, the token area.
+/// The fixture module: the generated file, the shared states, the hand-written style, the token files.
 private func files(
     generated: String? = nil, states: String = statesSwift, style: String = styleSwift, tokens: String = tokensSwift,
-    extra: [String: String] = [:]
+    generatedTokens: String = generatedTokensSwift, extra: [String: String] = [:]
 ) throws -> [(path: String, text: String)] {
     var files = [
         "\(root)/Generated/Button+Contract.swift": try generated ?? generatedSwift(),
         "\(root)/States.swift": states,
         "\(root)/Button/ButtonVariantStyle.swift": style,
         "\(root)/TokenAdapters.swift": tokens,
+        "\(root)/Generated/Tokens+SwiftUI.swift": generatedTokens,
     ]
     for (path, text) in extra { files["\(root)/\(path)"] = text }
     return files.sorted { $0.key < $1.key }.map { (path: $0.key, text: $0.value) }
@@ -278,7 +298,7 @@ struct APIParityTests {
                 generated: generated.replacingOccurrences(
                     of: "    public func buttonStyle(", with: "    @available(iOS 18, *) public func buttonStyle(")))
         #expect(attributed.count == 1)
-        #expect(attributed[0].contains("[@available(iOS 18, *)]"))
+        #expect(attributed[0].contains("has `@available(iOS 18, *)`, which changes where or how a product calls it"))
 
         let without =
             generated.components(separatedBy: "extension View {")[0]
@@ -345,7 +365,7 @@ struct APIParityTests {
                 "WestronUI/Button/ButtonVariantStyle.swift:13: public enum ButtonShape: component API that no contract "
                     + "accounts for: ButtonShape is named as Button's API, which Button's contract "
                     + "(spec/components/button/button.spec.yaml) does not give through the conventions "
-                    + "(spec/conventions.md); for a deliberate exception: // westron-lint: allow <reason>"
+                    + "(spec/conventions.md); for a deliberate exception: // westron-api-parity: allow <reason>"
             ])
     }
 
@@ -466,20 +486,104 @@ struct APIParityTests {
 
     // MARK: The boundary
 
-    @Test("public API outside the token area that no contract gives is reported; inside, only new types")
+    @Test("public API that no contract gives is reported outside the token files")
     func boundary() throws {
         let outside = try problems(
-            files(states: statesSwift + "\nextension View {\n    public func glow() -> some View { self }\n}\n"))
+            files(style: styleSwift + "\npublic struct Palette {\n    public var name = \"\"\n}\n"))
         #expect(outside.count == 1)
-        #expect(outside[0].contains("public func View.glow: public API outside the component API"))
+        #expect(outside[0].contains("public struct Palette: public API outside the component API"))
 
+        let modifier = try problems(
+            files(states: statesSwift + "\nextension View {\n    public func glow() -> some View { self }\n}\n"))
+        #expect(modifier.count == 1)
+        #expect(modifier[0].contains("public func View.glow: a public modifier on View that no contract gives"))
+    }
+
+    @Test("the adapters file holds only the reviewed adapters, each taking a westron value")
+    func adapters() throws {
+        // A new overload of a listed adapter, on a westron value, is an adapter.
         let accessor = "\nextension View {\n    public func tint(_ color: Westron.Color) -> some View { self }\n}\n"
         #expect(try problems(files(tokens: tokensSwift + accessor)) == [])
+
+        let notWestron = try problems(
+            files(tokens: tokensSwift + "\nextension View {\n    public func tint(_ v: Int) -> some View { self }\n}\n")
+        )
+        #expect(notWestron.count == 1)
+        #expect(notWestron[0].contains("public func View.tint: a public modifier on View that no contract gives"))
+
+        let unlisted = try problems(
+            files(tokens: tokensSwift + "\nextension Color {\n    public static var brand: Color { .red }\n}\n"))
+        #expect(unlisted.count == 1)
+        #expect(unlisted[0].contains("public var Color.brand: not one of the reviewed adapters (APIParity.adapters)"))
 
         let newType = try problems(
             files(tokens: tokensSwift + "\npublic struct Palette {\n    public var name = \"\"\n}\n"))
         #expect(newType.count == 1)
-        #expect(newType[0].contains("public struct Palette: a new public type in the token area"))
+        #expect(newType[0].contains("public struct Palette: not one of the reviewed adapters"))
+
+        // The generated token files declare nested types and statics; a new top-level type there is reported.
+        let generated = try problems(files(generatedTokens: generatedTokensSwift + "\npublic enum Spacing {}\n"))
+        #expect(generated.count == 1)
+        #expect(generated[0].contains("public enum Spacing: a new public top-level type in a generated token file"))
+    }
+
+    @Test("the token files let no component API through: style protocols, View modifiers, style overloads, new types")
+    func tokenFilesBoundary() throws {
+        let inputs: [(String, String)] = [
+            (
+                "extension PrimitiveButtonStyle where Self == BorderedProminentButtonStyle {\n"
+                    + "    public static var primary: Self { .borderedProminent }\n}\n",
+                "public var PrimitiveButtonStyle.primary: component API that no contract accounts for: "
+                    + "PrimitiveButtonStyle.primary extends the style protocol PrimitiveButtonStyle"
+            ),
+            (
+                "extension View {\n    public func primaryAction() -> some View { self }\n}\n",
+                "public func View.primaryAction: a public modifier on View that no contract gives"
+            ),
+            (
+                "extension View {\n    public func toggleStyle(_ v: Int) -> some View { self }\n}\n",
+                "toggleStyle(_: Int) -> some View is an overload of a style modifier, and no contract gives it"
+            ),
+            (
+                "extension Westron {\n    public enum Foo {\n        case a\n    }\n}\n",
+                "public enum Westron.Foo: not one of the reviewed adapters"
+            ),
+        ]
+        for (input, message) in inputs {
+            let found = try problems(files(tokens: tokensSwift + "\n" + input))
+            #expect(found.count == 1, "\(input)")
+            #expect(found.first?.contains(message) == true, "\(found)")
+            // Outside the token files too.
+            #expect(try problems(files(extra: ["Extra.swift": input])).count == 1, "\(input)")
+        }
+        // Button's style protocol names Button's contract.
+        let primary = try problems(files(tokens: tokensSwift + "\n" + inputs[0].0))
+        #expect(primary.first?.contains("which Button's contract (spec/components/button/button.spec.yaml)") == true)
+    }
+
+    @Test("a contract named like a SwiftUI type does not claim the adapters on it, only new API")
+    func contractNamedLikeSwiftUI() throws {
+        let label = try contract(contractYAML(id: "label", status: "draft"), id: "label")
+        let contracts = [try contract(contractYAML()), label]
+        #expect(problems(contracts, try files()) == [])
+
+        let newType = problems(contracts, try files(extra: ["Tint.swift": "public struct LabelTint {}\n"]))
+        #expect(newType.count == 1)
+        #expect(newType[0].contains("LabelTint is named as Label's API, but its contract"))
+
+        let overload = problems(
+            contracts,
+            try files(extra: [
+                "Tint.swift": "extension View {\n    public func labelStyle(_ v: Int) -> some View { self }\n}\n"
+            ]))
+        #expect(overload.count == 1)
+        #expect(overload[0].contains("labelStyle(_: Int) -> some View is an overload of a style modifier"))
+
+        let member = problems(
+            contracts,
+            try files(tokens: tokensSwift + "\nextension Label {\n    public func glow() -> some View { self }\n}\n"))
+        #expect(member.count == 1)
+        #expect(member[0].contains("public func Label.glow: not one of the reviewed adapters"))
     }
 
     // MARK: Per-OS differences
@@ -498,11 +602,11 @@ struct APIParityTests {
 
                     #if os(macOS)
                         extension View {
-                            public func macOnly() -> some View { self }
+                            public func tint(_ color: Westron.Color) -> some View { self }
                         }
                     #else
-                        extension View {
-                            public func elsewhere() -> some View { self }
+                        extension Text {
+                            public func foregroundStyle(_ color: Westron.Color) -> Text { self }
                         }
                     #endif
 
@@ -522,17 +626,17 @@ struct APIParityTests {
 
     // MARK: Exceptions
 
-    @Test("the allow marker with a reason excuses unaccounted and per-OS API, never expected API")
+    @Test("the lint's own marker with a reason excuses unaccounted and per-OS API, never expected API")
     func allowMarker() throws {
         let allowed = try problems(
             files(
                 states: statesSwift + """
 
                     extension View {
-                        // westron-lint: allow a probe the catalog needs until #23
+                        // westron-api-parity: allow a probe the catalog needs until #23
                         public func glow() -> some View { self }
                         #if os(macOS)
-                            public func macGlow() -> some View { self }  // westron-lint: allow AppKit only
+                            public func macGlow() -> some View { self }  // westron-api-parity: allow AppKit only
                         #endif
                     }
 
@@ -542,13 +646,103 @@ struct APIParityTests {
         let withoutReason = try problems(
             files(
                 states: statesSwift
-                    + "\nextension View {\n    // westron-lint: allow\n    public func glow() -> some View { self }\n}\n"
+                    + "\nextension View {\n    // westron-api-parity: allow\n    public func glow() -> some View { self }\n}\n"
             ))
         #expect(withoutReason.count == 1)
 
         let generated = try generatedSwift().replacingOccurrences(
-            of: "    case secondary\n", with: "    case outlined  // westron-lint: allow renamed\n")
+            of: "    case secondary\n", with: "    case outlined  // westron-api-parity: allow renamed\n")
         #expect(try problems(files(generated: generated)).count == 1)
+    }
+
+    @Test("the raw-values lint's marker does not excuse public API")
+    func rawValuesMarker() throws {
+        let marked = """
+
+            extension View {
+                // westron-lint: allow the system's own spacing
+                public func glow() -> some View { self }
+                public func halo() -> some View { padding(4) }  // westron-lint: allow the system's own spacing
+            }
+
+            """
+        let found = try problems(files(states: statesSwift + marked))
+        #expect(found.count == 2)
+        #expect(found.allSatisfy { $0.contains("a public modifier on View that no contract gives") })
+        // The raw-values lint still takes its marker.
+        #expect(RawValues.find(in: marked).isEmpty)
+    }
+
+    // MARK: Constraints and attributes on expected API
+
+    @Test("an extension's where clause or availability on expected API is reported")
+    func extensionConstraints() throws {
+        let generated = try generatedSwift()
+        let overload = try problems(
+            files(
+                generated: generated.replacingOccurrences(
+                    of: "extension View {", with: "extension View where Self: Equatable {")))
+        #expect(overload.count == 1)
+        #expect(overload[0].contains("Button's style overload has `where Self: Equatable`, which changes where or how"))
+
+        let state = try problems(
+            files(
+                states: statesSwift.replacingOccurrences(
+                    of: "extension View {", with: "extension View where Self == Never {")))
+        #expect(state.count == 1)
+        #expect(state[0].contains("the state modifier of loading has `where Self == Never`"))
+
+        let available = try problems(
+            files(
+                states: statesSwift.replacingOccurrences(
+                    of: "extension View {", with: "@available(iOS 18, *)\nextension View {")))
+        #expect(available.count == 1)
+        #expect(available[0].contains("has `@available(iOS 18, *)`"))
+    }
+
+    @Test("harmless attributes on expected API pass; ones that change the call do not")
+    func attributes() throws {
+        let generated = try generatedSwift()
+        for attribute in ["@MainActor", "nonisolated", "@inlinable", "@ViewBuilder", "@discardableResult"] {
+            let marked = try problems(
+                files(
+                    generated: generated.replacingOccurrences(
+                        of: "    public func buttonStyle(", with: "    \(attribute) public func buttonStyle("),
+                    states: statesSwift.replacingOccurrences(
+                        of: "    public func loading(", with: "    \(attribute) public func loading(")))
+            #expect(marked == [], "\(attribute)")
+        }
+        for attribute in ["@_disfavoredOverload", "@_spi(Catalog)", "@backDeployed(before: iOS 18)"] {
+            let marked = try problems(
+                files(
+                    states: statesSwift.replacingOccurrences(
+                        of: "    public func loading(", with: "    \(attribute) public func loading(")))
+            #expect(marked.count == 1, "\(attribute)")
+        }
+        let enumAttribute = try problems(
+            files(
+                generated: generated.replacingOccurrences(
+                    of: "public enum ButtonSize", with: "@available(macOS 15, *) public enum ButtonSize")))
+        #expect(enumAttribute.count == 1)
+        #expect(enumAttribute[0].contains("ButtonSize has `@available(macOS 15, *)`"))
+    }
+
+    // MARK: System states per base control
+
+    @Test("the system states come from the base control; an unknown base is reported")
+    func systemStatesPerBase() throws {
+        #expect(SystemStyles.byBase["SwiftUI.Button"]?.states == ["pressed", "hover", "focus", "disabled"])
+
+        let toggle = try contract(
+            contractYAML(
+                id: "switch", states: "[pressed, selected]",
+                apple: "        strategy: style-on-system-control\n        base: SwiftUI.Toggle"), id: "switch")
+        let found = problems([try contract(contractYAML()), toggle], try files())
+        #expect(found.count == 1)
+        #expect(
+            found[0].hasPrefix(
+                "spec/components/switch/switch.spec.yaml:14: no style modifier and no system states are known for "
+                    + "SwiftUI.Toggle (SystemStyles.byBase)"))
     }
 
     // MARK: Reading

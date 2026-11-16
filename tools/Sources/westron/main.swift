@@ -6,7 +6,7 @@ import WestronTools
 
 let usage = """
     usage: tools/westron lint raw-values [FILE.swift | DIRECTORY …]
-           tools/westron lint api-parity
+           tools/westron lint api-parity            (an exception: // westron-api-parity: allow <reason>)
            tools/westron generate [--check]
            tools/westron tokens check [RESOLVER.json]
            tools/westron tokens contrast [--all] [RESOLVER.json]
