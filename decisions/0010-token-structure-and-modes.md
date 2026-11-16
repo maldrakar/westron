@@ -114,6 +114,13 @@ The tools reject any other `dev.westron.*` key, so a misspelled key fails instea
   tier of tokens that every platform would see.
 - Colors in a colorset switch with the system and with the SwiftUI environment, which a constant
   `Color(red:green:blue:)` cannot do.
+- A dynamic color in code would drop the asset catalog and its second copy of the values. On 2026-11-16 a probe
+  (Xcode 27.1, the iOS 26.3 simulator, macOS 26) compared it with a colorset on `color.text.primary`. On iOS,
+  `UIColor(dynamicProvider:)` in a `Color` matches the colorset in all four themes, also when handed to UIKit. On
+  macOS, SwiftUI gives `NSColor(name:dynamicProvider:)` the environment's color scheme but not its contrast, so a
+  high-contrast theme set in the environment, as the catalog sets it, draws the standard values. watchOS has no
+  dynamic provider at all. A `ShapeStyle` that reads the environment draws all four themes on both, but it is not a
+  `Color`, so it cannot be handed to UIKit, AppKit or an API that takes a `Color`.
 - Keeping the numbers in a module with no SwiftUI lets the pilot's shared code and its WebAssembly build use the same
   values as its SwiftUI views.
 
