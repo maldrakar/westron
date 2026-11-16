@@ -65,6 +65,13 @@ and the parity lint (#21) are proved on it before a second component starts. The
   - `primary`: `color.background.accent-hover` and `accent-pressed`.
   - `primary` with the destructive role: `color.status.danger.fill-hover` and `fill-pressed`.
   - `secondary` and `tertiary`: `color.background.hover` and `color.background.pressed`.
+- **States that exclude each other** (decided 2026-11-16, after review).
+  - Considered: disabled and loading enter neither hover nor pressed; hover stays and pressed does not; each
+    platform does what its control does.
+  - **Chosen: neither hover nor pressed.** While the button is disabled or loading, its fill stays as at rest and a
+    press does not scale it, on every platform. A loading button that tinted under the pointer or the finger would
+    promise an action it does not take. The contract binds it: the first cases of `container.background` give the
+    resting fill to `state: [disabled, loading]`, ahead of the hover and pressed cases, since the first match wins.
 
 ### Platforms
 

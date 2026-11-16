@@ -6,7 +6,8 @@ description: >-
   A push button that runs an action: westron's style on the platform's own button, with a label and a leading icon.
   Hover and pressed tint the container in motion.fade and motion.press, and a press also scales it down to 98 %,
   which Reduce Motion drops (chapter 05). Disabled draws the whole button at opacity.disabled, with no colors of its
-  own. Loading puts a progress indicator in the icon's place, before the label when there is no icon, and in
+  own. A disabled or loading button never enters hover or pressed: its fill stays as at rest and it does not scale,
+  on every platform; container.background's leading cases bind that. Loading puts a progress indicator in the icon's place, before the label when there is no icon, and in
   icon-only in place of the icon; the label stays, the width does not change, presses are not accepted, and the
   button does not dim. Floating glass buttons over content are not this component: products use the system's glass
   styles (chapter 09).
@@ -49,6 +50,10 @@ tokens:
   container.gap: { s: space.50, m: space.75, l: space.100 }
   container.background:
     cases:
+      # Disabled and loading come first: they exclude hover and pressed, so the resting fill holds.
+      - { when: { variant: primary, role: destructive, state: [disabled, loading] }, token: color.status.danger.fill }
+      - { when: { variant: primary, state: [disabled, loading] }, token: color.background.accent }
+      - { when: { variant: [secondary, tertiary], state: [disabled, loading] }, token: null }
       - { when: { variant: primary, role: destructive, state: pressed }, token: color.status.danger.fill-pressed }
       - { when: { variant: primary, role: destructive, state: hover }, token: color.status.danger.fill-hover }
       - { when: { variant: primary, role: destructive }, token: color.status.danger.fill }
@@ -132,8 +137,9 @@ platforms:
     base: button
     description: >-
       A native <button> with westron's CSS, provisional until phase 6 (#40). The focus ring is an outline in
-      focusRing.color and focusRing.width on :focus-visible. Hover only under a pointer, (hover: hover). Corners are
-      circular.
+      focusRing.color and focusRing.width on :focus-visible. Hover only under a pointer, (hover: hover). A native
+      <button> still matches :hover while disabled, and :hover and :active while aria-busy, so the CSS excludes them
+      in those states and keeps the resting fill. Corners are circular.
   linux:
     strategy: style-on-system-control
     base: GtkButton

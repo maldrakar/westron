@@ -40,7 +40,7 @@ decisions/0003 rejected.
 | **Enum option: the variant** | A generated `public enum ButtonVariant: String, CaseIterable, Sendable`; cases are the contract's values in lowerCamelCase. It is the first, unlabeled argument of the style overload and has no default, so it is always written: `.buttonStyle(.primary, size: .m)`, `.buttonStyle(.secondary)`; the contract gives the variant no default. A value must not match a system style's static name (`plain`, `bordered`, …); the validator checks it (#18). Another enum option is a labeled argument named after it. Own component: Q2 | A `variant` attribute and property on a custom element; on a native element a class or data attribute (#40) | A Rust `enum ButtonVariant { Primary, … }` that adds a CSS class: the stock class where one exists (`.suggested-action`, `.destructive-action`), westron's own otherwise. The value-to-class map is in the `platforms` block | A generated `enum class ButtonVariant { Primary, … }` passed as a parameter; the variant picks westron's colors and shape for the Material3 composable, through `ButtonDefaults`-style factories or the Compose Style API, decided in phase 8 |
 | **Size option** | A generated `public enum ButtonSize` with the contract's values `s`, `m`, `l`, never `small/regular/large`. A labeled `size:` argument of the style overload. When the call leaves it out, the size comes from `@Environment(\.controlSize)`: `mini` and `small` → `s`, `regular` → `m`, `large` and `extraLarge` → `l`; an explicit `size:` wins. What `size:` does to `controlSize` inside the label is Q5 | A `size` attribute (`size="m"`) or a class, sizes in westron's CSS | A Rust `enum ButtonSize { S, M, L }` that adds westron's own size class: libadwaita has no size classes | `enum class ButtonSize { S, M, L }` as a parameter |
 | **Bool option** | When the system already models it, the system's modifier (`.labelStyle(.iconOnly)` for an icon-only label). Otherwise a labeled `Bool` argument named as in the contract, or an environment modifier: Q1. A bool that is a state follows the state rows | A boolean attribute, present or absent; an absent attribute is `false` (Q1) | A boolean GObject property, or a style class | A `Boolean` parameter with the contract's default |
-| **States the system control has** (pressed, hover, focus, disabled) | The system owns them, and the style reads them: pressed is `configuration.isPressed`, disabled is `@Environment(\.isEnabled)` set by `.disabled(_:)`, focus is `@Environment(\.isFocused)`, hover is `onHover`. Touch iOS and watchOS never enter hover, and `onHover` does not exist on watchOS. The system draws the focus ring (chapter 08) | CSS pseudo-classes: `:active`, `:hover`, `:focus-visible`, `:disabled` | CSS pseudo-classes `:active`, `:hover`, `:focus-visible`, `:disabled`; disabled is `set_sensitive(false)` | `interactionSource` (`collectIsPressedAsState`, `collectIsHoveredAsState`, `collectIsFocusedAsState`); disabled is the `enabled = false` parameter, Compose's positive name |
+| **States the system control has** (pressed, hover, focus, disabled) | The system owns them, and the style reads them: pressed is `configuration.isPressed`, disabled is `@Environment(\.isEnabled)` set by `.disabled(_:)`, focus is `@Environment(\.isFocused)`, hover is `onHover`. Touch iOS and watchOS never enter hover, and `onHover` does not exist on watchOS. The system draws the focus ring (chapter 08). Where states hold at once, the first matching case of a binding wins, as the contract orders them | CSS pseudo-classes: `:active`, `:hover`, `:focus-visible`, `:disabled`; a native element still matches `:hover` while disabled, and `:hover` and `:active` while `aria-busy`, so westron's CSS excludes what the contract excludes | CSS pseudo-classes `:active`, `:hover`, `:focus-visible`, `:disabled`; disabled is `set_sensitive(false)` | `interactionSource` (`collectIsPressedAsState`, `collectIsHoveredAsState`, `collectIsFocusedAsState`); disabled is the `enabled = false` parameter, Compose's positive name |
 | **States the system control lacks** (loading) | A modifier sets an environment value, and the style reads it (decisions/0003): `.loading(isSaving)`. One shared modifier per state, named as the state, for every component that has it: `.loading(_:)`, not `.buttonLoading(_:)` | An attribute that is also the accessible state: `aria-busy="true"`, styled by westron's CSS | A westron style class plus the accessible state `gtk::AccessibleState::Busy` | A `Boolean` parameter (`loading = true`), as Compose passes per-component state; a cascading value would go through `CompositionLocal` |
 | **Slots** | System control: the control's own `@ViewBuilder` label. The contract's `label` and `icon` are the title and the icon of a `Label` inside it: `Button { save() } label: { Label("Save", icon: .check) }`. Own component: a `@ViewBuilder` closure per slot, named after the slot, plus convenience initializers that take text and a `Westron.Icon`, as SwiftUI's `Label` does | The element's content; `<slot>` and `<slot name="icon">` in a custom element | Child widgets: `adw::ButtonContent` for an icon and a label; an own component exposes a child property per slot | `@Composable` lambda parameters: `content`, `icon: (@Composable () -> Unit)? = null` |
 | **Constraints between options** | The contract states them (`when` / `require` / `severity`) and the validator checks the contract (#18). The catalog and the snapshot matrix (#24) leave out combinations a constraint forbids. What code does with a forbidden combination is Q3 | As SwiftUI: checked in the contract; runtime behavior with Q3 | As SwiftUI | As SwiftUI |
@@ -82,7 +82,8 @@ public enum ButtonSize: String, CaseIterable, Sendable {
 }
 
 extension View {
-    public func buttonStyle(_ variant: ButtonVariant, size: ButtonSize) -> some View {
+    /// Without `size:`, the style takes the size from `controlSize`.
+    public func buttonStyle(_ variant: ButtonVariant, size: ButtonSize? = nil) -> some View {
         buttonStyle(ButtonVariantStyle(variant: variant, size: size))
     }
 }
@@ -132,22 +133,29 @@ and the validator requires a fallback for every value Apple drops (#18).
 // Hand-written. Illustrative tokens: the Button contract (#22) binds the real ones.
 struct ButtonVariantStyle: ButtonStyle {
     let variant: ButtonVariant
-    let size: ButtonSize
+    let size: ButtonSize?  // nil: from controlSize
 
     func makeBody(configuration: Configuration) -> some View {
-        ButtonBody(configuration: configuration, variant: variant, size: size)
+        ButtonBody(configuration: configuration, variant: variant, explicitSize: size)
     }
 }
 
 private struct ButtonBody: View {
     let configuration: ButtonStyleConfiguration
     let variant: ButtonVariant
-    let size: ButtonSize
+    let explicitSize: ButtonSize?
 
+    @Environment(\.controlSize) private var controlSize  // the size when the call names none
     @Environment(\.isEnabled) private var isEnabled  // disabled: set by .disabled(_:)
     @Environment(\.isFocused) private var isFocused  // focus: the system draws the ring
     @Environment(\.isLoading) private var isLoading  // loading: set by westron's modifier
     @State private var isHovered = false  // hover: never entered on touch iOS and watchOS
+
+    /// An explicit size wins; otherwise mini and small → s, regular → m, large and extraLarge → l.
+    private var size: ButtonSize { explicitSize ?? ButtonSize(controlSize) }
+
+    /// A disabled or loading button never enters hover or pressed: its fill stays as at rest.
+    private var isTinted: Bool { isEnabled && !isLoading && (isHovered || configuration.isPressed) }
 
     var body: some View {
         configuration.label
@@ -155,7 +163,7 @@ private struct ButtonBody: View {
             .foregroundStyle(.text.onAccent)
             .padding(.horizontal, .space200)
             .background(
-                isHovered || configuration.isPressed ? .background.accentHover : .background.accent,
+                isTinted ? .background.accentHover : .background.accent,
                 in: RoundedRectangle(cornerRadius: .radius.control, style: .continuous)
             )
             .overlay { if isLoading { ProgressView() } }
@@ -172,6 +180,10 @@ private struct ButtonBody: View {
   `.disabled(true)`.
 - **Hover is a state, not a variant.** Touch iOS and watchOS simply never enter it, so one state model holds on
   every platform (research report). `onHover` does not exist on watchOS, so it sits behind `#if !os(watchOS)`.
+- **States can hold at once, and the contract resolves them.** A component can be loading and hovered, or disabled
+  and focused. A case's `state` matches when the component is in any of the states it names, and the first matching
+  case wins, so a contract puts the states that exclude others first: a disabled or loading Button never draws hover
+  or pressed.
 - **A state the system control lacks goes through the environment** (decisions/0003). A modifier sets the value,
   the style reads it, and it cascades like `.disabled(_:)`:
 

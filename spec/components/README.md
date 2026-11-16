@@ -67,7 +67,8 @@ Names of options, values, slots, states and intents are lowerCamelCase: they bec
 
 - **Cases.** A case's `when` takes the same values as a constraint's (one value, a list, or `true`/`false` for a bool
   option) plus the key `state`, which names one state or a list of them. Put the narrower case first: a case that an
-  earlier one fully covers is never used, and the check reports it.
+  earlier one fully covers is never used, and the check reports it. A component can be in several states at once;
+  `state` matches when it is in any of the named ones, so a state that excludes others goes first.
 - **Restrictions.** A platform, or an Apple OS (`ios`, `macos`, `watchos`), restricts the contract with `options` (the
   values of an enum option it offers) and `states` (the states it enters); what it does not name, it keeps whole. An
   Apple OS restricts what Apple keeps.
