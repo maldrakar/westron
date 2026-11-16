@@ -1,0 +1,3 @@
+# The command the orchestrator test gate runs before an implementer subagent hands its work back.
+# It goes through the script so that the Xcode from .xcode-version is used, not the one xcode-select points at.
+tools/apple/check.sh package
