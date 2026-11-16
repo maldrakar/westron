@@ -1,0 +1,222 @@
+<!doctype html>
+<!-- Prototype (#26): the Button contract on a native <button> with CSS, no framework and no build step. Throwaway
+     evidence for spec/components/button/decisions/0002-portability-to-web-and-gtk.md. Open it in a browser, or
+     render it with snapshot.swift. Query parameters force what a static screenshot cannot reach:
+       ?theme=light|dark|light-hc|dark-hc   force a theme (otherwise prefers-color-scheme and prefers-contrast)
+       ?motion=reduce                        force the reduced-motion rules
+       ?hit=44&hitarea                       set the hit target and outline the hit areas -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>westron Button: web prototype</title>
+<script>
+  // Before the styles apply, so the first frame is already in the forced theme.
+  const params = new URLSearchParams(location.search);
+  const root = document.documentElement;
+  if (params.get("theme")) root.dataset.theme = params.get("theme");
+  if (params.get("motion")) root.dataset.motion = params.get("motion");
+  if (params.has("hitarea")) root.dataset.showHitArea = "";
+  if (params.get("hit")) root.style.setProperty("--prototype-hit-target", params.get("hit") + "px");
+</script>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="button.css">
+<style>
+  /* The page itself, not the prototype. */
+  body {
+    margin: 0;
+    padding: 24px;
+    background: var(--westron-color-background-canvas);
+    color: var(--westron-color-text-primary);
+    font: 13px/1.4 system-ui;
+  }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  h2 { font-size: 14px; margin: 28px 0 8px; }
+  p.note { margin: 0 0 8px; color: var(--westron-color-text-secondary); max-width: 900px; }
+  table { border-collapse: collapse; }
+  th, td { padding: 6px 10px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--westron-color-border-default); }
+  th { font-weight: 600; color: var(--westron-color-text-secondary); white-space: nowrap; }
+  .forced { color: var(--westron-color-status-danger-text); }
+  .cells { display: flex; gap: 8px; align-items: center; }
+  #log { font-family: ui-monospace, monospace; white-space: pre; }
+</style>
+</head>
+<body>
+<h1>westron Button: web prototype (#26)</h1>
+<p class="note">Theme: <span id="theme"></span>. Heights from <code>macos</code> (pointer); <code>(pointer: coarse)</code> takes the <code>ios</code> heights.
+  Columns marked <span class="forced">forced</span> draw a state through <code>data-state</code>, because a static screenshot has no pointer and no keyboard.</p>
+
+<h2>Variant × role × size (label, icon + label, icon-only)</h2>
+<table id="matrix"></table>
+
+<h2>States at size m</h2>
+<table id="states"></table>
+
+<h2>Loading keeps the width</h2>
+<p class="note">Measured on this page: each loading button against the resting one in the same row of the table above.</p>
+<table id="widths"></table>
+
+<h2>Live buttons (real pseudo-classes and real clicks)</h2>
+<div class="cells" id="live"></div>
+<p class="note">Clicks reach the log below only when the button accepts them. The busy and the disabled button must not log.</p>
+<div id="log"></div>
+
+<h2>Hit areas of size s, icon-only, 8 px apart</h2>
+<p class="note">With <code>?hit=44&amp;hitarea</code> the dashed outlines show where each button takes a pointer; neighbours overlap.</p>
+<div class="cells" id="hit"></div>
+
+<script>
+  const icons = {
+    plus: '<path d="M8 2.5v11M2.5 8h11" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>',
+    trash: '<path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>',
+    ellipsis: '<g fill="currentColor"><circle cx="3" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="13" cy="8" r="1.4"/></g>',
+  };
+
+  // One button as a product writes it. options: variant, role, size, icon, label, iconOnly, state, disabled, busy.
+  function button(o) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "wb";
+    b.dataset.variant = o.variant;
+    if (o.size && o.size !== "m") b.dataset.size = o.size;
+    if (o.role === "destructive") b.dataset.role = "destructive";
+    if (o.state) b.dataset.state = o.state;
+    if (o.focusOffset) b.dataset.focusOffset = "";
+    if (o.disabled) b.disabled = true;
+    if (o.busy) b.setAttribute("aria-busy", "true");
+    let html = "";
+    if (o.icon) html += `<span class="wb-icon" aria-hidden="true"><svg viewBox="0 0 16 16">${icons[o.icon]}</svg></span>`;
+    if (o.iconOnly) {
+      b.dataset.iconOnly = "";
+      b.setAttribute("aria-label", o.label);
+    } else {
+      html += `<span class="wb-label" data-label="${o.label}"><span class="wb-text">${o.label}</span></span>`;
+    }
+    b.innerHTML = html;
+    if (o.id) b.id = o.id;
+    return b;
+  }
+
+  const rows = [
+    ["primary", "default"], ["primary", "destructive"],
+    ["secondary", "default"], ["secondary", "destructive"],
+    ["tertiary", "default"], ["tertiary", "destructive"],
+  ];
+  const labelFor = (role) => role === "destructive" ? ["Delete", "trash"] : ["Add list", "plus"];
+
+  function cell(content) {
+    const td = document.createElement("td");
+    const div = document.createElement("div");
+    div.className = "cells";
+    [].concat(content).forEach((c) => div.append(c));
+    td.append(div);
+    return td;
+  }
+  function header(table, titles) {
+    const tr = table.insertRow();
+    titles.forEach((t) => {
+      const th = document.createElement("th");
+      th.innerHTML = t;
+      tr.append(th);
+    });
+  }
+
+  // The option matrix.
+  const matrix = document.getElementById("matrix");
+  header(matrix, ["variant / role", "s", "m", "l"]);
+  for (const [variant, role] of rows) {
+    const tr = matrix.insertRow();
+    const th = document.createElement("th");
+    th.textContent = `${variant} / ${role}`;
+    tr.append(th);
+    for (const size of ["s", "m", "l"]) {
+      const [label, icon] = labelFor(role);
+      tr.append(cell([
+        button({ variant, role, size, label }),
+        button({ variant, role, size, label, icon }),
+        button({ variant, role, size, label: "More", icon: "ellipsis", iconOnly: true }),
+      ]));
+    }
+  }
+
+  // The state matrix at size m.
+  const columns = [
+    ["rest", {}],
+    ["hover <span class=forced>forced</span>", { state: "hover" }],
+    ["pressed <span class=forced>forced</span>", { state: "pressed" }],
+    ["focus <span class=forced>forced</span>, offset 0 as written", { state: "focus" }],
+    ["focus <span class=forced>forced</span>, offset proposed", { state: "focus", focusOffset: true }],
+    ["disabled", { disabled: true }],
+    ["disabled + hover <span class=forced>forced</span>", { disabled: true, state: "hover" }],
+    ["loading", { busy: true }],
+    ["loading + pressed <span class=forced>forced</span>", { busy: true, state: "pressed" }],
+  ];
+  const states = document.getElementById("states");
+  header(states, ["variant / role"].concat(columns.map((c) => c[0])));
+  for (const [variant, role] of rows) {
+    const tr = states.insertRow();
+    tr.dataset.row = `${variant} / ${role}`;
+    const th = document.createElement("th");
+    th.textContent = `${variant} / ${role}`;
+    tr.append(th);
+    for (const [name, extra] of columns) {
+      const [label, icon] = labelFor(role);
+      const td = cell([
+        button({ variant, role, label, ...extra }),
+        button({ variant, role, label, icon, ...extra }),
+        button({ variant, role, label: "More", icon: "ellipsis", iconOnly: true, ...extra }),
+      ]);
+      td.dataset.column = name.split(" ")[0];
+      tr.append(td);
+    }
+  }
+
+  // Width of every loading button against its resting twin.
+  addEventListener("load", () => {
+    const widths = document.getElementById("widths");
+    header(widths, ["variant / role", "label only", "icon + label", "icon-only"]);
+    for (const tr of states.querySelectorAll("tr[data-row]")) {
+      const rest = tr.querySelector('td[data-column="rest"]').querySelectorAll("button");
+      const busy = tr.querySelector('td[data-column="loading"]').querySelectorAll("button");
+      const row = widths.insertRow();
+      row.insertCell().textContent = tr.dataset.row;
+      rest.forEach((r, i) => {
+        const a = r.getBoundingClientRect().width, b = busy[i].getBoundingClientRect().width;
+        row.insertCell().textContent = `${a.toFixed(1)} → ${b.toFixed(1)} ${Math.abs(a - b) < 0.01 ? "unchanged" : "CHANGED"}`;
+      });
+    }
+    document.getElementById("theme").textContent = root.dataset.theme
+      ? `${root.dataset.theme} (forced by data-theme)`
+      : `${matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"}${matchMedia("(prefers-contrast: more)").matches ? "-hc" : ""} (from the media queries)`;
+  });
+
+  // Loading refuses presses: CSS cannot, so a capture listener stops the click before any handler or form sees it.
+  // Keyboard activation and implicit form submission arrive as the same click event.
+  document.addEventListener("click", (event) => {
+    if (event.target.closest('button[aria-busy="true"]')) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+  }, true);
+
+  // Live buttons.
+  const log = document.getElementById("log");
+  const live = [
+    button({ variant: "primary", label: "Save", icon: "plus", id: "live-primary" }),
+    button({ variant: "secondary", label: "Cancel", id: "live-secondary" }),
+    button({ variant: "primary", label: "Saving", icon: "plus", busy: true, id: "live-busy" }),
+    button({ variant: "primary", label: "Disabled", disabled: true, id: "live-disabled" }),
+    button({ variant: "tertiary", role: "destructive", label: "More", icon: "ellipsis", iconOnly: true, id: "live-icon" }),
+  ];
+  live.forEach((b) => {
+    b.addEventListener("click", () => { log.textContent += `click accepted: #${b.id}\n`; });
+    document.getElementById("live").append(b);
+  });
+
+  // Hit areas.
+  for (let i = 0; i < 3; i++) {
+    document.getElementById("hit").append(button({ variant: "secondary", size: "s", label: "More", icon: "ellipsis", iconOnly: true }));
+  }
+</script>
+</body>
+</html>
