@@ -58,6 +58,39 @@ private func swift(_ yaml: String) throws -> String {
     try #require(try generated(yaml)).contents
 }
 
+/// The generator over contracts by id, each in `<directory>/<id>/<id>.spec.yaml` of a fresh directory, which is
+/// removed after `body`.
+private func withGenerator<T>(_ contracts: [String: String], _ body: (AppleComponents) throws -> T) throws -> T {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "westron-components-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: directory) }
+    for (id, yaml) in contracts {
+        let folder = directory.appendingPathComponent(id)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try yaml.write(to: folder.appendingPathComponent("\(id).spec.yaml"), atomically: true, encoding: .utf8)
+    }
+    return try body(
+        AppleComponents(
+            directory: directory.path,
+            schemaFile: repositoryRoot.appendingPathComponent(ContractSchema.defaultFile).path,
+            resolverFile: repositoryRoot.appendingPathComponent(TokenCheck.defaultResolver).path))
+}
+
+/// What the generator writes for contracts by id.
+private func generate(_ contracts: [String: String]) throws -> [GeneratedFile] {
+    try withGenerator(contracts) { try $0.run() }
+}
+
+/// The problems generation throws for contracts by id, or nil when it generates.
+private func generationProblems(_ contracts: [String: String]) throws -> [ContractProblem]? {
+    do {
+        _ = try generate(contracts)
+        return nil
+    } catch let error as AppleComponents.Problems {
+        return error.problems
+    }
+}
+
 /// The message of the problem generation throws.
 private func failure(_ yaml: String) -> String? {
     do {
@@ -140,7 +173,7 @@ struct AppleComponentsTests {
             failure(without)
                 == "spec/components/button/button.spec.yaml: options.role: ButtonRole would shadow SwiftUI's ButtonRole: "
                 + "if the option is the system's own API on Apple, name it in platforms.apple.systemOptions "
-                + "(spec/conventions.md)")
+                + "(spec/conventions.md); otherwise rename the option")
         // The field, not the name, decides: another option given to the system disappears too.
         let iconOnly = contractYAML().replacingOccurrences(
             of: "{ role: SwiftUI.ButtonRole }", with: "{ role: SwiftUI.ButtonRole, iconOnly: SwiftUI.LabelStyle }")
@@ -184,6 +217,19 @@ struct AppleComponentsTests {
         #expect(contents.contains("        #elseif os(macOS)\n"))
         #expect(contents.contains("        #elseif os(watchOS)\n"))
         #expect(contents.contains("            case .l: return .s\n"))
+        // The chain spec check enforces: Apple turns s into l, and watchOS l into m, so s draws m on watchOS.
+        let throughApple = contractYAML(
+            apple: """
+                    strategy: style-on-system-control
+                    base: SwiftUI.Button
+                    systemOptions: { role: SwiftUI.ButtonRole }
+                    options: { size: [m, l] }
+                    fallback: { size: l }
+                    watchos:
+                      options: { size: [m] }
+                      fallback: { size: { l: m } }
+                """)
+        #expect(try swift(throughApple).contains("on iOS, s → l; on macOS, s → l; on watchOS, s → m, l → m."))
         let missing = contractYAML().replacingOccurrences(of: "fallback: { size: m }", with: "")
         #expect(failure(missing)?.contains("platforms.apple.watchos.options.size: drops s with no fallback") == true)
     }
@@ -231,38 +277,152 @@ struct AppleComponentsTests {
 
     @Test("the same contracts give the same bytes; files come in the contracts' sorted order")
     func deterministic() throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
-            "westron-components-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        for id in ["toggle", "button", "chip"] {
-            let folder = directory.appendingPathComponent(id)
-            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-            let yaml = contractYAML(id: id, status: id == "chip" ? "draft" : "approved")
-            try yaml.write(to: folder.appendingPathComponent("\(id).spec.yaml"), atomically: true, encoding: .utf8)
+        let toggle = contractYAML(id: "toggle").replacingOccurrences(
+            of: "values: [primary, secondary]", with: "values: [filled, outlined]")
+        let contracts = [
+            "toggle": toggle, "button": contractYAML(), "chip": contractYAML(id: "chip", status: "draft"),
+        ]
+        try withGenerator(contracts) { generator in
+            let first = try generator.run()
+            #expect(
+                first.map(\.path)
+                    == ["Button", "Toggle"].map { "\(AppleComponents.outputDirectory)/\($0)+Contract.swift" })
+            #expect(try generator.run() == first)
+            #expect(generator.ownedDirectories == ["platforms/apple/Sources/WestronUI/Generated"])
         }
-        let generator = AppleComponents(
-            directory: directory.path,
-            schemaFile: repositoryRoot.appendingPathComponent(ContractSchema.defaultFile).path)
-        let first = try generator.run()
-        #expect(
-            first.map(\.path) == ["Button", "Toggle"].map { "\(AppleComponents.outputDirectory)/\($0)+Contract.swift" })
-        #expect(try generator.run() == first)
-        #expect(generator.ownedDirectories == ["platforms/apple/Sources/WestronUI/Generated"])
     }
 
     @Test("a contract that fails the schema fails generation")
     func invalidContract() throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
-            "westron-components-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let folder = directory.appendingPathComponent("button")
-        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        try contractYAML(status: "ready").write(
-            to: folder.appendingPathComponent("button.spec.yaml"), atomically: true, encoding: .utf8)
-        let generator = AppleComponents(
-            directory: directory.path,
-            schemaFile: repositoryRoot.appendingPathComponent(ContractSchema.defaultFile).path)
-        #expect(throws: AppleComponents.Problems.self) { try generator.run() }
+        #expect(throws: AppleComponents.Problems.self) { try generate(["button": contractYAML(status: "ready")]) }
+    }
+
+    @Test("a contract that passes the schema but breaks spec check's rules fails generation with the same problems")
+    func rulesBeforeGeneration() throws {
+        // A binding by value that leaves l without a token, and a token that does not exist.
+        let yaml = contractYAML().replacingOccurrences(
+            of: "accessibility:",
+            with: "tokens:\n  container.radius: { s: radius.control, m: radius.nothing }\naccessibility:")
+        let problems = try #require(try generationProblems(["button": yaml]))
+        #expect(problems.contains { $0.place == "tokens.container.radius" && $0.message.hasPrefix("no token for l") })
+        #expect(
+            problems.contains {
+                $0.place == "tokens.container.radius.m" && $0.message == "no token radius.nothing in tokens/"
+            })
+        // The base spec check rejects: a control whose system styles are unknown is not generated either.
+        let slider = contractYAML().replacingOccurrences(of: "base: SwiftUI.Button", with: "base: SwiftUI.Slider")
+        #expect(
+            try #require(try generationProblems(["button": slider])).contains {
+                $0.place == "platforms.apple.base" && $0.message.contains("SwiftUI.Slider")
+            })
+    }
+
+    @Test("a generated name that is any public SwiftUI type fails generation, not only the base control's")
+    func swiftUIShadowing() throws {
+        let order = contractYAML(
+            id: "menu",
+            options: """
+                  variant: { type: enum, values: [primary, secondary] }
+                  order: { type: enum, values: [fixed, priority], default: fixed }
+                """, apple: plainApple)
+        #expect(
+            failure(order)
+                == "spec/components/button/button.spec.yaml: options.order: MenuOrder would shadow SwiftUI's MenuOrder: "
+                + "if the option is the system's own API on Apple, name it in platforms.apple.systemOptions "
+                + "(spec/conventions.md); otherwise rename the option")
+        let toggleStyle = contractYAML(
+            options: """
+                  variant: { type: enum, values: [primary, secondary] }
+                  toggleStyle: { type: enum, values: [switch, check], default: switch }
+                """, apple: plainApple)
+        #expect(failure(toggleStyle)?.contains("ButtonToggleStyle would shadow SwiftUI's ButtonToggleStyle") == true)
+    }
+
+    @Test("a value or state Swift cannot use as a case fails generation")
+    func unusableCases() throws {
+        let initValue = contractYAML(
+            options: "  variant: { type: enum, values: [primary, secondary, init] }", apple: plainApple)
+        #expect(failure(initValue)?.contains("options.variant.values: init cannot be a value") == true)
+        #expect(
+            failure(contractYAML(states: "[hover, self]"))?.contains("states: self cannot be a state") == true)
+    }
+
+    @Test("a base control without a style modifier fails generation instead of calling a modifier that does not exist")
+    func noStyleModifier() throws {
+        for base in ["SwiftUI.Slider", "SwiftUI.Stepper", "SwiftUI.SecureField"] {
+            let yaml = contractYAML().replacingOccurrences(of: "base: SwiftUI.Button", with: "base: \(base)")
+            #expect(
+                failure(yaml)
+                    == "spec/components/button/button.spec.yaml: platforms.apple.base: no style modifier is known for "
+                    + "\(base) (SystemStyles.byBase), so there is no overload to generate")
+        }
+    }
+
+    @Test("two contracts that generate one type name fail generation, as does an option named like the style")
+    func nameCollisions() throws {
+        let button = contractYAML(
+            options: """
+                  variant: { type: enum, values: [primary, secondary] }
+                  groupSize: { type: enum, values: [s, m], default: m }
+                """, apple: plainApple)
+        let group = contractYAML(
+            id: "button-group",
+            options: """
+                  variant: { type: enum, values: [joined, spaced] }
+                  size: { type: enum, values: [s, m], default: m }
+                """, states: "[]", apple: plainApple)
+        let problems = try #require(try generationProblems(["button": button, "button-group": group]))
+        #expect(
+            problems.contains {
+                $0.place == "options.size"
+                    && $0.message.hasPrefix(
+                        "ButtonGroupSize, for ButtonGroup's option size, is already the type of Button's option groupSize"
+                    )
+            })
+        let style = contractYAML(
+            options: """
+                  variant: { type: enum, values: [primary, secondary] }
+                  variantStyle: { type: enum, values: [flat, raised], default: flat }
+                """, apple: plainApple)
+        let own = try #require(try generationProblems(["button": style]))
+        #expect(
+            own.map(\.message) == [
+                "ButtonVariantStyle, for Button's hand-written style, is already the type of Button's option "
+                    + "variantStyle: two types of one name do not compile; rename the option or the component"
+            ])
+    }
+
+    @Test("two contracts on one base control need variants without a default and with no value in common")
+    func sharedBase() throws {
+        let chip = contractYAML(id: "chip", states: "[]", apple: plainApple)
+        let problems = try #require(try generationProblems(["button": contractYAML(), "chip": chip]))
+        #expect(
+            problems.map(\.message).contains {
+                $0.hasPrefix("Chip and Button")
+                    && $0.contains("share the variant primary, secondary, so .buttonStyle(.primary) would be ambiguous")
+            })
+        let distinct = chip.replacingOccurrences(of: "values: [primary, secondary]", with: "values: [filled, outlined]")
+        #expect(try generate(["button": contractYAML(), "chip": distinct]).count == 2)
+        // A required variant next to one with a default: .buttonStyle() can only be the chip's (probed, Xcode 27.1).
+        let defaulted = distinct.replacingOccurrences(of: "outlined],", with: "outlined], default: filled,")
+        #expect(try generate(["button": contractYAML(), "chip": defaulted]).count == 2)
+        // Two overloads a call without a variant fits: two variants with a default, or one with a default and one
+        // component without a variant, where Swift would silently take the one without.
+        let tag = contractYAML(
+            id: "tag", options: "  variant: { type: enum, values: [solid, hollow], default: solid }", states: "[]",
+            apple: plainApple)
+        let badge = contractYAML(
+            id: "badge", options: "  tone: { type: enum, values: [calm, loud], default: calm }", states: "[]",
+            apple: plainApple)
+        for (id, other) in [("tag", tag), ("badge", badge)] {
+            let problems = try #require(try generationProblems(["chip": defaulted, id: other]))
+            #expect(
+                problems.map(\.message).contains {
+                    $0.contains(
+                        "that a call without a variant fits, so .buttonStyle() would be ambiguous or silently "
+                            + "take one of them")
+                }, "\(id): \(problems)")
+        }
     }
 
     @Test("westron's Button contract generates ButtonVariant and ButtonSize, and no ButtonRole")

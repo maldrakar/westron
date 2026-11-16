@@ -22,10 +22,16 @@ public struct AppleComponents: Generator {
     /// The contracts' directory, relative to the repository root.
     public let directory: String
     public let schemaFile: String
+    /// The token resolver, for the rules that check bound tokens.
+    public let resolverFile: String
 
-    public init(directory: String = ContractCheck.defaultDirectory, schemaFile: String = ContractSchema.defaultFile) {
+    public init(
+        directory: String = ContractCheck.defaultDirectory, schemaFile: String = ContractSchema.defaultFile,
+        resolverFile: String = TokenCheck.defaultResolver
+    ) {
         self.directory = directory
         self.schemaFile = schemaFile
+        self.resolverFile = resolverFile
     }
 
     public static let outputDirectory = "platforms/apple/Sources/WestronUI/Generated"
@@ -40,19 +46,46 @@ public struct AppleComponents: Generator {
         public var description: String { problems.map(\.description).joined(separator: "\n") }
     }
 
+    /// Generates from every contract, after `spec check`'s schema and rules pass on each: the generator never writes
+    /// code from a contract the check rejects (#62).
     public func run() throws -> [GeneratedFile] {
         let schema = try ContractSchema(file: schemaFile)
-        var files: [GeneratedFile] = []
+        let tokens = try ContractTokens(Resolution(resolverFile: resolverFile))
+        var contracts: [(contract: ComponentContract, source: String)] = []
+        var invalid: [ContractProblem] = []
         for file in try ContractCheck.files(in: directory) {
             let text = try String(contentsOfFile: file, encoding: .utf8)
-            let document = try ContractYAML.parse(text, source: file)
-            let invalid = schema.validate(document).map { ContractProblem(source: file, path: $0.path, $0.message) }
-            guard invalid.isEmpty else { throw Problems(problems: invalid) }
-            if let generated = try Self.file(for: ComponentContract(document: document, source: file), source: file) {
-                files.append(generated)
+            let problems = ContractCheck.check(yaml: text, source: file, schema: schema, tokens: tokens)
+            guard problems.isEmpty else {
+                invalid += problems
+                continue
+            }
+            contracts.append((try ComponentContract(yaml: text, source: file), file))
+        }
+        guard invalid.isEmpty else { throw Problems(problems: invalid) }
+        return try Self.files(for: contracts)
+    }
+
+    /// The generated files for contracts that pass `spec check`, in their order, after the checks that span
+    /// contracts: no two generate the same Swift name, and the overloads of two on one base control never make a
+    /// call ambiguous.
+    /// - Throws: `Problems`, with every problem found.
+    public static func files(for contracts: [(contract: ComponentContract, source: String)]) throws -> [GeneratedFile] {
+        var apis: [API] = []
+        var problems: [ContractProblem] = []
+        for (contract, source) in contracts {
+            guard generates(contract), let apple = contract.apple, let base = apple.base else { continue }
+            do {
+                apis.append(try API(contract, apple: apple, base: base, source: source))
+            } catch {
+                problems.append(error)
             }
         }
-        return files
+        problems += collisions(apis) + ambiguities(apis)
+        guard problems.isEmpty else { throw Problems(problems: problems) }
+        return apis.map {
+            GeneratedFile(path: "\(outputDirectory)/\($0.component)+Contract.swift", contents: $0.swift())
+        }
     }
 
     /// Whether the generator writes an API for a contract: approved or later, styled on an Apple system control.
@@ -69,15 +102,78 @@ public struct AppleComponents: Generator {
         return GeneratedFile(path: "\(outputDirectory)/\(api.component)+Contract.swift", contents: api.swift())
     }
 
-    /// The SwiftUI types whose names a generated `<Component><Option>` could take, by base control: such an enum would
-    /// shadow the system's type in every file that imports WestronUI. An option that is the system's own API is named
-    /// in `platforms.apple.systemOptions` instead.
-    public static let systemTypes: [String: Set<String>] = [
-        "SwiftUI.Button": [
-            "ButtonBorderShape", "ButtonRepeatBehavior", "ButtonRole", "ButtonSizing", "ButtonStyle",
-            "ButtonStyleConfiguration",
-        ]
-    ]
+    /// The type names that WestronUI declares for components: each generated enum, `<Component>State`, and the
+    /// hand-written `<Component>VariantStyle`. One name for two of them does not compile (`invalid redeclaration`),
+    /// as with `button`'s option `groupSize` and `button-group`'s option `size`, both `ButtonGroupSize`.
+    static func collisions(_ apis: [API]) -> [ContractProblem] {
+        var owners: [String: (source: String, what: String)] = [:]
+        var problems: [ContractProblem] = []
+        for api in apis {
+            var names: [(name: String, path: DocumentPath, what: String)] = api.enums.map {
+                (
+                    $0.type, DocumentPath.root.key("options").key($0.option.name),
+                    "\(api.component)'s option \($0.option.name)"
+                )
+            }
+            names.append((api.style, .root.key("id"), "\(api.component)'s hand-written style"))
+            if !api.contract.states.isEmpty {
+                names.append((api.stateType, .root.key("states"), "\(api.component)'s states"))
+            }
+            for entry in names {
+                if let owner = owners[entry.name] {
+                    let place = owner.source == api.source ? "" : " in \(owner.source)"
+                    problems.append(
+                        ContractProblem(
+                            source: api.source, path: entry.path,
+                            "\(entry.name), for \(entry.what), is already the type of \(owner.what)\(place): two "
+                                + "types of one name do not compile; rename the option or the component"))
+                } else {
+                    owners[entry.name] = (api.source, entry.what)
+                }
+            }
+        }
+        return problems
+    }
+
+    /// Components styled on one base control each add an overload of its style modifier, which a call tells apart by
+    /// the variant, the first argument (probed with Xcode 27.1, #62):
+    ///
+    /// - a value two variants share is ambiguous: `.buttonStyle(.primary)`;
+    /// - a call without a variant fits every overload whose variant has a default, or that has no variant. With two
+    ///   such overloads it is ambiguous when both have a variant, and when one has none Swift silently picks that
+    ///   one, even for `.buttonStyle(size: .m)` meant for the other.
+    ///
+    /// So no two of them share a variant value, and at most one can be called without a variant. A required variant
+    /// next to one with a default is fine: `.buttonStyle(.primary)`, `.buttonStyle()` and `.buttonStyle(.plain)` all
+    /// resolve.
+    static func ambiguities(_ apis: [API]) -> [ContractProblem] {
+        var problems: [ContractProblem] = []
+        func variant(_ api: API) -> API.Enum? { api.enums.first { $0.option.name == "variant" } }
+        func withoutVariant(_ api: API) -> Bool { variant(api).map { $0.defaultValue != nil } ?? true }
+        for (index, api) in apis.enumerated() {
+            for earlier in apis[..<index] where earlier.modifier == api.modifier {
+                let both =
+                    "\(api.component) and \(earlier.component) (\(earlier.source)) both add a .\(api.modifier) overload"
+                if withoutVariant(api), withoutVariant(earlier) {
+                    problems.append(
+                        ContractProblem(
+                            source: api.source, path: .root.key("options"),
+                            both + " that a call without a variant fits, so .\(api.modifier)() would be ambiguous "
+                                + "or silently take one of them: give one of them a variant without a default"))
+                }
+                guard let ours = variant(api), let theirs = variant(earlier) else { continue }
+                let shared = ours.values.filter(theirs.values.contains)
+                if !shared.isEmpty {
+                    problems.append(
+                        ContractProblem(
+                            source: api.source, path: .root.key("options").key("variant"),
+                            both + " and share the variant \(shared.joined(separator: ", ")), so "
+                                + ".\(api.modifier)(.\(shared[0])) would be ambiguous; rename it in one of them"))
+                }
+            }
+        }
+        return problems
+    }
 
     /// The `ControlSize` cases in SwiftUI's order, with the westron size each maps to by the conventions; `nil` is the
     /// contract's default (spec/conventions.md, "Sizes and controlSize").
@@ -126,22 +222,43 @@ public struct AppleComponents: Generator {
             self.source = source
             component = contract.id.split(separator: "-").map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined()
             control = String(base.split(separator: ".").last ?? Substring(base))
-            modifier = control.prefix(1).lowercased() + control.dropFirst() + "Style"
             let applePath = DocumentPath.root.key("platforms").key("apple")
+            // A control without a style modifier, such as SwiftUI.Slider, cannot take a style (SystemStyles).
+            guard let modifier = SystemStyles.byBase[base]?.modifier else {
+                throw problem(
+                    applePath.key("base"),
+                    "no style modifier is known for \(base) (SystemStyles.byBase), so there is no overload to generate")
+            }
+            self.modifier = modifier
             let optionNames = contract.options.map(\.name)
             for name in apple.systemOptions.keys.sorted() where !optionNames.contains(name) {
                 throw problem(applePath.key("systemOptions").key(name), "no option \(name)")
+            }
+            for (path, restriction) in [(applePath, apple.restriction)]
+                + ComponentContract.appleOSes.compactMap({ os in apple.targets[os].map { (applePath.key(os), $0) } })
+            {
+                for name in restriction.options.keys.sorted() where apple.systemOptions[name] != nil {
+                    throw problem(
+                        path.key("options").key(name), "\(name) is a system option: its values are the system's")
+                }
+            }
+            for name in contract.states where ContractRules.unusableCases[name] != nil {
+                throw problem(.root.key("states"), "\(name) cannot be a state: \(ContractRules.unusableCases[name]!)")
             }
             var enums: [Enum] = []
             for option in contract.options where apple.systemOptions[option.name] == nil {
                 guard case .enumeration(let values, let defaultValue) = option.kind else { continue }
                 let path = DocumentPath.root.key("options").key(option.name)
+                for value in values where ContractRules.unusableCases[value] != nil {
+                    throw problem(
+                        path.key("values"), "\(value) cannot be a value: \(ContractRules.unusableCases[value]!)")
+                }
                 let type = component + option.name.prefix(1).uppercased() + option.name.dropFirst()
-                if AppleComponents.systemTypes[base]?.contains(type) == true {
+                if SwiftUITypes.names.contains(type) {
                     throw problem(
                         path,
                         "\(type) would shadow SwiftUI's \(type): if the option is the system's own API on Apple, name "
-                            + "it in platforms.apple.systemOptions (spec/conventions.md)")
+                            + "it in platforms.apple.systemOptions (spec/conventions.md); otherwise rename the option")
                 }
                 var offered: [(os: String, map: [(value: String, drawn: String)])] = []
                 for os in ComponentContract.appleOSes {
@@ -164,6 +281,12 @@ public struct AppleComponents: Generator {
                     Enum(option: option, type: type, values: values, defaultValue: defaultValue, offered: offered))
             }
             self.enums = enums
+            let stateType = "\(component)State"
+            if !contract.states.isEmpty, SwiftUITypes.names.contains(stateType) {
+                throw problem(
+                    .root.key("states"),
+                    "\(stateType), the type of the states, would shadow SwiftUI's \(stateType): rename the component")
+            }
             size = enums.first { $0.option.name == "size" }
             var skipped: [(os: String, states: [String])] = []
             for os in ComponentContract.appleOSes {

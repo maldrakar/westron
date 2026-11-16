@@ -76,10 +76,40 @@ public struct ContractProblem: Error, Equatable, Sendable, CustomStringConvertib
 
 /// Reading a contract's YAML into JSON, which the schema validates and the rules walk.
 enum ContractYAML {
+    /// An unquoted scalar that YAML reads as something other than text: a boolean, a number or null. A contract's
+    /// names are text, so the check explains such a scalar where a name was meant.
+    struct ImplicitScalar: Equatable {
+        enum Kind: Equatable {
+            case bool, number, null
+        }
+
+        let path: DocumentPath
+        /// The scalar as written: `on`, `yes`, `12`.
+        let text: String
+        let kind: Kind
+        /// Whether it is a mapping key, which the document keeps as written.
+        let isKey: Bool
+    }
+
+    /// The words YAML 1.1 reads as booleans (Yams' default resolver). A contract writes a boolean as `true` or
+    /// `false` only, as YAML 1.2 does; the rest are a trap: `on` in a list of names becomes `true`.
+    static let booleanWords: Set<String> = [
+        "yes", "Yes", "YES", "no", "No", "NO", "true", "True", "TRUE", "false", "False", "FALSE", "on", "On", "ON",
+        "off", "Off", "OFF",
+    ]
+
     /// The document as JSON. A scalar takes the type YAML gives it: `true` is a boolean, `12` a number, `null` null,
     /// anything else a string. A mapping key is taken as written. An empty file is null.
     /// - Throws: `ContractProblem` for text that is not valid YAML or a mapping that repeats a key.
     static func parse(_ text: String, source: String) throws(ContractProblem) -> JSON {
+        try read(text, source: source).document
+    }
+
+    /// The document as JSON, with every unquoted scalar YAML did not read as text, in document order.
+    /// - Throws: `ContractProblem` for text that is not valid YAML or a mapping that repeats a key.
+    static func read(_ text: String, source: String) throws(ContractProblem) -> (
+        document: JSON, implicit: [ImplicitScalar]
+    ) {
         let root: Node?
         do {
             root = try Yams.compose(yaml: text)
@@ -88,12 +118,28 @@ enum ContractYAML {
         } catch {
             throw ContractProblem(source: source, place: "(root)", "invalid YAML: \(error)")
         }
-        return root.map(json) ?? .null
+        var implicit: [ImplicitScalar] = []
+        let document = root.map { json($0, at: .root, implicit: &implicit) } ?? .null
+        return (document, implicit)
     }
 
-    private static func json(_ node: Node) -> JSON {
+    /// The kind of an unquoted scalar that YAML does not read as text, or nil.
+    private static func implicitKind(_ node: Node) -> ImplicitScalar.Kind? {
+        guard let scalar = node.scalar, scalar.style == .plain || scalar.style == .any else { return nil }
+        switch node.tag.rawValue {
+        case Tag.Name.bool.rawValue: return .bool
+        case Tag.Name.int.rawValue, Tag.Name.float.rawValue: return .number
+        case Tag.Name.null.rawValue: return .null
+        default: return nil
+        }
+    }
+
+    private static func json(_ node: Node, at path: DocumentPath, implicit: inout [ImplicitScalar]) -> JSON {
         switch node {
         case .scalar:
+            if let kind = implicitKind(node) {
+                implicit.append(ImplicitScalar(path: path, text: node.string ?? "", kind: kind, isKey: false))
+            }
             switch node.tag.rawValue {
             case Tag.Name.bool.rawValue: return node.bool.map(JSON.bool) ?? .string(node.string ?? "")
             case Tag.Name.int.rawValue: return node.int.map { .number(Double($0)) } ?? .string(node.string ?? "")
@@ -102,9 +148,18 @@ enum ContractYAML {
             default: return .string(node.string ?? "")
             }
         case .mapping(let mapping):
-            return .object(mapping.map { JSON.Member($0.key.string ?? "\($0.key)", json($0.value)) })
+            return .object(
+                mapping.map { pair in
+                    let key = pair.key.string ?? "\(pair.key)"
+                    if let kind = implicitKind(pair.key) {
+                        implicit.append(
+                            ImplicitScalar(path: path.key(key), text: key, kind: kind, isKey: true))
+                    }
+                    return JSON.Member(key, json(pair.value, at: path.key(key), implicit: &implicit))
+                })
         case .sequence(let sequence):
-            return .array(sequence.map(json))
+            return .array(
+                sequence.enumerated().map { json($0.element, at: path.index($0.offset), implicit: &implicit) })
         case .alias(let alias):
             return .string(alias.anchor.rawValue)
         }
