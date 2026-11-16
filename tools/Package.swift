@@ -4,7 +4,8 @@
 // reach the products that use the root package. It builds on macOS and Linux and uses Foundation only.
 //
 //   tools/westron lint raw-values      tools/westron generate [--check]      tools/westron tokens check
-//   tools/westron icons check          tools/westron spec check              tools/check.sh
+//   tools/westron icons check          tools/westron spec check              tools/westron lint api-parity
+//   tools/check.sh
 
 import PackageDescription
 
@@ -19,6 +20,9 @@ let package = Package(
         .package(url: "https://github.com/ajevans99/swift-json-schema", exact: "0.15.0"),
         // YAML: the icon registry (spec/icons/icons.yaml), then the component contracts (decisions/0004, 0009).
         .package(url: "https://github.com/jpsim/Yams", exact: "6.2.2"),
+        // Swift's own parser: the API parity lint reads WestronUI's public declarations from its sources (#21). The
+        // version is the one swift-json-schema already resolves, for Swift 6.4.
+        .package(url: "https://github.com/swiftlang/swift-syntax.git", exact: "604.0.0"),
     ],
     targets: [
         // The logic of every tool; tests cover it here, the executable only parses arguments.
@@ -27,6 +31,8 @@ let package = Package(
             dependencies: [
                 .product(name: "JSONSchema", package: "swift-json-schema"),
                 .product(name: "Yams", package: "Yams"),
+                .product(name: "SwiftSyntax", package: "swift-syntax"),
+                .product(name: "SwiftParser", package: "swift-syntax"),
             ],
             exclude: ["Tokens/README.md"]
         ),
