@@ -18,6 +18,7 @@ the mechanism that catches it (`reports/`, section "Work plan").
 | `design-language/` | Design language, chapters `00–09` (phase 1) |
 | `tokens/` | DTCG 2025.10 tokens, the mode resolver `westron.resolver.json` (decisions/0010) and `palette.json`, the anchors the color ramps are generated from (decisions/0012) |
 | `spec/components/<id>/` | Component contract `<id>.spec.yaml`, its decisions and reference screenshots (phase 2) |
+| `spec/conventions.md` | How each contract concept maps to platform API: SwiftUI authoritative, web, GTK and Compose provisional |
 | `spec/icons/icons.yaml` | Icon registry: westron's icon names, what each glyph draws, its SF Symbol, the default (decisions/0011) |
 | `platforms/apple/Sources/WestronTokens/` | Token values as plain Swift with no imports, generated (decisions/0010) |
 | `platforms/apple/Sources/WestronUI/` | SwiftUI styles, components and token accessors: what products import |
@@ -48,6 +49,7 @@ tools/westron lint raw-values     # no raw values in WestronUI
 tools/westron generate            # regenerate code from the sources
 tools/westron generate --check    # generated code matches a fresh generation
 tools/westron icons check         # the icon registry spec/icons/icons.yaml is valid
+tools/westron spec check          # every contract spec/components/*/*.spec.yaml passes the schema and its rules
 tools/westron tokens check        # token files and the resolver: schema, subset, every mode combination
 tools/westron tokens contrast     # WCAG 2 contrast of every declared pair in every theme (--all for the table)
 ```

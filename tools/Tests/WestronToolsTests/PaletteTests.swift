@@ -64,6 +64,11 @@ struct PaletteTests {
                 #expect(marks >= (highContrast ? 4.5 : 3), "\(theme) \(ramp).8: \(marks)")
                 let label = ratio(step("contrast"), step("9"))
                 #expect(label >= (highContrast ? 7 : 4.5), "\(theme) \(ramp).9 under its label: \(label)")
+                // Under the pointer and pressed, the fill moves further from its label, step by step.
+                let hover = ratio(step("contrast"), step("10"))
+                let pressed = ratio(step("contrast"), step("fill-pressed"))
+                #expect(
+                    hover > label && pressed > hover, "\(theme) \(ramp): 9 \(label), 10 \(hover), pressed \(pressed)")
                 #expect(ratio(step("12"), grounds[0]) >= (highContrast ? 16 : 13), "\(theme) \(ramp).12")
             }
             for index in 1...palette.series.light.count {
@@ -132,6 +137,7 @@ struct PaletteTests {
                 ##""raised": {"$value": {"colorSpace": "oklch", "components": [1, 0, "none"], "hex": "#FFFFFF"}}"##))
         let tree = try TokenTree.load(Data(light.utf8), source: "color.light.tokens.json")
         #expect(tree.node(at: "color.neutral.raised") != nil && tree.node(at: "color.blue.contrast") != nil)
+        #expect(tree.node(at: "color.blue.fill-pressed") != nil && tree.node(at: "color.amber.fill-pressed") != nil)
         #expect(try PaletteTokens.files(for: load(fixture), source: "tokens/palette.json") == files, "deterministic")
     }
 

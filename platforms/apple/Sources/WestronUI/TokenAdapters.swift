@@ -270,6 +270,13 @@ extension CGFloat {
     }
 }
 
+extension Double {
+    /// A number as it is, such as an opacity: `.opacity(.opacity.disabled)`.
+    public init(_ number: Westron.Number) {
+        self = number.value
+    }
+}
+
 extension View {
     /// Casts a shadow token in the theme of the environment: each layer's color, its radius (half the CSS blur) and
     /// its offset (decisions/0013). A theme without layers casts none.

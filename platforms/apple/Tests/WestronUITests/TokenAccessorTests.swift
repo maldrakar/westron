@@ -222,6 +222,24 @@ struct TokenAccessorTests {
         #expect(CGFloat.stroke.thick == 2)
     }
 
+    @Test("a control's height is the platform's: a pointer's on macOS, a touch target on iOS and watchOS")
+    func controlHeights() {
+        let heights = [CGFloat.size.control.s, .size.control.m, .size.control.l]
+        #if os(macOS)
+            #expect(heights == [24, 32, 40])
+        #else
+            #expect(heights == [32, 44, 52])
+        #endif
+        #expect(Westron.Dimension.all.contains(.size.control.m))
+    }
+
+    @Test("a number is a Double as it is: the opacity of a disabled control")
+    func numbers() {
+        #expect(Double.opacity.disabled == 0.4)
+        #expect(Westron.Number.all == [.opacity.disabled])
+        _ = Text("Save").opacity(.opacity.disabled)
+    }
+
     @Test("a shadow has two layers in light, three times as opaque in dark, none on a raised card in dark")
     func shadows() {
         let overlay = Westron.Shadow.overlay

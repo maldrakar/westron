@@ -43,8 +43,11 @@ B spends space generously, on the 8 px base (decisions/0013):
   sections. Without it, B would not hold up in a dense table (`research_notes/space-shape-motion.md`, 5.3).
 - **Controls and rows have heights of their own.** On the web, B's controls are 32 px, its list rows 44 and its table
   rows 36 (decisions/0013). On touch platforms, rows are at least the platform's recommended hit target: 44 pt on
-  iOS, 48 dp on Android. A row's height is a minimum, so it grows with its text. The tokens for these sizes arrive
-  with the dense components (#33).
+  iOS, 48 dp on Android. A row's height is a minimum, so it grows with its text.
+- **Controls come in three heights, set by the input.** `size.control.s`, `m` and `l` are 24, 32 and 40 on macOS,
+  where a pointer drives, and 32, 44 and 52 on iOS, iPadOS and watchOS, where touch does. Size `m` is the 32 px
+  control on a pointer and the 44 pt touch target on touch (chapter 08). The tokens for row heights arrive with the
+  dense components (#33).
 
 ## Density is a mode
 
@@ -62,15 +65,17 @@ B spends space generously, on the 8 px base (decisions/0013):
   SwiftUI cascades `controlSize` the same way.
 - **The platform supplies, the density picks.** A control's height differs by platform and by density. The platform's
   token file supplies both values, and the density context picks one, so no token is set by two modifiers
-  (decisions/0010, 0013).
-- **`compact` is empty until it has a consumer.** It gets its values with the dense components (#33).
+  (decisions/0010, 0013). Today the platform files supply only the regular heights, as `size.control.*` itself.
+- **`compact` is empty until it has a consumer.** It gets its values with the dense components (#33); until then both
+  densities take the regular heights. Then the platform files add the compact column and each density points
+  `size.control.*` at its own, so the names a contract binds stay the same.
 
 ## Size follows the platform
 
 - **Values are keyed by platform.** A value that differs between iOS, macOS and watchOS lives in the `platform`
   modifier, resolved at build time, and only where it differs (decisions/0010). The input decides the size: touch
-  needs larger targets than a pointer, whatever the width. No token differs by platform yet; the control and row sizes
-  are expected to be the first (#33).
+  needs larger targets than a pointer, whatever the width. The control heights are the first tokens that differ by
+  platform (#56); the row heights follow with #33.
 - **Width decides structure.** Whether a screen shows a sidebar, a stack or columns follows the width class, never the
   device (chapter 09). So an iPad shows a wide layout with touch-sized controls.
 - **Hit targets follow chapter 08.** The platform's recommended size is the target, and the hit area may be larger
@@ -89,7 +94,8 @@ B spends space generously, on the 8 px base (decisions/0013):
 
 ## Open questions
 
-1. **The values of compact (#33).** Each platform's control and row heights in both densities.
+1. **The values of compact (#33).** Each platform's control heights in the compact density, and its row heights in
+   both.
 2. **System controls in compact.** On Apple, should compact also set `controlSize(.small)` on its subtree, so that
    system controls get denser together with westron's own?
 3. **Narrow and wide.** The page margin is `space.250` on a narrow window and `space.400` on a wide one. What switches

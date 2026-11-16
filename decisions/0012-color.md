@@ -1,6 +1,7 @@
 # 0012. Color
 
 Date: 2026-11-15. Status: accepted. The owner chose direction B with the cobalt palette on the direction specimens.
+Revised 2026-11-16: pressed fills.
 
 ## Context
 
@@ -113,6 +114,32 @@ written as a list is a stack, top first, and a translucent color is composited i
 High contrast adds direct labels and markers to a chart instead of contrast; eight series darkened to 4.5 would be
 hard to tell apart. On 2026-11-15, `tools/westron tokens contrast` measured 254 declared pairs in each of the four
 themes, and none failed.
+
+## Revision of 2026-11-16
+
+The Button contract (#22) needs a filled button under the pointer and pressed, in the accent and in danger. The owner
+chose fills one step apart, solved by the palette like every other color (#56).
+
+- **A pressed fill on every ramp.** Each ramp gets `fill-pressed`, its solid fill while pressed: step 10 moved one
+  more hover step, 0.04 in OKLCH lightness, further from its label, with step 10's chroma. Moving away from the label
+  only raises its contrast, so the label reads on steps 10 and `fill-pressed` at least as well as on step 9; the
+  solver still measures both on the 8-bit colors and fails with the token and the theme if one misses. The ramp keeps
+  its twelve numbered steps: like `contrast`, `fill-pressed` is named for the solid fill it belongs to, so a step
+  number keeps its job across systems that count to twelve.
+- **New semantic colors.** `color.background.accent-pressed` is blue `fill-pressed`. `color.status.danger.fill-hover`
+  is red 10, and `color.status.danger.fill-pressed` red `fill-pressed`. `text.on-accent` and `status.danger.on-fill`
+  declare them for the contrast check as `text`.
+
+  | Token | Light, dark | Light HC | Dark HC |
+  |---|---|---|---|
+  | `background.accent`, `accent-hover`, `accent-pressed` | `#2863D7`, `#1C56C9`, `#0F4ABC` | `#1651C3`, `#0844B6`, `#0038A5` | `#6A9EFF`, `#7EACFF`, `#93B9FF` |
+  | `status.danger.fill`, `fill-hover`, `fill-pressed` | `#A72120`, `#990D13`, `#88000A` | as light | `#FE7469`, `#FF8B7F`, `#FFA196` |
+
+  White on the accent reaches 5.44, 6.51 and 7.70 in light and dark; the canvas's color on the inverted dark
+  high-contrast fills 7.04, 8.18 and 9.41. On 2026-11-16, `tools/westron tokens contrast` measured 257 declared pairs
+  in each of the four themes, and none failed.
+- **Disabled is not a color.** A disabled control is drawn whole at `opacity.disabled` (decisions/0013), not in
+  colors of its own; WCAG exempts it from contrast (chapter 08).
 
 ## Why
 

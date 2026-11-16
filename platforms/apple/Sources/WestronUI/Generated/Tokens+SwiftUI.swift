@@ -1,10 +1,11 @@
 // Generated from tokens/westron.resolver.json by `tools/westron generate`. Do not edit: change the tokens and generate
 // again (decisions/0010).
 //
-// The public SwiftUI accessors of westron's lengths and motions. Each calls an adapter in TokenAdapters.swift with a
-// value from WestronTokens: `CGFloat.radius.card` is `CGFloat(Westron.Dimension.radius.card)`. Colors and text roles
-// need none: a view passes `Westron.Color` to the overloads in TokenAdapters.swift, `.foregroundStyle(.text.primary)`,
-// and a role to `.textRole(.body.strong)`.
+// The public SwiftUI accessors of westron's lengths, numbers and motions. Each calls an adapter in TokenAdapters.swift
+// with a value from WestronTokens: `CGFloat.radius.card` is `CGFloat(Westron.Dimension.radius.card)`,
+// `Double.opacity.disabled` is `Double(Westron.Number.opacity.disabled)`. Colors and text roles need none: a view
+// passes `Westron.Color` to the overloads in TokenAdapters.swift, `.foregroundStyle(.text.primary)`, and a role to
+// `.textRole(.body.strong)`.
 
 import SwiftUI
 import WestronTokens
@@ -205,6 +206,56 @@ extension CGFloat {
         /// A focus ring, a drop indicator, a selection ring.
         public static var thick: CGFloat {
             CGFloat(Westron.Dimension.stroke.thick)
+        }
+    }
+
+    /// The lengths `size.*` in points.
+    public enum size {
+        /// The lengths `size.control.*` in points.
+        public enum control {
+            /// The height of a control at size s: 24 on macOS, 32 on iOS, iPadOS and watchOS. On touch platforms it is
+            /// below the recommended target, so its hit area stays the target's size (chapter 08).
+            ///
+            /// Use for: small button, small field, control in a toolbar or a table row. Avoid: The default size: use
+            /// size.control.m. A row's height: rows have heights of their own.
+            public static var s: CGFloat {
+                CGFloat(Westron.Dimension.size.control.s)
+            }
+
+            /// The height of a control at the default size m: a button, a field, a segmented control. 32 on macOS,
+            /// westron's control (decisions/0013); 44 on iOS, iPadOS and watchOS, the touch target (chapter 08).
+            ///
+            /// Use for: button, field, segmented control. Avoid: A row's height: rows have heights of their own. A
+            /// fixed height where text can grow: the height is a minimum.
+            public static var m: CGFloat {
+                CGFloat(Westron.Dimension.size.control.m)
+            }
+
+            /// The height of a control at size l: the one prominent action of a form, a sheet or an empty state. 40 on
+            /// macOS, 52 on iOS, iPadOS and watchOS.
+            ///
+            /// Use for: prominent button, call to action. Avoid: Every control on a screen: the large size marks the
+            /// one action that leads.
+            public static var l: CGFloat {
+                CGFloat(Westron.Dimension.size.control.l)
+            }
+        }
+    }
+}
+
+extension Double {
+    /// The numbers `opacity.*` as Double.
+    public enum opacity {
+        /// A disabled control, drawn whole at this opacity: its fill, border, label and icon together, so it keeps its
+        /// shape and its variant but reads as unavailable. It sits between Apple's disabled labels (iOS's tertiary
+        /// label is 30 %) and libadwaita's --disabled-opacity (50 %, 40 % in high contrast). WCAG exempts an inactive
+        /// control from contrast (chapter 08).
+        ///
+        /// Use for: disabled button, disabled field, disabled toggle, disabled row. Avoid: Colors of its own for the
+        /// disabled state, or dimming the parts one by one; and something that is only secondary, which takes
+        /// text.secondary and stays readable. A system control that the platform disables keeps the platform's look.
+        public static var disabled: Double {
+            Double(Westron.Number.opacity.disabled)
         }
     }
 }

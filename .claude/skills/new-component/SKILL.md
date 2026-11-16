@@ -6,13 +6,11 @@ argument-hint: "<component id>"
 
 # New component: interview → contract → approval
 
-> **Draft until phase 2.** The contract format is set by the schema `spec/schema/component.schema.json` (issue #18).
-> Until it exists, the contract follows the structure of the example in the report (`reports/`, section "Identical
-> names do not hold by discipline") and counts as a draft. The example predates the decisions and differs from them in two places:
-> - the component name has no prefix, and the component is a style on top of a system control, not `WButton` (decisions/0003);
-> - `consumers` is a pilot screen, for example `todo-app/list-screen`, not `pilot-app` (decisions/0006).
->
-> The process steps will not change when the schema appears: only the file format will change, and validation will be added.
+> **Format.** The contract follows the schema `spec/schema/component.schema.json`, described briefly in
+> `spec/components/README.md`; `tools/westron spec check spec/components/<id>/<id>.spec.yaml` validates it and must
+> pass before the contract is shown to the human. The example in the report (`reports/`, section "Identical names do
+> not hold by discipline") predates the decisions: there is no `WButton` prefix, the component is a style on top of a
+> system control (decisions/0003), and `consumers` names a pilot screen such as `todo-app/list-screen` (decisions/0006).
 
 Component `$ARGUMENTS`. The task is to get the design decisions from the human and write them down so that
 an implementation on any platform can be verified. Do not make design decisions yourself: offer options.

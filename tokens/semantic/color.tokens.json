@@ -69,7 +69,17 @@
           }
         }
       },
-      "accent-hover": {"$value": "{color.blue.10}", "$description": "The accent fill under the pointer."}
+      "accent-hover": {"$value": "{color.blue.10}", "$description": "The accent fill under the pointer."},
+      "accent-pressed": {
+        "$value": "{color.blue.fill-pressed}",
+        "$description": "The accent fill while it is pressed: one step beyond accent-hover, further from its label, so text.on-accent reads on it as on the resting fill.",
+        "$extensions": {
+          "dev.westron.usage": {
+            "use": ["pressed primary button", "pressed checked box"],
+            "avoid": "A resting or hovered fill: use background.accent or background.accent-hover. A pressed row or a quiet control: use background.pressed."
+          }
+        }
+      }
     },
     "text": {
       "primary": {
@@ -133,9 +143,14 @@
       },
       "on-accent": {
         "$value": "{color.blue.contrast}",
-        "$description": "Text and glyphs on the accent fill: white, and the canvas's color in dark high contrast, where the fill turns light.",
+        "$description": "Text and glyphs on the accent fill, also under the pointer and pressed: white, and the canvas's color in dark high contrast, where the fill turns light.",
         "$extensions": {
-          "dev.westron.contrast": [{"kind": "text", "on": ["color.background.accent", "color.background.accent-hover"]}]
+          "dev.westron.contrast": [
+            {
+              "kind": "text",
+              "on": ["color.background.accent", "color.background.accent-hover", "color.background.accent-pressed"]
+            }
+          ]
         }
       },
       "accent": {
@@ -294,11 +309,36 @@
           }
         },
         "fill": {"$value": "{color.red.9}", "$description": "The solid fill of the status danger: a button or a count badge."},
+        "fill-hover": {
+          "$value": "{color.red.10}",
+          "$description": "The danger fill under the pointer: a destructive filled button that is hovered.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["hovered destructive button"],
+              "avoid": "A resting fill or a count badge: use status.danger.fill."
+            }
+          }
+        },
+        "fill-pressed": {
+          "$value": "{color.red.fill-pressed}",
+          "$description": "The danger fill while it is pressed: one step beyond fill-hover, further from its label, so on-fill reads on it as on the resting fill.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["pressed destructive button"],
+              "avoid": "A resting fill or a count badge: use status.danger.fill."
+            }
+          }
+        },
         "on-fill": {
           "$value": "{color.red.contrast}",
-          "$description": "Text and glyphs on the danger fill.",
+          "$description": "Text and glyphs on the danger fill, also under the pointer and pressed.",
           "$extensions": {
-            "dev.westron.contrast": [{"kind": "text", "on": ["color.status.danger.fill"]}]
+            "dev.westron.contrast": [
+              {
+                "kind": "text",
+                "on": ["color.status.danger.fill", "color.status.danger.fill-hover", "color.status.danger.fill-pressed"]
+              }
+            ]
           }
         }
       },
