@@ -15,12 +15,12 @@ struct StatusSample {
     let name: String
     let word: String
     let icon: Westron.Icon
-    let background: Color
-    let border: Color
-    let iconColor: Color
-    let text: Color
-    let fill: Color
-    let onFill: Color
+    let background: Westron.Color
+    let border: Westron.Color
+    let iconColor: Westron.Color
+    let text: Westron.Color
+    let fill: Westron.Color
+    let onFill: Westron.Color
 
     static let danger = StatusSample(
         name: "danger", word: "Failed", icon: .xmarkCircleFill, background: .status.danger.background,
@@ -70,7 +70,9 @@ private struct StatusColorsPage: View {
     private static let roles = ["badge", "border", "fill, on-fill"]
     /// The heights of the bars, as parts of the tallest.
     private static let values: [Double] = [1, 0.82, 0.66, 0.9, 0.48, 0.74, 0.58, 0.4]
-    private static let series: [Color] = [.chart1, .chart2, .chart3, .chart4, .chart5, .chart6, .chart7, .chart8]
+    private static let series: [Westron.Color] = [
+        .chart1, .chart2, .chart3, .chart4, .chart5, .chart6, .chart7, .chart8,
+    ]
 
     var body: some View {
         TokenPage(

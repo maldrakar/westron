@@ -24,10 +24,12 @@ paths:
 - Tokens come from `tools/westron generate` (decisions/0010): never edit `WestronTokens/Generated/`,
   `WestronUI/Generated/` or `WestronUI/Tokens.xcassets`; change the tokens and generate again. Names follow the token
   path, a member per segment, without the group the type already names; a step joins its ladder (`space100`):
-  - colors: `Color.text.secondary`, `.foregroundStyle(.text.secondary)`, `.background(.background.surface)`,
-    `Color(Westron.Color.text.secondary)`; they come from colorsets, so they switch with the theme and the contrast
-    setting by themselves;
-  - list colors: `Westron.Category(rawValue: name)` with `.background`, `.text`, … and `.category(.amber).text`;
+  - colors: `.foregroundStyle(.text.secondary)`, `.background(.background.surface)`, `.fill`, `.stroke`,
+    `.strokeBorder` and `.tint` take a `Westron.Color` through WestronUI's overloads; any other call takes
+    `Color(.text.secondary)`, and so do a color's own modifiers (`Color(.text.secondary).opacity(0.5)`). Colors
+    come from colorsets, so they switch with the theme and the contrast setting by themselves;
+  - list colors: `Westron.Category(rawValue: name)` with `.background`, `.text`, …, as in
+    `.foregroundStyle(list.color.text)`;
   - text: a text role in its text style, `.textRole(.heading.large)`, which applies the font and its tracking, or
     `Font(.body.regular)` where only a font fits (`.font(Font(.caption.medium).monospaced())`). `Font` has no westron
     statics, so SwiftUI's `Font.body` stays unambiguous. Headings in Onest and code in Geist Mono go through

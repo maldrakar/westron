@@ -20,16 +20,17 @@ enum AppleTokensSwift {
             model.resolver,
             "The values of westron's semantic tokens as plain Swift, with no imports, so that shared code and its "
                 + "WebAssembly build can use them; their types are in Westron.swift, their SwiftUI accessors in "
-                + "WestronUI. A group of tokens is a type of its own, `Westron.Color.background.canvas`, generic over "
-                + "its values so that WestronUI holds the same group as SwiftUI values.")
+                + "WestronUI. A group of tokens is an enum named after it, so `color.background.canvas` is "
+                + "`Westron.Color.background.canvas`, and each token is made on its first use.")
 
         if !model.colors.isEmpty || model.categories != nil {
-            let tree = model.colorTree
             out += ["", "extension Westron.Color {"]
-            out += statics(
-                tree, noun: "colors", doc: { model.colors[$0].doc },
+            out += members(
+                model.colorTree.roots, indent: 1, noun: "colors", doc: { model.colors[$0].doc },
                 value: { colorValue(model.colors[$0], indent: $1) })
-            out += doc(Doc(description: "Every semantic color in token order, the list colors included."), indent: 1)
+            out +=
+                [""]
+                + doc(Doc(description: "Every semantic color in token order, the list colors included."), indent: 1)
             out.append("    public static let all: [Westron.Color] = [")
             for entry in model.allColors {
                 switch entry {
@@ -37,9 +38,7 @@ enum AppleTokensSwift {
                 case .category(let caseName, let role): out.append("        Westron.Category.\(caseName).\(role),")
                 }
             }
-            out.append("    ]")
-            out += groupTypes(tree, noun: "colors", doc: { model.colors[$0].doc })
-            out.append("}")
+            out += ["    ]", "}"]
         }
 
         if let categories = model.categories {
@@ -69,97 +68,45 @@ enum AppleTokensSwift {
         return out.joined(separator: "\n") + "\n"
     }
 
-    /// `extension Westron.TextRole { statics, all, group types }`.
+    /// `extension Westron.TextRole { members, all }`.
     static func tokenType(
         _ type: String, _ tree: MemberTree, noun: String, summary: String, doc docOf: (Int) -> Doc,
         value: (Int, Int) -> [String]
     ) -> [String] {
         var out = ["", "extension \(type) {"]
-        out += statics(tree, noun: noun, doc: docOf, value: value)
-        out += doc(Doc(description: summary), indent: 1) + ["    public static let all: [\(type)] = ["]
+        out += members(tree.roots, indent: 1, noun: noun, doc: docOf, value: value)
+        out += [""] + doc(Doc(description: summary), indent: 1) + ["    public static let all: [\(type)] = ["]
         let paths = tree.leafPaths.sorted { $0.item < $1.item }
-        out += paths.map { "        \(reference($0.path.split(separator: ".").map(String.init)))," } + ["    ]"]
-        out += groupTypes(tree, noun: noun, doc: docOf)
-        return out + ["}"]
+        out += paths.map { "        \(reference($0.path.split(separator: ".").map(String.init)))," } + ["    ]", "}"]
+        return out
     }
 
-    /// A static per token or group directly on the type, each with its doc, followed by a blank line.
-    static func statics(
-        _ tree: MemberTree, noun: String, doc docOf: (Int) -> Doc, value: (Int, Int) -> [String]
+    /// A static per token and an enum per group, with its members inside, each with its doc, a blank line between.
+    static func members(
+        _ nodes: [MemberTree.Node], indent: Int, noun: String, doc docOf: (Int) -> Doc, value: (Int, Int) -> [String]
     ) -> [String] {
-        let blocks = tree.roots.map { node -> [String] in
+        let pad = String(repeating: "    ", count: indent)
+        let blocks = nodes.map { node -> [String] in
             switch node {
             case .leaf(let name, let item):
-                return doc(docOf(item), indent: 1)
-                    + indented(assigned("public static let \(SwiftName.declared(name)) = ", value(item, 1)), 1)
-            case .group(let group):
-                return doc(groupDoc(group, noun: noun), indent: 1)
+                return doc(docOf(item), indent: indent)
                     + indented(
-                        assigned(
-                            "public static let \(SwiftName.declared(group.name)) = ",
-                            groupValue(group, indent: 1, value: value)), 1)
+                        assigned("public static let \(SwiftName.declared(name)) = ", value(item, indent)), indent)
+            case .group(let group):
+                return doc(groupDoc(group, noun: noun), indent: indent)
+                    + [pad + "public enum \(SwiftName.declared(group.name)) {"]
+                    + members(group.children, indent: indent + 1, noun: noun, doc: docOf, value: value) + [pad + "}"]
             }
         }
-        return blocks.joined(separator: [""]) + [""]
+        return blocks.joined(separator: [""]).map { $0 }
     }
 
-    /// The doc of a group's static and of its member in the group above: what it holds.
+    /// The doc of a group's enum: what it holds.
     static func groupDoc(_ group: MemberTree.Group, noun: String) -> Doc {
         Doc(description: "The \(noun) `\(group.path).*`.")
     }
 
-    /// `Status(danger: StatusDanger(text: Westron.Color(…), …), …)`, as lines relative to `indent`.
-    static func groupValue(_ group: MemberTree.Group, indent: Int, value: (Int, Int) -> [String]) -> [String] {
-        callLines(
-            "\(group.typeName)(",
-            group.children.map { child -> [String] in
-                switch child {
-                case .leaf(let name, let item): assigned("\(name): ", value(item, indent + 1))
-                case .group(let sub): assigned("\(sub.name): ", groupValue(sub, indent: indent + 1, value: value))
-                }
-            })
-    }
-
-    /// The type of each group, depth first: a member per token or group in it, and `map`.
-    static func groupTypes(_ tree: MemberTree, noun: String, doc docOf: (Int) -> Doc) -> [String] {
-        tree.groups.flatMap { group -> [String] in
-            var out = [""]
-            out += doc(
-                Doc(
-                    description:
-                        "The \(noun) `\(group.path).*`, one member per token. The group is generic over its values, "
-                        + "so that WestronUI holds the same group as SwiftUI values."), indent: 1)
-            out.append("    public struct \(group.typeName)<Value: Sendable>: Sendable {")
-            var blocks = group.children.map { child -> [String] in
-                switch child {
-                case .leaf(let name, let item):
-                    doc(docOf(item), indent: 2) + ["        public let \(SwiftName.declared(name)): Value"]
-                case .group(let sub):
-                    doc(groupDoc(sub, noun: noun), indent: 2) + [
-                        "        public let \(SwiftName.declared(sub.name)): \(sub.typeName)<Value>"
-                    ]
-                }
-            }
-            let arguments = group.children.map { child -> String in
-                switch child {
-                case .leaf(let name, _): "\(name): transform(\(SwiftName.declared(name)))"
-                case .group(let sub): "\(sub.name): \(SwiftName.declared(sub.name)).map(transform)"
-                }
-            }
-            blocks.append(
-                doc(
-                    Doc(
-                        description: "The group with every value transformed, as WestronUI makes SwiftUI values of it."),
-                    indent: 2)
-                    + ["        public func map<T: Sendable>(_ transform: (Value) -> T) -> \(group.typeName)<T> {"]
-                    + oneLineOrCall("\(group.typeName)<T>(", arguments, indent: 3) + ["        }"])
-            out += blocks.joined(separator: [""])
-            out.append("    }")
-            return out
-        }
-    }
-
-    /// The list colors: `Westron.Category`, its roles as members and as `Roles`, and the colors of each.
+    /// The list colors: `Westron.Category`, its roles as members, and the colors of each.
     static func category(_ categories: AppleTokenModel.Categories) -> [String] {
         var out = ["", "extension Westron {"]
         out += doc(
@@ -187,37 +134,11 @@ enum AppleTokensSwift {
             }
             out += ["            }", "        }"]
         }
-        let names = categories.roles.map(\.name)
         out.append("")
         out += doc(Doc(description: "The colors of the category, one per role, in token order."), indent: 2)
-        out += wrapList("public var colors: [Westron.Color] { [", names.map(SwiftName.declared), "] }", indent: 2)
-        out.append("")
-        out += doc(
-            Doc(
-                description:
-                    "The colors of the category by role, which WestronUI's `Color.category(_:)` holds as SwiftUI colors."
-            ),
+        out += wrapList(
+            "public var colors: [Westron.Color] { [", categories.roles.map { SwiftName.declared($0.name) }, "] }",
             indent: 2)
-        out.append("        public var roles: Roles<Westron.Color> {")
-        out += oneLineOrCall("Roles(", names.map { "\($0): \(SwiftName.declared($0))" }, indent: 3)
-        out.append("        }")
-        out.append("")
-        out += doc(
-            Doc(
-                description:
-                    "A list color's colors by role, generic over the value so that WestronUI holds them as SwiftUI colors."
-            ),
-            indent: 2)
-        out.append("        public struct Roles<Value: Sendable>: Sendable {")
-        for role in categories.roles {
-            out += doc(role.doc, indent: 3) + ["            public let \(SwiftName.declared(role.name)): Value", ""]
-        }
-        out += doc(
-            Doc(description: "The roles with every value transformed, as WestronUI makes SwiftUI colors of them."),
-            indent: 3)
-        out.append("            public func map<T: Sendable>(_ transform: (Value) -> T) -> Roles<T> {")
-        out += oneLineOrCall("Roles<T>(", names.map { "\($0): transform(\(SwiftName.declared($0)))" }, indent: 4)
-        out += ["            }", "        }"]
         for category in categories.categories {
             for (role, color) in zip(categories.roles, category.colors) {
                 out.append("")
@@ -369,55 +290,12 @@ enum AppleTokensSwift {
     static func swiftUI(_ model: AppleTokenModel) -> String {
         var out = header(
             model.resolver,
-            "The public SwiftUI accessors of westron's semantic tokens. Each calls an adapter in TokenAdapters.swift "
-                + "with a value from WestronTokens: `Color.text.secondary` is `Color(Westron.Color.text.secondary)`, "
-                + "the colorset of that name, and `Color.text` is WestronTokens' group `Westron.Color.text` with "
-                + "SwiftUI colors. Text roles have no statics on `Font`, where `Font.body` would become ambiguous: a "
-                + "role is `.textRole(.body.strong)` or `Font(.body.strong)`.")
+            "The public SwiftUI accessors of westron's lengths and motions. Each calls an adapter in "
+                + "TokenAdapters.swift with a value from WestronTokens: `CGFloat.radius.card` is "
+                + "`CGFloat(Westron.Dimension.radius.card)`. Colors and text roles need none: a view passes "
+                + "`Westron.Color` to the overloads in TokenAdapters.swift, `.foregroundStyle(.text.primary)`, and "
+                + "a role to `.textRole(.body.strong)`.")
         out += ["", "import SwiftUI", "import WestronTokens"]
-
-        if !model.colors.isEmpty || model.categories != nil {
-            let tree = model.colorTree
-            for type in ["Color", "ShapeStyle where Self == Color"] {
-                var blocks = tree.roots.map { node -> [String] in
-                    switch node {
-                    case .leaf(let name, let item):
-                        return doc(model.colors[item].doc, indent: 1) + [
-                            "    public static var \(SwiftName.declared(name)): Color {",
-                            "        Color(Westron.Color.\(name))",
-                            "    }",
-                        ]
-                    case .group(let group):
-                        let summary = Doc(
-                            description: "The colors `\(group.path).*` as SwiftUI colors, from their colorsets.")
-                        let declared = SwiftName.declared(group.name)
-                        return doc(summary, indent: 1)
-                            + (type == "Color"
-                                ? ["    public static let \(declared) = Westron.Color.\(group.name).map { Color($0) }"]
-                                : [
-                                    "    public static var \(declared): Westron.Color.\(group.typeName)<Color> {",
-                                    "        Color.\(group.name)",
-                                    "    }",
-                                ])
-                    }
-                }
-                if model.categories != nil {
-                    blocks.append(
-                        doc(
-                            Doc(
-                                description:
-                                    "A list's colors by role, as SwiftUI colors from their colorsets: `.category(.amber).text`."
-                            ),
-                            indent: 1) + [
-                                "    public static func category(_ category: Westron.Category) -> Westron.Category.Roles<Color> {",
-                                type == "Color"
-                                    ? "        category.roles.map { Color($0) }" : "        Color.category(category)",
-                                "    }",
-                            ])
-                }
-                out += ["", "extension \(type) {"] + blocks.joined(separator: [""]) + ["}"]
-            }
-        }
         out += swiftUIStatics(
             "Animation", "Westron.Transition", model.transitionTree, noun: "motions",
             converted: "as SwiftUI animations",
@@ -428,28 +306,33 @@ enum AppleTokensSwift {
         return out.joined(separator: "\n") + "\n"
     }
 
-    /// `extension CGFloat { public static var space100: CGFloat { CGFloat(Westron.Dimension.space100) } … }`, and a
-    /// group as WestronTokens' group with SwiftUI values: `public static let radius = Westron.Dimension.radius.map …`.
+    /// `extension CGFloat { public static var space100: CGFloat { CGFloat(Westron.Dimension.space100) } … }`, with an
+    /// enum per group: `CGFloat.radius.card`.
     static func swiftUIStatics(
         _ type: String, _ tokenType: String, _ tree: MemberTree, noun: String, converted: String,
         doc docOf: (Int) -> Doc
     ) -> [String] {
         guard !tree.roots.isEmpty else { return [] }
-        let blocks = tree.roots.map { node -> [String] in
-            switch node {
-            case .leaf(let name, let item):
-                return doc(docOf(item), indent: 1) + [
-                    "    public static var \(SwiftName.declared(name)): \(type) {",
-                    "        \(type)(\(tokenType).\(name))",
-                    "    }",
-                ]
-            case .group(let group):
-                return doc(Doc(description: "The \(noun) `\(group.path).*` \(converted)."), indent: 1) + [
-                    "    public static let \(SwiftName.declared(group.name)) = \(tokenType).\(group.name).map { \(type)($0) }"
-                ]
+        func members(_ nodes: [MemberTree.Node], path: [String], indent: Int) -> [String] {
+            let pad = String(repeating: "    ", count: indent)
+            let blocks = nodes.map { node -> [String] in
+                switch node {
+                case .leaf(let name, let item):
+                    let token = ([tokenType] + path + [name]).joined(separator: ".")
+                    return doc(docOf(item), indent: indent) + [
+                        pad + "public static var \(SwiftName.declared(name)): \(type) {",
+                        pad + "    \(type)(\(token))",
+                        pad + "}",
+                    ]
+                case .group(let group):
+                    return doc(Doc(description: "The \(noun) `\(group.path).*` \(converted)."), indent: indent)
+                        + [pad + "public enum \(SwiftName.declared(group.name)) {"]
+                        + members(group.children, path: path + [group.name], indent: indent + 1) + [pad + "}"]
+                }
             }
+            return blocks.joined(separator: [""]).map { $0 }
         }
-        return ["", "extension \(type) {"] + blocks.joined(separator: [""]) + ["}"]
+        return ["", "extension \(type) {"] + members(tree.roots, path: [], indent: 1) + ["}"]
     }
 
     // MARK: - Text

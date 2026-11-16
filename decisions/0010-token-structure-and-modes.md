@@ -93,24 +93,29 @@ The tools reject any other `dev.westron.*` key, so a misspelled key fails instea
   `color.chart.1` is `chart1`. A keyword is declared in backticks and read after a dot as it is: `.border.default`.
   The owner asked for names that follow the paths on 2026-11-16, in review of PR #54; until then a name was the whole
   path in one word, `Color.textSecondary`.
-- A group of tokens is a struct of its own, `Westron.Color.Background<Value>`, with a member per token and
-  `map(_:)`. It is generic over its values, so that WestronUI holds the same group with SwiftUI values, and each
-  token's doc comment is written once. A list color is `Westron.Category`, by the name a product stores; its roles
-  are its members, and `roles` holds them as `Westron.Category.Roles`.
-- A name fails generation when two tokens or groups share it, or when it would collide with SwiftUI. A color or a
-  group directly on `Color` cannot take a `Color` static (`Color.primary` would be ambiguous), and a color cannot take
-  a `ShapeStyle` static either (`.background`). A group can: its static is a group, not a style, so
-  `.foregroundStyle(.background)` stays SwiftUI's and `.background.canvas` is westron's (a probe with Xcode 27.1,
-  2026-11-16).
-- `WestronUI` re-exports `WestronTokens` and adds `public` statics on `Color` and `ShapeStyle where Self == Color`:
-  colors from colorsets through `Bundle.module`, groups as WestronTokens' groups of them, and `category(_:)` for a
-  list's colors by role (`.category(.amber).text`). On `Animation`, a motion is `.spring(duration:bounce:)` where the
-  token has a spring and `.timingCurve` otherwise, with `.delay` when it waits; lengths are on `CGFloat`.
-  `View.shadow(_:)` takes a `Westron.Shadow`, with half its CSS blur as the radius.
-- Text roles get no statics on `Font`. A group named `body` there would make SwiftUI's own `Font.body` ambiguous
-  (`let font = Font.body` stops compiling, the same probe), and five of the seven groups share a text style's name. A
-  view takes a role with `.textRole(.body.strong)`, which also applies its tracking, or `Font(.body.strong)` where
-  only a font fits.
+- A group of tokens is an enum named after it, lowercase like the path, with a `static let` per token:
+  `enum background { static let canvas = Westron.Color(…) }`. Each token is made on its first use, alone. A list
+  color is `Westron.Category`, by the name a product stores, with a member per role: `list.color.text`.
+- Colors have no statics on SwiftUI's `Color`. SwiftUI's modifiers take `some ShapeStyle`, and there Swift looks for
+  a short name only among the statics of `ShapeStyle` extensions, where an enum cannot be declared:
+  `.foregroundStyle(.text.primary)` would not compile (a probe with Xcode 27.1, 2026-11-16). So `WestronUI` overloads
+  the modifiers that take a style to take a `Westron.Color`, and the short name is looked up on `Westron.Color`:
+  `foregroundStyle` on a view and on `Text` (which stays a `Text` for `+`), `background(_:)` and
+  `background(_:in:)`, `fill`, `stroke`, `strokeBorder` and `tint`. These are the calls the catalog makes. Any other
+  call takes `Color(.text.primary)`, as do a color's own modifiers: `Color(.text.primary).opacity(0.5)`. A new
+  SwiftUI call gets the short form only when westron adds its overload.
+- A name fails generation when two tokens or groups share it, or when it would collide with a member of westron's
+  type. A color also cannot take the name of a `Color` or `ShapeStyle` static: with the overloads,
+  `.foregroundStyle(.primary)` would be ambiguous. A group can: it is an enum, not a value, so
+  `.foregroundStyle(.background)` stays SwiftUI's and `.background.canvas` is westron's (the same probe).
+- `WestronUI` re-exports `WestronTokens` and adds `public` statics where the parameter is a concrete type, so a short
+  name works without an overload: on `Animation`, a motion is `.spring(duration:bounce:)` where the token has a
+  spring and `.timingCurve` otherwise, with `.delay` when it waits; lengths are on `CGFloat`, a group as an enum
+  (`cornerRadius: .radius.card`). `View.shadow(_:)` takes a `Westron.Shadow`, with half its CSS blur as the radius.
+- Text roles get no statics on `Font`: a group named `body` there would make SwiftUI's own `Font.body` ambiguous
+  (`let font = Font.body` stops compiling), and five of the seven groups share a text style's name. A view takes a
+  role with `.textRole(.body.strong)`, which also applies its tracking, or `Font(.body.strong)` where only a font
+  fits.
 - Icons are not tokens, but come out of the same `generate` and the same split (decisions/0011): `Westron.Icon` in
   `WestronTokens` is a `String`-backed `CaseIterable` enum of the names in `spec/icons/icons.yaml`, with
   `fallback` for a name it does not know; `WestronUI` adds `systemName`, the SF Symbol, and the hand-written

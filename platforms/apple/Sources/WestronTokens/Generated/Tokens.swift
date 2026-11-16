@@ -2,77 +2,113 @@
 // again (decisions/0010).
 //
 // The values of westron's semantic tokens as plain Swift, with no imports, so that shared code and its WebAssembly
-// build can use them; their types are in Westron.swift, their SwiftUI accessors in WestronUI. A group of tokens is a
-// type of its own, `Westron.Color.background.canvas`, generic over its values so that WestronUI holds the same group as
-// SwiftUI values.
+// build can use them; their types are in Westron.swift, their SwiftUI accessors in WestronUI. A group of tokens is an
+// enum named after it, so `color.background.canvas` is `Westron.Color.background.canvas`, and each token is made on its
+// first use.
 
 extension Westron.Color {
     /// The colors `color.background.*`.
-    public static let background = Background(
-        canvas: Westron.Color(
+    public enum background {
+        /// The ground of a screen, a list or a table.
+        ///
+        /// Use for: screen background, list background. Avoid: Cards and sheets: use background.surface.
+        public static let canvas = Westron.Color(
             name: "color.background.canvas",
             light: Westron.RGB(hex: 0xF7FAFF),
             dark: Westron.RGB(hex: 0x101318),
             lightHighContrast: Westron.RGB(hex: 0xF7FAFF),
-            darkHighContrast: Westron.RGB(hex: 0x101318)),
-        surface: Westron.Color(
+            darkHighContrast: Westron.RGB(hex: 0x101318))
+
+        /// Something raised off the canvas: a card, a sheet or a popover westron draws, a dragged row. White in light;
+        /// one step lighter than the canvas in dark, where higher is lighter.
+        ///
+        /// Use for: card, sheet, popover, dragged row. Avoid: A well below the content: use background.sunken.
+        public static let surface = Westron.Color(
             name: "color.background.surface",
             light: Westron.RGB(hex: 0xFFFFFF),
             dark: Westron.RGB(hex: 0x181C21),
             lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
-            darkHighContrast: Westron.RGB(hex: 0x181C21)),
-        sunken: Westron.Color(
+            darkHighContrast: Westron.RGB(hex: 0x181C21))
+
+        /// A well below the canvas: a sidebar, a code block, a log, a table header.
+        ///
+        /// Use for: sidebar, code block, log, table header. Avoid: A control's fill: use background.muted.
+        public static let sunken = Westron.Color(
             name: "color.background.sunken",
             light: Westron.RGB(hex: 0xF0F3F8),
             dark: Westron.RGB(hex: 0x090C10),
             lightHighContrast: Westron.RGB(hex: 0xF0F3F8),
-            darkHighContrast: Westron.RGB(hex: 0x090C10)),
-        muted: Westron.Color(
+            darkHighContrast: Westron.RGB(hex: 0x090C10))
+
+        /// A quiet fill inside content: the track of a segmented control, a tag or a badge without a color.
+        ///
+        /// Use for: segmented track, neutral tag, neutral badge. Avoid: A row under the pointer: use background.hover.
+        public static let muted = Westron.Color(
             name: "color.background.muted",
             light: Westron.RGB(hex: 0xEBEEF4),
             dark: Westron.RGB(hex: 0x22272D),
             lightHighContrast: Westron.RGB(hex: 0xEBEEF4),
-            darkHighContrast: Westron.RGB(hex: 0x22272D)),
-        hover: Westron.Color(
+            darkHighContrast: Westron.RGB(hex: 0x22272D))
+
+        /// A row or a control under the pointer.
+        public static let hover = Westron.Color(
             name: "color.background.hover",
             light: Westron.RGB(hex: 0xEDF0F6),
             dark: Westron.RGB(hex: 0x1F232A),
             lightHighContrast: Westron.RGB(hex: 0xEDF0F6),
-            darkHighContrast: Westron.RGB(hex: 0x1F232A)),
-        pressed: Westron.Color(
+            darkHighContrast: Westron.RGB(hex: 0x1F232A))
+
+        /// A row or a control while it is pressed.
+        public static let pressed = Westron.Color(
             name: "color.background.pressed",
             light: Westron.RGB(hex: 0xE6E9EF),
             dark: Westron.RGB(hex: 0x292E34),
             lightHighContrast: Westron.RGB(hex: 0xE6E9EF),
-            darkHighContrast: Westron.RGB(hex: 0x292E34)),
-        selected: Westron.Color(
+            darkHighContrast: Westron.RGB(hex: 0x292E34))
+
+        /// A selected row or item, tinted with the accent.
+        ///
+        /// Use for: selected row, selected item. Avoid: Color alone: in high contrast a selected row also shows a check
+        /// or a border.focus outline.
+        public static let selected = Westron.Color(
             name: "color.background.selected",
             light: Westron.RGB(hex: 0xDDEAFF),
             dark: Westron.RGB(hex: 0x202E45),
             lightHighContrast: Westron.RGB(hex: 0xDDEAFF),
-            darkHighContrast: Westron.RGB(hex: 0x202E45)),
-        accentSubtle: Westron.Color(
+            darkHighContrast: Westron.RGB(hex: 0x202E45))
+
+        /// A quiet accent ground: the tile behind an empty state's icon, a highlighted tip.
+        public static let accentSubtle = Westron.Color(
             name: "color.background.accent-subtle",
             light: Westron.RGB(hex: 0xE8F0FF),
             dark: Westron.RGB(hex: 0x182336),
             lightHighContrast: Westron.RGB(hex: 0xE8F0FF),
-            darkHighContrast: Westron.RGB(hex: 0x182336)),
-        accent: Westron.Color(
+            darkHighContrast: Westron.RGB(hex: 0x182336))
+
+        /// The fill of the one primary action on a screen, a checked box, a switch that is on.
+        ///
+        /// Use for: primary button, checked box, switch on. Avoid: Large areas, and more than one filled control on a
+        /// screen. Status: use status.info.fill, even though info is the accent's blue today.
+        public static let accent = Westron.Color(
             name: "color.background.accent",
             light: Westron.RGB(hex: 0x2863D7),
             dark: Westron.RGB(hex: 0x2863D7),
             lightHighContrast: Westron.RGB(hex: 0x1651C3),
-            darkHighContrast: Westron.RGB(hex: 0x6A9EFF)),
-        accentHover: Westron.Color(
+            darkHighContrast: Westron.RGB(hex: 0x6A9EFF))
+
+        /// The accent fill under the pointer.
+        public static let accentHover = Westron.Color(
             name: "color.background.accent-hover",
             light: Westron.RGB(hex: 0x1C56C9),
             dark: Westron.RGB(hex: 0x1C56C9),
             lightHighContrast: Westron.RGB(hex: 0x0844B6),
-            darkHighContrast: Westron.RGB(hex: 0x7EACFF)))
+            darkHighContrast: Westron.RGB(hex: 0x7EACFF))
+    }
 
     /// The colors `color.text.*`.
-    public static let text = Text(
-        primary: Westron.Color(
+    public enum text {
+        /// Main text and glyphs.
+        public static let primary = Westron.Color(
             name: "color.text.primary",
             light: Westron.RGB(hex: 0x23272C),
             dark: Westron.RGB(hex: 0xD7DFEA),
@@ -87,8 +123,10 @@ extension Westron.Color {
                 ["color.background.pressed"],
                 ["color.background.selected"],
                 ["color.background.accent-subtle"],
-            ]),
-        secondary: Westron.Color(
+            ])
+
+        /// Text and glyphs that come second: captions, metadata, a row's details, timestamps.
+        public static let secondary = Westron.Color(
             name: "color.text.secondary",
             light: Westron.RGB(hex: 0x656970),
             dark: Westron.RGB(hex: 0x8E96A0),
@@ -103,8 +141,10 @@ extension Westron.Color {
                 ["color.background.pressed"],
                 ["color.background.selected"],
                 ["color.background.accent-subtle"],
-            ]),
-        placeholder: Westron.Color(
+            ])
+
+        /// The placeholder of an empty field. It meets the text target, as all words do.
+        public static let placeholder = Westron.Color(
             name: "color.text.placeholder",
             light: Westron.RGB(hex: 0x656970),
             dark: Westron.RGB(hex: 0x8E96A0),
@@ -115,15 +155,22 @@ extension Westron.Color {
                 ["color.background.surface"],
                 ["color.background.sunken"],
                 ["color.background.muted"],
-            ]),
-        onAccent: Westron.Color(
+            ])
+
+        /// Text and glyphs on the accent fill: white, and the canvas's color in dark high contrast, where the fill
+        /// turns light.
+        public static let onAccent = Westron.Color(
             name: "color.text.on-accent",
             light: Westron.RGB(hex: 0xFFFFFF),
             dark: Westron.RGB(hex: 0xFFFFFF),
             lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
             darkHighContrast: Westron.RGB(hex: 0x101318),
-            backgrounds: [["color.background.accent"], ["color.background.accent-hover"]]),
-        accent: Westron.Color(
+            backgrounds: [["color.background.accent"], ["color.background.accent-hover"]])
+
+        /// Links and accent text.
+        ///
+        /// Use for: link, accent text. Avoid: Status text: use status.<name>.text.
+        public static let accent = Westron.Color(
             name: "color.text.accent",
             light: Westron.RGB(hex: 0x2C63D1),
             dark: Westron.RGB(hex: 0x5992FF),
@@ -136,11 +183,15 @@ extension Westron.Color {
                 ["color.background.hover"],
                 ["color.background.selected"],
                 ["color.background.accent-subtle"],
-            ]))
+            ])
+    }
 
     /// The colors `color.icon.*`.
-    public static let icon = Icon(
-        tertiary: Westron.Color(
+    public enum icon {
+        /// Glyphs that carry no words and need only 3:1: a chevron, a grip, a disclosure triangle.
+        ///
+        /// Use for: chevron, grip, disclosure. Avoid: Words: words are text.secondary at least.
+        public static let tertiary = Westron.Color(
             name: "color.icon.tertiary",
             light: Westron.RGB(hex: 0x81868D),
             dark: Westron.RGB(hex: 0x717781),
@@ -152,18 +203,23 @@ extension Westron.Color {
                 ["color.background.sunken"],
                 ["color.background.hover"],
                 ["color.background.selected"],
-            ]))
+            ])
+    }
 
     /// The colors `color.border.*`.
-    public static let border = Border(
-        default: Westron.Color(
+    public enum border {
+        /// Separators and the outline of a card: decorative in standard themes, 3:1 in high contrast, where every
+        /// raised surface gets one.
+        public static let `default` = Westron.Color(
             name: "color.border.default",
             light: Westron.RGB(hex: 0xDCDFE5),
             dark: Westron.RGB(hex: 0x2E3339),
             lightHighContrast: Westron.RGB(hex: 0x898D92),
             darkHighContrast: Westron.RGB(hex: 0x656B72),
-            backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]]),
-        strong: Westron.Color(
+            backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
+
+        /// The border of a control that must be seen: a field, a checkbox, a radio ring, a secondary button.
+        public static let strong = Westron.Color(
             name: "color.border.strong",
             light: Westron.RGB(hex: 0x81868D),
             dark: Westron.RGB(hex: 0x717781),
@@ -174,8 +230,10 @@ extension Westron.Color {
                 ["color.background.surface"],
                 ["color.background.sunken"],
                 ["color.background.muted"],
-            ]),
-        focus: Westron.Color(
+            ])
+
+        /// The focus ring, and the outline of a selected item in high contrast.
+        public static let focus = Westron.Color(
             name: "color.border.focus",
             light: Westron.RGB(hex: 0x5283E1),
             dark: Westron.RGB(hex: 0x4474D0),
@@ -187,18 +245,23 @@ extension Westron.Color {
                 ["color.background.sunken"],
                 ["color.background.hover"],
                 ["color.background.selected"],
-            ]))
+            ])
+    }
 
     /// The colors `color.status.*`.
-    public static let status = Status(
-        danger: StatusDanger(
-            background: Westron.Color(
+    public enum status {
+        /// The colors `color.status.danger.*`.
+        public enum danger {
+            /// The quiet ground of a badge, a banner or a row in the status danger.
+            public static let background = Westron.Color(
                 name: "color.status.danger.background",
                 light: Westron.RGB(hex: 0xFFEFED),
                 dark: Westron.RGB(hex: 0x2F1B18),
                 lightHighContrast: Westron.RGB(hex: 0xFFEFED),
-                darkHighContrast: Westron.RGB(hex: 0x2F1B18)),
-            border: Westron.Color(
+                darkHighContrast: Westron.RGB(hex: 0x2F1B18))
+
+            /// The border of a field or a banner in the status danger.
+            public static let border = Westron.Color(
                 name: "color.status.danger.border",
                 light: Westron.RGB(hex: 0xCF665C),
                 dark: Westron.RGB(hex: 0xBF564D),
@@ -209,8 +272,10 @@ extension Westron.Color {
                     ["color.background.surface"],
                     ["color.background.sunken"],
                     ["color.status.danger.background"],
-                ]),
-            icon: Westron.Color(
+                ])
+
+            /// The icon or dot of the status danger.
+            public static let icon = Westron.Color(
                 name: "color.status.danger.icon",
                 light: Westron.RGB(hex: 0xCF665C),
                 dark: Westron.RGB(hex: 0xBF564D),
@@ -221,8 +286,10 @@ extension Westron.Color {
                     ["color.background.surface"],
                     ["color.background.sunken"],
                     ["color.status.danger.background"],
-                ]),
-            text: Westron.Color(
+                ])
+
+            /// Text in the status danger.
+            public static let text = Westron.Color(
                 name: "color.status.danger.text",
                 light: Westron.RGB(hex: 0xBA3D37),
                 dark: Westron.RGB(hex: 0xEE6D62),
@@ -233,28 +300,38 @@ extension Westron.Color {
                     ["color.background.surface"],
                     ["color.background.sunken"],
                     ["color.status.danger.background"],
-                ]),
-            fill: Westron.Color(
+                ])
+
+            /// The solid fill of the status danger: a button or a count badge.
+            public static let fill = Westron.Color(
                 name: "color.status.danger.fill",
                 light: Westron.RGB(hex: 0xA72120),
                 dark: Westron.RGB(hex: 0xA72120),
                 lightHighContrast: Westron.RGB(hex: 0xA72120),
-                darkHighContrast: Westron.RGB(hex: 0xFE7469)),
-            onFill: Westron.Color(
+                darkHighContrast: Westron.RGB(hex: 0xFE7469))
+
+            /// Text and glyphs on the danger fill.
+            public static let onFill = Westron.Color(
                 name: "color.status.danger.on-fill",
                 light: Westron.RGB(hex: 0xFFFFFF),
                 dark: Westron.RGB(hex: 0xFFFFFF),
                 lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
                 darkHighContrast: Westron.RGB(hex: 0x101318),
-                backgrounds: [["color.status.danger.fill"]])),
-        warning: StatusWarning(
-            background: Westron.Color(
+                backgrounds: [["color.status.danger.fill"]])
+        }
+
+        /// The colors `color.status.warning.*`.
+        public enum warning {
+            /// The quiet ground of a badge, a banner or a row in the status warning.
+            public static let background = Westron.Color(
                 name: "color.status.warning.background",
                 light: Westron.RGB(hex: 0xFEF1DD),
                 dark: Westron.RGB(hex: 0x281F0F),
                 lightHighContrast: Westron.RGB(hex: 0xFEF1DD),
-                darkHighContrast: Westron.RGB(hex: 0x281F0F)),
-            border: Westron.Color(
+                darkHighContrast: Westron.RGB(hex: 0x281F0F))
+
+            /// The border of a field or a banner in the status warning.
+            public static let border = Westron.Color(
                 name: "color.status.warning.border",
                 light: Westron.RGB(hex: 0xAF7C04),
                 dark: Westron.RGB(hex: 0x9C6F00),
@@ -265,8 +342,10 @@ extension Westron.Color {
                     ["color.background.surface"],
                     ["color.background.sunken"],
                     ["color.status.warning.background"],
-                ]),
-            icon: Westron.Color(
+                ])
+
+            /// The icon or dot of the status warning.
+            public static let icon = Westron.Color(
                 name: "color.status.warning.icon",
                 light: Westron.RGB(hex: 0xAF7C04),
                 dark: Westron.RGB(hex: 0x9C6F00),
@@ -277,8 +356,10 @@ extension Westron.Color {
                     ["color.background.surface"],
                     ["color.background.sunken"],
                     ["color.status.warning.background"],
-                ]),
-            text: Westron.Color(
+                ])
+
+            /// Text in the status warning.
+            public static let text = Westron.Color(
                 name: "color.status.warning.text",
                 light: Westron.RGB(hex: 0x8A6100),
                 dark: Westron.RGB(hex: 0xC28B00),
@@ -289,28 +370,38 @@ extension Westron.Color {
                     ["color.background.surface"],
                     ["color.background.sunken"],
                     ["color.status.warning.background"],
-                ]),
-            fill: Westron.Color(
+                ])
+
+            /// The solid fill of the status warning: a button or a count badge.
+            public static let fill = Westron.Color(
                 name: "color.status.warning.fill",
                 light: Westron.RGB(hex: 0xF3B01D),
                 dark: Westron.RGB(hex: 0xF3B01D),
                 lightHighContrast: Westron.RGB(hex: 0xF3B01D),
-                darkHighContrast: Westron.RGB(hex: 0xF3B01D)),
-            onFill: Westron.Color(
+                darkHighContrast: Westron.RGB(hex: 0xF3B01D))
+
+            /// Text and glyphs on the warning fill.
+            public static let onFill = Westron.Color(
                 name: "color.status.warning.on-fill",
                 light: Westron.RGB(hex: 0x191610),
                 dark: Westron.RGB(hex: 0x191610),
                 lightHighContrast: Westron.RGB(hex: 0x191610),
                 darkHighContrast: Westron.RGB(hex: 0x191610),
-                backgrounds: [["color.status.warning.fill"]])),
-        success: StatusSuccess(
-            background: Westron.Color(
+                backgrounds: [["color.status.warning.fill"]])
+        }
+
+        /// The colors `color.status.success.*`.
+        public enum success {
+            /// The quiet ground of a badge, a banner or a row in the status success.
+            public static let background = Westron.Color(
                 name: "color.status.success.background",
                 light: Westron.RGB(hex: 0xE6F7F0),
                 dark: Westron.RGB(hex: 0x15231D),
                 lightHighContrast: Westron.RGB(hex: 0xE6F7F0),
-                darkHighContrast: Westron.RGB(hex: 0x15231D)),
-            border: Westron.Color(
+                darkHighContrast: Westron.RGB(hex: 0x15231D))
+
+            /// The border of a field or a banner in the status success.
+            public static let border = Westron.Color(
                 name: "color.status.success.border",
                 light: Westron.RGB(hex: 0x449378),
                 dark: Westron.RGB(hex: 0x348469),
@@ -321,8 +412,10 @@ extension Westron.Color {
                     ["color.background.surface"],
                     ["color.background.sunken"],
                     ["color.status.success.background"],
-                ]),
-            icon: Westron.Color(
+                ])
+
+            /// The icon or dot of the status success.
+            public static let icon = Westron.Color(
                 name: "color.status.success.icon",
                 light: Westron.RGB(hex: 0x449378),
                 dark: Westron.RGB(hex: 0x348469),
@@ -333,8 +426,10 @@ extension Westron.Color {
                     ["color.background.surface"],
                     ["color.background.sunken"],
                     ["color.status.success.background"],
-                ]),
-            text: Westron.Color(
+                ])
+
+            /// Text in the status success.
+            public static let text = Westron.Color(
                 name: "color.status.success.text",
                 light: Westron.RGB(hex: 0x00775A),
                 dark: Westron.RGB(hex: 0x41A684),
@@ -345,28 +440,38 @@ extension Westron.Color {
                     ["color.background.surface"],
                     ["color.background.sunken"],
                     ["color.status.success.background"],
-                ]),
-            fill: Westron.Color(
+                ])
+
+            /// The solid fill of the status success: a button or a count badge.
+            public static let fill = Westron.Color(
                 name: "color.status.success.fill",
                 light: Westron.RGB(hex: 0x018766),
                 dark: Westron.RGB(hex: 0x018766),
                 lightHighContrast: Westron.RGB(hex: 0x00654C),
-                darkHighContrast: Westron.RGB(hex: 0x46B18D)),
-            onFill: Westron.Color(
+                darkHighContrast: Westron.RGB(hex: 0x46B18D))
+
+            /// Text and glyphs on the success fill.
+            public static let onFill = Westron.Color(
                 name: "color.status.success.on-fill",
                 light: Westron.RGB(hex: 0xFFFFFF),
                 dark: Westron.RGB(hex: 0xFFFFFF),
                 lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
                 darkHighContrast: Westron.RGB(hex: 0x101318),
-                backgrounds: [["color.status.success.fill"]])),
-        info: StatusInfo(
-            background: Westron.Color(
+                backgrounds: [["color.status.success.fill"]])
+        }
+
+        /// The colors `color.status.info.*`.
+        public enum info {
+            /// The quiet ground of a badge, a banner or a row in the status info.
+            public static let background = Westron.Color(
                 name: "color.status.info.background",
                 light: Westron.RGB(hex: 0xEDF3FF),
                 dark: Westron.RGB(hex: 0x172031),
                 lightHighContrast: Westron.RGB(hex: 0xEDF3FF),
-                darkHighContrast: Westron.RGB(hex: 0x172031)),
-            border: Westron.Color(
+                darkHighContrast: Westron.RGB(hex: 0x172031))
+
+            /// The border of a field or a banner in the status info.
+            public static let border = Westron.Color(
                 name: "color.status.info.border",
                 light: Westron.RGB(hex: 0x5283E1),
                 dark: Westron.RGB(hex: 0x4474D0),
@@ -377,8 +482,10 @@ extension Westron.Color {
                     ["color.background.surface"],
                     ["color.background.sunken"],
                     ["color.status.info.background"],
-                ]),
-            icon: Westron.Color(
+                ])
+
+            /// The icon or dot of the status info.
+            public static let icon = Westron.Color(
                 name: "color.status.info.icon",
                 light: Westron.RGB(hex: 0x5283E1),
                 dark: Westron.RGB(hex: 0x4474D0),
@@ -389,8 +496,10 @@ extension Westron.Color {
                     ["color.background.surface"],
                     ["color.background.sunken"],
                     ["color.status.info.background"],
-                ]),
-            text: Westron.Color(
+                ])
+
+            /// Text in the status info.
+            public static let text = Westron.Color(
                 name: "color.status.info.text",
                 light: Westron.RGB(hex: 0x2C63D1),
                 dark: Westron.RGB(hex: 0x5992FF),
@@ -401,28 +510,38 @@ extension Westron.Color {
                     ["color.background.surface"],
                     ["color.background.sunken"],
                     ["color.status.info.background"],
-                ]),
-            fill: Westron.Color(
+                ])
+
+            /// The solid fill of the status info: a button or a count badge.
+            public static let fill = Westron.Color(
                 name: "color.status.info.fill",
                 light: Westron.RGB(hex: 0x2863D7),
                 dark: Westron.RGB(hex: 0x2863D7),
                 lightHighContrast: Westron.RGB(hex: 0x1651C3),
-                darkHighContrast: Westron.RGB(hex: 0x6A9EFF)),
-            onFill: Westron.Color(
+                darkHighContrast: Westron.RGB(hex: 0x6A9EFF))
+
+            /// Text and glyphs on the info fill.
+            public static let onFill = Westron.Color(
                 name: "color.status.info.on-fill",
                 light: Westron.RGB(hex: 0xFFFFFF),
                 dark: Westron.RGB(hex: 0xFFFFFF),
                 lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
                 darkHighContrast: Westron.RGB(hex: 0x101318),
-                backgrounds: [["color.status.info.fill"]])),
-        neutral: StatusNeutral(
-            background: Westron.Color(
+                backgrounds: [["color.status.info.fill"]])
+        }
+
+        /// The colors `color.status.neutral.*`.
+        public enum neutral {
+            /// The quiet ground of a badge, a banner or a row in the status neutral.
+            public static let background = Westron.Color(
                 name: "color.status.neutral.background",
                 light: Westron.RGB(hex: 0xEBEEF4),
                 dark: Westron.RGB(hex: 0x22272D),
                 lightHighContrast: Westron.RGB(hex: 0xEBEEF4),
-                darkHighContrast: Westron.RGB(hex: 0x22272D)),
-            border: Westron.Color(
+                darkHighContrast: Westron.RGB(hex: 0x22272D))
+
+            /// The border of a field or a banner in the status neutral.
+            public static let border = Westron.Color(
                 name: "color.status.neutral.border",
                 light: Westron.RGB(hex: 0x81868D),
                 dark: Westron.RGB(hex: 0x717781),
@@ -433,8 +552,10 @@ extension Westron.Color {
                     ["color.background.surface"],
                     ["color.background.sunken"],
                     ["color.status.neutral.background"],
-                ]),
-            icon: Westron.Color(
+                ])
+
+            /// The icon or dot of the status neutral.
+            public static let icon = Westron.Color(
                 name: "color.status.neutral.icon",
                 light: Westron.RGB(hex: 0x81868D),
                 dark: Westron.RGB(hex: 0x717781),
@@ -445,8 +566,10 @@ extension Westron.Color {
                     ["color.background.surface"],
                     ["color.background.sunken"],
                     ["color.status.neutral.background"],
-                ]),
-            text: Westron.Color(
+                ])
+
+            /// Text in the status neutral.
+            public static let text = Westron.Color(
                 name: "color.status.neutral.text",
                 light: Westron.RGB(hex: 0x656970),
                 dark: Westron.RGB(hex: 0x8E96A0),
@@ -457,20 +580,26 @@ extension Westron.Color {
                     ["color.background.surface"],
                     ["color.background.sunken"],
                     ["color.status.neutral.background"],
-                ]),
-            fill: Westron.Color(
+                ])
+
+            /// The solid fill of the status neutral: a button or a count badge.
+            public static let fill = Westron.Color(
                 name: "color.status.neutral.fill",
                 light: Westron.RGB(hex: 0x5F646A),
                 dark: Westron.RGB(hex: 0x5D646E),
                 lightHighContrast: Westron.RGB(hex: 0x555960),
-                darkHighContrast: Westron.RGB(hex: 0x98A0AA)),
-            onFill: Westron.Color(
+                darkHighContrast: Westron.RGB(hex: 0x98A0AA))
+
+            /// Text and glyphs on the neutral fill.
+            public static let onFill = Westron.Color(
                 name: "color.status.neutral.on-fill",
                 light: Westron.RGB(hex: 0xFFFFFF),
                 dark: Westron.RGB(hex: 0xFFFFFF),
                 lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
                 darkHighContrast: Westron.RGB(hex: 0x101318),
-                backgrounds: [["color.status.neutral.fill"]])))
+                backgrounds: [["color.status.neutral.fill"]])
+        }
+    }
 
     /// Series 1 of a chart.
     public static let chart1 = Westron.Color(
@@ -676,329 +805,6 @@ extension Westron.Color {
         chart7,
         chart8,
     ]
-
-    /// The colors `color.background.*`, one member per token. The group is generic over its values, so that WestronUI
-    /// holds the same group as SwiftUI values.
-    public struct Background<Value: Sendable>: Sendable {
-        /// The ground of a screen, a list or a table.
-        ///
-        /// Use for: screen background, list background. Avoid: Cards and sheets: use background.surface.
-        public let canvas: Value
-
-        /// Something raised off the canvas: a card, a sheet or a popover westron draws, a dragged row. White in light;
-        /// one step lighter than the canvas in dark, where higher is lighter.
-        ///
-        /// Use for: card, sheet, popover, dragged row. Avoid: A well below the content: use background.sunken.
-        public let surface: Value
-
-        /// A well below the canvas: a sidebar, a code block, a log, a table header.
-        ///
-        /// Use for: sidebar, code block, log, table header. Avoid: A control's fill: use background.muted.
-        public let sunken: Value
-
-        /// A quiet fill inside content: the track of a segmented control, a tag or a badge without a color.
-        ///
-        /// Use for: segmented track, neutral tag, neutral badge. Avoid: A row under the pointer: use background.hover.
-        public let muted: Value
-
-        /// A row or a control under the pointer.
-        public let hover: Value
-
-        /// A row or a control while it is pressed.
-        public let pressed: Value
-
-        /// A selected row or item, tinted with the accent.
-        ///
-        /// Use for: selected row, selected item. Avoid: Color alone: in high contrast a selected row also shows a check
-        /// or a border.focus outline.
-        public let selected: Value
-
-        /// A quiet accent ground: the tile behind an empty state's icon, a highlighted tip.
-        public let accentSubtle: Value
-
-        /// The fill of the one primary action on a screen, a checked box, a switch that is on.
-        ///
-        /// Use for: primary button, checked box, switch on. Avoid: Large areas, and more than one filled control on a
-        /// screen. Status: use status.info.fill, even though info is the accent's blue today.
-        public let accent: Value
-
-        /// The accent fill under the pointer.
-        public let accentHover: Value
-
-        /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-        public func map<T: Sendable>(_ transform: (Value) -> T) -> Background<T> {
-            Background<T>(
-                canvas: transform(canvas),
-                surface: transform(surface),
-                sunken: transform(sunken),
-                muted: transform(muted),
-                hover: transform(hover),
-                pressed: transform(pressed),
-                selected: transform(selected),
-                accentSubtle: transform(accentSubtle),
-                accent: transform(accent),
-                accentHover: transform(accentHover))
-        }
-    }
-
-    /// The colors `color.text.*`, one member per token. The group is generic over its values, so that WestronUI holds
-    /// the same group as SwiftUI values.
-    public struct Text<Value: Sendable>: Sendable {
-        /// Main text and glyphs.
-        public let primary: Value
-
-        /// Text and glyphs that come second: captions, metadata, a row's details, timestamps.
-        public let secondary: Value
-
-        /// The placeholder of an empty field. It meets the text target, as all words do.
-        public let placeholder: Value
-
-        /// Text and glyphs on the accent fill: white, and the canvas's color in dark high contrast, where the fill
-        /// turns light.
-        public let onAccent: Value
-
-        /// Links and accent text.
-        ///
-        /// Use for: link, accent text. Avoid: Status text: use status.<name>.text.
-        public let accent: Value
-
-        /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-        public func map<T: Sendable>(_ transform: (Value) -> T) -> Text<T> {
-            Text<T>(
-                primary: transform(primary),
-                secondary: transform(secondary),
-                placeholder: transform(placeholder),
-                onAccent: transform(onAccent),
-                accent: transform(accent))
-        }
-    }
-
-    /// The colors `color.icon.*`, one member per token. The group is generic over its values, so that WestronUI holds
-    /// the same group as SwiftUI values.
-    public struct Icon<Value: Sendable>: Sendable {
-        /// Glyphs that carry no words and need only 3:1: a chevron, a grip, a disclosure triangle.
-        ///
-        /// Use for: chevron, grip, disclosure. Avoid: Words: words are text.secondary at least.
-        public let tertiary: Value
-
-        /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-        public func map<T: Sendable>(_ transform: (Value) -> T) -> Icon<T> {
-            Icon<T>(tertiary: transform(tertiary))
-        }
-    }
-
-    /// The colors `color.border.*`, one member per token. The group is generic over its values, so that WestronUI holds
-    /// the same group as SwiftUI values.
-    public struct Border<Value: Sendable>: Sendable {
-        /// Separators and the outline of a card: decorative in standard themes, 3:1 in high contrast, where every
-        /// raised surface gets one.
-        public let `default`: Value
-
-        /// The border of a control that must be seen: a field, a checkbox, a radio ring, a secondary button.
-        public let strong: Value
-
-        /// The focus ring, and the outline of a selected item in high contrast.
-        public let focus: Value
-
-        /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-        public func map<T: Sendable>(_ transform: (Value) -> T) -> Border<T> {
-            Border<T>(default: transform(`default`), strong: transform(strong), focus: transform(focus))
-        }
-    }
-
-    /// The colors `color.status.*`, one member per token. The group is generic over its values, so that WestronUI holds
-    /// the same group as SwiftUI values.
-    public struct Status<Value: Sendable>: Sendable {
-        /// The colors `color.status.danger.*`.
-        public let danger: StatusDanger<Value>
-
-        /// The colors `color.status.warning.*`.
-        public let warning: StatusWarning<Value>
-
-        /// The colors `color.status.success.*`.
-        public let success: StatusSuccess<Value>
-
-        /// The colors `color.status.info.*`.
-        public let info: StatusInfo<Value>
-
-        /// The colors `color.status.neutral.*`.
-        public let neutral: StatusNeutral<Value>
-
-        /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-        public func map<T: Sendable>(_ transform: (Value) -> T) -> Status<T> {
-            Status<T>(
-                danger: danger.map(transform),
-                warning: warning.map(transform),
-                success: success.map(transform),
-                info: info.map(transform),
-                neutral: neutral.map(transform))
-        }
-    }
-
-    /// The colors `color.status.danger.*`, one member per token. The group is generic over its values, so that
-    /// WestronUI holds the same group as SwiftUI values.
-    public struct StatusDanger<Value: Sendable>: Sendable {
-        /// The quiet ground of a badge, a banner or a row in the status danger.
-        public let background: Value
-
-        /// The border of a field or a banner in the status danger.
-        public let border: Value
-
-        /// The icon or dot of the status danger.
-        public let icon: Value
-
-        /// Text in the status danger.
-        public let text: Value
-
-        /// The solid fill of the status danger: a button or a count badge.
-        public let fill: Value
-
-        /// Text and glyphs on the danger fill.
-        public let onFill: Value
-
-        /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-        public func map<T: Sendable>(_ transform: (Value) -> T) -> StatusDanger<T> {
-            StatusDanger<T>(
-                background: transform(background),
-                border: transform(border),
-                icon: transform(icon),
-                text: transform(text),
-                fill: transform(fill),
-                onFill: transform(onFill))
-        }
-    }
-
-    /// The colors `color.status.warning.*`, one member per token. The group is generic over its values, so that
-    /// WestronUI holds the same group as SwiftUI values.
-    public struct StatusWarning<Value: Sendable>: Sendable {
-        /// The quiet ground of a badge, a banner or a row in the status warning.
-        public let background: Value
-
-        /// The border of a field or a banner in the status warning.
-        public let border: Value
-
-        /// The icon or dot of the status warning.
-        public let icon: Value
-
-        /// Text in the status warning.
-        public let text: Value
-
-        /// The solid fill of the status warning: a button or a count badge.
-        public let fill: Value
-
-        /// Text and glyphs on the warning fill.
-        public let onFill: Value
-
-        /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-        public func map<T: Sendable>(_ transform: (Value) -> T) -> StatusWarning<T> {
-            StatusWarning<T>(
-                background: transform(background),
-                border: transform(border),
-                icon: transform(icon),
-                text: transform(text),
-                fill: transform(fill),
-                onFill: transform(onFill))
-        }
-    }
-
-    /// The colors `color.status.success.*`, one member per token. The group is generic over its values, so that
-    /// WestronUI holds the same group as SwiftUI values.
-    public struct StatusSuccess<Value: Sendable>: Sendable {
-        /// The quiet ground of a badge, a banner or a row in the status success.
-        public let background: Value
-
-        /// The border of a field or a banner in the status success.
-        public let border: Value
-
-        /// The icon or dot of the status success.
-        public let icon: Value
-
-        /// Text in the status success.
-        public let text: Value
-
-        /// The solid fill of the status success: a button or a count badge.
-        public let fill: Value
-
-        /// Text and glyphs on the success fill.
-        public let onFill: Value
-
-        /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-        public func map<T: Sendable>(_ transform: (Value) -> T) -> StatusSuccess<T> {
-            StatusSuccess<T>(
-                background: transform(background),
-                border: transform(border),
-                icon: transform(icon),
-                text: transform(text),
-                fill: transform(fill),
-                onFill: transform(onFill))
-        }
-    }
-
-    /// The colors `color.status.info.*`, one member per token. The group is generic over its values, so that WestronUI
-    /// holds the same group as SwiftUI values.
-    public struct StatusInfo<Value: Sendable>: Sendable {
-        /// The quiet ground of a badge, a banner or a row in the status info.
-        public let background: Value
-
-        /// The border of a field or a banner in the status info.
-        public let border: Value
-
-        /// The icon or dot of the status info.
-        public let icon: Value
-
-        /// Text in the status info.
-        public let text: Value
-
-        /// The solid fill of the status info: a button or a count badge.
-        public let fill: Value
-
-        /// Text and glyphs on the info fill.
-        public let onFill: Value
-
-        /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-        public func map<T: Sendable>(_ transform: (Value) -> T) -> StatusInfo<T> {
-            StatusInfo<T>(
-                background: transform(background),
-                border: transform(border),
-                icon: transform(icon),
-                text: transform(text),
-                fill: transform(fill),
-                onFill: transform(onFill))
-        }
-    }
-
-    /// The colors `color.status.neutral.*`, one member per token. The group is generic over its values, so that
-    /// WestronUI holds the same group as SwiftUI values.
-    public struct StatusNeutral<Value: Sendable>: Sendable {
-        /// The quiet ground of a badge, a banner or a row in the status neutral.
-        public let background: Value
-
-        /// The border of a field or a banner in the status neutral.
-        public let border: Value
-
-        /// The icon or dot of the status neutral.
-        public let icon: Value
-
-        /// Text in the status neutral.
-        public let text: Value
-
-        /// The solid fill of the status neutral: a button or a count badge.
-        public let fill: Value
-
-        /// Text and glyphs on the neutral fill.
-        public let onFill: Value
-
-        /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-        public func map<T: Sendable>(_ transform: (Value) -> T) -> StatusNeutral<T> {
-            StatusNeutral<T>(
-                background: transform(background),
-                border: transform(border),
-                icon: transform(icon),
-                text: transform(text),
-                fill: transform(fill),
-                onFill: transform(onFill))
-        }
-    }
 }
 
 extension Westron {
@@ -1128,43 +934,6 @@ extension Westron {
 
         /// The colors of the category, one per role, in token order.
         public var colors: [Westron.Color] { [background, border, icon, text, fill, onFill] }
-
-        /// The colors of the category by role, which WestronUI's `Color.category(_:)` holds as SwiftUI colors.
-        public var roles: Roles<Westron.Color> {
-            Roles(background: background, border: border, icon: icon, text: text, fill: fill, onFill: onFill)
-        }
-
-        /// A list color's colors by role, generic over the value so that WestronUI holds them as SwiftUI colors.
-        public struct Roles<Value: Sendable>: Sendable {
-            /// The quiet ground of a tag or a row in the list color.
-            public let background: Value
-
-            /// The border of an outlined tag in the list color.
-            public let border: Value
-
-            /// A dot or an icon in the list color.
-            public let icon: Value
-
-            /// Text in the list color.
-            public let text: Value
-
-            /// The solid fill of a lit tag in the list color.
-            public let fill: Value
-
-            /// Text and glyphs on the fill of the list color.
-            public let onFill: Value
-
-            /// The roles with every value transformed, as WestronUI makes SwiftUI colors of them.
-            public func map<T: Sendable>(_ transform: (Value) -> T) -> Roles<T> {
-                Roles<T>(
-                    background: transform(background),
-                    border: transform(border),
-                    icon: transform(icon),
-                    text: transform(text),
-                    fill: transform(fill),
-                    onFill: transform(onFill))
-            }
-        }
 
         /// The quiet ground of a tag or a row in the list color blue.
         private static let blueBackground = Westron.Color(
@@ -1914,8 +1683,9 @@ extension Westron {
 
 extension Westron.TextRole {
     /// The text roles `typography.heading.*`.
-    public static let heading = Heading(
-        large: Westron.TextRole(
+    public enum heading {
+        /// The title of a screen. Onest Bold at the size of the largeTitle text style, tracked in by 1 % of its size.
+        public static let large = Westron.TextRole(
             name: "typography.heading.large",
             textStyle: .largeTitle,
             design: .default,
@@ -1923,8 +1693,11 @@ extension Westron.TextRole {
             font: "Onest-Bold",
             size: 34,
             lineHeight: 1.206,
-            letterSpacing: -0.34),
-        medium: Westron.TextRole(
+            letterSpacing: -0.34)
+
+        /// The title of a card, a section of a screen or an empty state. Onest Bold at the size of the title3 text
+        /// style.
+        public static let medium = Westron.TextRole(
             name: "typography.heading.medium",
             textStyle: .title3,
             design: .default,
@@ -1932,8 +1705,10 @@ extension Westron.TextRole {
             font: "Onest-Bold",
             size: 20,
             lineHeight: 1.25,
-            letterSpacing: -0.2),
-        small: Westron.TextRole(
+            letterSpacing: -0.2)
+
+        /// The title of a block inside a card or a list. Onest SemiBold at the size of the headline text style.
+        public static let small = Westron.TextRole(
             name: "typography.heading.small",
             textStyle: .headline,
             design: .default,
@@ -1941,8 +1716,11 @@ extension Westron.TextRole {
             font: "Onest-SemiBold",
             size: 17,
             lineHeight: 1.294,
-            letterSpacing: -0.17),
-        overline: Westron.TextRole(
+            letterSpacing: -0.17)
+
+        /// A short label above a group, written in capitals by the product, such as a sidebar section. Onest SemiBold
+        /// at the size of the caption text style, tracked out by 6 % of its size.
+        public static let overline = Westron.TextRole(
             name: "typography.heading.overline",
             textStyle: .caption,
             design: .default,
@@ -1950,11 +1728,13 @@ extension Westron.TextRole {
             font: "Onest-SemiBold",
             size: 12,
             lineHeight: 1.333,
-            letterSpacing: 0.72))
+            letterSpacing: 0.72)
+    }
 
     /// The text roles `typography.body.*`.
-    public static let body = Body(
-        regular: Westron.TextRole(
+    public enum body {
+        /// Main text: a row's title, a field's text, a paragraph. The size follows the body text style.
+        public static let regular = Westron.TextRole(
             name: "typography.body.regular",
             textStyle: .body,
             design: .default,
@@ -1962,8 +1742,10 @@ extension Westron.TextRole {
             font: nil,
             size: 17,
             lineHeight: 1.294,
-            letterSpacing: 0),
-        strong: Westron.TextRole(
+            letterSpacing: 0)
+
+        /// Main text that needs emphasis: the selected row, a row with children. The size follows the body text style.
+        public static let strong = Westron.TextRole(
             name: "typography.body.strong",
             textStyle: .body,
             design: .default,
@@ -1971,11 +1753,14 @@ extension Westron.TextRole {
             font: nil,
             size: 17,
             lineHeight: 1.294,
-            letterSpacing: 0))
+            letterSpacing: 0)
+    }
 
     /// The text roles `typography.callout.*`.
-    public static let callout = Callout(
-        regular: Westron.TextRole(
+    public enum callout {
+        /// Text one step below the main text: a nested row's title, a card in a column. The size follows the callout
+        /// text style.
+        public static let regular = Westron.TextRole(
             name: "typography.callout.regular",
             textStyle: .callout,
             design: .default,
@@ -1983,8 +1768,10 @@ extension Westron.TextRole {
             font: nil,
             size: 16,
             lineHeight: 1.312,
-            letterSpacing: 0),
-        strong: Westron.TextRole(
+            letterSpacing: 0)
+
+        /// `callout.regular` with emphasis. The size follows the callout text style.
+        public static let strong = Westron.TextRole(
             name: "typography.callout.strong",
             textStyle: .callout,
             design: .default,
@@ -1992,11 +1779,13 @@ extension Westron.TextRole {
             font: nil,
             size: 16,
             lineHeight: 1.312,
-            letterSpacing: 0))
+            letterSpacing: 0)
+    }
 
     /// The text roles `typography.subheadline.*`.
-    public static let subheadline = Subheadline(
-        regular: Westron.TextRole(
+    public enum subheadline {
+        /// Supporting text: a subtitle, notes, a count. The size follows the subheadline text style.
+        public static let regular = Westron.TextRole(
             name: "typography.subheadline.regular",
             textStyle: .subheadline,
             design: .default,
@@ -2004,8 +1793,10 @@ extension Westron.TextRole {
             font: nil,
             size: 15,
             lineHeight: 1.333,
-            letterSpacing: 0),
-        medium: Westron.TextRole(
+            letterSpacing: 0)
+
+        /// A row that adds something, such as "Add task". The size follows the subheadline text style.
+        public static let medium = Westron.TextRole(
             name: "typography.subheadline.medium",
             textStyle: .subheadline,
             design: .default,
@@ -2013,8 +1804,10 @@ extension Westron.TextRole {
             font: nil,
             size: 15,
             lineHeight: 1.333,
-            letterSpacing: 0),
-        strong: Westron.TextRole(
+            letterSpacing: 0)
+
+        /// The label of a button or of a bar item. The size follows the subheadline text style.
+        public static let strong = Westron.TextRole(
             name: "typography.subheadline.strong",
             textStyle: .subheadline,
             design: .default,
@@ -2022,11 +1815,14 @@ extension Westron.TextRole {
             font: nil,
             size: 15,
             lineHeight: 1.333,
-            letterSpacing: 0))
+            letterSpacing: 0)
+    }
 
     /// The text roles `typography.footnote.*`.
-    public static let footnote = Footnote(
-        regular: Westron.TextRole(
+    public enum footnote {
+        /// Secondary detail: a hint, a cell in a dense table, a line under a title. The size follows the footnote text
+        /// style.
+        public static let regular = Westron.TextRole(
             name: "typography.footnote.regular",
             textStyle: .footnote,
             design: .default,
@@ -2034,8 +1830,10 @@ extension Westron.TextRole {
             font: nil,
             size: 13,
             lineHeight: 1.385,
-            letterSpacing: 0),
-        medium: Westron.TextRole(
+            letterSpacing: 0)
+
+        /// A small label: a column header, a date, a tag's name. The size follows the footnote text style.
+        public static let medium = Westron.TextRole(
             name: "typography.footnote.medium",
             textStyle: .footnote,
             design: .default,
@@ -2043,8 +1841,10 @@ extension Westron.TextRole {
             font: nil,
             size: 13,
             lineHeight: 1.385,
-            letterSpacing: 0),
-        strong: Westron.TextRole(
+            letterSpacing: 0)
+
+        /// The words on a chip, a pill or a small button. The size follows the footnote text style.
+        public static let strong = Westron.TextRole(
             name: "typography.footnote.strong",
             textStyle: .footnote,
             design: .default,
@@ -2052,11 +1852,14 @@ extension Westron.TextRole {
             font: nil,
             size: 13,
             lineHeight: 1.385,
-            letterSpacing: 0))
+            letterSpacing: 0)
+    }
 
     /// The text roles `typography.caption.*`.
-    public static let caption = Caption(
-        medium: Westron.TextRole(
+    public enum caption {
+        /// Metadata and badges: a status badge, a line of metadata under a title. The size follows the caption text
+        /// style.
+        public static let medium = Westron.TextRole(
             name: "typography.caption.medium",
             textStyle: .caption,
             design: .default,
@@ -2064,11 +1867,14 @@ extension Westron.TextRole {
             font: nil,
             size: 12,
             lineHeight: 1.333,
-            letterSpacing: 0))
+            letterSpacing: 0)
+    }
 
     /// The text roles `typography.code.*`.
-    public static let code = Code(
-        regular: Westron.TextRole(
+    public enum code {
+        /// Code, logs, identifiers and hashes: Geist Mono at the size of the subheadline text style, a step below body
+        /// text.
+        public static let regular = Westron.TextRole(
             name: "typography.code.regular",
             textStyle: .subheadline,
             design: .monospaced,
@@ -2076,8 +1882,11 @@ extension Westron.TextRole {
             font: "GeistMono-Regular",
             size: 15,
             lineHeight: 1.333,
-            letterSpacing: 0),
-        strong: Westron.TextRole(
+            letterSpacing: 0)
+
+        /// Emphasis inside code or a log: a keyword, a level. Geist Mono SemiBold at the size of the subheadline text
+        /// style.
+        public static let strong = Westron.TextRole(
             name: "typography.code.strong",
             textStyle: .subheadline,
             design: .monospaced,
@@ -2085,7 +1894,8 @@ extension Westron.TextRole {
             font: "GeistMono-SemiBold",
             size: 15,
             lineHeight: 1.333,
-            letterSpacing: 0))
+            letterSpacing: 0)
+    }
 
     /// Every text role in token order.
     public static let all: [Westron.TextRole] = [
@@ -2107,131 +1917,6 @@ extension Westron.TextRole {
         code.regular,
         code.strong,
     ]
-
-    /// The text roles `typography.heading.*`, one member per token. The group is generic over its values, so that
-    /// WestronUI holds the same group as SwiftUI values.
-    public struct Heading<Value: Sendable>: Sendable {
-        /// The title of a screen. Onest Bold at the size of the largeTitle text style, tracked in by 1 % of its size.
-        public let large: Value
-
-        /// The title of a card, a section of a screen or an empty state. Onest Bold at the size of the title3 text
-        /// style.
-        public let medium: Value
-
-        /// The title of a block inside a card or a list. Onest SemiBold at the size of the headline text style.
-        public let small: Value
-
-        /// A short label above a group, written in capitals by the product, such as a sidebar section. Onest SemiBold
-        /// at the size of the caption text style, tracked out by 6 % of its size.
-        public let overline: Value
-
-        /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-        public func map<T: Sendable>(_ transform: (Value) -> T) -> Heading<T> {
-            Heading<T>(
-                large: transform(large),
-                medium: transform(medium),
-                small: transform(small),
-                overline: transform(overline))
-        }
-    }
-
-    /// The text roles `typography.body.*`, one member per token. The group is generic over its values, so that
-    /// WestronUI holds the same group as SwiftUI values.
-    public struct Body<Value: Sendable>: Sendable {
-        /// Main text: a row's title, a field's text, a paragraph. The size follows the body text style.
-        public let regular: Value
-
-        /// Main text that needs emphasis: the selected row, a row with children. The size follows the body text style.
-        public let strong: Value
-
-        /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-        public func map<T: Sendable>(_ transform: (Value) -> T) -> Body<T> {
-            Body<T>(regular: transform(regular), strong: transform(strong))
-        }
-    }
-
-    /// The text roles `typography.callout.*`, one member per token. The group is generic over its values, so that
-    /// WestronUI holds the same group as SwiftUI values.
-    public struct Callout<Value: Sendable>: Sendable {
-        /// Text one step below the main text: a nested row's title, a card in a column. The size follows the callout
-        /// text style.
-        public let regular: Value
-
-        /// `callout.regular` with emphasis. The size follows the callout text style.
-        public let strong: Value
-
-        /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-        public func map<T: Sendable>(_ transform: (Value) -> T) -> Callout<T> {
-            Callout<T>(regular: transform(regular), strong: transform(strong))
-        }
-    }
-
-    /// The text roles `typography.subheadline.*`, one member per token. The group is generic over its values, so that
-    /// WestronUI holds the same group as SwiftUI values.
-    public struct Subheadline<Value: Sendable>: Sendable {
-        /// Supporting text: a subtitle, notes, a count. The size follows the subheadline text style.
-        public let regular: Value
-
-        /// A row that adds something, such as "Add task". The size follows the subheadline text style.
-        public let medium: Value
-
-        /// The label of a button or of a bar item. The size follows the subheadline text style.
-        public let strong: Value
-
-        /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-        public func map<T: Sendable>(_ transform: (Value) -> T) -> Subheadline<T> {
-            Subheadline<T>(regular: transform(regular), medium: transform(medium), strong: transform(strong))
-        }
-    }
-
-    /// The text roles `typography.footnote.*`, one member per token. The group is generic over its values, so that
-    /// WestronUI holds the same group as SwiftUI values.
-    public struct Footnote<Value: Sendable>: Sendable {
-        /// Secondary detail: a hint, a cell in a dense table, a line under a title. The size follows the footnote text
-        /// style.
-        public let regular: Value
-
-        /// A small label: a column header, a date, a tag's name. The size follows the footnote text style.
-        public let medium: Value
-
-        /// The words on a chip, a pill or a small button. The size follows the footnote text style.
-        public let strong: Value
-
-        /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-        public func map<T: Sendable>(_ transform: (Value) -> T) -> Footnote<T> {
-            Footnote<T>(regular: transform(regular), medium: transform(medium), strong: transform(strong))
-        }
-    }
-
-    /// The text roles `typography.caption.*`, one member per token. The group is generic over its values, so that
-    /// WestronUI holds the same group as SwiftUI values.
-    public struct Caption<Value: Sendable>: Sendable {
-        /// Metadata and badges: a status badge, a line of metadata under a title. The size follows the caption text
-        /// style.
-        public let medium: Value
-
-        /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-        public func map<T: Sendable>(_ transform: (Value) -> T) -> Caption<T> {
-            Caption<T>(medium: transform(medium))
-        }
-    }
-
-    /// The text roles `typography.code.*`, one member per token. The group is generic over its values, so that
-    /// WestronUI holds the same group as SwiftUI values.
-    public struct Code<Value: Sendable>: Sendable {
-        /// Code, logs, identifiers and hashes: Geist Mono at the size of the subheadline text style, a step below body
-        /// text.
-        public let regular: Value
-
-        /// Emphasis inside code or a log: a keyword, a level. Geist Mono SemiBold at the size of the subheadline text
-        /// style.
-        public let strong: Value
-
-        /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-        public func map<T: Sendable>(_ transform: (Value) -> T) -> Code<T> {
-            Code<T>(regular: transform(regular), strong: transform(strong))
-        }
-    }
 }
 
 extension Westron.Transition {
@@ -2401,12 +2086,22 @@ extension Westron.Dimension {
     public static let radius400 = Westron.Dimension(name: "radius.400", value: 32)
 
     /// The lengths `radius.*`.
-    public static let radius = Radius(
-        control: Westron.Dimension(name: "radius.control", value: 8),
-        row: Westron.Dimension(name: "radius.row", value: 8),
-        card: Westron.Dimension(name: "radius.card", value: 12),
-        overlay: Westron.Dimension(name: "radius.overlay", value: 12),
-        sheet: Westron.Dimension(name: "radius.sheet", value: 16))
+    public enum radius {
+        /// A control westron draws: a button, a field, a segmented control. 8 px, a quarter of a 32 px control.
+        public static let control = Westron.Dimension(name: "radius.control", value: 8)
+
+        /// The highlight of a row under the pointer or selected.
+        public static let row = Westron.Dimension(name: "radius.row", value: 8)
+
+        /// A card or a panel on the canvas.
+        public static let card = Westron.Dimension(name: "radius.card", value: 12)
+
+        /// A popover or a menu westron draws; system ones keep their own.
+        public static let overlay = Westron.Dimension(name: "radius.overlay", value: 12)
+
+        /// A sheet or a dialog westron draws.
+        public static let sheet = Westron.Dimension(name: "radius.sheet", value: 16)
+    }
 
     /// Step 25 of the space ladder: 2 px.
     public static let space25 = Westron.Dimension(name: "space.25", value: 2)
@@ -2448,11 +2143,19 @@ extension Westron.Dimension {
     public static let space800 = Westron.Dimension(name: "space.800", value: 64)
 
     /// The lengths `stroke.*`.
-    public static let stroke = Stroke(
-        hairline: Westron.Dimension(name: "stroke.hairline", value: 0.5),
-        thin: Westron.Dimension(name: "stroke.thin", value: 1),
-        regular: Westron.Dimension(name: "stroke.regular", value: 1.5),
-        thick: Westron.Dimension(name: "stroke.thick", value: 2))
+    public enum stroke {
+        /// The edge of glass and of a card on a fill.
+        public static let hairline = Westron.Dimension(name: "stroke.hairline", value: 0.5)
+
+        /// Rules, dividers, tree guides in a sidebar.
+        public static let thin = Westron.Dimension(name: "stroke.thin", value: 1)
+
+        /// Guides on a phone, a dashed outline, a small check's ring.
+        public static let regular = Westron.Dimension(name: "stroke.regular", value: 1.5)
+
+        /// A focus ring, a drop indicator, a selection ring.
+        public static let thick = Westron.Dimension(name: "stroke.thick", value: 2)
+    }
 
     /// Every dimension in token order.
     public static let all: [Westron.Dimension] = [
@@ -2487,58 +2190,4 @@ extension Westron.Dimension {
         stroke.regular,
         stroke.thick,
     ]
-
-    /// The lengths `radius.*`, one member per token. The group is generic over its values, so that WestronUI holds the
-    /// same group as SwiftUI values.
-    public struct Radius<Value: Sendable>: Sendable {
-        /// A control westron draws: a button, a field, a segmented control. 8 px, a quarter of a 32 px control.
-        public let control: Value
-
-        /// The highlight of a row under the pointer or selected.
-        public let row: Value
-
-        /// A card or a panel on the canvas.
-        public let card: Value
-
-        /// A popover or a menu westron draws; system ones keep their own.
-        public let overlay: Value
-
-        /// A sheet or a dialog westron draws.
-        public let sheet: Value
-
-        /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-        public func map<T: Sendable>(_ transform: (Value) -> T) -> Radius<T> {
-            Radius<T>(
-                control: transform(control),
-                row: transform(row),
-                card: transform(card),
-                overlay: transform(overlay),
-                sheet: transform(sheet))
-        }
-    }
-
-    /// The lengths `stroke.*`, one member per token. The group is generic over its values, so that WestronUI holds the
-    /// same group as SwiftUI values.
-    public struct Stroke<Value: Sendable>: Sendable {
-        /// The edge of glass and of a card on a fill.
-        public let hairline: Value
-
-        /// Rules, dividers, tree guides in a sidebar.
-        public let thin: Value
-
-        /// Guides on a phone, a dashed outline, a small check's ring.
-        public let regular: Value
-
-        /// A focus ring, a drop indicator, a selection ring.
-        public let thick: Value
-
-        /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-        public func map<T: Sendable>(_ transform: (Value) -> T) -> Stroke<T> {
-            Stroke<T>(
-                hairline: transform(hairline),
-                thin: transform(thin),
-                regular: transform(regular),
-                thick: transform(thick))
-        }
-    }
 }

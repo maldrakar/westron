@@ -17,9 +17,9 @@
 ///     Westron.Transition.move.spring             // Spring(duration: 0.35, bounce: 0.15)
 ///     Westron.Icon(rawValue: "sun") ?? .fallback // a list's icon by the name the store keeps
 ///
-/// A token's name follows its path: `color.status.danger.text` is `Westron.Color.status.danger.text`. A group of
-/// tokens is a type of its own, generic over its values, so that WestronUI holds the same group with SwiftUI values:
-/// `Color.status.danger.text` (decisions/0010).
+/// A token's name follows its path: `color.status.danger.text` is `Westron.Color.status.danger.text`, a group being an
+/// enum named after it. In SwiftUI a view passes it as it is: `.foregroundStyle(.status.danger.text)`
+/// (decisions/0010).
 public enum Westron {}
 
 extension Westron {

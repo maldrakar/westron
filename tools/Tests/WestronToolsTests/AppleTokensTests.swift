@@ -34,7 +34,7 @@ struct AppleTokensTests {
         #expect(contents?.contains("ink") == false, "primitives stay out")
     }
 
-    @Test("the SwiftUI file: a static per token that calls the hand-written adapter")
+    @Test("the SwiftUI file: a static per length and motion that calls the hand-written adapter, an enum per group")
     func swiftUIFile() throws {
         #expect(AppleFixture.file(try AppleFixture.generate(), AppleTokens.swiftUIFile) == Self.swiftUI)
     }
@@ -185,8 +185,8 @@ struct AppleTokensTests {
                     "tint": { "$value": "{color.ink}" },
                     "chart": { "1": { "$value": "{color.ink}" } },
                     "chart1": { "$value": "{color.ink}" },
-                    "text-x": { "y": { "$value": "{color.ink}" } },
-                    "text": { "map": { "$value": "{color.ink}" }, "x": { "y": { "$value": "{color.ink}" } },
+                    "name": { "x": { "$value": "{color.ink}" } },
+                    "text": {
                     """#)
         }
         let problems = AppleFixture.problems([
@@ -196,23 +196,22 @@ struct AppleTokensTests {
         let collides = "collides with a member the type already has; rename the token"
         #expect(
             Set(problems) == [
-                "color.primary: its Swift name Color.primary \(collides)",
-                "color.tint: its Swift name Color.tint \(collides)",
-                "color.chart1 and color.chart.1 have the same Swift name Color.chart1",
-                "color.text.map: its Swift name Color.text.map collides with a member a group's type already has; "
-                    + "rename the token",
-                "color.text.x and color.text-x have the same Swift type TextX",
+                "color.primary: its Swift name Westron.Color.primary \(collides)",
+                "color.tint: its Swift name Westron.Color.tint \(collides)",
+                "color.name: its Swift name Westron.Color.name \(collides)",
+                "color.chart1 and color.chart.1 have the same Swift name Westron.Color.chart1",
                 "typography.font: its Swift name Westron.TextRole.font \(collides)",
                 "motion.linear: its Swift name Animation.linear \(collides)",
                 "pi: its Swift name CGFloat.pi \(collides)",
             ])
     }
 
-    @Test("a group may share its name with a ShapeStyle of SwiftUI, a color may not")
+    @Test("a group is an enum and may share its name with a ShapeStyle of SwiftUI; a color may not")
     func groupNames() throws {
         // The fixture's `color.background.vivid` is in a group named like SwiftUI's `.background`.
         let tokens = try #require(AppleFixture.file(try AppleFixture.generate(), AppleTokens.tokensFile))
-        #expect(tokens.contains("    public static let background = Background("))
+        #expect(tokens.contains("    public enum background {\n"))
+        #expect(tokens.contains("        public static let vivid = Westron.Color(\n"))
     }
 
     @Test("a name follows the path, a member per segment, without the group the Swift type names")
@@ -233,7 +232,6 @@ struct AppleTokensTests {
                 "color.status", "color.status.danger", "color.status.danger.text",
             ])
         #expect(try SwiftName.members("space.100", dropping: nil).map(\.path) == ["space.100"])
-        #expect(SwiftName.typeName(["status", "danger"]) == "StatusDanger")
         #expect(SwiftName.declared("default") == "`default`", "a keyword is declared in backticks")
         #expect(SwiftName.declared("canvas") == "canvas")
     }
@@ -264,29 +262,35 @@ struct AppleTokensTests {
         // (decisions/0010).
         //
         // The values of westron's semantic tokens as plain Swift, with no imports, so that shared code and its WebAssembly
-        // build can use them; their types are in Westron.swift, their SwiftUI accessors in WestronUI. A group of tokens is a
-        // type of its own, `Westron.Color.background.canvas`, generic over its values so that WestronUI holds the same group as
-        // SwiftUI values.
+        // build can use them; their types are in Westron.swift, their SwiftUI accessors in WestronUI. A group of tokens is an
+        // enum named after it, so `color.background.canvas` is `Westron.Color.background.canvas`, and each token is made on its
+        // first use.
 
         extension Westron.Color {
             /// The colors `color.text.*`.
-            public static let text = Text(
-                primary: Westron.Color(
+            public enum text {
+                /// Words and glyphs.
+                ///
+                /// Use for: body text, titles. Avoid: Words on the accent: use text.on-accent.
+                public static let primary = Westron.Color(
                     name: "color.text.primary",
                     light: Westron.RGB(hex: 0x1F1D1A),
                     dark: Westron.RGB(hex: 0xFFFFFF),
                     lightHighContrast: Westron.RGB(hex: 0x000000),
                     darkHighContrast: Westron.RGB(hex: 0xFFFFFF),
-                    backgrounds: [["color.background.vivid"], ["color.category.blue.background", "color.background.vivid"]]))
+                    backgrounds: [["color.background.vivid"], ["color.category.blue.background", "color.background.vivid"]])
+            }
 
             /// The colors `color.background.*`.
-            public static let background = Background(
-                vivid: Westron.Color(
+            public enum background {
+                /// A fill brighter than sRGB can show.
+                public static let vivid = Westron.Color(
                     name: "color.background.vivid",
                     light: Westron.RGB(.displayP3, red: 0, green: 0.8, blue: 0.3),
                     dark: Westron.RGB(.displayP3, red: 0.1, green: 0.9, blue: 0.4),
                     lightHighContrast: Westron.RGB(.displayP3, red: 0, green: 0.8, blue: 0.3),
-                    darkHighContrast: Westron.RGB(.displayP3, red: 0.1, green: 0.9, blue: 0.4)))
+                    darkHighContrast: Westron.RGB(.displayP3, red: 0.1, green: 0.9, blue: 0.4))
+            }
 
             /// Every semantic color in token order, the list colors included.
             public static let all: [Westron.Color] = [
@@ -297,32 +301,6 @@ struct AppleTokensTests {
                 Westron.Category.lightGreen.background,
                 Westron.Category.lightGreen.onFill,
             ]
-
-            /// The colors `color.text.*`, one member per token. The group is generic over its values, so that WestronUI holds
-            /// the same group as SwiftUI values.
-            public struct Text<Value: Sendable>: Sendable {
-                /// Words and glyphs.
-                ///
-                /// Use for: body text, titles. Avoid: Words on the accent: use text.on-accent.
-                public let primary: Value
-
-                /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-                public func map<T: Sendable>(_ transform: (Value) -> T) -> Text<T> {
-                    Text<T>(primary: transform(primary))
-                }
-            }
-
-            /// The colors `color.background.*`, one member per token. The group is generic over its values, so that WestronUI
-            /// holds the same group as SwiftUI values.
-            public struct Background<Value: Sendable>: Sendable {
-                /// A fill brighter than sRGB can show.
-                public let vivid: Value
-
-                /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-                public func map<T: Sendable>(_ transform: (Value) -> T) -> Background<T> {
-                    Background<T>(vivid: transform(vivid))
-                }
-            }
         }
 
         extension Westron {
@@ -350,25 +328,6 @@ struct AppleTokensTests {
 
                 /// The colors of the category, one per role, in token order.
                 public var colors: [Westron.Color] { [background, onFill] }
-
-                /// The colors of the category by role, which WestronUI's `Color.category(_:)` holds as SwiftUI colors.
-                public var roles: Roles<Westron.Color> {
-                    Roles(background: background, onFill: onFill)
-                }
-
-                /// A list color's colors by role, generic over the value so that WestronUI holds them as SwiftUI colors.
-                public struct Roles<Value: Sendable>: Sendable {
-                    /// The tile under a glyph: the list color, translucent.
-                    public let background: Value
-
-                    /// The mark on a fill.
-                    public let onFill: Value
-
-                    /// The roles with every value transformed, as WestronUI makes SwiftUI colors of them.
-                    public func map<T: Sendable>(_ transform: (Value) -> T) -> Roles<T> {
-                        Roles<T>(background: transform(background), onFill: transform(onFill))
-                    }
-                }
 
                 /// The tile under a glyph: the list color blue, translucent.
                 private static let blueBackground = Westron.Color(
@@ -406,8 +365,9 @@ struct AppleTokensTests {
 
         extension Westron.TextRole {
             /// The text roles `typography.heading.*`.
-            public static let heading = Heading(
-                large: Westron.TextRole(
+            public enum heading {
+                /// The title of a screen.
+                public static let large = Westron.TextRole(
                     name: "typography.heading.large",
                     textStyle: .largeTitle,
                     design: .default,
@@ -415,7 +375,8 @@ struct AppleTokensTests {
                     font: "Onest-Bold",
                     size: 34,
                     lineHeight: 1.206,
-                    letterSpacing: 0))
+                    letterSpacing: 0)
+            }
 
             /// Main text.
             public static let label = Westron.TextRole(
@@ -433,18 +394,6 @@ struct AppleTokensTests {
                 heading.large,
                 label,
             ]
-
-            /// The text roles `typography.heading.*`, one member per token. The group is generic over its values, so that
-            /// WestronUI holds the same group as SwiftUI values.
-            public struct Heading<Value: Sendable>: Sendable {
-                /// The title of a screen.
-                public let large: Value
-
-                /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-                public func map<T: Sendable>(_ transform: (Value) -> T) -> Heading<T> {
-                    Heading<T>(large: transform(large))
-                }
-            }
         }
 
         extension Westron.Transition {
@@ -499,26 +448,16 @@ struct AppleTokensTests {
             public static let space100 = Westron.Dimension(name: "space.100", value: 8)
 
             /// The lengths `stroke.*`.
-            public static let stroke = Stroke(
-                thin: Westron.Dimension(name: "stroke.thin", value: 1))
+            public enum stroke {
+                /// Rules and dividers.
+                public static let thin = Westron.Dimension(name: "stroke.thin", value: 1)
+            }
 
             /// Every dimension in token order.
             public static let all: [Westron.Dimension] = [
                 space100,
                 stroke.thin,
             ]
-
-            /// The lengths `stroke.*`, one member per token. The group is generic over its values, so that WestronUI holds the
-            /// same group as SwiftUI values.
-            public struct Stroke<Value: Sendable>: Sendable {
-                /// Rules and dividers.
-                public let thin: Value
-
-                /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
-                public func map<T: Sendable>(_ transform: (Value) -> T) -> Stroke<T> {
-                    Stroke<T>(thin: transform(thin))
-                }
-            }
         }
 
         """#
@@ -527,43 +466,13 @@ struct AppleTokensTests {
         // Generated from r.resolver.json by `tools/westron generate`. Do not edit: change the tokens and generate again
         // (decisions/0010).
         //
-        // The public SwiftUI accessors of westron's semantic tokens. Each calls an adapter in TokenAdapters.swift with a value
-        // from WestronTokens: `Color.text.secondary` is `Color(Westron.Color.text.secondary)`, the colorset of that name, and
-        // `Color.text` is WestronTokens' group `Westron.Color.text` with SwiftUI colors. Text roles have no statics on `Font`,
-        // where `Font.body` would become ambiguous: a role is `.textRole(.body.strong)` or `Font(.body.strong)`.
+        // The public SwiftUI accessors of westron's lengths and motions. Each calls an adapter in TokenAdapters.swift with a
+        // value from WestronTokens: `CGFloat.radius.card` is `CGFloat(Westron.Dimension.radius.card)`. Colors and text roles
+        // need none: a view passes `Westron.Color` to the overloads in TokenAdapters.swift, `.foregroundStyle(.text.primary)`,
+        // and a role to `.textRole(.body.strong)`.
 
         import SwiftUI
         import WestronTokens
-
-        extension Color {
-            /// The colors `color.text.*` as SwiftUI colors, from their colorsets.
-            public static let text = Westron.Color.text.map { Color($0) }
-
-            /// The colors `color.background.*` as SwiftUI colors, from their colorsets.
-            public static let background = Westron.Color.background.map { Color($0) }
-
-            /// A list's colors by role, as SwiftUI colors from their colorsets: `.category(.amber).text`.
-            public static func category(_ category: Westron.Category) -> Westron.Category.Roles<Color> {
-                category.roles.map { Color($0) }
-            }
-        }
-
-        extension ShapeStyle where Self == Color {
-            /// The colors `color.text.*` as SwiftUI colors, from their colorsets.
-            public static var text: Westron.Color.Text<Color> {
-                Color.text
-            }
-
-            /// The colors `color.background.*` as SwiftUI colors, from their colorsets.
-            public static var background: Westron.Color.Background<Color> {
-                Color.background
-            }
-
-            /// A list's colors by role, as SwiftUI colors from their colorsets: `.category(.amber).text`.
-            public static func category(_ category: Westron.Category) -> Westron.Category.Roles<Color> {
-                Color.category(category)
-            }
-        }
 
         extension Animation {
             /// Something popping into place.
@@ -584,7 +493,12 @@ struct AppleTokensTests {
             }
 
             /// The lengths `stroke.*` in points.
-            public static let stroke = Westron.Dimension.stroke.map { CGFloat($0) }
+            public enum stroke {
+                /// Rules and dividers.
+                public static var thin: CGFloat {
+                    CGFloat(Westron.Dimension.stroke.thin)
+                }
+            }
         }
 
         """#

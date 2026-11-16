@@ -1,147 +1,13 @@
 // Generated from tokens/westron.resolver.json by `tools/westron generate`. Do not edit: change the tokens and generate
 // again (decisions/0010).
 //
-// The public SwiftUI accessors of westron's semantic tokens. Each calls an adapter in TokenAdapters.swift with a value
-// from WestronTokens: `Color.text.secondary` is `Color(Westron.Color.text.secondary)`, the colorset of that name, and
-// `Color.text` is WestronTokens' group `Westron.Color.text` with SwiftUI colors. Text roles have no statics on `Font`,
-// where `Font.body` would become ambiguous: a role is `.textRole(.body.strong)` or `Font(.body.strong)`.
+// The public SwiftUI accessors of westron's lengths and motions. Each calls an adapter in TokenAdapters.swift with a
+// value from WestronTokens: `CGFloat.radius.card` is `CGFloat(Westron.Dimension.radius.card)`. Colors and text roles
+// need none: a view passes `Westron.Color` to the overloads in TokenAdapters.swift, `.foregroundStyle(.text.primary)`,
+// and a role to `.textRole(.body.strong)`.
 
 import SwiftUI
 import WestronTokens
-
-extension Color {
-    /// The colors `color.background.*` as SwiftUI colors, from their colorsets.
-    public static let background = Westron.Color.background.map { Color($0) }
-
-    /// The colors `color.text.*` as SwiftUI colors, from their colorsets.
-    public static let text = Westron.Color.text.map { Color($0) }
-
-    /// The colors `color.icon.*` as SwiftUI colors, from their colorsets.
-    public static let icon = Westron.Color.icon.map { Color($0) }
-
-    /// The colors `color.border.*` as SwiftUI colors, from their colorsets.
-    public static let border = Westron.Color.border.map { Color($0) }
-
-    /// The colors `color.status.*` as SwiftUI colors, from their colorsets.
-    public static let status = Westron.Color.status.map { Color($0) }
-
-    /// Series 1 of a chart.
-    public static var chart1: Color {
-        Color(Westron.Color.chart1)
-    }
-
-    /// Series 2 of a chart.
-    public static var chart2: Color {
-        Color(Westron.Color.chart2)
-    }
-
-    /// Series 3 of a chart.
-    public static var chart3: Color {
-        Color(Westron.Color.chart3)
-    }
-
-    /// Series 4 of a chart.
-    public static var chart4: Color {
-        Color(Westron.Color.chart4)
-    }
-
-    /// Series 5 of a chart.
-    public static var chart5: Color {
-        Color(Westron.Color.chart5)
-    }
-
-    /// Series 6 of a chart.
-    public static var chart6: Color {
-        Color(Westron.Color.chart6)
-    }
-
-    /// Series 7 of a chart.
-    public static var chart7: Color {
-        Color(Westron.Color.chart7)
-    }
-
-    /// Series 8 of a chart.
-    public static var chart8: Color {
-        Color(Westron.Color.chart8)
-    }
-
-    /// A list's colors by role, as SwiftUI colors from their colorsets: `.category(.amber).text`.
-    public static func category(_ category: Westron.Category) -> Westron.Category.Roles<Color> {
-        category.roles.map { Color($0) }
-    }
-}
-
-extension ShapeStyle where Self == Color {
-    /// The colors `color.background.*` as SwiftUI colors, from their colorsets.
-    public static var background: Westron.Color.Background<Color> {
-        Color.background
-    }
-
-    /// The colors `color.text.*` as SwiftUI colors, from their colorsets.
-    public static var text: Westron.Color.Text<Color> {
-        Color.text
-    }
-
-    /// The colors `color.icon.*` as SwiftUI colors, from their colorsets.
-    public static var icon: Westron.Color.Icon<Color> {
-        Color.icon
-    }
-
-    /// The colors `color.border.*` as SwiftUI colors, from their colorsets.
-    public static var border: Westron.Color.Border<Color> {
-        Color.border
-    }
-
-    /// The colors `color.status.*` as SwiftUI colors, from their colorsets.
-    public static var status: Westron.Color.Status<Color> {
-        Color.status
-    }
-
-    /// Series 1 of a chart.
-    public static var chart1: Color {
-        Color(Westron.Color.chart1)
-    }
-
-    /// Series 2 of a chart.
-    public static var chart2: Color {
-        Color(Westron.Color.chart2)
-    }
-
-    /// Series 3 of a chart.
-    public static var chart3: Color {
-        Color(Westron.Color.chart3)
-    }
-
-    /// Series 4 of a chart.
-    public static var chart4: Color {
-        Color(Westron.Color.chart4)
-    }
-
-    /// Series 5 of a chart.
-    public static var chart5: Color {
-        Color(Westron.Color.chart5)
-    }
-
-    /// Series 6 of a chart.
-    public static var chart6: Color {
-        Color(Westron.Color.chart6)
-    }
-
-    /// Series 7 of a chart.
-    public static var chart7: Color {
-        Color(Westron.Color.chart7)
-    }
-
-    /// Series 8 of a chart.
-    public static var chart8: Color {
-        Color(Westron.Color.chart8)
-    }
-
-    /// A list's colors by role, as SwiftUI colors from their colorsets: `.category(.amber).text`.
-    public static func category(_ category: Westron.Category) -> Westron.Category.Roles<Color> {
-        Color.category(category)
-    }
-}
 
 extension Animation {
     /// A change of color or opacity: a hover tint, a selection, a fade in or out. It has no spring and no bounce.
@@ -227,7 +93,32 @@ extension CGFloat {
     }
 
     /// The lengths `radius.*` in points.
-    public static let radius = Westron.Dimension.radius.map { CGFloat($0) }
+    public enum radius {
+        /// A control westron draws: a button, a field, a segmented control. 8 px, a quarter of a 32 px control.
+        public static var control: CGFloat {
+            CGFloat(Westron.Dimension.radius.control)
+        }
+
+        /// The highlight of a row under the pointer or selected.
+        public static var row: CGFloat {
+            CGFloat(Westron.Dimension.radius.row)
+        }
+
+        /// A card or a panel on the canvas.
+        public static var card: CGFloat {
+            CGFloat(Westron.Dimension.radius.card)
+        }
+
+        /// A popover or a menu westron draws; system ones keep their own.
+        public static var overlay: CGFloat {
+            CGFloat(Westron.Dimension.radius.overlay)
+        }
+
+        /// A sheet or a dialog westron draws.
+        public static var sheet: CGFloat {
+            CGFloat(Westron.Dimension.radius.sheet)
+        }
+    }
 
     /// Step 25 of the space ladder: 2 px.
     public static var space25: CGFloat {
@@ -295,5 +186,25 @@ extension CGFloat {
     }
 
     /// The lengths `stroke.*` in points.
-    public static let stroke = Westron.Dimension.stroke.map { CGFloat($0) }
+    public enum stroke {
+        /// The edge of glass and of a card on a fill.
+        public static var hairline: CGFloat {
+            CGFloat(Westron.Dimension.stroke.hairline)
+        }
+
+        /// Rules, dividers, tree guides in a sidebar.
+        public static var thin: CGFloat {
+            CGFloat(Westron.Dimension.stroke.thin)
+        }
+
+        /// Guides on a phone, a dashed outline, a small check's ring.
+        public static var regular: CGFloat {
+            CGFloat(Westron.Dimension.stroke.regular)
+        }
+
+        /// A focus ring, a drop indicator, a selection ring.
+        public static var thick: CGFloat {
+            CGFloat(Westron.Dimension.stroke.thick)
+        }
+    }
 }

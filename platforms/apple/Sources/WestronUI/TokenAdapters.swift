@@ -1,6 +1,7 @@
 // The adapters that turn WestronTokens values into SwiftUI values. The generated statics in
-// Generated/Tokens+SwiftUI.swift call them: `Color.text.secondary` is `Color(Westron.Color.text.secondary)`. An icon
-// draws the SF Symbol that Generated/Icons+SwiftUI.swift names for it.
+// Generated/Tokens+SwiftUI.swift call them: `CGFloat.radius.card` is `CGFloat(Westron.Dimension.radius.card)`. A color
+// goes to SwiftUI through the modifier overloads below, `.foregroundStyle(.text.primary)`, or `Color(.text.primary)`.
+// An icon draws the SF Symbol that Generated/Icons+SwiftUI.swift names for it.
 
 import CoreText
 import SwiftUI
@@ -22,6 +23,73 @@ extension Color {
     /// A color of one theme, which does not switch: a shadow's color, a sample of a theme.
     public init(_ rgb: Westron.RGB) {
         self.init(Color.RGBColorSpace(rgb.space), red: rgb.red, green: rgb.green, blue: rgb.blue, opacity: rgb.opacity)
+    }
+}
+
+// MARK: - Colors where SwiftUI takes a style
+//
+// SwiftUI's modifiers take `some ShapeStyle`, where Swift finds a short name only among the statics of `ShapeStyle`
+// extensions, and a group of tokens is an enum, which cannot live there. These overloads take a `Westron.Color`, so
+// `.foregroundStyle(.text.primary)` finds westron's group, while `.foregroundStyle(.background)` and `.red` stay
+// SwiftUI's (decisions/0010). A call without an overload takes `Color(.text.primary)`.
+
+extension View {
+    /// Sets the foreground of the view's content to a westron color.
+    public func foregroundStyle(_ color: Westron.Color) -> some View {
+        foregroundStyle(Color(color))
+    }
+
+    /// Puts a westron color behind the view, to the edges of the safe area it names.
+    public func background(_ color: Westron.Color, ignoresSafeAreaEdges edges: Edge.Set = .all) -> some View {
+        background(Color(color), ignoresSafeAreaEdges: edges)
+    }
+
+    /// Puts a shape filled with a westron color behind the view.
+    public func background<S: Shape>(_ color: Westron.Color, in shape: S, fillStyle: FillStyle = FillStyle())
+        -> some View
+    {
+        background(Color(color), in: shape, fillStyle: fillStyle)
+    }
+
+    /// Tints the view's controls with a westron color.
+    public func tint(_ color: Westron.Color) -> some View {
+        tint(Color(color))
+    }
+}
+
+extension Text {
+    /// Sets the text's color to a westron color, keeping it a `Text` that can join others with `+`.
+    public func foregroundStyle(_ color: Westron.Color) -> Text {
+        foregroundStyle(Color(color))
+    }
+}
+
+extension Shape {
+    /// Fills the shape with a westron color.
+    public func fill(_ color: Westron.Color, style: FillStyle = FillStyle()) -> some View {
+        fill(Color(color), style: style)
+    }
+
+    /// Strokes the shape's outline with a westron color.
+    public func stroke(_ color: Westron.Color, lineWidth: CGFloat = .stroke.thin) -> some View {
+        stroke(Color(color), lineWidth: lineWidth)
+    }
+
+    /// Strokes the shape's outline with a westron color in a stroke style.
+    public func stroke(_ color: Westron.Color, style: StrokeStyle) -> some View {
+        stroke(Color(color), style: style)
+    }
+}
+
+extension InsettableShape {
+    /// Strokes the shape's outline with a westron color, inside its frame.
+    public func strokeBorder(_ color: Westron.Color, lineWidth: CGFloat = .stroke.thin) -> some View {
+        strokeBorder(Color(color), lineWidth: lineWidth)
+    }
+
+    /// Strokes the shape's outline with a westron color in a stroke style, inside its frame.
+    public func strokeBorder(_ color: Westron.Color, style: StrokeStyle) -> some View {
+        strokeBorder(Color(color), style: style)
     }
 }
 
@@ -245,7 +313,7 @@ extension Image {
     ///
     ///     Image(Westron.Icon(rawValue: list.icon) ?? .fallback)
     ///         .textRole(.body.regular)
-    ///         .foregroundStyle(.category(.amber).text)
+    ///         .foregroundStyle(Westron.Category.amber.text)
     public init(_ icon: Westron.Icon) {
         self.init(systemName: icon.systemName)
     }

@@ -166,23 +166,23 @@ private struct CategoryColorsPage: View {
                             .gridColumnAlignment(.leading)
                         tile(category)
                         Circle()
-                            .strokeBorder(.category(category).border, lineWidth: .stroke.regular)
+                            .strokeBorder(category.border, lineWidth: .stroke.regular)
                             .frame(width: SampleMetrics.mark, height: SampleMetrics.mark)
                         Circle()
-                            .fill(.category(category).icon)
+                            .fill(category.icon)
                             .frame(width: Size.dot, height: Size.dot)
                         Text("Aa")
                             .textRole(.body.strong)
-                            .foregroundStyle(.category(category).text)
+                            .foregroundStyle(category.text)
                         Circle()
-                            .fill(.category(category).fill)
+                            .fill(category.fill)
                             .frame(width: SampleMetrics.mark, height: SampleMetrics.mark)
                         Circle()
-                            .fill(.category(category).fill)
+                            .fill(category.fill)
                             .overlay {
                                 Image(Westron.Icon.check)
                                     .font(Font(.caption.medium).weight(.bold))
-                                    .foregroundStyle(.category(category).onFill)
+                                    .foregroundStyle(category.onFill)
                             }
                             .frame(width: SampleMetrics.mark, height: SampleMetrics.mark)
                     }
@@ -208,11 +208,11 @@ private struct CategoryColorsPage: View {
     /// The tile under a list's glyph, with the glyph in the list's text color, as the sidebar draws it.
     private func tile(_ category: Westron.Category) -> some View {
         RoundedRectangle(cornerRadius: .radius100)
-            .fill(.category(category).background)
+            .fill(category.background)
             .overlay {
                 Image(Westron.Icon.tray)
                     .textRole(.footnote.medium)
-                    .foregroundStyle(.category(category).text)
+                    .foregroundStyle(category.text)
             }
             .frame(width: SampleMetrics.tile, height: SampleMetrics.tile)
     }

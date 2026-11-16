@@ -70,7 +70,7 @@ struct TokenAccessorTests {
     @Test("a theme switches the color: the canvas differs in each theme")
     func themesSwitch() {
         let canvas = Westron.Theme.allCases.map { theme in
-            Color.text.secondary.resolve(in: Self.environment(theme))
+            Color(.text.secondary).resolve(in: Self.environment(theme))
         }
         #expect(!Self.close(canvas[0], canvas[1]))
         #expect(!Self.close(canvas[0], canvas[2]))
@@ -88,25 +88,58 @@ struct TokenAccessorTests {
         #expect(resolved.green > 1, "a Display P3 green is outside sRGB")
     }
 
-    @Test("a group reads the same where a ShapeStyle is expected, as in .foregroundStyle(.text.primary)")
-    func groupsAsShapeStyles() {
-        func style<S: ShapeStyle>(_ style: S) -> S { style }
-        for theme in Westron.Theme.allCases {
-            let environment = Self.environment(theme)
-            let pairs: [(Color, Westron.Color)] = [
-                (style(.text.primary), .text.primary),
-                (style(.background.canvas), .background.canvas),
-                (style(.status.danger.onFill), .status.danger.onFill),
-                (style(.border.default), .border.default),
-                (style(.category(.amber).text), Westron.Category.amber.text),
-                (style(.chart1), .chart1),
-            ]
-            for (color, token) in pairs {
-                #expect(
-                    Self.close(color.resolve(in: environment), Self.resolved(token[theme])),
-                    "\(token.name) in \(theme.rawValue)")
-            }
+    /// The color of the middle pixel of a view drawn in a theme, in 8-bit sRGB.
+    static func pixel(of view: some View, theme: Westron.Theme) -> Color.Resolved? {
+        let renderer = ImageRenderer(
+            content: view.frame(width: 4, height: 4)
+                .environment(\.colorScheme, theme.isDark ? .dark : .light)
+                .environment(\._colorSchemeContrast, theme.isHighContrast ? .increased : .standard))
+        renderer.scale = 1
+        guard let image = renderer.cgImage, let space = CGColorSpace(name: CGColorSpace.sRGB) else { return nil }
+        var bytes = [UInt8](repeating: 0, count: 4)
+        guard
+            let context = CGContext(
+                data: &bytes, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: space,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return nil }
+        context.draw(image, in: CGRect(x: -2, y: -2, width: image.width, height: image.height))
+        return Color.Resolved(
+            colorSpace: .sRGB, red: Float(bytes[0]) / 255, green: Float(bytes[1]) / 255, blue: Float(bytes[2]) / 255,
+            opacity: Float(bytes[3]) / 255)
+    }
+
+    @Test(
+        "a westron color reaches SwiftUI's modifiers through the overloads, in every theme",
+        arguments: Westron.Theme.allCases)
+    func modifierOverloads(theme: Westron.Theme) throws {
+        let token = Westron.Color.background.accent
+        let views: [(String, AnyView)] = [
+            ("fill", AnyView(Rectangle().fill(.background.accent))),
+            ("foregroundStyle", AnyView(Rectangle().foregroundStyle(.background.accent))),
+            ("background", AnyView(Color.clear.background(.background.accent))),
+            ("background(_:in:)", AnyView(Color.clear.background(.background.accent, in: Rectangle()))),
+            ("strokeBorder", AnyView(Rectangle().strokeBorder(.background.accent, lineWidth: .space50))),
+        ]
+        let expected = Self.resolved(token[theme])
+        for (name, view) in views {
+            let pixel = try #require(Self.pixel(of: view, theme: theme), "\(name) drew nothing")
+            let step: Float = 2 / 255
+            #expect(
+                abs(pixel.red - expected.red) <= step && abs(pixel.green - expected.green) <= step
+                    && abs(pixel.blue - expected.blue) <= step,
+                "\(name) in \(theme.rawValue): \(pixel), expected \(expected)")
         }
+    }
+
+    @Test("SwiftUI's own styles keep their names next to westron's groups")
+    func systemStylesStay() {
+        // `.background` is SwiftUI's BackgroundStyle and `.red` its Color; `.background.canvas` is westron's. The
+        // test is that this compiles without ambiguity.
+        _ = Text("a").foregroundStyle(.background)
+        _ = Text("a").foregroundStyle(.red)
+        _ = Text("a").foregroundStyle(.background.canvas)
+        _ = Rectangle().fill(.background.secondary)
+        _ = Text("a").foregroundStyle(.text.primary) + Text("b").foregroundStyle(.text.secondary)
     }
 
     @Test("a list color is found by its name, and each role is its colorset")
@@ -121,17 +154,10 @@ struct TokenAccessorTests {
         for theme in Westron.Theme.allCases {
             let environment = Self.environment(theme)
             for category in Westron.Category.allCases {
-                let pairs: [(Color, Westron.Color)] = [
-                    (.category(category).background, category.background),
-                    (.category(category).border, category.border),
-                    (.category(category).icon, category.icon),
-                    (.category(category).fill, category.fill),
-                    (.category(category).onFill, category.onFill),
-                    (.category(category).text, category.text),
-                ]
-                for (color, token) in pairs {
+                #expect(category.colors.count == 6)
+                for token in category.colors {
                     #expect(
-                        Self.close(color.resolve(in: environment), Self.resolved(token[theme])),
+                        Self.close(Color(token).resolve(in: environment), Self.resolved(token[theme])),
                         "\(token.name) in \(theme.rawValue)")
                 }
             }
@@ -217,10 +243,10 @@ struct TokenAccessorTests {
             .background(.background.surface, in: RoundedRectangle(cornerRadius: .radius150))
             .overlay(RoundedRectangle(cornerRadius: .radius150).stroke(.border.default, lineWidth: .stroke.thin))
             .shadow(.raised)
-            .tint(.category(.amber).fill)
+            .tint(Westron.Category.amber.fill)
             .animation(.move, value: 0)
         _ = view
-        let stack = VStack(spacing: .space100) { Text("Today").foregroundColor(.category(.blue).text) }
+        let stack = VStack(spacing: .space100) { Text("Today").foregroundStyle(Westron.Category.blue.text) }
         _ = stack
     }
 }

@@ -1,5 +1,6 @@
 /// The Swift names of one token type as a tree, in token order: a leaf is a token, a group holds the tokens and groups
-/// whose names start with it (`Westron.Color.status.danger.text`; decisions/0010, "Apple API").
+/// whose names start with it. A group is generated as an enum named after it, so a token reads as its path:
+/// `Westron.Color.status.danger.text` (decisions/0010, "Apple API").
 struct MemberTree: Equatable {
     indirect enum Node: Equatable {
         /// A token: its member name and its index in the generator's list of that type.
@@ -21,17 +22,6 @@ struct MemberTree: Equatable {
         /// The members up to this group: `status`, `danger`.
         let members: [String]
         var children: [Node]
-
-        /// The Swift type of the group, `StatusDanger`.
-        var typeName: String { SwiftName.typeName(members) }
-
-        /// The groups below this one, depth first, in token order.
-        var descendants: [Group] {
-            children.flatMap { node -> [Group] in
-                guard case .group(let group) = node else { return [] }
-                return [group] + group.descendants
-            }
-        }
     }
 
     var roots: [Node] = []
@@ -68,14 +58,6 @@ struct MemberTree: Equatable {
         }
     }
 
-    /// Every group, depth first, in token order.
-    var groups: [Group] {
-        roots.flatMap { node -> [Group] in
-            guard case .group(let group) = node else { return [] }
-            return [group] + group.descendants
-        }
-    }
-
     /// Every token's members joined by dots, in tree order: `status.danger.text`.
     var leafPaths: [(item: Int, path: String)] {
         func walk(_ nodes: [Node], _ prefix: String) -> [(item: Int, path: String)] {
@@ -89,8 +71,7 @@ struct MemberTree: Equatable {
         return walk(roots, "")
     }
 
-    /// Names that two tokens or groups share in one place, that the type or a group's type already has, and group
-    /// types that two groups share or that westron already has.
+    /// Names that two tokens or groups share in one place, or that the type already has.
     /// - Parameters:
     ///   - type: the Swift type in the messages, `Color`.
     ///   - paths: each token's path, by its index.
@@ -111,12 +92,11 @@ struct MemberTree: Equatable {
             for node in nodes {
                 let isGroup: Bool
                 if case .group = node { isGroup = true } else { isGroup = false }
-                let reserved = top ? (isGroup ? reservedGroup : reservedLeaf) : SwiftName.Reserved.group
+                let reserved = top ? (isGroup ? reservedGroup : reservedLeaf) : []
                 if reserved.contains(node.name) {
-                    let owner = top ? "the type" : "a group's type"
                     problems.append(
-                        "\(path(node)): its Swift name \(type).\(prefix)\(node.name) collides with a member \(owner) "
-                            + "already has; rename the token")
+                        "\(path(node)): its Swift name \(type).\(node.name) collides with a member the type already "
+                            + "has; rename the token")
                 } else if let other = seen[node.name] {
                     problems.append(
                         "\(path(node)) and \(other) have the same Swift name \(type).\(prefix)\(node.name)")
@@ -129,18 +109,6 @@ struct MemberTree: Equatable {
             }
         }
         check(roots, prefix: "", top: true)
-        var types: [String: TokenPath] = [:]
-        for group in groups {
-            if SwiftName.Reserved.types.contains(group.typeName) {
-                problems.append(
-                    "\(group.path): its Swift type \(group.typeName) collides with a type westron already has; rename "
-                        + "the group")
-            } else if let other = types[group.typeName], other != group.path {
-                problems.append("\(group.path) and \(other) have the same Swift type \(group.typeName)")
-            } else {
-                types[group.typeName] = group.path
-            }
-        }
         return problems
     }
 }

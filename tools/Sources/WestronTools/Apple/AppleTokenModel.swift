@@ -33,7 +33,7 @@ struct AppleTokenModel: Equatable {
         struct Role: Equatable {
             /// The path below the category, `["background-subtle"]`.
             let segments: [String]
-            /// The member of `Westron.Category` and of its `Roles`, `backgroundSubtle`.
+            /// The member of `Westron.Category`, `backgroundSubtle`.
             let name: String
             let doc: Doc
         }
@@ -529,7 +529,8 @@ extension AppleTokenModel {
         typealias Reserved = SwiftName.Reserved
         var problems =
             colorTree.collisions(
-                type: "Color", paths: colors.map(\.path), reservedLeaf: Reserved.color.union(Reserved.shapeStyle),
+                type: "Westron.Color", paths: colors.map(\.path),
+                reservedLeaf: Reserved.color.union(Reserved.shapeStyle),
                 reservedGroup: Reserved.color)
             + textRoleTree.collisions(
                 type: "Westron.TextRole", paths: textRoles.map(\.path), reservedLeaf: Reserved.textRole,

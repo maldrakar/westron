@@ -35,7 +35,7 @@ private struct IconsPage: View {
                 .overlay {
                     RoundedRectangle(cornerRadius: .radius100)
                         .strokeBorder(
-                            icon == .fallback ? Color.border.focus : Color.border.default, lineWidth: .stroke.thin)
+                            icon == .fallback ? Westron.Color.border.focus : .border.default, lineWidth: .stroke.thin)
                 }
                 .overlay {
                     Image(icon)

@@ -1,10 +1,11 @@
 /// Swift names of tokens, derived mechanically from their paths (decisions/0010, "Apple API").
 ///
-/// A token's Swift name follows its path, segment by segment: `color.text.on-accent` is `Color.text.onAccent`. Each
-/// segment is lowercase kebab-case and becomes one member in lowerCamelCase. The first segment is dropped where the
-/// Swift type already says it (`Color.text.secondary`, `Westron.TextRole.heading.large`, `Animation.rowLeave`) and
-/// kept where it does not (`CGFloat.stroke.thin`). A segment that starts with a digit joins the one before it, as a
-/// Swift name cannot start with a digit: `space.100` is `CGFloat.space100`.
+/// A token's Swift name follows its path, segment by segment, a group being an enum named after it:
+/// `color.text.on-accent` is `Westron.Color.text.onAccent`. Each segment is lowercase kebab-case and becomes one
+/// member in lowerCamelCase. The first segment is dropped where the Swift type already says it
+/// (`Westron.TextRole.heading.large`, `Animation.rowLeave`) and kept where it does not (`CGFloat.stroke.thin`). A
+/// segment that starts with a digit joins the one before it, as a Swift name cannot start with a digit: `space.100` is
+/// `CGFloat.space100`.
 public enum SwiftName {
     /// One member of a token's Swift name, and the token path up to it: `status` of `color.status`.
     public struct Member: Equatable, Sendable {
@@ -41,11 +42,6 @@ public enum SwiftName {
     /// A member as declared: in backticks when it is a Swift keyword, `` `default` ``. After a dot it needs none.
     public static func declared(_ name: String) -> String {
         keywords.contains(name) ? "`\(name)`" : name
-    }
-
-    /// The type of a group of tokens: its members in UpperCamelCase, `status`, `danger` → `StatusDanger`.
-    public static func typeName(_ members: [String]) -> String {
-        members.map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined()
     }
 
     /// Words that cannot name a member even in backticks, because `x.self`, `x.init` and `x.Type` mean something else.
@@ -111,20 +107,21 @@ extension SwiftName {
     /// The lists hold what SwiftUI declared on 2026-11-15 (Xcode 27.1), the deprecated members included; a member
     /// added to SwiftUI later fails the build of the generated code instead.
     public enum Reserved {
-        /// `Color` statics and the members of `Westron.Color`. No color and no group of colors can take one: an
-        /// explicit `Color.primary` would be ambiguous.
+        /// The members of `Westron.Color`, which no color and no group of colors can take.
         public static let color: Set<String> = [
-            // Color
-            "accentColor", "black", "blue", "brown", "clear", "cyan", "gray", "green", "indigo", "mint", "orange",
-            "pink", "primary", "purple", "red", "secondary", "teal", "white", "yellow", "init",
-            // Westron.Color
-            "name", "light", "dark", "lightHighContrast", "darkHighContrast", "all", "category",
+            "name", "light", "dark", "lightHighContrast", "darkHighContrast", "backgrounds", "all", "init",
         ]
 
-        /// `ShapeStyle` statics of other styles, which `.foregroundStyle(.name)` could also mean. A color cannot take
-        /// one, but a group of colors can: its static is a group, not a style, so `.background` stays SwiftUI's and
-        /// `.background.canvas` is westron's (probe, Xcode 27.1, 2026-11-16).
+        /// The statics of SwiftUI's `Color` and `ShapeStyle`. WestronUI overloads `foregroundStyle`, `fill` and the
+        /// other modifiers that take a style to take a `Westron.Color` too, so `.foregroundStyle(.primary)` would be
+        /// ambiguous if a westron color were named `primary`. A group can take one of these names: it is an enum, not
+        /// a value, so `.foregroundStyle(.background)` stays SwiftUI's and `.background.canvas` is westron's (probe,
+        /// Xcode 27.1, 2026-11-16).
         public static let shapeStyle: Set<String> = [
+            // Color
+            "accentColor", "black", "blue", "brown", "clear", "cyan", "gray", "green", "indigo", "mint", "orange",
+            "pink", "primary", "purple", "red", "secondary", "teal", "white", "yellow",
+            // ShapeStyle
             "foreground", "background", "selection", "separator", "tint", "placeholder", "link", "fill",
             "windowBackground", "tertiary", "quaternary", "quinary", "ultraThinMaterial", "thinMaterial",
             "regularMaterial", "thickMaterial", "ultraThickMaterial", "bar", "image", "linearGradient",
@@ -133,7 +130,8 @@ extension SwiftName {
         ]
 
         /// The members of `Westron.TextRole`. Text roles have no statics on SwiftUI's `Font`: a group `body` there
-        /// would make `Font.body` ambiguous, so a role is `.textRole(.body.strong)` or `Font(.body.strong)`.
+        /// would make `Font.body` ambiguous, so a role is `.textRole(.body.strong)` or `Font(.body.strong)`, where the
+        /// type is westron's.
         public static let textRole: Set<String> = [
             "name", "textStyle", "design", "weight", "font", "size", "lineHeight", "letterSpacing", "platformSize",
             "all", "init",
@@ -163,16 +161,7 @@ extension SwiftName {
 
         /// The members of `Westron.Category`, which its cases and its roles cannot be.
         public static let category: Set<String> = [
-            "rawValue", "allCases", "colors", "roles", "hashValue", "init", "map",
-        ]
-
-        /// The members of a group's type, which the tokens in the group cannot be.
-        public static let group: Set<String> = ["map"]
-
-        /// The types nested in westron's token types and the generic parameters of a group's type, which no group's
-        /// type can be.
-        public static let types: Set<String> = [
-            "TextStyle", "Design", "Weight", "Curve", "Spring", "Layer", "Space", "Roles", "Value", "T",
+            "rawValue", "allCases", "colors", "hashValue", "init",
         ]
 
         /// The members of `Westron.Icon` and of its WestronUI extension, which its cases cannot be.

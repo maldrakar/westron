@@ -24,15 +24,15 @@ A SwiftUI library for iOS, iPadOS, macOS and watchOS. The package manifest lives
 `tools/westron generate` writes them from `tokens/westron.resolver.json` (decisions/0010); the generated files are
 `Sources/WestronTokens/Generated/`, `Sources/WestronUI/Generated/` and `Sources/WestronUI/Tokens.xcassets`, and are not
 edited by hand. Only semantic tokens are exposed. A Swift name follows the token path, a member per segment, without
-the group the type already names: `color.text.secondary` is `Color.text.secondary`. A step joins its ladder:
-`space.100` is `.space100`.
+the group the type already names, and a group is an enum: `color.text.secondary` is `Westron.Color.text.secondary`.
+A step joins its ladder: `space.100` is `.space100`.
 
 ```swift
 import WestronUI   // re-exports WestronTokens
 
 Text(list.name)
     .textRole(.heading.small)                     // typography.heading.small: Onest SemiBold in the headline style
-    .foregroundStyle(.category(list.color).text)  // color.category.<name>.text, by the name the store keeps
+    .foregroundStyle(list.color.text)             // color.category.<name>.text, by the name the store keeps
     .padding(.horizontal, .space200)              // space.200: 16 pt
     .background(.background.surface, in: RoundedRectangle(cornerRadius: .radius.card))
     .shadow(.raised)                              // shadow.raised
@@ -45,8 +45,8 @@ let ink = Westron.Color.text.primary.dark                 // Westron.RGB(hex: 0x
 - Colors come from colorsets with four variants (any, dark, high contrast, dark with high contrast), so they switch
   with the system and with the SwiftUI environment. watchOS asset catalogs take no appearances, so the watch gets the
   dark theme alone, whatever its contrast setting.
-- A group of tokens is a type of its own, generic over its values: `Westron.Color.background` holds
-  `Westron.Color`s, `Color.background` the same group as SwiftUI colors.
+- A view passes a `Westron.Color` straight to `foregroundStyle`, `background`, `fill`, `stroke`, `strokeBorder` and
+  `tint`, which WestronUI overloads for it; any other call takes `Color(.text.primary)`.
 - Text roles are taken with `.textRole(_:)` or `Font(_:)`, in the role's text style, so they follow Dynamic Type:
   Onest and Geist Mono through `Font.custom(_:size:relativeTo:)`, the rest `Font.system` (decisions/0011). `Font` has
   no westron statics, so SwiftUI's `Font.body` stays as it is.
@@ -63,7 +63,7 @@ let icon = Westron.Icon(rawValue: list.icon) ?? .fallback   // by the name the s
 
 Image(icon)                                       // its SF Symbol, which takes the font of the text it goes with
     .textRole(.body.regular)
-    .foregroundStyle(.category(list.color).text)
+    .foregroundStyle(list.color.text)
 Label("Rename", icon: .pen)                       // as Label(_:systemImage:)
 Button("Add", systemImage: Westron.Icon.plus.systemName) { add() }   // any call that takes systemImage:
 ```

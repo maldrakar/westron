@@ -128,8 +128,8 @@ private struct TaskRow<Meta: View>: View {
                 // A done title: text.secondary, struck through in icon.tertiary.
                 Text(title)
                     .textRole(.body.regular)
-                    .foregroundStyle(done ? Color.text.secondary : .text.primary)
-                    .strikethrough(done, color: .icon.tertiary)
+                    .foregroundStyle(done ? Westron.Color.text.secondary : .text.primary)
+                    .strikethrough(done, color: Color(.icon.tertiary))
                 HStack(spacing: .space100) {
                     meta
                 }
@@ -139,7 +139,7 @@ private struct TaskRow<Meta: View>: View {
         }
         .padding(.horizontal, .space75)
         .padding(.vertical, .space50)
-        .background(selected ? Color.background.selected : .clear, in: RoundedRectangle(cornerRadius: .radius.row))
+        .background(selected ? Color(.background.selected) : .clear, in: RoundedRectangle(cornerRadius: .radius.row))
     }
 }
 
@@ -172,10 +172,10 @@ private struct Tag: View {
     var body: some View {
         Text(title)
             .textRole(.caption.medium)
-            .foregroundStyle(.category(category).text)
+            .foregroundStyle(category.text)
             .padding(.horizontal, .space75)
             .frame(height: Metrics.tag)
-            .background(.category(category).background, in: Capsule())
+            .background(category.background, in: Capsule())
     }
 }
 
@@ -293,8 +293,8 @@ private struct Notice: View {
 private struct FilledButton: View {
     let title: String
     let icon: Westron.Icon?
-    let fill: Color
-    let label: Color
+    let fill: Westron.Color
+    let label: Westron.Color
 
     var body: some View {
         HStack(spacing: .space50) {
