@@ -4,7 +4,11 @@
 #   tools/apple/check.sh package     swift build + swift test (macOS)
 #   tools/apple/check.sh platforms   compile the package for iOS and watchOS
 #   tools/apple/check.sh catalog     build the catalog and UI tests for the iOS simulator and macOS
-#   tools/apple/check.sh a11y [ios|macos]  accessibility audit of every catalog entry (default: the iOS simulator)
+#   tools/apple/check.sh a11y [ios|macos] [test …]
+#                                    accessibility audit of every catalog entry (default: the iOS simulator), in the
+#                                    configurations named (testDefaultSettings testAccessibilityDynamicType
+#                                    testIncreasedContrast testDarkAppearance testDarkIncreasedContrast; default: all);
+#                                    WESTRON_ENTRY=<id>[,<id>…] limits it to those entries
 #   tools/apple/check.sh format      swift format lint without changes, tools/ included
 #   tools/apple/check.sh fix-format  swift format that rewrites the files, tools/ included
 #   tools/apple/check.sh all         everything except fix-format and a11y
@@ -44,11 +48,27 @@ catalog() {
 }
 
 # The CatalogAccessibilityAuditTests UI test: performAccessibilityAudit on every catalog entry in several
-# configurations. iOS runs on $WESTRON_SIM_DEVICE (default iPhone 17); macOS needs Automation Mode
-# (platforms/apple/README.md) and the screen to itself.
+# configurations, one test method each. With no test named, all of them run. iOS runs on $WESTRON_SIM_DEVICE
+# (default iPhone 17); macOS needs Automation Mode (platforms/apple/README.md) and the screen to itself.
+a11y_tests=(testDefaultSettings testAccessibilityDynamicType testIncreasedContrast testDarkAppearance
+  testDarkIncreasedContrast)
+
 a11y() {
-  local platform="${1:-ios}" destination udid
-  local log=".build/logs/a11y-$platform.log" results=".build/xcode/results/a11y-$platform.xcresult"
+  local platform=ios destination udid test name
+  case "${1:-}" in ios | macos) platform="$1"; shift ;; esac
+  local only=() selection=""
+  for test in "$@"; do
+    if [[ " ${a11y_tests[*]} " != *" $test "* ]]; then
+      echo "check.sh: a11y: no test \"$test\"; the tests: ${a11y_tests[*]}" >&2
+      return 2
+    fi
+    only+=("-only-testing:CatalogUITests/CatalogAccessibilityAuditTests/$test")
+    selection+="-$test"
+  done
+  [ ${#only[@]} -gt 0 ] || only=("-only-testing:CatalogUITests/CatalogAccessibilityAuditTests")
+  # The selection is in the names, so that runs of different tests side by side keep their own log and result.
+  name="a11y-$platform$selection"
+  local log=".build/logs/$name.log" results=".build/xcode/results/$name.xcresult"
   case "$platform" in
     ios)
       # shellcheck source=tools/apple/simulator.sh
@@ -57,18 +77,17 @@ a11y() {
       destination="id=$udid"
       ;;
     macos) destination="platform=macOS,arch=$(uname -m)" ;;
-    *) echo "check.sh: a11y takes ios or macos, not \"$platform\"" >&2; return 2 ;;
   esac
-  # WESTRON_ENTRY=<id> audits one entry, to iterate on its issues.
+  # WESTRON_ENTRY=<id>[,<id>…] audits those entries only: to iterate on an entry's issues, or to split a run.
   if [ -n "${WESTRON_ENTRY:-}" ]; then export TEST_RUNNER_WESTRON_ENTRY="$WESTRON_ENTRY"; fi
   mkdir -p .build/logs .build/xcode/results
   rm -rf "$results"
-  echo "== a11y: $destination"
+  echo "== a11y: $destination${selection:+ (${selection#-})}"
   local status=0
   # Without -collect-test-diagnostics never, a failed run waits minutes for a sysdiagnose of the simulator.
   xcodebuild -project platforms/apple/Catalog/Catalog.xcodeproj -scheme Catalog -destination "$destination" \
     -derivedDataPath .build/xcode/catalog -resultBundlePath "$results" -collect-test-diagnostics never \
-    -only-testing:CatalogUITests/CatalogAccessibilityAuditTests test > "$log" 2>&1 || status=$?
+    "${only[@]}" test > "$log" 2>&1 || status=$?
   # The issues the audit found and suppressed, then the test cases and the totals.
   grep -E "^a11y: |: error: |Test Case .*(passed|failed)|Executed [0-9]+ test" "$log" | grep -v "\[MT\]" || true
   if [ "$status" -ne 0 ]; then
@@ -90,9 +109,9 @@ case "${1:-}" in
   package) package ;;
   platforms) platforms ;;
   catalog) catalog ;;
-  a11y) a11y "${2:-ios}" ;;
+  a11y) shift; a11y "$@" ;;
   format) format ;;
   fix-format) fix_format ;;
   all) format; package; platforms; catalog ;;
-  *) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+  *) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac

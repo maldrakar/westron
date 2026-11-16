@@ -54,6 +54,10 @@ Date: 2026-11-14. Status: accepted.
   2026-11-17: every test audits each page a screenful at a time, down to its end; the Dynamic Type and text clipped
   audits of the default test run on windows of the page held in place by `-WestronScrollAnchor`, because a dragged
   scroll view goes back to its top when they enlarge the text. The README lists what the audit still cannot see.
+  The same day the audit outgrew one CI step: the runner is 2.2–2.3 times slower than a local Mac, and a serial run
+  passed 40 minutes (`testAccessibilityDynamicType` alone took 13.5). CI now runs the five tests as a matrix job,
+  `accessibility-audit`, one job each in parallel, 35 minutes each: about 40 runner-minutes per pull request. Whether
+  it runs on every pull request or on `main` only is the owner's call: one commented `if:` line in the job.
 
 ## Consequences
 

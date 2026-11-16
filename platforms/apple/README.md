@@ -92,10 +92,24 @@ tools/apple/catalog-screenshot.sh ios --entry color-in-use --appearance dark --c
 
 `tools/apple/check.sh a11y` runs the UI test `CatalogAccessibilityAuditTests` on the iOS simulator (`iPhone 17` or
 `$WESTRON_SIM_DEVICE`): it opens every entry of `Catalog.entries` in isolation, so a new entry is audited with no
-change to the test, and runs `XCUIApplication.performAccessibilityAudit` on it. Every issue fails the test. CI runs it
-in the `apple` job. The log goes to `.build/logs/a11y-ios.log`, the result bundle to
-`.build/xcode/results/a11y-ios.xcresult`; the script prints each issue as a line starting with `a11y:`. A full run
+change to the test, and runs `XCUIApplication.performAccessibilityAudit` on it. Every issue fails the test. The log
+goes to `.build/logs/a11y-ios[-<tests>].log`, the result bundle to `.build/xcode/results/a11y-ios[-<tests>].xcresult`
+(the tests named, if any, are in the names); the script prints each issue as a line starting with `a11y:`. A full run
 takes about 16 minutes (2026-11-17, iPhone 17 Pro simulator).
+
+```sh
+tools/apple/check.sh a11y                                  # all five tests below
+tools/apple/check.sh a11y ios testDarkAppearance           # one or more of them, by name
+WESTRON_ENTRY=controls,icons tools/apple/check.sh a11y     # those entries only
+```
+
+CI runs the audit in its own job, `accessibility-audit`, a matrix of the five tests, one job each, side by side
+(`fail-fast: false`, 35 minutes each). The runner is 2.2–2.3 times slower than a local Mac: in one serial run
+(2026-11-17) `testAccessibilityDynamicType` took 13.5 minutes, the two dark tests 4 minutes each, and the run passed
+the 40 minutes of its step before `testDefaultSettings` (about 11 minutes there, by the local time) ended. The cost is
+five parallel jobs and about 40 runner-minutes of tests per pull request, plus a catalog build in each job. To run it
+on `main` only, uncomment the `if: github.event_name == 'push'` line of the job in `.github/workflows/ci.yml`. If one
+test outgrows its 35 minutes as pages are added, `WESTRON_ENTRY` takes a list, so a test can be split by entries.
 
 | Test | Launch arguments | Audit types on iOS |
 |---|---|---|
@@ -133,7 +147,8 @@ takes about 16 minutes (2026-11-17, iPhone 17 Pro simulator).
   stacks in a scroll view rather than a `Form`.
 - An issue that is not the entry's fault, or that the catalog cannot fix, is suppressed one by one, with its reason,
   in `CatalogAccessibilityAuditTests.suppressions`; an audit type is never turned off as a whole.
-- `WESTRON_ENTRY=<id> tools/apple/check.sh a11y` audits one entry while its issues are being fixed.
+- `WESTRON_ENTRY=<id>[,<id>…] tools/apple/check.sh a11y` audits those entries only: one while its issues are being
+  fixed, or a share of the catalog.
 - `tools/apple/check.sh a11y macos` runs the same tests on macOS, with the macOS audit types (contrast, element
   detection, hit region, sufficient element description, action, parent–child; macOS has no Dynamic Type or text
   clipped audit). It needs Automation Mode (below) and takes over the screen while it runs, so it is not a CI gate.

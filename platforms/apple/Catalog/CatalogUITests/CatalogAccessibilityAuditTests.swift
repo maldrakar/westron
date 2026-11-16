@@ -110,8 +110,10 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
 
     @MainActor
     private func audit(_ configuration: Configuration) {
-        // WESTRON_ENTRY narrows the run to one entry while its issues are being fixed.
-        let entries = ProcessInfo.processInfo.environment["WESTRON_ENTRY"].map { [$0] } ?? Catalog.entries.map(\.id)
+        // WESTRON_ENTRY=<id>[,<id>…] narrows the run to those entries: to fix an entry's issues, or to split a run.
+        let entries =
+            ProcessInfo.processInfo.environment["WESTRON_ENTRY"].map { $0.split(separator: ",").map(String.init) }
+            ?? Catalog.entries.map(\.id)
         XCTAssertFalse(entries.isEmpty, "the catalog registry has no entries")
         for entryID in entries {
             XCTContext.runActivity(named: "\(entryID) \(configuration.arguments.joined(separator: " "))") { _ in

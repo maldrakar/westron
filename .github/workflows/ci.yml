@@ -45,14 +45,37 @@ jobs:
         run: tools/apple/check.sh platforms
       - name: Catalog and UI tests
         run: tools/apple/check.sh catalog
-      - name: Accessibility audit of the catalog (iOS)
-        run: tools/apple/check.sh a11y
-        # About 16 minutes locally (2026-11-17, iPhone 17 Pro); the margin is for a slower runner and the build.
-        timeout-minutes: 40
+
+  accessibility-audit:
+    name: Accessibility audit — ${{ matrix.test }}
+    # The full audit on every pull request: five parallel jobs, about 40 runner-minutes of tests plus a catalog build in
+    # each. To run it on main only, remove the "#" in front of the next line.
+    # if: github.event_name == 'push'
+    runs-on: xcode-27
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    strategy:
+      fail-fast: false
+      # One job per configuration of CatalogAccessibilityAuditTests. On the runner (2026-11-17), 2.2–2.3 times slower
+      # than a local Mac: testAccessibilityDynamicType 13.5 min, testDarkAppearance and testDarkIncreasedContrast 4 min
+      # each; testDefaultSettings about 11 min (estimated from 290 s locally); one serial run passed 40 min.
+      matrix:
+        test:
+          - testDefaultSettings
+          - testAccessibilityDynamicType
+          - testIncreasedContrast
+          - testDarkAppearance
+          - testDarkIncreasedContrast
+    # The slowest configuration with the margin for the pages still to come (the Button entries add about 40 %).
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - name: Audit (iOS)
+        run: tools/apple/check.sh a11y ios ${{ matrix.test }}
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: a11y-audit
+          name: a11y-${{ matrix.test }}
           path: |
             .build/logs/a11y-*.log
             .build/xcode/results/a11y-*.xcresult
