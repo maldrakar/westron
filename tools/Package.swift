@@ -4,7 +4,7 @@
 // reach the products that use the root package. It builds on macOS and Linux and uses Foundation only.
 //
 //   tools/westron lint raw-values      tools/westron generate [--check]      tools/westron tokens check
-//   tools/westron icons check          tools/check.sh
+//   tools/westron icons check          tools/westron spec check              tools/check.sh
 
 import PackageDescription
 

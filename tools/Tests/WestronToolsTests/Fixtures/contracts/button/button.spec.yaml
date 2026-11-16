@@ -1,0 +1,85 @@
+# A test fixture, not westron's Button contract (#22), though it follows the owner's Button decisions so that it
+# doubles as an example of the format. ContractCheckTests breaks each part of it.
+id: button
+status: draft
+description: A push button that runs an action.
+consumers: [todo-app/list-screen, todo-app/lists-screen]
+
+options:
+  variant: { type: enum, values: [primary, secondary, tertiary], default: secondary }
+  size:
+    type: enum
+    values: [s, m, l]
+    default: m
+    description: Heights differ by input kind, pointer 24/32/40 and touch 32/44/52, with the hit area at least the platform's target.
+  role:
+    type: enum
+    values: [default, destructive]
+    default: default
+    description: destructive recolors any variant in danger colors.
+  iconOnly:
+    type: bool
+    default: false
+    description: The same button showing only its icon, square, its side equal to its height.
+
+slots: [label, icon]
+states: [hover, focus, pressed, disabled, loading]
+
+tokens:
+  container.background:
+    cases:
+      - { when: { state: disabled }, token: color.background.muted }
+      - { when: { variant: primary, role: destructive }, token: color.status.danger.fill }
+      - { when: { variant: primary, state: [hover, pressed] }, token: color.background.accent-hover }
+      - { when: { variant: primary }, token: color.background.accent }
+      - { when: { variant: secondary, state: hover }, token: color.background.hover }
+      - { when: { variant: secondary, state: pressed }, token: color.background.pressed }
+      - { when: { variant: secondary }, token: color.background.muted }
+      - { when: { variant: tertiary, state: hover }, token: color.background.hover }
+      - { when: { variant: tertiary, state: pressed }, token: color.background.pressed }
+      - { when: { variant: tertiary }, token: null }
+  label.color:
+    token: color.text.primary
+    cases:
+      - { when: { state: disabled }, token: color.text.placeholder }
+      - { when: { variant: primary, role: destructive }, token: color.status.danger.on-fill }
+      - { when: { variant: primary }, token: color.text.on-accent }
+      - { when: { role: destructive }, token: color.status.danger.text }
+      - { when: { variant: tertiary }, token: color.text.accent }
+  container.radius: radius.control
+  label.font: typography.body.strong
+  # container.height and container.padding by size wait for the size tokens, which differ by input kind.
+
+accessibility:
+  role: button
+  intents: [activate]
+  keyboardIntents: [activate]
+  label: required
+  states: { disabled: disabled, loading: busy }
+  description: >-
+    Loading shows a progress indicator in the icon's place (or before the label); the label stays, the width does not
+    change, presses are not accepted, and it does not dim as disabled does.
+
+platforms:
+  apple:
+    strategy: style-on-system-control
+    base: SwiftUI.Button
+    description: The focus ring is the system's.
+    ios:
+      description: Hover only with a pointer.
+    macos:
+      keyboardIntents: [defaultAction, cancelAction]
+      description: Return and Escape trigger the default and cancel buttons.
+    watchos:
+      options: { size: [m] }
+      fallback: { size: m }
+      states: [pressed, disabled, loading]
+      description: One size and no pointer or keyboard focus; the Swift enum keeps every size and the style falls back to m.
+  web:
+    status: planned
+  linux:
+    strategy: style-on-system-control
+    base: GtkButton
+    description: The focus ring is the system's.
+  android:
+    status: planned

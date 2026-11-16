@@ -1,0 +1,356 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "westron component contract",
+  "description": "One neutral contract per component, spec/components/<id>/<id>.spec.yaml, written in YAML (decisions/0004). Every platform implementation is generated from it and checked against it. `tools/westron spec check` validates a contract against this schema, then applies the rules a schema cannot express: the file name matches the id; option values are unique and a default is one of them; no value is the name of a system style of the base control (decisions/0003); constraints, token bindings, platform restrictions and accessibility states name only options, values and states that exist; no option is named `state`; no case of a binding is shadowed by an earlier one; a fallback maps each value a platform drops to a value it keeps (on Apple every dropped value has one); every bound token exists in tokens/ and is not a primitive. Lists of names are checked for repeats there too, with a message that names the repeat.",
+  "type": "object",
+  "required": ["id", "status", "consumers", "accessibility", "platforms"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "description": "The component's name in every platform's terms: lowercase words joined by hyphens, such as `button` or `list-row`. The contract lives in spec/components/<id>/<id>.spec.yaml. No prefix (decisions/0003).",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    },
+    "status": {
+      "description": "draft: written, not approved; approved: the human approved it and platforms may implement it (decisions/0005); stable: released; deprecated: on its way out.",
+      "enum": ["draft", "approved", "stable", "deprecated"]
+    },
+    "description": {
+      "description": "What the component is for, in a sentence or two.",
+      "$ref": "#/$defs/text"
+    },
+    "consumers": {
+      "description": "The product screens that need the component, as <product>/<screen>, such as `todo-app/list-screen` (decisions/0006). A component without a consumer is not created (AGENTS.md, rule 6).",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(-[a-z0-9]+)*/[a-z0-9]+(-[a-z0-9]+)*$"
+      }
+    },
+    "options": {
+      "description": "What a product chooses, by option name: an enum with its values and default, or a bool with its default. The names and values become generated names on every platform (AGENTS.md, rule 4).",
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/name" },
+      "additionalProperties": { "$ref": "#/$defs/option" }
+    },
+    "slots": {
+      "description": "The content a product puts into the component, such as `label` or `icon`.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/name" }
+    },
+    "states": {
+      "description": "Every state the component can be in, such as `hover`, `focus`, `pressed`, `disabled`, `loading`. A platform that never enters some of them says so in `platforms`.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/name" }
+    },
+    "constraints": {
+      "description": "Rules between options: when the options have the values in `when`, they must have the values in `require`.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/constraint" }
+    },
+    "tokens": {
+      "description": "Token bindings, by `<part>.<property>` of the component's anatomy, such as `container.background`: one token path; a map from the values of one enum option to token paths; or cases, `{token, cases: [{when, token}]}`, for bindings that depend on several options or on a state.",
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z][a-zA-Z0-9]*\\.[a-z][a-zA-Z0-9]*$"
+      },
+      "additionalProperties": { "$ref": "#/$defs/tokenBinding" }
+    },
+    "accessibility": { "$ref": "#/$defs/accessibility" },
+    "platforms": {
+      "description": "How each platform implements the contract, and every way it differs from it. A difference between platforms that is not recorded here is a bug (AGENTS.md, rule 5).",
+      "type": "object",
+      "required": ["apple", "web", "linux", "android"],
+      "additionalProperties": false,
+      "properties": {
+        "apple": { "$ref": "#/$defs/applePlatform" },
+        "web": { "$ref": "#/$defs/platform" },
+        "linux": { "$ref": "#/$defs/platform" },
+        "android": { "$ref": "#/$defs/platform" }
+      }
+    }
+  },
+  "$defs": {
+    "name": {
+      "description": "A name that becomes an identifier on every platform: lowerCamelCase ASCII, a lowercase letter first.",
+      "type": "string",
+      "pattern": "^[a-z][a-zA-Z0-9]*$"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tokenPath": {
+      "description": "The dotted path of a token in tokens/, without braces: `color.background.accent`.",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)+$"
+    },
+    "option": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["enum", "bool"] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "enum" } } },
+          "then": { "$ref": "#/$defs/enumOption" }
+        },
+        {
+          "if": { "properties": { "type": { "const": "bool" } } },
+          "then": { "$ref": "#/$defs/boolOption" }
+        }
+      ]
+    },
+    "enumOption": {
+      "description": "One value of a closed list; `default` is one of `values`.",
+      "type": "object",
+      "required": ["type", "values", "default"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "enum" },
+        "values": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/name" }
+        },
+        "default": { "$ref": "#/$defs/name" },
+        "description": { "$ref": "#/$defs/text" }
+      }
+    },
+    "boolOption": {
+      "description": "On or off.",
+      "type": "object",
+      "required": ["type", "default"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "bool" },
+        "default": { "type": "boolean" },
+        "description": { "$ref": "#/$defs/text" }
+      }
+    },
+    "optionValues": {
+      "description": "Values by option name: one value or a list of them; a bool option takes true or false.",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/name" },
+      "additionalProperties": {
+        "type": ["string", "boolean", "array"],
+        "pattern": "^[a-z][a-zA-Z0-9]*$",
+        "minItems": 1,
+        "items": { "$ref": "#/$defs/name" }
+      }
+    },
+    "constraint": {
+      "type": "object",
+      "required": ["when", "require", "severity"],
+      "additionalProperties": false,
+      "properties": {
+        "when": { "$ref": "#/$defs/optionValues" },
+        "require": { "$ref": "#/$defs/optionValues" },
+        "severity": {
+          "description": "error: the combination is not allowed; warning: allowed, but advised against.",
+          "enum": ["error", "warning"]
+        },
+        "description": { "$ref": "#/$defs/text" }
+      }
+    },
+    "tokenBinding": {
+      "description": "A token path; a map from the values of one enum option to token paths; or, when the object has `cases`, a case binding.",
+      "type": ["string", "object"],
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)+$",
+      "if": { "type": "object", "required": ["cases"] },
+      "then": { "$ref": "#/$defs/caseBinding" },
+      "else": {
+        "minProperties": 1,
+        "propertyNames": { "$ref": "#/$defs/name" },
+        "additionalProperties": { "$ref": "#/$defs/tokenPath" }
+      }
+    },
+    "caseBinding": {
+      "description": "The first case whose `when` matches gives the token; when none matches, `token` does, and without `token` the part has no value. A case's `token: null` means the part has no value in that case.",
+      "type": "object",
+      "required": ["cases"],
+      "additionalProperties": false,
+      "properties": {
+        "token": { "$ref": "#/$defs/tokenPath" },
+        "cases": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/case" }
+        }
+      }
+    },
+    "case": {
+      "type": "object",
+      "required": ["when", "token"],
+      "additionalProperties": false,
+      "properties": {
+        "when": {
+          "description": "Values by option name, as in a constraint; the key `state` names one state or a list of states from `states`. A case matches when every key matches.",
+          "$ref": "#/$defs/optionValues"
+        },
+        "token": {
+          "type": ["string", "null"],
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)+$"
+        }
+      }
+    },
+    "accessibility": {
+      "description": "Accessibility in abstract terms; each platform maps them to its own API.",
+      "type": "object",
+      "required": ["role"],
+      "additionalProperties": false,
+      "properties": {
+        "role": {
+          "description": "The abstract role, such as `button`, `checkbox`, `slider`.",
+          "$ref": "#/$defs/name"
+        },
+        "intents": {
+          "description": "What an assistive technology can do with the component, such as `activate` or `dismiss`.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/name" }
+        },
+        "keyboardIntents": {
+          "description": "What the keyboard can do with the component, such as `activate`. A platform or an Apple OS adds its own in `platforms`.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/name" }
+        },
+        "label": {
+          "description": "required: every instance has an accessible label, even when none is visible (an icon-only presentation); optional: it may have none.",
+          "enum": ["required", "optional"]
+        },
+        "states": {
+          "description": "By state from `states`, the abstract state assistive technology announces in it, such as `loading: busy` or `disabled: disabled`.",
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/name" },
+          "additionalProperties": { "$ref": "#/$defs/name" }
+        },
+        "description": { "$ref": "#/$defs/text" }
+      }
+    },
+    "restrictedOptions": {
+      "description": "By enum option, the values a platform offers: a subset of the option's values. An option not named here is offered whole.",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/name" },
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": { "$ref": "#/$defs/name" }
+      }
+    },
+    "restrictedStates": {
+      "description": "The states a platform enters: a subset of `states`. Without it, the platform enters every state.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/name" }
+    },
+    "fallback": {
+      "description": "By restricted option, what a value the platform drops becomes there: one kept value for every dropped one, or a map from each dropped value to a kept one. On Apple every dropped value needs one, since the OSes share one generated enum.",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/name" },
+      "additionalProperties": {
+        "type": ["string", "object"],
+        "pattern": "^[a-z][a-zA-Z0-9]*$",
+        "minProperties": 1,
+        "propertyNames": { "$ref": "#/$defs/name" },
+        "additionalProperties": { "$ref": "#/$defs/name" }
+      }
+    },
+    "platformKeyboardIntents": {
+      "description": "Keyboard intents this platform adds to `accessibility.keyboardIntents`, such as `defaultAction` and `cancelAction` on macOS.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/name" }
+    },
+    "reason": {
+      "description": "Why the platform differs from the contract.",
+      "$ref": "#/$defs/text"
+    },
+    "appleTarget": {
+      "description": "What one Apple OS keeps of the contract, beyond what all of Apple keeps.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "options": { "$ref": "#/$defs/restrictedOptions" },
+        "fallback": { "$ref": "#/$defs/fallback" },
+        "states": { "$ref": "#/$defs/restrictedStates" },
+        "keyboardIntents": { "$ref": "#/$defs/platformKeyboardIntents" },
+        "description": { "$ref": "#/$defs/reason" }
+      }
+    },
+    "planned": {
+      "description": "Not designed for this platform yet.",
+      "type": "object",
+      "required": ["status"],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "const": "planned" },
+        "description": { "$ref": "#/$defs/text" }
+      }
+    },
+    "strategy": {
+      "description": "style-on-system-control: westron styles the platform's own control, named in `base` (decisions/0003); own-component: the platform has no such control, so westron builds one.",
+      "enum": ["style-on-system-control", "own-component"]
+    },
+    "base": {
+      "description": "The system control, as the platform names it: `SwiftUI.Button`, `GtkButton`, `button` (an HTML element).",
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9]*(\\.[A-Za-z][A-Za-z0-9]*)*$"
+    },
+    "baseRequirement": {
+      "description": "A style goes on a system control, so that strategy names its base; an own component has none.",
+      "if": {
+        "properties": { "strategy": { "const": "style-on-system-control" } },
+        "required": ["strategy"]
+      },
+      "then": { "required": ["base"] },
+      "else": { "properties": { "base": false } }
+    },
+    "platform": {
+      "description": "A platform: planned, or its strategy with its restrictions.",
+      "if": { "type": "object", "required": ["status"] },
+      "then": { "$ref": "#/$defs/planned" },
+      "else": {
+        "type": "object",
+        "required": ["strategy"],
+        "additionalProperties": false,
+        "allOf": [{ "$ref": "#/$defs/baseRequirement" }],
+        "properties": {
+          "strategy": { "$ref": "#/$defs/strategy" },
+          "base": { "$ref": "#/$defs/base" },
+          "options": { "$ref": "#/$defs/restrictedOptions" },
+          "fallback": { "$ref": "#/$defs/fallback" },
+          "states": { "$ref": "#/$defs/restrictedStates" },
+          "keyboardIntents": { "$ref": "#/$defs/platformKeyboardIntents" },
+          "description": { "$ref": "#/$defs/reason" }
+        }
+      }
+    },
+    "applePlatform": {
+      "description": "Apple: planned, or its strategy with its restrictions for all of Apple and for each OS.",
+      "if": { "type": "object", "required": ["status"] },
+      "then": { "$ref": "#/$defs/planned" },
+      "else": {
+        "type": "object",
+        "required": ["strategy"],
+        "additionalProperties": false,
+        "allOf": [{ "$ref": "#/$defs/baseRequirement" }],
+        "properties": {
+          "strategy": { "$ref": "#/$defs/strategy" },
+          "base": { "$ref": "#/$defs/base" },
+          "options": { "$ref": "#/$defs/restrictedOptions" },
+          "fallback": { "$ref": "#/$defs/fallback" },
+          "states": { "$ref": "#/$defs/restrictedStates" },
+          "keyboardIntents": { "$ref": "#/$defs/platformKeyboardIntents" },
+          "description": { "$ref": "#/$defs/reason" },
+          "ios": { "$ref": "#/$defs/appleTarget" },
+          "macos": { "$ref": "#/$defs/appleTarget" },
+          "watchos": { "$ref": "#/$defs/appleTarget" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+# A test fixture that fails `tools/westron spec check`: schema errors (no consumers, an unknown key, a status that
+# does not exist) and rule errors (the system style name `plain`, a default that is no value, a missing token).
+id: button
+status: done
+options:
+  variant: { type: enum, values: [plain, primary], defualt: primary }
+  size: { type: enum, values: [s, m], default: xl }
+tokens:
+  container.background: color.background.nothing
+accessibility: { role: button }
+platforms:
+  apple: { strategy: style-on-system-control, base: SwiftUI.Button }
+  web: { status: planned }
+  linux: { status: planned }
+  android: { status: planned }

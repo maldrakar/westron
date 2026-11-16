@@ -3,7 +3,7 @@
 # and the agent's Stop hook runs it on macOS with the Xcode from .xcode-version.
 #
 #   tools/check.sh    build and test tools/, the raw-values lint, generate --check, tokens check and contrast,
-#                     icons check
+#                     icons check, spec check
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -26,3 +26,5 @@ echo "== tokens contrast (WCAG 2, every theme)"
 tools/westron tokens contrast
 echo "== icons check"
 tools/westron icons check
+echo "== spec check"
+tools/westron spec check

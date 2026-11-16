@@ -48,6 +48,7 @@ tools/westron lint raw-values     # no raw values in WestronUI
 tools/westron generate            # regenerate code from the sources
 tools/westron generate --check    # generated code matches a fresh generation
 tools/westron icons check         # the icon registry spec/icons/icons.yaml is valid
+tools/westron spec check          # every contract spec/components/*/*.spec.yaml passes the schema and its rules
 tools/westron tokens check        # token files and the resolver: schema, subset, every mode combination
 tools/westron tokens contrast     # WCAG 2 contrast of every declared pair in every theme (--all for the table)
 ```
