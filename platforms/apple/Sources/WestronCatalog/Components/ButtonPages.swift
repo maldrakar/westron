@@ -10,9 +10,10 @@ import WestronUI
 // Button's catalog entries, from spec/components/button/button.spec.yaml. The matrix is larger than one screen, so it
 // is split into pages, each of which fits one screenshot on an iPhone 17 in portrait: `button` (variants × sizes ×
 // label, icon and label, icon-only), `button-destructive` (the same in the destructive role), `button-states` and
-// `button-states-destructive` (every state and the combinations the contract excludes), and `button-behavior` (live
-// buttons that count accepted presses, loading's width and Dynamic Type). The variants, sizes and states come from the
-// generated enums, so the pages follow the contract.
+// `button-states-destructive` (every state and the combinations the contract excludes), `button-behavior` (live
+// buttons that count accepted presses, close neighbors, focus and Dynamic Type), and, until the owner chooses,
+// `button-loading-layouts`. The variants, sizes and states come from the generated enums, so the pages follow the
+// contract.
 
 extension CatalogEntry {
     static let button = CatalogEntry(id: "button", title: "Button", section: .components) {
@@ -40,6 +41,20 @@ extension CatalogEntry {
     ) {
         ButtonBehaviorPage()
     }
+
+    /// TEMPORARY, until the owner chooses how loading lays out a label without an icon (#23): the first two layouts.
+    static let buttonLoadingLayouts = CatalogEntry(
+        id: "button-loading-layouts", title: "Button: loading layouts 1 (temporary)", section: .components
+    ) {
+        ButtonLoadingLayoutsPage(layouts: [.sharedWidth, .grows])
+    }
+
+    /// TEMPORARY, the other two layouts (#23).
+    static let buttonLoadingLayouts2 = CatalogEntry(
+        id: "button-loading-layouts-2", title: "Button: loading layouts 2 (temporary)", section: .components
+    ) {
+        ButtonLoadingLayoutsPage(layouts: [.reservedSlot, .replacesLabel])
+    }
 }
 
 /// Accessibility identifiers of the live buttons, which the catalog's UI tests (ButtonBehaviorTests) press.
@@ -52,8 +67,16 @@ enum ButtonCatalogID {
     static let loadingToggle = "button.live.loading-toggle"
     /// The test control that presses `loading` through the accessibility API.
     static let accessibilityPress = "button.live.accessibility-press"
+    /// A secondary button, loading with Publish, whose ⌘E shortcut is dropped while it loads.
+    static let export = "button.live.export"
     /// A secondary button at size s, drawn smaller than the recommended target.
     static let small = "button.live.small"
+    /// A primary icon-only button with the checkmark, labelled "Save".
+    static let iconOnly = "button.live.icon-only"
+    /// Two size s icon-only buttons side by side, and the text that counts their presses: "first 1, second 0".
+    static let firstNeighbor = "button.live.neighbor-first"
+    static let secondNeighbor = "button.live.neighbor-second"
+    static let neighbors = "button.live.neighbors"
     /// The text with the number of accepted presses: "Accepted presses: 3".
     static let count = "button.live.count"
 }
@@ -197,15 +220,18 @@ private struct ButtonMatrixPage: View {
     }
 }
 
-/// Rows of samples, each with its name: a grid with the names in the first column, or, when the grid is wider than the
-/// page (accessibility text sizes, long labels), each name above its samples, which then wrap onto lines of their own when they do not fit side by side. A grid
-/// column would squeeze a button until its label breaks between letters (chapter 08: layout reflows, it never clips).
+/// Rows of samples, each with its name: a grid with the names in the first column, or, at accessibility text sizes,
+/// each name above its samples, which wrap onto as many lines as they need (`FlowLayout`). A grid column would squeeze
+/// a button until its label breaks between letters (chapter 08: layout reflows, it never clips). The choice is eager,
+/// by the text size, so the accessibility audit follows one layout.
 private struct SampleRows<Item: Hashable, Cells: View>: View {
     let items: [Item]
     let name: (Item) -> String
     /// Names in the face of token names (variants), or of details (states).
     let monospaced: Bool
     @ViewBuilder let cells: (Item) -> Cells
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     init(
         items: [Item], name: @escaping (Item) -> String, monospaced: Bool = true,
@@ -222,7 +248,14 @@ private struct SampleRows<Item: Hashable, Cells: View>: View {
     }
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: .space100) {
+                ForEach(items, id: \.self) { item in
+                    label(item)
+                    FlowLayout(spacing: .space100) { cells(item) }
+                }
+            }
+        } else {
             Grid(alignment: .leading, horizontalSpacing: .space100, verticalSpacing: .space100) {
                 ForEach(items, id: \.self) { item in
                     GridRow {
@@ -231,16 +264,57 @@ private struct SampleRows<Item: Hashable, Cells: View>: View {
                     }
                 }
             }
-            VStack(alignment: .leading, spacing: .space100) {
-                ForEach(items, id: \.self) { item in
-                    label(item)
-                    ViewThatFits(in: .horizontal) {
-                        HStack(spacing: .space100) { cells(item) }
-                        VStack(alignment: .leading, spacing: .space100) { cells(item) }
-                    }
-                }
-            }
         }
+    }
+}
+
+/// Places its subviews left to right at their ideal sizes, and starts a new line when the next one does not fit.
+struct FlowLayout: Layout {
+    let spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let lines = lines(subviews, width: proposal.width ?? .infinity)
+        let width = lines.map(\.width).max() ?? 0
+        let height = lines.map(\.height).reduce(0, +) + spacing * CGFloat(max(0, lines.count - 1))
+        return CGSize(width: width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        for line in lines(subviews, width: bounds.width) {
+            var x = bounds.minX
+            for index in line.indices {
+                let size = subviews[index].sizeThatFits(.unspecified)
+                subviews[index].place(
+                    at: CGPoint(x: x, y: y + line.height / 2), anchor: .leading, proposal: ProposedViewSize(size))
+                x += size.width + spacing
+            }
+            y += line.height + spacing
+        }
+    }
+
+    private struct Line {
+        var indices: [Int] = []
+        var width: CGFloat = 0
+        var height: CGFloat = 0
+    }
+
+    private func lines(_ subviews: Subviews, width: CGFloat) -> [Line] {
+        var lines: [Line] = []
+        var line = Line()
+        for index in subviews.indices {
+            let size = subviews[index].sizeThatFits(.unspecified)
+            let needed = line.indices.isEmpty ? size.width : line.width + spacing + size.width
+            if !line.indices.isEmpty && needed > width {
+                lines.append(line)
+                line = Line()
+            }
+            line.width = line.indices.isEmpty ? size.width : line.width + spacing + size.width
+            line.height = max(line.height, size.height)
+            line.indices.append(index)
+        }
+        if !line.indices.isEmpty { lines.append(line) }
+        return lines
     }
 }
 
@@ -258,8 +332,8 @@ private struct ButtonStatesPage: View {
     /// Rest, each state alone, then each state that excludes hover and pressed combined with each of them.
     private static var rows: [Row] {
         let entered = ButtonCatalogState.all.filter(\.isEntered)
-        let excluding = entered.filter { ["disabled", "loading"].contains($0.name) }
-        let excluded = entered.filter { ["hover", "pressed"].contains($0.name) }
+        let excluding = entered.filter(\.excludesTint)
+        let excluded = entered.filter(\.isTint)
         return [Row(states: [])] + entered.map { Row(states: [$0]) }
             + excluding.flatMap { state in excluded.map { Row(states: [state, $0]) } }
     }
@@ -279,19 +353,19 @@ private struct ButtonStatesPage: View {
     }
 
     private func cell(_ row: Row, variant: ButtonVariant) -> some View {
-        let names = Set(row.states.map(\.name))
         // Size s: the states' colors do not depend on the size, and three buttons of s fit beside the names on a phone.
-        return SampleButton(kind: .iconAndLabel, variant: variant, size: .s, destructive: destructive)
-            .forcingButtonStates(Set(row.states.filter { !["disabled", "loading"].contains($0.name) }))
-            .disabled(names.contains("disabled"))
-            .loading(names.contains("loading"))
+        SampleButton(kind: .iconAndLabel, variant: variant, size: .s, destructive: destructive)
+            .forcingButtonStates(Set(row.states.filter(\.isForced)))
+            .disabled(row.states.contains(where: \.isDisabled))
+            .loading(row.states.contains(where: \.isLoading))
     }
 }
 
-/// Live buttons that count the presses they accept, loading's width, and Dynamic Type.
+/// Live buttons that count the presses they accept, close neighbors, focus and Dynamic Type.
 private struct ButtonBehaviorPage: View {
     @State private var accepted = 0
     @State private var isPublishing = true
+    @State private var neighborPresses = (first: 0, second: 0)
     /// What the last accessibility press did, for the UI test: "" before any, then `AccessibilityPress`'s report.
     @State private var accessibilityPress = ""
     @FocusState private var isFocused: Bool
@@ -300,15 +374,16 @@ private struct ButtonBehaviorPage: View {
     var body: some View {
         TokenPage(
             title: "Button · behavior",
-            summary: "A loading button refuses a touch or a click, and is neither dimmed nor announced as unavailable. "
-                + "An accessibility press, and a keyboard shortcut on macOS, still reach it: a contract gap (#23)."
+            summary: "A loading button refuses a touch, a click and assistive technology, and is neither dimmed nor "
+                + "announced as unavailable. A keyboard shortcut on macOS still reaches it unless the product drops it "
+                + "while loading, as Export does (#23)."
         ) {
             section("Presses") {
                 Text("Accepted presses: \(accepted)")
                     .textRole(.body.regular)
                     .foregroundStyle(.text.primary)
                     .accessibilityIdentifier(ButtonCatalogID.count)
-                HStack(spacing: .space200) {
+                FlowLayout(spacing: .space200) {
                     Button("Save") { accepted += 1 }
                         .buttonStyle(.primary)
                         .accessibilityIdentifier(ButtonCatalogID.rest)
@@ -319,6 +394,14 @@ private struct ButtonBehaviorPage: View {
                             .keyboardShortcut(.defaultAction)
                         #endif
                         .accessibilityIdentifier(ButtonCatalogID.loading)
+                    Button("Export") { accepted += 1 }
+                        .buttonStyle(.secondary)
+                        .loading(isPublishing)
+                        #if !os(watchOS)
+                            // The spelling `.loading(_:)` documents: no shortcut while loading.
+                            .keyboardShortcut(isPublishing ? nil : KeyboardShortcut("e", modifiers: .command))
+                        #endif
+                        .accessibilityIdentifier(ButtonCatalogID.export)
                     Button {
                         accepted += 1
                     } label: {
@@ -326,9 +409,16 @@ private struct ButtonBehaviorPage: View {
                     }
                     .buttonStyle(.secondary, size: .s)
                     .accessibilityIdentifier(ButtonCatalogID.small)
+                    Button {
+                        accepted += 1
+                    } label: {
+                        Label("Save", icon: .check)
+                    }
+                    .buttonStyle(.primary, iconOnly: true)
+                    .accessibilityIdentifier(ButtonCatalogID.iconOnly)
                 }
-                HStack(spacing: .space200) {
-                    Toggle("Publish is loading", isOn: $isPublishing)
+                FlowLayout(spacing: .space200) {
+                    Toggle("Publish and Export are loading", isOn: $isPublishing)
                         .fixedSize()
                         .accessibilityIdentifier(ButtonCatalogID.loadingToggle)
                     // A test control in the system's own style: it presses Publish as assistive technology does.
@@ -341,6 +431,28 @@ private struct ButtonBehaviorPage: View {
                 }
                 .textRole(.footnote.regular)
                 .foregroundStyle(.text.secondary)
+            }
+            section("Close neighbors: two size s icon-only buttons \(Int(CGFloat.space100)) pt apart") {
+                HStack(spacing: .space100) {
+                    Button {
+                        neighborPresses.first += 1
+                    } label: {
+                        Label("First", icon: .plus)
+                    }
+                    .buttonStyle(.secondary, size: .s, iconOnly: true)
+                    .accessibilityIdentifier(ButtonCatalogID.firstNeighbor)
+                    Button {
+                        neighborPresses.second += 1
+                    } label: {
+                        Label("Second", icon: .plus)
+                    }
+                    .buttonStyle(.secondary, size: .s, iconOnly: true)
+                    .accessibilityIdentifier(ButtonCatalogID.secondNeighbor)
+                    Text("first \(neighborPresses.first), second \(neighborPresses.second)")
+                        .textRole(.footnote.regular)
+                        .foregroundStyle(.text.secondary)
+                        .accessibilityIdentifier(ButtonCatalogID.neighbors)
+                }
             }
             #if os(macOS)
                 section("Focus: the system's ring") {
@@ -359,24 +471,10 @@ private struct ButtonBehaviorPage: View {
                     .onAppear { isFocused = true }
                 }
             #endif
-            section("Loading keeps the width") {
-                Grid(alignment: .leading, horizontalSpacing: .space150, verticalSpacing: .space100) {
-                    ForEach(SampleButton.Kind.allCases, id: \.self) { kind in
-                        GridRow {
-                            TokenDetail(kind.title)
-                            SampleButton(kind: kind, variant: .primary, destructive: false)
-                            SampleButton(kind: kind, variant: .primary, destructive: false)
-                                .loading(true)
-                            SampleButton(kind: kind, variant: .secondary, destructive: false)
-                                .loading(true)
-                        }
-                    }
-                }
-            }
-            section("Text size accessibility3: the height grows") {
+            section("Text size accessibility3: the height, padding and gap grow") {
                 VStack(alignment: .leading, spacing: .space100) {
                     ForEach(ButtonSize.allCases, id: \.self) { size in
-                        HStack(spacing: .space100) {
+                        FlowLayout(spacing: .space100) {
                             ForEach(SampleButton.Kind.allCases, id: \.self) { kind in
                                 SampleButton(kind: kind, variant: .secondary, size: size, destructive: false)
                             }
@@ -394,6 +492,43 @@ private struct ButtonBehaviorPage: View {
                 .textRole(.subheadline.strong)
                 .foregroundStyle(.text.primary)
             content()
+        }
+    }
+}
+
+/// TEMPORARY, until the owner chooses (#23): ways a loading button can lay out a label without an icon. For each
+/// layout and size, a short and a long label, each at rest and then loading, so the widths can be compared. The four
+/// layouts fill two pages, each of which fits one screenshot on a phone. A label with an icon is the same in every
+/// layout (the `button-states` pages).
+private struct ButtonLoadingLayoutsPage: View {
+    let layouts: [ButtonLoadingLayout]
+
+    private static let labels = ["Save", "Save changes"]
+
+    var body: some View {
+        TokenPage(
+            title: "Button · loading layouts (temporary)",
+            summary:
+                "A label without an icon: at rest, then loading. sharedWidth is P13, today's default; grows widens "
+                + "while loading; reservedSlot keeps the indicator's place at rest; replacesLabel shows the indicator."
+        ) {
+            ForEach(layouts, id: \.self) { layout in
+                VStack(alignment: .leading, spacing: SampleMetrics.rowSpacing) {
+                    TokenName(layout.rawValue)
+                    ForEach(ButtonSize.allCases, id: \.self) { size in
+                        FlowLayout(spacing: .space100) {
+                            ForEach(Self.labels, id: \.self) { label in
+                                Button(label) {}
+                                    .buttonStyle(.secondary, size: size)
+                                Button(label) {}
+                                    .buttonStyle(.secondary, size: size)
+                                    .loading(true)
+                            }
+                        }
+                    }
+                }
+                .buttonLoadingLayout(layout)
+            }
         }
     }
 }

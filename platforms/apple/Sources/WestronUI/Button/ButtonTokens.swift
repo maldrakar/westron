@@ -84,9 +84,10 @@ struct ButtonTokens: Equatable, Sendable {
         return states.contains(.pressed) && states.isDisjoint(with: [.disabled, .loading])
     }
 
-    /// The scale of a pressed button, 98 % (chapter 05, `motion.press`). The contract gives the number in prose and no
-    /// token holds it yet; a token is proposed in spec/components/button/decisions (#23).
-    static let pressScale: CGFloat = 0.98  // westron-lint: allow the 98 % press scale has no token yet (chapter 05)
+    /// The scale of a pressed button, 98 % (`motion.press`). Chapter 05 ("Shapes belong to components") puts a motion's
+    /// shape in the component's contract, not in the motion tokens, and fixes this one for every control, so it is a
+    /// number here, under the lint's exemption, not a token.
+    static let pressScale: CGFloat = 0.98  // westron-lint: allow a motion's shape, fixed by chapter 05, is not a token
 }
 
 /// The bindings of Button that vary by size: the contract's per-size maps.
@@ -124,11 +125,6 @@ struct ButtonMetrics: Equatable, Sendable {
         // icon.font equals label.font by size (P4).
         iconFont = labelFont
     }
-
-    /// The smallest side of the hit area: the platform's recommended target (chapter 08), even where the drawn height
-    /// is smaller. No token names the target, so it is `size.control.m`, which is the touch target, 44, on iOS, iPadOS
-    /// and watchOS, and 32 on macOS, above the Mac's recommended 28 (tokens/platform/*.tokens.json).
-    static let minimumTarget: Westron.Dimension = .size.control.m
 
     /// `container.radius`.
     static let radius: Westron.Dimension = .radius.control

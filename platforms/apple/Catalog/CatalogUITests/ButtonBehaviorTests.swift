@@ -1,7 +1,7 @@
 import XCTest
 
 /// Button's behavior that a unit test cannot reach, on the catalog's `button-behavior` entry: a loading button refuses
-/// every press and stays enabled; the hit area of a small button reaches the recommended target.
+/// presses and stays enabled; an icon-only button reads as its title; the hit area of a small button.
 ///
 /// The entry counts accepted presses in a text, `ButtonCatalogID.count` in WestronCatalog.
 final class ButtonBehaviorTests: XCTestCase {
@@ -11,7 +11,12 @@ final class ButtonBehaviorTests: XCTestCase {
         static let loading = "button.live.loading"
         static let loadingToggle = "button.live.loading-toggle"
         static let accessibilityPress = "button.live.accessibility-press"
+        static let export = "button.live.export"
         static let small = "button.live.small"
+        static let iconOnly = "button.live.icon-only"
+        static let firstNeighbor = "button.live.neighbor-first"
+        static let secondNeighbor = "button.live.neighbor-second"
+        static let neighbors = "button.live.neighbors"
         static let count = "button.live.count"
     }
 
@@ -31,12 +36,16 @@ final class ButtonBehaviorTests: XCTestCase {
         app.terminate()
     }
 
+    /// A text's string: iOS puts it in the label, macOS in the value.
+    @MainActor
+    private func text(_ id: String) -> String {
+        let text = app.staticTexts[id]
+        return text.label.isEmpty ? (text.value as? String ?? "") : text.label
+    }
+
     @MainActor
     private var accepted: Int {
-        // iOS puts a text's string in its label, macOS in its value.
-        let text = app.staticTexts[ID.count]
-        let string = text.label.isEmpty ? (text.value as? String ?? "") : text.label
-        return Int(string.split(separator: " ").last ?? "") ?? -1
+        Int(text(ID.count).split(separator: " ").last ?? "") ?? -1
     }
 
     @MainActor
@@ -53,6 +62,28 @@ final class ButtonBehaviorTests: XCTestCase {
         #else
             element.tap()
         #endif
+    }
+
+    @MainActor
+    private func press(_ coordinate: XCUICoordinate) {
+        #if os(macOS)
+            coordinate.click()
+        #else
+            coordinate.tap()
+        #endif
+    }
+
+    /// Takes Publish and Export out of loading.
+    @MainActor
+    private func stopLoading() {
+        let toggle = app.descendants(matching: .any)[ID.loadingToggle].firstMatch
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+        #if os(macOS)
+            toggle.click()
+        #else
+            if toggle.switches.firstMatch.exists { toggle.switches.firstMatch.tap() } else { toggle.tap() }
+        #endif
+        XCTAssertEqual(button(ID.loading).value as? String ?? "", "", "the button is still loading")
     }
 
     @MainActor
@@ -78,96 +109,119 @@ final class ButtonBehaviorTests: XCTestCase {
         XCTAssertEqual(accepted, 1)
     }
 
-    /// Return triggers the window's default action, which the live "Publish" button is
-    /// (`.keyboardShortcut(.defaultAction)`): it does at rest, and should not while loading.
-    ///
-    /// macOS only. On iOS 26.3 in the simulator, `typeKey` reaches no default-action shortcut, not even a system
-    /// `.borderedProminent` button's, so the iOS behavior is not measured.
-    ///
-    /// A known contract gap (#23): on macOS SwiftUI runs a shortcut's button action itself, without the button's
-    /// style, so no style can refuse it. The expected failure fails the test once that changes.
-    @MainActor
-    func testLoadingButtonRefusesItsKeyboardShortcut() throws {
-        #if os(macOS)
-            app.windows.firstMatch.click()
-            app.typeKey(.return, modifierFlags: [])
-            let afterLoading = accepted
-            XCTExpectFailure("contract gap #23: on macOS a keyboard shortcut runs the action of a loading button") {
-                XCTAssertEqual(afterLoading, 0, "Return triggered a loading default button")
-            }
-            // The control: out of loading, the same key triggers it.
-            app.descendants(matching: .any)[ID.loadingToggle].firstMatch.click()
-            XCTAssertEqual(button(ID.loading).value as? String ?? "", "", "the button is still loading")
-            app.typeKey(.return, modifierFlags: [])
-            XCTAssertEqual(accepted, afterLoading + 1, "Return did not trigger the default button at rest")
-        #else
-            throw XCTSkip("the iOS simulator's typeKey reaches no default-action shortcut")
-        #endif
-    }
-
     /// VoiceOver, Switch Control and Voice Control press a button through the accessibility API: AXPress on macOS,
     /// `accessibilityActivate()` on iOS. The runner is not trusted for that API, so the catalog makes the press itself,
-    /// on Publish's own accessibility element, when its test control is pressed.
-    ///
-    /// A known contract gap (#23), on iOS and macOS: SwiftUI runs the action of the product's `Button` for an
-    /// accessibility press itself, without the button's style, so the loading button takes it. The expected failure
-    /// fails the test once that changes.
+    /// on Publish's own accessibility element, when its test control is pressed. `.loading(_:)` refuses it.
     @MainActor
     func testLoadingButtonRefusesTheAccessibilityPress() {
         let trigger = button(ID.accessibilityPress)
         press(trigger)
         XCTAssertNotEqual(
             trigger.value as? String, "not found", "the catalog found no accessibility element for Publish")
-        let afterLoading = accepted
-        XCTExpectFailure("contract gap #23: an accessibility press runs the action of a loading button") {
-            XCTAssertEqual(afterLoading, 0, "an accessibility press triggered a loading button")
-        }
-        // The control: out of loading, the same press reaches it.
-        let toggle = app.descendants(matching: .any)[ID.loadingToggle].firstMatch
-        #if os(macOS)
-            toggle.click()
-        #else
-            if toggle.switches.firstMatch.exists { toggle.switches.firstMatch.tap() } else { toggle.tap() }
-        #endif
         press(trigger)
-        XCTAssertEqual(
-            accepted, afterLoading + 1,
-            "an accessibility press did not reach the button at rest: \(trigger.value ?? "")")
+        XCTAssertEqual(accepted, 0, "an accessibility press triggered a loading button")
+        // The control: out of loading, the same press reaches it.
+        stopLoading()
+        press(trigger)
+        XCTAssertEqual(accepted, 1, "an accessibility press did not reach the button at rest: \(trigger.value ?? "")")
     }
 
-    /// A size s button is drawn smaller than the recommended target, 32 on iOS and 24 on macOS; a press just outside
-    /// what is drawn, inside the target, still reaches it.
+    /// Return triggers the window's default action, which the live "Publish" button is
+    /// (`.keyboardShortcut(.defaultAction)`): it does at rest, and should not while loading. ⌘E triggers Export, whose
+    /// shortcut the catalog drops while it loads, as `.loading(_:)` tells a product to.
     ///
-    /// On iOS the system's own touch tolerance reaches farther (about 16 pt below a 32 pt button without westron's
-    /// larger content shape, 24 pt with it, measured on iOS 26.3), so there this test cannot fail. On macOS a click
-    /// outside the button's frame misses whatever content shape it has: a known contract gap (#23), recorded as an
-    /// expected failure.
+    /// macOS only. In the iOS 26.3 simulator `typeKey` reaches no shortcut, not even a system `.borderedProminent`
+    /// button's default action, so the iOS (iPad hardware keyboard) behavior is not measured.
+    ///
+    /// A known contract gap (#23): on macOS SwiftUI runs a shortcut's button action itself, around the button's style
+    /// and modifiers, so westron cannot refuse it. The expected failure fails the test once that changes.
+    @MainActor
+    func testKeyboardShortcutsWhileLoading() throws {
+        #if os(macOS)
+            app.windows.firstMatch.click()
+            app.typeKey(.return, modifierFlags: [])
+            let afterReturn = accepted
+            XCTExpectFailure("contract gap #23: on macOS a keyboard shortcut runs the action of a loading button") {
+                XCTAssertEqual(afterReturn, 0, "Return triggered a loading default button")
+            }
+            // A product that drops the shortcut while loading: ⌘E does nothing.
+            app.typeKey("e", modifierFlags: .command)
+            XCTAssertEqual(accepted, afterReturn, "⌘E triggered Export while its shortcut is dropped")
+            // The control: out of loading, both keys trigger their buttons.
+            stopLoading()
+            app.typeKey(.return, modifierFlags: [])
+            XCTAssertEqual(accepted, afterReturn + 1, "Return did not trigger the default button at rest")
+            app.typeKey("e", modifierFlags: .command)
+            XCTAssertEqual(accepted, afterReturn + 2, "⌘E did not trigger Export at rest")
+        #else
+            throw XCTSkip("the iOS simulator's typeKey reaches no keyboard shortcut")
+        #endif
+    }
+
+    /// An icon-only button reads as its title, a button and nothing else: the checkmark symbol's own trait does not
+    /// leak ("Selected").
+    @MainActor
+    func testIconOnlyButtonReadsAsItsTitle() {
+        let iconOnly = button(ID.iconOnly)
+        XCTAssertEqual(iconOnly.label, "Save")
+        XCTAssertEqual(iconOnly.elementType, .button)
+        XCTAssertFalse(iconOnly.isSelected, "the icon-only button reads as selected")
+        XCTAssertEqual(iconOnly.value as? String ?? "", "")
+        press(iconOnly)
+        XCTAssertEqual(accepted, 1)
+    }
+
+    /// A size s button is drawn smaller than the recommended target: 32 pt tall on iOS (target 44), 24 on macOS
+    /// (target 28). A press 5 pt below what is drawn, inside the target on iOS, must reach it. The hit area there is the
+    /// system's touch tolerance, which westron does not grow (ButtonVariantStyle.swift): measured on iOS 26.3 it reaches
+    /// 16 pt below such a button, and the test fails if the platform ever covers less than the target.
+    ///
+    /// macOS has no such tolerance and ignores a hit area larger than the frame, so a click 2 pt below the 24 pt button,
+    /// inside its 28 pt target, misses: a known contract gap (#23), recorded as an expected failure there.
     @MainActor
     func testSmallButtonHitAreaReachesTheTarget() {
         let small = button(ID.small)
-        let frame = small.frame
         #if os(macOS)
-            let target: CGFloat = 32  // size.control.m on macOS, above the recommended 28
+            let below: CGFloat = 2
         #else
-            let target: CGFloat = 44
+            let below: CGFloat = 5
         #endif
-        XCTAssertLessThan(frame.height, target, "the small button is drawn at the target already")
-        // Just below the drawn edge, inside the extended area.
-        let outside = (target - frame.height) / 2 - 1
-        let point = small.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 1)).withOffset(
-            CGVector(dx: 0, dy: outside))
-        #if os(macOS)
-            point.click()
-        #else
-            point.tap()
-        #endif
+        press(small.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 1)).withOffset(CGVector(dx: 0, dy: below)))
         let reached = accepted
         #if os(macOS)
             XCTExpectFailure("contract gap #23: macOS does not extend a hit area beyond the frame") {
-                XCTAssertEqual(reached, 1, "a click \(outside) pt below the drawn button did not reach it")
+                XCTAssertEqual(reached, 1, "a click \(below) pt below the drawn button did not reach it")
             }
         #else
-            XCTAssertEqual(reached, 1, "a press \(outside) pt below the drawn button did not reach it")
+            XCTAssertEqual(reached, 1, "a tap \(below) pt below the drawn button did not reach it")
+        #endif
+    }
+
+    /// Two size s icon-only buttons 8 pt apart: a press inside a button's drawn frame reaches it, and on iOS a tap in
+    /// the gap reaches the closer one (the system's touch tolerance decides; westron adds no hit area that would hand
+    /// the gap to the later sibling). On macOS a click in the gap reaches neither.
+    @MainActor
+    func testCloseNeighbors() {
+        let first = button(ID.firstNeighbor)
+        let second = button(ID.secondNeighbor)
+        let gap = second.frame.minX - first.frame.maxX
+        XCTAssertEqual(gap, 8, accuracy: 0.5)
+
+        func tap(_ element: XCUIElement, edge: CGFloat, offset: CGFloat) -> String {
+            press(
+                element.coordinate(withNormalizedOffset: CGVector(dx: edge, dy: 0.5)).withOffset(
+                    CGVector(dx: offset, dy: 0)))
+            return text(ID.neighbors)
+        }
+        // Inside each drawn frame, 1 pt from the edge that faces the other.
+        XCTAssertEqual(tap(first, edge: 1, offset: -1), "first 1, second 0")
+        XCTAssertEqual(tap(second, edge: 0, offset: 1), "first 1, second 1")
+        #if os(macOS)
+            XCTAssertEqual(tap(first, edge: 1, offset: 3), "first 1, second 1", "a click in the gap reached a button")
+        #else
+            // In the gap: 3 pt from the first (5 from the second), then 5 pt from the first (3 from the second).
+            XCTAssertEqual(tap(first, edge: 1, offset: 3), "first 2, second 1", "a tap closer to the first missed it")
+            XCTAssertEqual(tap(first, edge: 1, offset: 5), "first 2, second 2", "a tap closer to the second missed it")
         #endif
     }
 }

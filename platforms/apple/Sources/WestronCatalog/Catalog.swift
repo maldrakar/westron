@@ -9,6 +9,8 @@ public enum Catalog {
         .buttonStates,
         .buttonStatesDestructive,
         .buttonBehavior,
+        .buttonLoadingLayouts,
+        .buttonLoadingLayouts2,
         .colorBackgrounds,
         .colorForegrounds,
         .colorCategories,

@@ -226,23 +226,13 @@ struct ButtonStyleTests {
         #endif
     }
 
-    // MARK: - Hit area
+    // MARK: - Strings
 
-    @Test("the hit area grows to the recommended target around what is drawn, and never shrinks it")
-    func hitArea() {
-        let target = CGFloat(ButtonMetrics.minimumTarget)
-        let small = CGRect(x: 10, y: 20, width: target / 2, height: target / 2)
-        let grown = MinimumTargetShape.target(around: small, minSide: target)
-        #expect(grown.width == target && grown.height == target)
-        #expect(grown.midX == small.midX && grown.midY == small.midY)
-        let large = CGRect(x: 0, y: 0, width: target * 3, height: target * 2)
-        #expect(MinimumTargetShape.target(around: large, minSide: target) == large)
-        #if os(macOS)
-            // The Mac's recommended target is 28 (chapter 08); size.control.m is 32 there.
-            #expect(target >= 28)
-        #elseif os(iOS) || os(watchOS)
-            #expect(target == 44)
-        #endif
+    @Test("loading's accessibility value comes from WestronUI's string table, in English")
+    func loadingIsLocalizable() {
+        // Without the table the fallback value would come back.
+        #expect(Bundle.module.localizedString(forKey: "Loading", value: "no table", table: nil) == "Loading")
+        #expect(Bundle.module.developmentLocalization == "en")
     }
 
     // MARK: - The catalog's hook
