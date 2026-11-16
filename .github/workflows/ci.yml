@@ -37,6 +37,10 @@ jobs:
         run: tools/apple/check.sh format
       - name: Build and tests (macOS)
         run: tools/apple/check.sh package
+      - name: Tools tests on macOS (the SwiftUI type list is not stale)
+        run: |
+          source tools/apple/xcode-env.sh
+          swift test --package-path tools
       - name: Compile for iOS and watchOS
         run: tools/apple/check.sh platforms
       - name: Catalog and UI tests

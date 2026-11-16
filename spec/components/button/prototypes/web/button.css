@@ -1,0 +1,283 @@
+/* Prototype (#26): westron's Button contract as CSS on a native <button>. Throwaway evidence for
+   spec/components/button/decisions/0002-portability-to-web-and-gtk.md, not the start of the web library (phase 6,
+   #40). Values come only from tokens.css; the few raw values are marked "raw:" with the reason.
+
+   Markup:
+     <button class="wb" data-variant="primary|secondary|tertiary" data-size="s|m|l" data-role="destructive"
+             [data-icon-only aria-label="…"] [disabled] [aria-busy="true"]>
+       <span class="wb-icon" aria-hidden="true"><svg>…</svg></span>          optional leading icon
+       <span class="wb-label" data-label="Save"><span class="wb-text">Save</span></span>   absent when icon-only
+     </button>
+
+   The contract's option `role` is `data-role`, never `role`: on an HTML element `role` is the ARIA role.
+   `data-state="hover|pressed|focus"` forces a state for the static screenshots; it is excluded exactly where the
+   real pseudo-class is. */
+
+.wb {
+  /* Sizes: container.height, paddingHorizontal, gap; label.font and icon.font by size. m is the default. */
+  --wb-height: var(--westron-size-control-m);
+  --wb-padding: var(--westron-space-150);
+  --wb-gap: var(--westron-space-75);
+  --wb-font-family: var(--westron-typography-subheadline-strong-font-family);
+  --wb-font-size: var(--westron-typography-subheadline-strong-font-size);
+  --wb-font-weight: var(--westron-typography-subheadline-strong-font-weight);
+  --wb-line-height: var(--westron-typography-subheadline-strong-line-height);
+  --wb-letter-spacing: var(--westron-typography-subheadline-strong-letter-spacing);
+
+  /* The contract's "no value" means nothing is drawn. A native <button> draws the browser's own fill, border, font
+     and color, so every part is reset here; on SwiftUI a ButtonStyle starts from nothing. */
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  box-sizing: border-box;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--wb-gap);
+  min-height: var(--wb-height); /* a minimum: the button grows with its text (P11) */
+  padding: 0 var(--wb-padding);
+  border-radius: var(--westron-radius-control); /* circular corners on the web */
+  border: var(--wb-border-width, 0px) solid var(--wb-border-color, transparent);
+  background-color: var(--wb-background, transparent);
+  color: var(--wb-label-color);
+  font-family: var(--wb-font-family);
+  font-size: var(--wb-font-size);
+  font-weight: var(--wb-font-weight);
+  line-height: var(--wb-line-height);
+  letter-spacing: var(--wb-letter-spacing);
+  flex: none;
+  white-space: nowrap;
+  cursor: default;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  /* hoverMotion: motion.fade; pressMotion: motion.press, sampled from its spring into linear(). CSS takes the timing
+     of the state it goes to, so a release back to rest or hover runs in fade for the tint. */
+  transition:
+    background-color var(--westron-motion-fade-duration) var(--westron-motion-fade-easing),
+    transform var(--westron-motion-press-spring-duration) var(--westron-motion-press-spring);
+}
+
+.wb[data-size="s"] {
+  --wb-height: var(--westron-size-control-s);
+  --wb-padding: var(--westron-space-100);
+  --wb-gap: var(--westron-space-50);
+  --wb-font-family: var(--westron-typography-footnote-strong-font-family);
+  --wb-font-size: var(--westron-typography-footnote-strong-font-size);
+  --wb-font-weight: var(--westron-typography-footnote-strong-font-weight);
+  --wb-line-height: var(--westron-typography-footnote-strong-line-height);
+  --wb-letter-spacing: var(--westron-typography-footnote-strong-letter-spacing);
+}
+
+.wb[data-size="l"] {
+  --wb-height: var(--westron-size-control-l);
+  --wb-padding: var(--westron-space-200);
+  --wb-gap: var(--westron-space-100);
+}
+
+/* Variant × role: the resting fill and its hover and pressed fills (container.background), the border
+   (borderColor, borderWidth), and the label, icon and indicator color, which the contract binds identically. */
+.wb[data-variant="primary"] {
+  --wb-background: var(--westron-color-background-accent);
+  --wb-background-hover: var(--westron-color-background-accent-hover);
+  --wb-background-pressed: var(--westron-color-background-accent-pressed);
+  --wb-label-color: var(--westron-color-text-on-accent);
+}
+
+.wb[data-variant="primary"][data-role="destructive"] {
+  --wb-background: var(--westron-color-status-danger-fill);
+  --wb-background-hover: var(--westron-color-status-danger-fill-hover);
+  --wb-background-pressed: var(--westron-color-status-danger-fill-pressed);
+  --wb-label-color: var(--westron-color-status-danger-on-fill);
+}
+
+.wb[data-variant="secondary"],
+.wb[data-variant="tertiary"] {
+  --wb-background: transparent;
+  --wb-background-hover: var(--westron-color-background-hover);
+  --wb-background-pressed: var(--westron-color-background-pressed);
+}
+
+.wb[data-variant="secondary"] {
+  --wb-border-width: var(--westron-stroke-thin);
+  --wb-border-color: var(--westron-color-border-strong);
+  --wb-label-color: var(--westron-color-text-primary);
+}
+
+.wb[data-variant="secondary"][data-role="destructive"] {
+  --wb-border-color: var(--westron-color-status-danger-border);
+  --wb-label-color: var(--westron-color-status-danger-text);
+}
+
+.wb[data-variant="tertiary"] {
+  --wb-label-color: var(--westron-color-text-accent);
+}
+
+.wb[data-variant="tertiary"][data-role="destructive"] {
+  --wb-label-color: var(--westron-color-status-danger-text);
+}
+
+/* Hover only with a pointer that hovers (P15). A disabled <button> still matches :hover, and an aria-busy one :hover
+   and :active, so both are excluded: the contract's first cases keep the resting fill. */
+@media (hover: hover) {
+  .wb:hover:not(:disabled, [aria-busy="true"]) {
+    background-color: var(--wb-background-hover);
+  }
+}
+
+.wb[data-state="hover"]:not(:disabled, [aria-busy="true"]) {
+  background-color: var(--wb-background-hover);
+}
+
+.wb:active:not(:disabled, [aria-busy="true"]),
+.wb[data-state="pressed"]:not(:disabled, [aria-busy="true"]) {
+  background-color: var(--wb-background-pressed);
+  transform: scale(0.98); /* raw: the 98 % press scale is prose in chapter 05, not a token */
+  transition:
+    background-color var(--westron-motion-press-spring-duration) var(--westron-motion-press-spring),
+    transform var(--westron-motion-press-spring-duration) var(--westron-motion-press-spring);
+}
+
+/* Focus: an outline in focusRing.color and focusRing.width on :focus-visible. The contract names no offset, so the
+   ring is drawn at offset 0 as written; data-focus-offset shows the proposal of an offset (stroke.thick here). */
+.wb:focus-visible,
+.wb[data-state="focus"] {
+  outline: var(--westron-stroke-thick) solid var(--westron-color-border-focus);
+  outline-offset: 0;
+}
+
+.wb[data-focus-offset]:focus-visible,
+.wb[data-focus-offset][data-state="focus"] {
+  outline-offset: var(--westron-stroke-thick);
+}
+
+/* Disabled: the whole control at opacity.disabled, with no colors of its own. */
+.wb:disabled {
+  opacity: var(--westron-opacity-disabled);
+}
+
+/* Slots. The icon is sized by the label's font, as icon.font asks; a web icon is an SVG, so 1em is the prototype's
+   reading of "the icon takes its text's role". */
+.wb-icon {
+  position: relative;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1em;
+  height: 1em;
+}
+
+.wb-icon svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* The label sizes the button with a hidden copy of its text, so the visible text can make room for the loading
+   indicator without changing the width (P13). */
+.wb-label {
+  display: grid;
+}
+
+.wb-label::before {
+  content: attr(data-label);
+  grid-area: 1 / 1;
+  visibility: hidden;
+  height: 0;
+}
+
+.wb-text {
+  grid-area: 1 / 1;
+  width: 0;
+  min-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Icon-only: a square whose side equals the height; padding and gap do not apply. aria-label is the label. */
+.wb[data-icon-only] {
+  padding: 0;
+  gap: 0;
+  min-width: var(--wb-height);
+  aspect-ratio: 1;
+}
+
+/* Loading: the indicator in the icon's place, before the label without an icon; the label stays, the width does not
+   change, and the button does not dim. Presses are ignored by the script in index.html: CSS cannot refuse a click. */
+.wb[aria-busy="true"] .wb-icon > svg {
+  visibility: hidden;
+}
+
+.wb[aria-busy="true"] .wb-icon::after,
+.wb[aria-busy="true"]:not(:has(.wb-icon)) .wb-text::before {
+  content: "";
+  box-sizing: border-box;
+  width: 1em;
+  height: 1em;
+  border-radius: 50%;
+  /* progress.color equals the label color. raw: the ring's stroke, its gap and its period have no token. */
+  border: 0.125em solid var(--wb-label-color);
+  border-inline-end-color: transparent;
+  animation: wb-spin 800ms linear infinite;
+}
+
+.wb[aria-busy="true"] .wb-icon::after {
+  position: absolute;
+  inset: 0;
+}
+
+.wb[aria-busy="true"]:not(:has(.wb-icon)) .wb-text::before {
+  display: inline-block;
+  vertical-align: -0.15em; /* raw: centers the ring on the text's x-height */
+  margin-inline-end: var(--wb-gap);
+}
+
+@keyframes wb-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* Reduce Motion: the press keeps its tint and loses its scale (chapter 05). Nothing loops: the indicator stops. */
+@media (prefers-reduced-motion: reduce) {
+  .wb:active,
+  .wb[data-state="pressed"] {
+    transform: none !important;
+  }
+
+  .wb[aria-busy="true"] .wb-icon::after,
+  .wb[aria-busy="true"] .wb-text::before {
+    animation: none;
+  }
+}
+
+:root[data-motion="reduce"] .wb:active,
+:root[data-motion="reduce"] .wb[data-state="pressed"] {
+  transform: none !important;
+}
+
+:root[data-motion="reduce"] .wb[aria-busy="true"] .wb-icon::after,
+:root[data-motion="reduce"] .wb[aria-busy="true"] .wb-text::before {
+  animation: none;
+}
+
+/* Forced colors (Windows High Contrast): the system repaints every color, and a transparent border is what keeps
+   primary and tertiary outlined there. */
+@media (forced-colors: active) {
+  .wb {
+    border-width: var(--westron-stroke-thin);
+  }
+}
+
+/* The hit area: at least the platform's recommended target where the drawn height is smaller (chapter 08). The web
+   names two, 24 px (AA) and 44 px (AAA), and westron has decided neither (chapter 08, question 1), so the target is a
+   page setting here. raw: no token holds a target size. */
+.wb::after {
+  content: "";
+  position: absolute;
+  inset: min(0px, calc((var(--wb-height) - var(--prototype-hit-target, 24px)) / 2));
+}
+
+:root[data-show-hit-area] .wb::after {
+  outline: 1px dashed var(--westron-color-status-danger-border);
+}

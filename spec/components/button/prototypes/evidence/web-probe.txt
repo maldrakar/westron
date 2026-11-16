@@ -1,0 +1,20 @@
+Pointer (synthetic NSEvents to the WKWebView):
+  live-primary after mouseMoved: :hover=false :active=false :focus=false :focus-visible=false background=rgb(40, 99, 215) transform=none outline=none 3px
+  live-primary after mouseDown:  :hover=true :active=true :focus=false :focus-visible=false background=rgb(15, 74, 188) transform=matrix(0.98, 0, 0, 0.98, 0, 0) outline=none 3px
+  live-primary after mouseUp: clicks dispatched [live-primary], accepted by the page's handlers [live-primary]
+  live-busy after mouseMoved: :hover=false :active=false :focus=false :focus-visible=false background=rgb(40, 99, 215) transform=none outline=none 3px
+  live-busy after mouseDown:  :hover=true :active=true :focus=false :focus-visible=false background=rgb(40, 99, 215) transform=none outline=none 3px
+  live-busy after mouseUp: clicks dispatched [live-busy], accepted by the page's handlers []
+  live-disabled after mouseMoved: :hover=false :active=false :focus=false :focus-visible=false background=rgb(40, 99, 215) transform=none outline=none 3px
+  live-disabled after mouseDown:  :hover=true :active=true :focus=false :focus-visible=false background=rgb(40, 99, 215) transform=none outline=none 3px
+  live-disabled after mouseUp: clicks dispatched [], accepted by the page's handlers []
+Keyboard (focus(), then Space and Return as NSEvents):
+  live-primary focused: :hover=false :active=false :focus=false :focus-visible=false background=rgb(40, 99, 215) transform=none outline=none 3px
+  live-primary after Space and Return: clicks dispatched [live-primary, live-primary], accepted by the page's handlers [live-primary, live-primary]
+  live-busy focused: :hover=false :active=false :focus=false :focus-visible=false background=rgb(40, 99, 215) transform=none outline=none 3px
+  live-busy after Space and Return: clicks dispatched [live-busy, live-busy], accepted by the page's handlers []
+Press scale of a forced pressed button, then with the reduced-motion rules forced:
+  matrix(0.98, 0, 0, 0.98, 0, 0)
+  none
+Media features WebKit reports here:
+  (hover: hover)=true (pointer: fine)=true (pointer: coarse)=false (prefers-reduced-motion: reduce)=false (prefers-contrast: more)=false (forced-colors: active)=false

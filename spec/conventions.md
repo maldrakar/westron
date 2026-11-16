@@ -114,14 +114,28 @@ enum ButtonState: String, CaseIterable, Sendable {
   for every enum option (its restrictions and fallbacks on each Apple OS, as `#if os(…)`), and `<Component>State`
   with `isEntered`. The hand-written style switches over these enums exhaustively, so a value renamed, added or
   removed in the contract fails the build there until the style follows it (#20). A draft contract generates nothing,
-  so a contract in review never breaks the build, and an own component waits for Q2.
+  so a contract in review never breaks the build, and an own component waits for Q2. The generator first runs
+  `spec check` on every contract and generates nothing while one fails it (#62).
 - **An option that is the system's own API gets no type.** The Apple entry names it in `systemOptions`, with the
   system type that carries it: Button's `role` is `systemOptions: { role: SwiftUI.ButtonRole }`, so no `ButtonRole`
   is generated, which would shadow SwiftUI's, the overload takes no `role:`, and the style reads
-  `configuration.role`. A generated name that would shadow a SwiftUI type of the base control fails generation and
-  points at `systemOptions`.
+  `configuration.role`. A generated `<Component><Option>` or `<Component>State` that is the name of a public SwiftUI
+  type, of any control, fails generation and points at `systemOptions`: the generator checks it against
+  `tools/Sources/WestronTools/Contracts/SwiftUITypes.swift`, the public top-level types of the SwiftUI and SwiftUICore
+  interfaces of the Xcode in `.xcode-version`, which a test on macOS keeps current (`tools/README.md`). Types of the
+  other modules SwiftUI re-exports (CoreGraphics, CoreTransferable, DeveloperToolsSupport) are not in it.
 - **The names come from the contract.** The enum is `<Component><Option>` in UpperCamelCase. A case is the
-  contract's value in lowerCamelCase. Renaming a value in the contract breaks the build (#20).
+  contract's value in lowerCamelCase. Renaming a value in the contract breaks the build (#20). Two contracts that
+  give one type name, counting `<Component>State` and the hand-written `<Component>VariantStyle`, fail generation.
+  `spec check` rejects the words Swift cannot use as a case, `init`, `self` and `none`, and as an argument label,
+  `inout`, `var` and `let`; other keywords are declared in backticks.
+- **One base control, several components.** Each adds an overload of the same modifier, told apart by the variant.
+  Generation fails when two variants share a value, since `.buttonStyle(.primary)` would be ambiguous, and when two
+  of the overloads can be called without a variant (a variant with a default, or none): `.buttonStyle()` is then
+  ambiguous, or, when one has no variant, Swift silently takes that one, `.buttonStyle(size: .m)` included. A
+  required variant next to one with a default is fine. `SystemStyles.swift` names each base's modifier, and a base it
+  lacks fails `spec check`: `SwiftUI.Slider` and `SwiftUI.Stepper` have no style modifier, and `SwiftUI.SecureField`
+  takes `textFieldStyle`, not one named after it.
 - **`String` raw values** are the contract's values as written, so the catalog, the snapshot matrix (#24) and the
   parity lint (#21) can match a case to the contract.
 - **The variant is unlabeled, every other option is labeled.** `.buttonStyle(.primary, size: .m)` reads as SwiftUI's
@@ -159,7 +173,9 @@ the mapping is a `switch`, not a comparison.
 The generated enum is one for every Apple OS, so it keeps every case the contract declares. Where an OS drops a
 value, the `platforms` block names its fallback, and the style draws that value instead: on watchOS, which offers
 only `m`, `.buttonStyle(.primary, size: .l)` compiles and draws `m`. The call never fails to compile on one OS only,
-and the validator requires a fallback for every value Apple drops (#18).
+and the validator requires a fallback for every value Apple drops (#18). Fallbacks chain: Apple's applies first, then
+the OS's to what the OS drops of what Apple keeps, and the validator checks that every value reaches one each OS
+offers (#62).
 
 ### States: what the system has, the style reads; what it lacks, a modifier sets
 
