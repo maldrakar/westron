@@ -7,6 +7,11 @@ import XCTest
 /// launch arguments, and runs `performAccessibilityAudit` with the configuration's audit types on every screenful of
 /// the page, scrolling down to its end. Every issue the audit reports fails the test, except the ones in
 /// `suppressions`, each with its reason. A new entry is audited without any change here.
+///
+/// The Dynamic Type and text clipped audits enlarge the text of the page they look at, and a dragged scroll view goes
+/// back to its top when its content grows. Where the system's size reaches the page (`testDefaultSettings`), they run
+/// in a pass of their own: one launch per window of the page, held in view by the catalog's scroll anchor
+/// (`-WestronScrollAnchor`) from the top of the page to its bottom (see `audit(entryID:_:)`).
 final class CatalogAccessibilityAuditTests: XCTestCase {
     override func setUp() {
         super.setUp()
@@ -17,39 +22,36 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
     /// The default: the system's font size, the light theme, standard contrast. Every audit type runs. The theme is
     /// set, not left to the simulator, so the run does not depend on the machine.
     @MainActor
-    func testDefaultSettings() throws {
-        try audit(Configuration(appearance: .light, types: Configuration.allTypes, scrolls: true))
+    func testDefaultSettings() {
+        audit(Configuration(appearance: .light, types: Configuration.allTypes))
     }
 
     /// The largest accessibility font size. Every audit type runs except `dynamicType`: the catalog pins this size in
     /// the view tree (`-WestronDynamicType`), so a text cannot follow the system size the audit sets, and the audit
     /// would report every text. `testDefaultSettings` runs the `dynamicType` audit with the system's size.
     @MainActor
-    func testAccessibilityDynamicType() throws {
-        try audit(
+    func testAccessibilityDynamicType() {
+        audit(
             Configuration(
-                appearance: .light, dynamicType: "accessibility5", types: Configuration.typesWithoutDynamicType,
-                scrolls: true))
+                appearance: .light, dynamicType: "accessibility5", types: Configuration.typesWithoutDynamicType))
     }
 
-    /// Increased contrast, the `-hc` themes: only colors change, so the contrast audit runs. Like the other theme
-    /// tests, it audits the first screenful only: the pages are laid out to fit one at the default text size, and
-    /// scrolling every page in every theme would make the run longer than its worth.
+    /// Increased contrast, the `-hc` themes: only colors change, so the contrast audit runs.
     @MainActor
-    func testIncreasedContrast() throws {
-        try audit(Configuration(appearance: .light, increasedContrast: true, types: .contrast))
+    func testIncreasedContrast() {
+        audit(Configuration(appearance: .light, increasedContrast: true, types: .contrast))
     }
 
     /// The dark theme: only colors change, so the contrast audit runs.
     @MainActor
-    func testDarkAppearance() throws {
-        try audit(Configuration(appearance: .dark, types: .contrast))
+    func testDarkAppearance() {
+        audit(Configuration(appearance: .dark, types: .contrast))
     }
 
     /// The dark theme with increased contrast.
     @MainActor
-    func testDarkIncreasedContrast() throws {
-        try audit(Configuration(appearance: .dark, increasedContrast: true, types: .contrast))
+    func testDarkIncreasedContrast() {
+        audit(Configuration(appearance: .dark, increasedContrast: true, types: .contrast))
     }
 
     // MARK: - Running the audit
@@ -64,8 +66,6 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         /// A `-WestronDynamicType` size; `nil` follows the system's.
         var dynamicType: String? = nil
         let types: XCUIAccessibilityAuditType
-        /// Whether the page is audited down to its end, a screenful at a time, or on its first screenful only.
-        var scrolls = false
 
         var arguments: [String] {
             var arguments = ["-WestronAppearance", appearance.rawValue]
@@ -89,60 +89,73 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         #endif
     }
 
-    /// The most screenfuls a page is audited in; a page that does not end by then fails.
-    private static let maxScreens = 30
-    /// How long a page has to stay still to count as settled, and how long it may take.
-    private static let stillInterval: TimeInterval = 0.25
-    private static let settleTimeout: TimeInterval = 5
-
-    @MainActor
-    private func audit(_ configuration: Configuration) throws {
-        // WESTRON_ENTRY narrows the run to one entry while its issues are being fixed.
-        let entries = ProcessInfo.processInfo.environment["WESTRON_ENTRY"].map { [$0] } ?? Catalog.entries.map(\.id)
-        XCTAssertFalse(entries.isEmpty, "the catalog registry has no entries")
-        for entryID in entries {
-            try XCTContext.runActivity(named: "\(entryID) \(configuration.arguments.joined(separator: " "))") { _ in
-                try audit(entryID: entryID, configuration)
-            }
-        }
-    }
-
-    /// The audit types that change the system's text size to see how the page follows it. After them the page's
-    /// accessibility tree and its pixels disagree for a while, so they run on a fresh launch, last (see below).
+    /// The audit types that change the system's text size to see how the page follows it.
     #if os(iOS)
         private static let sizeChangingTypes: XCUIAccessibilityAuditType = [.dynamicType, .textClipped]
     #else
         private static let sizeChangingTypes: XCUIAccessibilityAuditType = []
     #endif
+    /// How far a drag moves the page: most of a screen, so that consecutive screenfuls overlap.
+    private static let step = 0.65
+    /// The most screenfuls a page is audited in; a page that does not end by then fails.
+    private static let maxScreens = 30
+    /// How long a page has to stay still to count as settled, and how long it may take.
+    private static let stillInterval: TimeInterval = 0.25
+    private static let settleTimeout: TimeInterval = 5
+    /// The entries that did not stop moving within `settleTimeout`: later waits on them are short, so that a page
+    /// with a running animation costs one timeout, not one per screenful.
+    private var restlessEntries: Set<String> = []
+    /// Where the iOS status bar ends, once looked up.
+    private var statusBarBottom: CGFloat?
+
+    @MainActor
+    private func audit(_ configuration: Configuration) {
+        // WESTRON_ENTRY narrows the run to one entry while its issues are being fixed.
+        let entries = ProcessInfo.processInfo.environment["WESTRON_ENTRY"].map { [$0] } ?? Catalog.entries.map(\.id)
+        XCTAssertFalse(entries.isEmpty, "the catalog registry has no entries")
+        for entryID in entries {
+            XCTContext.runActivity(named: "\(entryID) \(configuration.arguments.joined(separator: " "))") { _ in
+                audit(entryID: entryID, configuration)
+            }
+        }
+    }
 
     /// Audits an entry a screenful at a time, down to the end of the page: the audit sees only what is on screen.
     ///
-    /// The audit types that change the text size go in a pass of their own when the configuration lets the system's
-    /// size reach the page (`testDefaultSettings`): one fresh launch per screenful, scrolled to it. Where the catalog
-    /// pins the size, they do not move the page and run with the rest.
+    /// The Dynamic Type and text clipped audits enlarge the page's text, and a scroll view that the drags moved goes
+    /// back to its top when its content grows: they would measure the top of the page on every screenful. And after
+    /// them, the page's accessibility tree and its pixels disagree for a while, so that an audit of another type reads
+    /// every text as failing contrast. So where the system's size reaches the page (`testDefaultSettings`), they run
+    /// in a pass of their own, with no drags: a fresh launch per window of the page, each held in view by the
+    /// catalog's scroll anchor (`-WestronScrollAnchor`), from the top of the page to its bottom. Where the catalog
+    /// pins the size, the enlarging does not reach the page, and they run with the rest.
     @MainActor
-    private func audit(entryID: String, _ configuration: Configuration) throws {
+    private func audit(entryID: String, _ configuration: Configuration) {
         let separate =
             configuration.dynamicType == nil ? configuration.types.intersection(Self.sizeChangingTypes) : []
-        guard let screens = try auditScreens(entryID, configuration, types: configuration.types.subtracting(separate))
+        guard let screens = auditScreens(entryID, configuration, types: configuration.types.subtracting(separate))
         else { return }
         guard !separate.isEmpty else { return }
-        for screen in 1...screens {
-            guard let (app, entry) = launch(entryID, configuration) else { return }
-            defer { app.terminate() }
-            for _ in 1..<screen {
-                scrollDown(entry)
-                settle(entry)
-            }
-            try auditScreen(app, entryID, configuration, types: separate, screen: screen)
+        // One window more than the screenfuls, from the top to the bottom, so that the windows overlap; a page of one
+        // screenful gets its top and its bottom, which the enlarged text pushes below the screen.
+        let windows = screens + 1
+        for window in 0..<windows {
+            let anchor = Double(window) / Double(windows - 1)
+            guard
+                let (app, entry) = launch(
+                    entryID, configuration.arguments + ["-WestronScrollAnchor", String(format: "%.3f", anchor)])
+            else { return }
+            settle(entry, entryID, screen: window + 1)
+            auditScreen(app, entryID, configuration, types: separate, screen: window + 1)
+            app.terminate()
         }
     }
 
     /// Launches the catalog on the entry; `nil` after a failure when it does not show.
     @MainActor
-    private func launch(_ entryID: String, _ configuration: Configuration) -> (XCUIApplication, XCUIElement)? {
+    private func launch(_ entryID: String, _ arguments: [String]) -> (XCUIApplication, XCUIElement)? {
         let app = XCUIApplication()
-        app.launchArguments = ["-WestronEntry", entryID] + configuration.arguments
+        app.launchArguments = ["-WestronEntry", entryID] + arguments
         app.launch()
 
         let entry = app.descendants(matching: .any)[CatalogAccessibilityID.entry]
@@ -161,26 +174,39 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             app.terminate()
             return nil
         }
-        settle(entry)
         return (app, entry)
     }
 
-    /// Audits every screenful of the page with the types given, and returns how many screenfuls the page has.
+    /// Audits every screenful of the page with the types given, on one launch, and returns how many screenfuls the
+    /// page has; `nil` when the entry did not show.
     @MainActor
+    @discardableResult
     private func auditScreens(
         _ entryID: String, _ configuration: Configuration, types: XCUIAccessibilityAuditType
-    ) throws -> Int? {
-        guard let (app, entry) = launch(entryID, configuration) else { return nil }
+    ) -> Int? {
+        guard let (app, entry) = launch(entryID, configuration.arguments) else { return nil }
         defer { app.terminate() }
+        var position = scrollPosition(entry)
         for screen in 1...Self.maxScreens {
-            try auditScreen(app, entryID, configuration, types: types, screen: screen)
-            guard configuration.scrolls else { return 1 }
-            // The end is where a scroll no longer moves the page. It is told by where the page's first text is, not
-            // by a picture: the scroll indicator shows after every drag, at the end of the page too.
-            let before = scrollPosition(entry)
+            settle(entry, entryID, screen: screen)
+            auditScreen(app, entryID, configuration, types: types, screen: screen)
+            // The end is where a drag no longer moves the page. It is told by where the page's first text is after
+            // each drag (an audit may move the page a little), not by a picture: the scroll indicator shows after
+            // every drag, at the end of the page too.
             scrollDown(entry)
-            settle(entry)
-            if scrollPosition(entry) == before { return screen }
+            settle(entry, entryID, screen: screen)
+            let next = scrollPosition(entry)
+            if next == position {
+                #if os(macOS)
+                    if screen == 1 {
+                        // Not verified that the scroll event reaches the page on macOS: a longer page that does not
+                        // move is audited on its first screenful only.
+                        print("a11y: \(entryID) did not move when scrolled; on macOS only its first screenful is sure")
+                    }
+                #endif
+                return screen
+            }
+            position = next
         }
         XCTFail("\(entryID): the page did not end within \(Self.maxScreens) screenfuls")
         return Self.maxScreens
@@ -190,7 +216,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
     private func auditScreen(
         _ app: XCUIApplication, _ entryID: String, _ configuration: Configuration, types: XCUIAccessibilityAuditType,
         screen: Int
-    ) throws {
+    ) {
         guard !types.isEmpty else { return }
         // An audit now and then gives up ("Audit failed to complete in time"): it is run once more, and if it fails
         // again the entry fails, but the run goes on to the next entry.
@@ -211,7 +237,18 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         _ app: XCUIApplication, _ entryID: String, _ configuration: Configuration, types: XCUIAccessibilityAuditType,
         screen: Int
     ) throws {
+        let visible = visibleArea(app)
         try app.performAccessibilityAudit(for: types) { issue in
+            // After a drag, the contrast audit also reports an element off the screen or under the status bar,
+            // measured on pixels that are not its own (the clock over a line of text). Such an element is judged on
+            // the screenful before, which showed it whole: a drag moves the page by two thirds of the screen.
+            if issue.auditType == .contrast, let element = issue.element, !element.frame.isEmpty,
+                element.frame.minY < visible.minY || !element.frame.intersects(visible)
+            {
+                print(
+                    "a11y: suppressed in \(entryID): \(Self.describe(issue)) (off the screen or under the status bar)")
+                return true
+            }
             if let suppression = Self.suppressions.first(where: {
                 $0.matches(issue, entryID: entryID, configuration: configuration)
             }) {
@@ -223,20 +260,43 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         }
     }
 
-    /// Waits until two pictures of the entry in a row are the same: the layout and its animations have finished, the
-    /// scroll has stopped. Returns the last picture.
+    /// The part of the screen the page shows itself on: below the status bar on iOS. Looked up once per run.
     @MainActor
-    @discardableResult
-    private func settle(_ entry: XCUIElement) -> Data {
+    private func visibleArea(_ app: XCUIApplication) -> CGRect {
+        let window = app.windows.firstMatch.frame
+        #if os(iOS)
+            if statusBarBottom == nil {
+                let statusBar = XCUIApplication(bundleIdentifier: "com.apple.springboard").statusBars.firstMatch
+                statusBarBottom = statusBar.exists ? statusBar.frame.maxY : 0
+            }
+            let top = statusBarBottom ?? 0
+            return CGRect(x: window.minX, y: top, width: window.width, height: max(window.maxY - top, 0))
+        #else
+            return window
+        #endif
+    }
+
+    /// Waits until two pictures of the entry in a row are the same: the layout and its animations have finished, the
+    /// scroll has stopped. A page that is still moving after `settleTimeout` is audited as it is, with a line in the
+    /// log, and is not waited for again.
+    @MainActor
+    private func settle(_ entry: XCUIElement, _ entryID: String, screen: Int) {
+        guard !restlessEntries.contains(entryID) else {
+            Thread.sleep(forTimeInterval: Self.stillInterval)
+            return
+        }
         var previous = entry.screenshot().pngRepresentation
         let deadline = Date().addingTimeInterval(Self.settleTimeout)
         while Date() < deadline {
             Thread.sleep(forTimeInterval: Self.stillInterval)
             let current = entry.screenshot().pngRepresentation
-            if current == previous { return current }
+            if current == previous { return }
             previous = current
         }
-        return previous
+        restlessEntries.insert(entryID)
+        print(
+            "a11y: \(entryID), screen \(screen): the page was still moving after \(Int(Self.settleTimeout)) s; it is "
+                + "audited as it is, and not waited for again")
     }
 
     /// Where the page's first text is on screen: it moves when the page scrolls.
@@ -245,21 +305,22 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         entry.descendants(matching: .staticText).firstMatch.frame
     }
 
-    /// Scrolls the page by most of a screen, so that consecutive screenfuls overlap, without momentum.
+    /// Scrolls the page up by most of a screen, so that consecutive screenfuls overlap, without momentum.
     @MainActor
     private func scrollDown(_ entry: XCUIElement) {
         #if os(iOS)
-            let start = entry.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85))
-            let end = entry.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2))
+            let start = entry.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15 + Self.step))
+            let end = entry.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15))
             start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .default, thenHoldForDuration: 0.2)
         #else
-            entry.scroll(byDeltaX: 0, deltaY: -entry.frame.height * 0.65)
+            entry.scroll(byDeltaX: 0, deltaY: -entry.frame.height * Self.step)
         #endif
     }
 
     private static func describe(_ issue: XCUIAccessibilityAuditIssue) -> String {
         let element =
-            issue.element.map { "\($0.elementType.rawValue) \"\($0.label)\" [\($0.identifier)]" } ?? "no element"
+            issue.element.map { "\($0.elementType.rawValue) \"\($0.label)\" [\($0.identifier)] at \($0.frame)" }
+            ?? "no element"
         return
             "\(issue.compactDescription) (type \(issue.auditType.rawValue)); \(element); \(issue.detailedDescription)"
     }

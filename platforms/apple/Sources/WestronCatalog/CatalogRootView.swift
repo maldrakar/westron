@@ -37,6 +37,7 @@ public struct CatalogRootView: View {
         if let id = options.entryID {
             if let entry = Catalog.entry(id: id) {
                 entry.content()
+                    .modifier(ScrollAnchor(anchor: options.scrollAnchor))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .accessibilityElement(children: .contain)
                     .accessibilityIdentifier(CatalogAccessibilityID.entry)
@@ -58,6 +59,19 @@ private struct ContrastOverride: ViewModifier {
     func body(content: Content) -> some View {
         if let contrast {
             content.environment(\._colorSchemeContrast, contrast)
+        } else {
+            content
+        }
+    }
+}
+
+/// The point of an entry's scroll content held in view, for `-WestronScrollAnchor`.
+private struct ScrollAnchor: ViewModifier {
+    let anchor: Double?
+
+    func body(content: Content) -> some View {
+        if let anchor {
+            content.defaultScrollAnchor(UnitPoint(x: 0.5, y: anchor))
         } else {
             content
         }

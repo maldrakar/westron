@@ -43,8 +43,8 @@ jobs:
         run: tools/apple/check.sh catalog
       - name: Accessibility audit of the catalog (iOS)
         run: tools/apple/check.sh a11y
-        # About 12 minutes locally (2026-11-17, iPhone 17); the margin is for a slower runner and the build.
-        timeout-minutes: 30
+        # About 16 minutes locally (2026-11-17, iPhone 17 Pro); the margin is for a slower runner and the build.
+        timeout-minutes: 40
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

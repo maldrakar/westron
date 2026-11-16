@@ -51,6 +51,9 @@ Date: 2026-11-14. Status: accepted.
   `tools/apple/check.sh a11y` runs it on the iOS simulator, and the CI `apple` job runs it as a gate.
   `tools/apple/check.sh a11y macos` runs it on macOS by hand: it needs Automation Mode and the screen to itself.
   Suppressed issues, each with its reason, are listed in the test; the matrix is in `platforms/apple/README.md`.
+  2026-11-17: every test audits each page a screenful at a time, down to its end; the Dynamic Type and text clipped
+  audits of the default test run on windows of the page held in place by `-WestronScrollAnchor`, because a dragged
+  scroll view goes back to its top when they enlarge the text. The README lists what the audit still cannot see.
 
 ## Consequences
 
