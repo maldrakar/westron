@@ -46,6 +46,11 @@ Date: 2026-11-14. Status: accepted.
 - UI tests on macOS require Automation Mode. It is on for GitHub runners. On your own machine the human turns it on
   once: `sudo automationmodetool enable-automationmode-without-authentication`.
 - The same UI test target will host the `performAccessibilityAudit` audit in phase 2 (issue #25).
+  2026-11-16: it does. `CatalogAccessibilityAuditTests` audits every entry of `Catalog.entries` in five
+  configurations (default, accessibility5, increased contrast, dark, dark with increased contrast);
+  `tools/apple/check.sh a11y` runs it on the iOS simulator, and the CI `apple` job runs it as a gate.
+  `tools/apple/check.sh a11y macos` runs it on macOS by hand: it needs Automation Mode and the screen to itself.
+  Suppressed issues, each with its reason, are listed in the test; the matrix is in `platforms/apple/README.md`.
 
 ## Consequences
 

@@ -63,8 +63,7 @@ private struct ControlsPage: View {
                             TokenName(height.name)
                             TokenDetail(Points(height.value).text)
                                 .gridColumnAlignment(.trailing)
-                            sample("Save", fill: .background.accent, label: .text.onAccent)
-                                .frame(height: CGFloat(height))
+                            sample("Save", fill: .background.accent, label: .text.onAccent, height: CGFloat(height))
                         }
                     }
                 }
@@ -76,7 +75,6 @@ private struct ControlsPage: View {
                             ForEach(fill.states, id: \.name) { state in
                                 VStack(alignment: .leading, spacing: .space25) {
                                     sample(fill.word, fill: state.color, label: fill.label)
-                                        .frame(height: .size.control.m)
                                     TokenDetail(state.name)
                                 }
                             }
@@ -88,29 +86,34 @@ private struct ControlsPage: View {
                 Grid(alignment: .leading, horizontalSpacing: .space100, verticalSpacing: .space100) {
                     ForEach([false, true], id: \.self) { disabled in
                         GridRow {
-                            sample("Save", fill: .background.accent, label: .text.onAccent)
-                            sample("Delete", fill: .status.danger.fill, label: .status.danger.onFill)
-                            sample("Cancel", fill: .background.surface, label: .text.primary)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: .radius.control)
-                                        .strokeBorder(.border.strong, lineWidth: .stroke.thin))
+                            Group {
+                                sample("Save", fill: .background.accent, label: .text.onAccent)
+                                sample("Delete", fill: .status.danger.fill, label: .status.danger.onFill)
+                                sample("Cancel", fill: .background.surface, label: .text.primary)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: .radius.control)
+                                            .strokeBorder(.border.strong, lineWidth: .stroke.thin))
+                            }
+                            .modifier(DisabledSample(disabled: disabled))
+                            // The row's caption is not a control: it keeps its contrast.
                             TokenDetail(disabled ? "disabled" : "enabled")
                         }
-                        .frame(height: .size.control.m)
-                        .opacity(disabled ? .opacity.disabled : 1)
                     }
                 }
             }
         }
     }
 
-    private func sample(_ word: String, fill: Westron.Color, label: Westron.Color) -> some View {
+    /// A control's face at a height token. The height is its least: the face grows with its text at a large Dynamic
+    /// Type size, as a control does, so the word is never clipped.
+    private func sample(
+        _ word: String, fill: Westron.Color, label: Westron.Color, height: CGFloat = .size.control.m
+    ) -> some View {
         Text(word)
             .textRole(.body.strong)
             .foregroundStyle(label)
-            .lineLimit(1)
             .padding(.horizontal, .space200)
-            .frame(maxHeight: .infinity)
+            .frame(minHeight: height)
             .background(fill, in: RoundedRectangle(cornerRadius: .radius.control))
     }
 
@@ -120,6 +123,23 @@ private struct ControlsPage: View {
                 .textRole(.subheadline.strong)
                 .foregroundStyle(.text.primary)
             content()
+        }
+    }
+}
+
+/// A disabled control's face: dimmed by opacity.disabled, and announced as disabled, as a disabled control is. WCAG
+/// exempts an inactive control from the contrast minimum (design-language chapter 08); the accessibility audit lets
+/// these samples through by that value (`CatalogAccessibilityAuditTests`).
+private struct DisabledSample: ViewModifier {
+    let disabled: Bool
+
+    func body(content: Content) -> some View {
+        if disabled {
+            content
+                .opacity(.opacity.disabled)
+                .accessibilityValue(Text("disabled"))
+        } else {
+            content
         }
     }
 }

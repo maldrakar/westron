@@ -135,9 +135,24 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         let reason: String
         /// Tells the issue by its element's label; `nil` when the audit names no element.
         let label: @Sendable (String?) -> Bool
+        /// The element's accessibility value it must have, if any.
+        var value: String? = nil
 
+        init(
+            entryID: String?, type: XCUIAccessibilityAuditType, reason: String, value: String? = nil,
+            label: @escaping @Sendable (String?) -> Bool
+        ) {
+            self.entryID = entryID
+            self.type = type
+            self.reason = reason
+            self.value = value
+            self.label = label
+        }
+
+        @MainActor
         func matches(_ issue: XCUIAccessibilityAuditIssue, entryID: String) -> Bool {
             guard self.entryID == nil || self.entryID == entryID, issue.auditType == type else { return false }
+            if let value, issue.element?.value as? String != value { return false }
             return label(issue.element?.label)
         }
     }
@@ -156,16 +171,22 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             Suppression(entryID: "shape", type: .contrast, reason: "a shadow sample's caption under its own shadow") {
                 $0?.wholeMatch(of: #/y [0-9.]+ pt, blur [0-9.]+ pt/#) != nil
             },
-            // "Contrast nearly passed" with no element on the environment page, in the light themes: its four
-            // section headers. The page is a system Form in the system's colors, not westron's; it is a utility
-            // page that reports the launch conditions.
-            Suppression(entryID: "environment", type: .contrast, reason: "a system Form in system colors") {
-                $0 == nil
+            // "Contrast nearly passed" on the four section headers of the environment page, in the light themes;
+            // one run names them, another reports them with no element. The page is a system Form in the system's
+            // colors, not westron's; it is a utility page that reports the launch conditions.
+            Suppression(entryID: "environment", type: .contrast, reason: "a system Form's section header") {
+                $0 == nil || ["Platform", "Appearance", "Accessibility", "Language"].contains($0 ?? "")
             },
             // "Contrast nearly passed" on the dash that stands for no delay in the motion table, in the light
             // themes. It is text.primary on background.canvas, the pair with the most contrast westron has; the
             // audit measures the pixels of a glyph that is a single thin stroke.
             Suppression(entryID: "motion", type: .contrast, reason: "a dash, a single thin stroke") { $0 == "–" },
+            // Contrast on the disabled control samples, drawn at opacity.disabled on purpose: WCAG exempts an
+            // inactive control from the contrast minimum (design-language chapter 08). The page announces them as
+            // disabled, and only an element with that value matches; the enabled samples are audited as usual.
+            Suppression(entryID: "controls", type: .contrast, reason: "an inactive control", value: "disabled") {
+                ["Save", "Delete", "Cancel"].contains($0 ?? "")
+            },
         ]
         #if os(iOS)
             suppressions += [
