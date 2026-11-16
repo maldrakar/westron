@@ -29,7 +29,7 @@
       }
     },
     "options": {
-      "description": "What a product chooses, by option name: an enum with its values and default, or a bool with its default. The names and values become generated names on every platform (AGENTS.md, rule 4).",
+      "description": "What a product chooses, by option name: an enum with its values and, unless every use must name a value, its default; or a bool with its default. The names and values become generated names on every platform (AGENTS.md, rule 4).",
       "type": "object",
       "propertyNames": { "$ref": "#/$defs/name" },
       "additionalProperties": { "$ref": "#/$defs/option" }
@@ -105,9 +105,9 @@
       ]
     },
     "enumOption": {
-      "description": "One value of a closed list; `default` is one of `values`.",
+      "description": "One value of a closed list; `default`, when given, is one of `values`. An enum option without a default has to be named in every use: a call that leaves it out does not compile, as a SwiftUI variant (spec/conventions.md).",
       "type": "object",
-      "required": ["type", "values", "default"],
+      "required": ["type", "values"],
       "additionalProperties": false,
       "properties": {
         "type": { "const": "enum" },
