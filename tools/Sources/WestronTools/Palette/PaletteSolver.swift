@@ -12,6 +12,7 @@ import Foundation
 /// | 8 | borders of controls, focus rings, marks | 3 on every ground and on every step 5; high contrast 4.5 |
 /// | 9 | solid fill | moved from the source's lightness until its label reaches 4.5; high contrast 7 |
 /// | 10 | solid fill under the pointer | step 9, 0.04 further from its label |
+/// | `fill-pressed` | solid fill while pressed | step 10, another 0.04 further from its label |
 /// | 11 | colored or secondary text | 4.5 on every ground and on every step 5; high contrast 7 |
 /// | 12 | primary text | from the source's lightness, 13 on the canvas and 7 on every step 5; high contrast 16 |
 ///
@@ -19,6 +20,9 @@ import Foundation
 /// the least lightness that meets its targets, keeping its hue and chroma; contrast is measured on the 8-bit sRGB
 /// color the step becomes, as the contrast check measures it. Light themes walk darker, dark themes lighter; the dark
 /// themes are solved again, not inverted. A high-contrast theme keeps its theme's canvas and steps 1–5.
+///
+/// Moving away from the label only raises its contrast, so the label reads on steps 10 and `fill-pressed` at least as
+/// well as on step 9; the solver still checks it on the 8-bit colors and fails otherwise.
 ///
 /// `contrast` is the label of a ramp's solid fill. In dark high contrast a white label at 7:1 would sink the fill
 /// into the canvas, so the fill turns light and the label takes the canvas's color.
@@ -58,6 +62,8 @@ public enum PaletteSolver {
         static let primaryOnSteps = 7.0
         static let series = 3.0
         static let hoverOffset = 0.04
+        /// How much further than step 10 the pressed fill moves from its label: one more hover step.
+        static let pressedOffset = 0.04
         static let ink = (lightness: 0.2, chroma: 0.012)
     }
 
@@ -192,8 +198,17 @@ public enum PaletteSolver {
                 ratio($0, label) >= text
             }
             steps.append(solid.color)
+            // Under the pointer and pressed, the fill moves further from its label, one hover step each.
             let hover = min(max(solid.lightness + fromLabel * Target.hoverOffset, 0), 1)
-            steps.append(color(hover, ramp.chroma[9], ramp.hue))
+            let pressed = min(max(hover + fromLabel * Target.pressedOffset, 0), 1)
+            let fillStates = [
+                (name: "10", color: color(hover, ramp.chroma[9], ramp.hue)),
+                (name: "fill-pressed", color: color(pressed, ramp.chroma[9], ramp.hue)),
+            ]
+            for state in fillStates where ratio(state.color, label) < text {
+                throw Unreachable(theme: theme, path: [ramp.name, state.name], target: "\(text):1 under its label")
+            }
+            steps.append(fillStates[0].color)
 
             let secondary = try solveStep(11, from: canvasLightness, direction: away, "\(text):1 on every step 5") {
                 minimum($0, on: onEverything) >= text
@@ -208,6 +223,7 @@ public enum PaletteSolver {
 
             entries += steps.enumerated().map { Entry(path: [ramp.name, "\($0.offset + 1)"], color: $0.element) }
             entries.append(Entry(path: [ramp.name, "contrast"], color: label))
+            entries.append(Entry(path: [ramp.name, "fill-pressed"], color: fillStates[1].color))
         }
 
         let series = source.series[dark: dark]

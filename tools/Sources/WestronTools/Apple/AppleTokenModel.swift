@@ -1,7 +1,8 @@
 import Foundation
 
-/// The semantic tokens as the Apple generator writes them: Swift names, a value per theme for each color and one value
-/// for everything else, with the checks that what is written is what every Apple input resolves to.
+/// The semantic tokens as the Apple generator writes them: Swift names, a value per theme for each color and shadow, a
+/// value per platform for each length and number, and one value for everything else, with the checks that what is
+/// written is what every Apple input resolves to.
 struct AppleTokenModel: Equatable {
     /// A color as Apple stores it: 8-bit sRGB when it is inside sRGB, so that a hex stays the same byte for byte, and
     /// Display P3 otherwise.
@@ -102,11 +103,14 @@ struct AppleTokenModel: Equatable {
         let layers: [[Layer]]
     }
 
-    struct Dimension: Equatable {
+    /// A length or a number: one value, or a value per Apple platform where the platform decides it.
+    struct Scalar: Equatable {
         let path: TokenPath
         let members: [SwiftName.Member]
         let doc: Doc
-        let value: Double
+        /// In the order of `AppleTokenModel.platforms`: one per platform when the resolver has a `platform`
+        /// modifier, otherwise one.
+        let values: [Double]
     }
 
     /// The resolver file, as given: the generated files name it.
@@ -117,17 +121,21 @@ struct AppleTokenModel: Equatable {
     var textRoles: [TextRole] = []
     var transitions: [Transition] = []
     var shadows: [Shadow] = []
-    var dimensions: [Dimension] = []
+    var dimensions: [Scalar] = []
+    var numbers: [Scalar] = []
 }
 
 extension AppleTokenModel {
     /// The modifier whose contexts are the themes, and its contexts in the order of `Westron.Theme`.
     static let themeModifier = "theme"
     static let themes = ["light", "dark", "light-hc", "dark-hc"]
-    /// The modifier resolved at build time, and the contexts the Apple generator reads; the first is the one the
-    /// values come from.
+    /// The modifier resolved at build time, and the contexts the Apple generator reads. The first is the base: the
+    /// one the values come from, and the one every other system takes (visionOS, Linux, WebAssembly).
     static let platformModifier = "platform"
     static let platforms = ["ios", "macos", "watchos"]
+    /// The types whose tokens may differ by platform: a value per platform goes behind `#if os(...)`. A color cannot,
+    /// as its colorset switches only by theme.
+    static let platformTypes: Set<TokenType> = [.dimension, .number]
     /// The set whose tokens are primitives, which the generator leaves out (decisions/0010).
     static let primitiveSet = "primitive"
     /// The directory of primitive token files, relative to the resolver: a file there holds primitives even when a
@@ -137,8 +145,9 @@ extension AppleTokenModel {
     static let categoryGroup: TokenPath = "color.category"
 
     /// Reads the semantic tokens of a resolution.
-    /// - Throws: `AppleTokens.Failure` with every problem: a value that differs by density or platform, a token that
-    ///   is not a color and differs by theme, a type or unit Apple has no output for yet, a name that cannot be
+    /// - Throws: `AppleTokens.Failure` with every problem: a value that differs by density, a token other than a
+    ///   length or a number that differs by platform or in more than its value, a token that is not a color and
+    ///   differs by theme, a type or unit Apple has no output for yet, a name that cannot be
     ///   derived or collides.
     init(_ resolution: Resolution) throws {
         self.init(resolver: resolution.document.source)
@@ -162,8 +171,9 @@ extension AppleTokenModel {
             }
         }
 
-        // The values come from each theme at the default density on the first platform; every other Apple input
-        // must resolve to the same values.
+        // The values come from each theme at the default density on each platform, the first platform's being the
+        // base. Every other density must resolve to the same values on its platform, and every other platform to the
+        // base's, except in the value of a length or a number.
         let primitives = Set(
             resolution.document.steps.flatMap { step -> [String] in
                 guard case .set(let name, let sources) = step, name == Self.primitiveSet else { return [] }
@@ -180,37 +190,71 @@ extension AppleTokenModel {
         func semantic(_ input: [String: String]) throws -> [ResolvedToken] {
             try resolution.resolve(input).tokens.filter { !isPrimitive($0.source) }
         }
-        func baseInput(_ theme: String) -> [String: String] {
-            platform == nil ? [Self.themeModifier: theme] : [Self.themeModifier: theme, Self.platformModifier: "ios"]
+        let platformNames: [String?] = platform == nil ? [nil] : Self.platforms
+        func baseInput(_ theme: String, _ platform: String?) -> [String: String] {
+            var input = [Self.themeModifier: theme]
+            if let platform { input[Self.platformModifier] = platform }
+            return input
         }
-        var base: [String: [ResolvedToken]] = [:]
-        for name in Self.themes { base[name] = try semantic(baseInput(name)) }
+        // By platform, in the order of `platformNames`, then by theme.
+        var resolved: [[String: [ResolvedToken]]] = []
+        for platformName in platformNames {
+            var byTheme: [String: [ResolvedToken]] = [:]
+            for name in Self.themes { byTheme[name] = try semantic(baseInput(name, platformName)) }
+            resolved.append(byTheme)
+        }
+        let base = resolved[0]
 
         var reported: Set<TokenPath> = []
         for input in resolution.inputs where platform == nil || Self.platforms.contains(input[Self.platformModifier]!) {
             let themeName = input[Self.themeModifier]!
-            let reference = try resolution.document.complete(baseInput(themeName))
+            let platformName = input[Self.platformModifier]
+            let reference = try resolution.document.complete(baseInput(themeName, platformName))
             guard input != reference else { continue }
-            for path in Self.differences(base[themeName]!, try semantic(input)) where reported.insert(path).inserted {
+            let index = platformNames.firstIndex(of: platformName)!
+            for path in Self.differences(resolved[index][themeName]!, try semantic(input))
+            where reported.insert(path).inserted {
                 problems.append(
                     "\(path): differs between \(resolution.describe(reference)) and \(resolution.describe(input)); "
-                        + "values that differ by density or platform are not generated for Apple yet")
+                        + "values that differ by density are not generated for Apple yet")
             }
         }
-        let light = base[Self.themes[0]]!
-        for name in Self.themes.dropFirst() {
-            let other = base[name]!
-            for path in Self.differences(light, other, themesMayDiffer: true) where reported.insert(path).inserted {
-                problems.append(
-                    "\(path): differs between theme \(Self.themes[0]) and theme \(name); on Apple only colors and "
-                        + "shadows switch with the theme")
+        for index in platformNames.indices.dropFirst() {
+            for themeName in Self.themes {
+                let first = Dictionary(base[themeName]!.map { ($0.path, $0) }) { first, _ in first }
+                let other = Dictionary(resolved[index][themeName]!.map { ($0.path, $0) }) { first, _ in first }
+                for path in Self.differences(base[themeName]!, resolved[index][themeName]!)
+                where !Self.differsInValueOnly(first[path], other[path]) && reported.insert(path).inserted {
+                    let reference = try resolution.document.complete(baseInput(themeName, platformNames[0]))
+                    let input = try resolution.document.complete(baseInput(themeName, platformNames[index]))
+                    problems.append(
+                        "\(path): differs between \(resolution.describe(reference)) and \(resolution.describe(input)); "
+                            + "on Apple only a length or a number differs by platform, and only in its value")
+                }
+            }
+        }
+        for byTheme in resolved {
+            let light = byTheme[Self.themes[0]]!
+            for name in Self.themes.dropFirst() {
+                for path in Self.differences(light, byTheme[name]!, themesMayDiffer: true)
+                where reported.insert(path).inserted {
+                    problems.append(
+                        "\(path): differs between theme \(Self.themes[0]) and theme \(name); on Apple only colors and "
+                            + "shadows switch with the theme")
+                }
             }
         }
         guard problems.isEmpty else { throw AppleTokens.Failure(problems) }
+        let light = base[Self.themes[0]]!
+        // The light theme's tokens on each platform, by path.
+        let byPlatform = resolved.map { byTheme in
+            Dictionary(byTheme[Self.themes[0]]!.map { ($0.path, $0) }) { first, _ in first }
+        }
 
         let byTheme = Self.themes.map { name in
             Dictionary(base[name]!.map { ($0.path, $0) }) { first, _ in first }
         }
+        func platformTokens(_ token: ResolvedToken) -> [ResolvedToken] { byPlatform.map { $0[token.path]! } }
         var categoryTokens: [ResolvedToken] = []
         // `allColors` in token order: an index into `colors`, or the path of a list color.
         var colorOrder: [(plain: Int?, category: TokenPath?)] = []
@@ -237,8 +281,9 @@ extension AppleTokenModel {
                 case .typography: textRoles.append(try Self.textRole(token))
                 case .transition: transitions.append(try Self.transition(token))
                 case .shadow: shadows.append(try Self.shadow(token, byTheme: byTheme))
-                case .dimension: dimensions.append(try Self.dimension(token))
-                case .number, .duration, .cubicBezier, .fontFamily, .fontWeight:
+                case .dimension: dimensions.append(try Self.dimension(token, platformTokens(token)))
+                case .number: numbers.append(try Self.number(token, platformTokens(token)))
+                case .duration, .cubicBezier, .fontFamily, .fontWeight:
                     problems.append(
                         "\(token.path): a semantic token of type \(token.type.rawValue) is not generated for Apple yet")
                 }
@@ -284,6 +329,14 @@ extension AppleTokenModel {
         }
         result += second.map(\.path).filter { !paths.contains($0) }
         return result
+    }
+
+    /// Whether two tokens at one path, on two platforms, differ only in a value that may differ by platform: a length
+    /// or a number with the same description and extensions on both.
+    static func differsInValueOnly(_ first: ResolvedToken?, _ second: ResolvedToken?) -> Bool {
+        guard let first, let second else { return false }
+        return first.type == second.type && platformTypes.contains(first.type)
+            && first.description == second.description && first.westron == second.westron
     }
 
     /// The colors of the list colors: the categories in token order, each with the same roles.
@@ -502,11 +555,25 @@ extension AppleTokenModel {
             layers: layers)
     }
 
-    static func dimension(_ token: ResolvedToken) throws -> Dimension {
-        guard case .dimension(let value) = token.value else { preconditionFailure("a dimension token") }
-        return Dimension(
+    /// A length, with its value on each platform.
+    static func dimension(_ token: ResolvedToken, _ platforms: [ResolvedToken]) throws -> Scalar {
+        Scalar(
             path: token.path, members: try SwiftName.members(token.path, dropping: nil), doc: Doc(token),
-            value: try points(value, token.path))
+            values: try platforms.map { platform in
+                guard case .dimension(let value) = platform.value else { preconditionFailure("a dimension token") }
+                return try points(value, token.path)
+            })
+    }
+
+    /// A number, such as an opacity, with its value on each platform. Its name keeps its group, as a length's does:
+    /// `opacity.disabled` is `Westron.Number.opacity.disabled`.
+    static func number(_ token: ResolvedToken, _ platforms: [ResolvedToken]) throws -> Scalar {
+        Scalar(
+            path: token.path, members: try SwiftName.members(token.path, dropping: nil), doc: Doc(token),
+            values: platforms.map { platform in
+                guard case .number(let value) = platform.value else { preconditionFailure("a number token") }
+                return value
+            })
     }
 
     /// A dimension in points: px are points on Apple; rem has no Apple meaning yet.
@@ -523,6 +590,7 @@ extension AppleTokenModel {
     var transitionTree: MemberTree { MemberTree(transitions.map(\.members)) }
     var shadowTree: MemberTree { MemberTree(shadows.map(\.members)) }
     var dimensionTree: MemberTree { MemberTree(dimensions.map(\.members)) }
+    var numberTree: MemberTree { MemberTree(numbers.map(\.members)) }
 
     /// Names that two tokens share in one place, or that the type already has (`SwiftName.Reserved`).
     func collisions() -> [String] {
@@ -544,6 +612,9 @@ extension AppleTokenModel {
             + dimensionTree.collisions(
                 type: "CGFloat", paths: dimensions.map(\.path), reservedLeaf: Reserved.cgFloat,
                 reservedGroup: Reserved.cgFloat)
+            + numberTree.collisions(
+                type: "Double", paths: numbers.map(\.path), reservedLeaf: Reserved.double,
+                reservedGroup: Reserved.double)
         if let categories {
             let rolePath = categories.group.appending("<name>")
             var seen: [String: TokenPath] = [:]

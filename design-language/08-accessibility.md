@@ -28,13 +28,17 @@ The reference is WCAG 2 ([WCAG 2.2](https://www.w3.org/TR/WCAG22/)). The kinds a
   westron does not, because a small bold label, such as the overline heading, is still small.
 - **Exempt as WCAG defines it**: text and glyphs that are part of an inactive control, purely decorative, not visible
   to anyone, or part of a picture with significant other content, and logotypes. Nothing else is exempt.
+- **A disabled control is dimmed whole.** westron draws it at `opacity.disabled`, 0.4, fill, border, label and icon
+  together, rather than in colors of its own (decisions/0013). It falls under the exemption for inactive controls,
+  so it carries no contrast declaration. Its state is also announced as unavailable (below), so dimming is never the
+  only signal.
 - **The kind lives with the token.** Each foreground color lists, in `dev.westron.contrast`, the backgrounds it is
   drawn on and the kind of contrast it needs there ([decisions/0010](../decisions/0010-token-structure-and-modes.md)).
   A color that meets only a glyph's target, such as `color.icon.tertiary`, says in `dev.westron.usage`, under `avoid`,
   that it is not for words.
 - **The targets hold by construction.** The palette generator solves each step of each ramp for its job's contrast
   in each theme, and it fails with the token and the theme when a target cannot be met (decisions/0012). The
-  contrast check then proves every declared pair: on 2026-11-15, `tools/westron tokens contrast` measured 254 pairs
+  contrast check then proves every declared pair: on 2026-11-16, `tools/westron tokens contrast` measured 257 pairs
   in each of the four themes, and none failed.
 - **A stack is measured as it is seen.** A translucent color is composited over what is under it, in gamma-encoded
   sRGB, before its contrast is measured.
@@ -103,7 +107,10 @@ westron's target is the platform's recommended size. The hit area may be larger 
 | Web | 44×44 CSS px (AAA) | 24×24 CSS px (AA) | [2.5.5](https://www.w3.org/TR/WCAG22/#target-size-enhanced), [2.5.8](https://www.w3.org/TR/WCAG22/#target-size-minimum) |
 | Android | 48×48 dp | — | [Android accessibility](https://developer.android.com/guide/topics/ui/accessibility/apps) |
 
-The value for each platform lives in its platform token file, not in component code.
+The value for each platform lives in its platform token file, not in component code. The control heights are there
+(#56): `size.control.m` is 44 on iOS, iPadOS and watchOS, the recommended target, and 32 on macOS, above its
+recommended 28. `size.control.s` is below the recommended size on every platform, 32 on touch and 24 on macOS, so a
+control drawn at it keeps a hit area of the recommended size around what it draws.
 
 ## Keyboard and focus
 

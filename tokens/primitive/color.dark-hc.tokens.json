@@ -10,7 +10,8 @@
       "10": {"$value": {"colorSpace": "oklch", "components": [0.7423, 0.01769, 259.42], "hex": "#A5ACB7"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.7899, 0.01741, 259.42], "hex": "#B4BBC6"}},
       "12": {"$value": {"colorSpace": "oklch", "components": [0.9493, 0.01713, 256.28], "hex": "#E7EFFA"}},
-      "contrast": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}}
+      "contrast": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}},
+      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.7805, 0.01746, 259.42], "hex": "#B1B8C3"}}
     },
     "blue": {
       "6": {"$value": {"colorSpace": "oklch", "components": [0.5258, 0.06057, 261.4], "hex": "#576B8E"}},
@@ -20,7 +21,8 @@
       "10": {"$value": {"colorSpace": "oklch", "components": [0.7459, 0.13053, 261.61], "hex": "#7EACFF"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.793, 0.10445, 261.45], "hex": "#96BCFF"}},
       "12": {"$value": {"colorSpace": "oklch", "components": [0.9494, 0.02411, 259.82], "hex": "#E5EFFF"}},
-      "contrast": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}}
+      "contrast": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}},
+      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.785, 0.10869, 262.21], "hex": "#93B9FF"}}
     },
     "sky": {
       "6": {"$value": {"colorSpace": "oklch", "components": [0.5213, 0.04124, 231.03], "hex": "#516E7D"}},
@@ -30,7 +32,8 @@
       "10": {"$value": {"colorSpace": "oklch", "components": [0.733, 0.12999, 232.09], "hex": "#3DB6EC"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.783, 0.12328, 231.43], "hex": "#58C6F9"}},
       "12": {"$value": {"colorSpace": "oklch", "components": [0.9469, 0.03163, 230.24], "hex": "#D9F2FF"}},
-      "contrast": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}}
+      "contrast": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}},
+      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.7733, 0.13028, 232.31], "hex": "#4DC3FA"}}
     },
     "teal": {
       "6": {"$value": {"colorSpace": "oklch", "components": [0.5209, 0.03584, 193.61], "hex": "#51706F"}},
@@ -40,7 +43,8 @@
       "10": {"$value": {"colorSpace": "oklch", "components": [0.7268, 0.11, 195.01], "hex": "#39BCBC"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.7789, 0.10475, 194.44], "hex": "#57CCCB"}},
       "12": {"$value": {"colorSpace": "oklch", "components": [0.9426, 0.04895, 194.78], "hex": "#C7F7F6"}},
-      "contrast": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}}
+      "contrast": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}},
+      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.7671, 0.10988, 195.11], "hex": "#4AC9C9"}}
     },
     "emerald": {
       "6": {"$value": {"colorSpace": "oklch", "components": [0.5203, 0.0361, 168.04], "hex": "#557065"}},
@@ -50,7 +54,8 @@
       "10": {"$value": {"colorSpace": "oklch", "components": [0.7264, 0.11171, 167.92], "hex": "#54BD99"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.7787, 0.10664, 168.06], "hex": "#6BCDAA"}},
       "12": {"$value": {"colorSpace": "oklch", "components": [0.9433, 0.05128, 168.45], "hex": "#CCF8E6"}},
-      "contrast": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}}
+      "contrast": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}},
+      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.7668, 0.11118, 168.25], "hex": "#62CAA6"}}
     },
     "green": {
       "6": {"$value": {"colorSpace": "oklch", "components": [0.5197, 0.0449, 144.89], "hex": "#597059"}},
@@ -60,7 +65,8 @@
       "10": {"$value": {"colorSpace": "oklch", "components": [0.7254, 0.14001, 144.95], "hex": "#69BD6D"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.7775, 0.13358, 144.98], "hex": "#7DCD80"}},
       "12": {"$value": {"colorSpace": "oklch", "components": [0.9421, 0.06418, 145.04], "hex": "#D2F8D2"}},
-      "contrast": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}}
+      "contrast": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}},
+      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.7657, 0.13909, 145.09], "hex": "#76CA7A"}}
     },
     "olive": {
       "6": {"$value": {"colorSpace": "oklch", "components": [0.5213, 0.03923, 113.12], "hex": "#696C52"}},
@@ -84,7 +90,8 @@
       "10": {"$value": {"colorSpace": "oklch", "components": [0.7543, 0.16007, 49.9], "hex": "#FE8D47"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.8008, 0.12639, 50.2], "hex": "#FFA571"}},
       "12": {"$value": {"colorSpace": "oklch", "components": [0.9507, 0.02805, 51.85], "hex": "#FFEADE"}},
-      "contrast": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}}
+      "contrast": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}},
+      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.7949, 0.13079, 50.15], "hex": "#FFA26C"}}
     },
     "red": {
       "6": {"$value": {"colorSpace": "oklch", "components": [0.5307, 0.05456, 26.83], "hex": "#89605B"}},
@@ -94,7 +101,8 @@
       "10": {"$value": {"colorSpace": "oklch", "components": [0.7607, 0.14261, 27.08], "hex": "#FF8B7F"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.8028, 0.11255, 27.15], "hex": "#FFA297"}},
       "12": {"$value": {"colorSpace": "oklch", "components": [0.9511, 0.02425, 23.85], "hex": "#FFE9E7"}},
-      "contrast": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}}
+      "contrast": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}},
+      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.8009, 0.11385, 27.11], "hex": "#FFA196"}}
     },
     "pink": {
       "6": {"$value": {"colorSpace": "oklch", "components": [0.5302, 0.05073, 349.88], "hex": "#836070"}},
@@ -104,7 +112,8 @@
       "10": {"$value": {"colorSpace": "oklch", "components": [0.7638, 0.1599, 350.25], "hex": "#FC84C0"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.8074, 0.13053, 349.92], "hex": "#FF9CCC"}},
       "12": {"$value": {"colorSpace": "oklch", "components": [0.952, 0.02759, 351.93], "hex": "#FFE8F1"}},
-      "contrast": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}}
+      "contrast": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}},
+      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.8024, 0.13489, 349.78], "hex": "#FF99CB"}}
     },
     "violet": {
       "6": {"$value": {"colorSpace": "oklch", "components": [0.5278, 0.05582, 300.2], "hex": "#706487"}},
@@ -114,7 +123,8 @@
       "10": {"$value": {"colorSpace": "oklch", "components": [0.7571, 0.14704, 300.08], "hex": "#BF99FF"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.8005, 0.11893, 300.35], "hex": "#CAACFF"}},
       "12": {"$value": {"colorSpace": "oklch", "components": [0.9506, 0.02739, 299.55], "hex": "#F1EBFF"}},
-      "contrast": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}}
+      "contrast": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}},
+      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.7978, 0.12033, 300.1], "hex": "#C9ABFF"}}
     },
     "indigo": {
       "6": {"$value": {"colorSpace": "oklch", "components": [0.5262, 0.05053, 278.96], "hex": "#646888"}},
@@ -124,7 +134,8 @@
       "10": {"$value": {"colorSpace": "oklch", "components": [0.7504, 0.13051, 279.87], "hex": "#9EA4FF"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.795, 0.10513, 279.55], "hex": "#AEB5FF"}},
       "12": {"$value": {"colorSpace": "oklch", "components": [0.9491, 0.0244, 278.37], "hex": "#EAEDFF"}},
-      "contrast": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}}
+      "contrast": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}},
+      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.7904, 0.10795, 280.14], "hex": "#ADB3FF"}}
     }
   }
 }

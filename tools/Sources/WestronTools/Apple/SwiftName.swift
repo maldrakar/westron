@@ -154,6 +154,15 @@ extension SwiftName {
             "name", "value", "all",
         ]
 
+        /// `Double` statics, where numbers such as an opacity live in SwiftUI: `.opacity(.opacity.disabled)`.
+        public static let double: Set<String> = [
+            "pi", "infinity", "nan", "signalingNaN", "zero", "greatestFiniteMagnitude", "leastNormalMagnitude",
+            "leastNonzeroMagnitude", "ulpOfOne", "radix", "exponentBitCount", "significandBitCount", "random",
+            "minimum", "maximum", "init",
+            // Westron.Number
+            "name", "value", "all",
+        ]
+
         /// The members of `Westron.Shadow`; shadows have no SwiftUI statics (`.shadow(.raised)` takes the token).
         public static let shadow: Set<String> = [
             "name", "color", "x", "y", "blur", "spread", "radius", "all", "init",
