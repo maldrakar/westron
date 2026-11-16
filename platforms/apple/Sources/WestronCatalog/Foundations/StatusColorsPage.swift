@@ -23,25 +23,26 @@ struct StatusSample {
     let onFill: Color
 
     static let danger = StatusSample(
-        name: "danger", word: "Failed", icon: .xmarkCircleFill, background: .statusDangerBackground,
-        border: .statusDangerBorder, iconColor: .statusDangerIcon, text: .statusDangerText, fill: .statusDangerFill,
-        onFill: .statusDangerOnFill)
+        name: "danger", word: "Failed", icon: .xmarkCircleFill, background: .status.danger.background,
+        border: .status.danger.border, iconColor: .status.danger.icon, text: .status.danger.text,
+        fill: .status.danger.fill,
+        onFill: .status.danger.onFill)
     static let warning = StatusSample(
-        name: "warning", word: "Slow", icon: .exclamationTriangleFill, background: .statusWarningBackground,
-        border: .statusWarningBorder, iconColor: .statusWarningIcon, text: .statusWarningText,
-        fill: .statusWarningFill, onFill: .statusWarningOnFill)
+        name: "warning", word: "Slow", icon: .exclamationTriangleFill, background: .status.warning.background,
+        border: .status.warning.border, iconColor: .status.warning.icon, text: .status.warning.text,
+        fill: .status.warning.fill, onFill: .status.warning.onFill)
     static let success = StatusSample(
-        name: "success", word: "Succeeded", icon: .checkCircleFill, background: .statusSuccessBackground,
-        border: .statusSuccessBorder, iconColor: .statusSuccessIcon, text: .statusSuccessText,
-        fill: .statusSuccessFill, onFill: .statusSuccessOnFill)
+        name: "success", word: "Succeeded", icon: .checkCircleFill, background: .status.success.background,
+        border: .status.success.border, iconColor: .status.success.icon, text: .status.success.text,
+        fill: .status.success.fill, onFill: .status.success.onFill)
     static let info = StatusSample(
-        name: "info", word: "Running", icon: .infoCircleFill, background: .statusInfoBackground,
-        border: .statusInfoBorder, iconColor: .statusInfoIcon, text: .statusInfoText, fill: .statusInfoFill,
-        onFill: .statusInfoOnFill)
+        name: "info", word: "Running", icon: .infoCircleFill, background: .status.info.background,
+        border: .status.info.border, iconColor: .status.info.icon, text: .status.info.text, fill: .status.info.fill,
+        onFill: .status.info.onFill)
     static let neutral = StatusSample(
-        name: "neutral", word: "Cancelled", icon: .checkCircle, background: .statusNeutralBackground,
-        border: .statusNeutralBorder, iconColor: .statusNeutralIcon, text: .statusNeutralText,
-        fill: .statusNeutralFill, onFill: .statusNeutralOnFill)
+        name: "neutral", word: "Cancelled", icon: .checkCircle, background: .status.neutral.background,
+        border: .status.neutral.border, iconColor: .status.neutral.icon, text: .status.neutral.text,
+        fill: .status.neutral.fill, onFill: .status.neutral.onFill)
 
     static let all: [StatusSample] = [.danger, .warning, .success, .info, .neutral]
 }
@@ -57,7 +58,7 @@ struct StatusBadge: View {
             Text(status.word)
                 .foregroundStyle(status.text)
         }
-        .font(.captionMedium)
+        .textRole(.caption.medium)
         .padding(.horizontal, .space75)
         .frame(height: StatusMetrics.badge)
         .background(status.background, in: Capsule())
@@ -87,16 +88,16 @@ private struct StatusColorsPage: View {
                         TokenName(status.name)
                         StatusBadge(status: status)
                         Text("Aa")
-                            .font(.footnoteRegular)
+                            .textRole(.footnote.regular)
                             .foregroundStyle(status.text)
                             .padding(.horizontal, .space100)
                             .frame(height: StatusMetrics.badge)
                             .overlay {
                                 RoundedRectangle(cornerRadius: .radius100)
-                                    .strokeBorder(status.border, lineWidth: .strokeThin)
+                                    .strokeBorder(status.border, lineWidth: .stroke.thin)
                             }
                         Text(status.word)
-                            .font(.captionMedium)
+                            .textRole(.caption.medium)
                             .foregroundStyle(status.onFill)
                             .padding(.horizontal, .space100)
                             .frame(height: StatusMetrics.badge)

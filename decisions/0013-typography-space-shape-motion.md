@@ -32,8 +32,9 @@ The owner chose B: the soft shape and its rhythm, with the cobalt palette (decis
   - Large and medium are Bold, small and overline SemiBold.
   - Headings are tracked in by 1 % of their size.
   - The overline is written in capitals by the product and tracked out by 6 %.
-  - On Apple the font cannot carry tracking, so a view sets a heading with `.textRole(.headingLarge)`, which applies
-    the font and the token's `letterSpacing`. `.font(.headingLarge)` alone sets the face without the tracking.
+  - On Apple the font cannot carry tracking, so a view sets a heading with `.textRole(.heading.large)`, which
+    applies the font and the token's `letterSpacing`. `Font(.heading.large)` alone sets the face without the
+    tracking.
 - **On Apple a role scales with Dynamic Type.** A heading or code role is `Font.custom(_:size:relativeTo:)` with its
   text style, at the size the platform gives that text style, as the system font takes it: the Mac's sizes are
   smaller than iOS's. watchOS has no API for that size, so there the token's size, which is iOS's, is used. A text

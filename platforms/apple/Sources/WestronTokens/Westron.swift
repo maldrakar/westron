@@ -11,11 +11,15 @@
 /// one a consumer's modules own, such as SwiftUI's `Color`, `Font` and `Animation`. Primitive tokens are not here:
 /// components and products use the semantic ones only.
 ///
-///     Westron.Color.textSecondary.dark          // the color in the dark theme
-///     Westron.Category(rawValue: "amber")?.text // a list's color by the name the store keeps
-///     Westron.TextRole.headingLarge.textStyle   // .largeTitle
-///     Westron.Transition.move.spring            // Spring(duration: 0.35, bounce: 0.15)
+///     Westron.Color.text.secondary.dark          // the color in the dark theme
+///     Westron.Category(rawValue: "amber")?.text  // a list's color by the name the store keeps
+///     Westron.TextRole.heading.large.textStyle   // .largeTitle
+///     Westron.Transition.move.spring             // Spring(duration: 0.35, bounce: 0.15)
 ///     Westron.Icon(rawValue: "sun") ?? .fallback // a list's icon by the name the store keeps
+///
+/// A token's name follows its path: `color.status.danger.text` is `Westron.Color.status.danger.text`. A group of
+/// tokens is a type of its own, generic over its values, so that WestronUI holds the same group with SwiftUI values:
+/// `Color.status.danger.text` (decisions/0010).
 public enum Westron {}
 
 extension Westron {
@@ -76,8 +80,8 @@ extension Westron {
 
     /// A semantic color: its value in each of the four themes.
     ///
-    /// The colors are the static members of this type, named after their tokens (`color.text.secondary` is
-    /// `textSecondary`); the list colors are `Westron.Category`'s. `all` lists every one.
+    /// The colors are the static members of this type and of its groups, named after their tokens
+    /// (`color.text.secondary` is `text.secondary`); the list colors are `Westron.Category`'s. `all` lists every one.
     public struct Color: Hashable, Sendable {
         /// The token's path, `color.text.secondary`. In WestronUI it is also the name of the color's colorset.
         public let name: String

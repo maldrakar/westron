@@ -18,7 +18,8 @@ struct AppleTokenModel: Equatable {
 
     struct Color: Equatable {
         let path: TokenPath
-        let name: String
+        /// The members of its Swift name, `background`, `canvas`; a list color's is its role, `text`.
+        let members: [SwiftName.Member]
         let doc: Doc
         /// In the order of `themes`.
         let values: [ColorValue]
@@ -32,10 +33,8 @@ struct AppleTokenModel: Equatable {
         struct Role: Equatable {
             /// The path below the category, `["background-subtle"]`.
             let segments: [String]
-            /// The member of `Westron.Category`, `backgroundSubtle`.
+            /// The member of `Westron.Category` and of its `Roles`, `backgroundSubtle`.
             let name: String
-            /// The function on SwiftUI's `Color`, `categoryBackgroundSubtle`.
-            let colorFunction: String
             let doc: Doc
         }
 
@@ -62,7 +61,7 @@ struct AppleTokenModel: Equatable {
 
     struct TextRole: Equatable {
         let path: TokenPath
-        let name: String
+        let members: [SwiftName.Member]
         let doc: Doc
         /// Cases of `Westron.TextRole.TextStyle`, `.Design`, `.Weight`.
         let textStyle: String
@@ -77,7 +76,7 @@ struct AppleTokenModel: Equatable {
 
     struct Transition: Equatable {
         let path: TokenPath
-        let name: String
+        let members: [SwiftName.Member]
         let doc: Doc
         /// Seconds.
         let duration: Double
@@ -96,7 +95,7 @@ struct AppleTokenModel: Equatable {
         }
 
         let path: TokenPath
-        let name: String
+        let members: [SwiftName.Member]
         let doc: Doc
         /// The layers of each theme, in the order of `themes`. A transparent layer is left out, so a theme without a
         /// shadow has none.
@@ -105,7 +104,7 @@ struct AppleTokenModel: Equatable {
 
     struct Dimension: Equatable {
         let path: TokenPath
-        let name: String
+        let members: [SwiftName.Member]
         let doc: Doc
         let value: Double
     }
@@ -232,7 +231,7 @@ extension AppleTokenModel {
                         colorOrder.append((colors.count, nil))
                         colors.append(
                             Color(
-                                path: token.path, name: try SwiftName.member(token.path, dropping: "color"),
+                                path: token.path, members: try SwiftName.members(token.path, dropping: "color"),
                                 doc: Doc(token), values: values, backgrounds: Self.backgrounds(token)))
                     }
                 case .typography: textRoles.append(try Self.textRole(token))
@@ -322,16 +321,19 @@ extension AppleTokenModel {
 
         var roles: [Categories.Role] = []
         var categories: [Categories.Category] = []
+        /// A name Swift can take as a case or a member, in backticks where it is a keyword.
+        func usable(_ name: String, _ path: TokenPath) throws -> String {
+            guard !SwiftName.unusable.contains(name) else {
+                throw SwiftName.Problem(path: path, "the Swift name \(name) cannot be a member")
+            }
+            return name
+        }
         do {
             for (index, segments) in roleSegments.enumerated() {
                 let path = categoryGroup.appending("<name>")
-                let name = try SwiftName.lowerCamelCase(segments, path: TokenPath(path.names + segments))
-                let function = try SwiftName.lowerCamelCase(
-                    [categoryGroup.names.last!] + segments, path: TokenPath(path.names + segments))
+                let name = try usable(SwiftName.lowerCamelCase(segments, path: TokenPath(path.names + segments)), path)
                 let docs = order.map { (name: $0, doc: Doc(byCategory[$0]![index])) }
-                roles.append(
-                    Categories.Role(
-                        segments: segments, name: name, colorFunction: function, doc: Self.commonDoc(docs)))
+                roles.append(Categories.Role(segments: segments, name: name, doc: Self.commonDoc(docs)))
             }
             for name in order {
                 let path = categoryGroup.appending(name)
@@ -343,12 +345,13 @@ extension AppleTokenModel {
                         return try colorValue(color, path: token.path, theme: themes[theme])
                     }
                     return Color(
-                        path: token.path, name: roles[index].name, doc: Doc(token), values: values,
-                        backgrounds: backgrounds(token))
+                        path: token.path, members: [SwiftName.Member(name: roles[index].name, path: token.path)],
+                        doc: Doc(token), values: values, backgrounds: backgrounds(token))
                 }
                 categories.append(
                     Categories.Category(
-                        rawValue: name, caseName: try SwiftName.lowerCamelCase([name], path: path), colors: colors))
+                        rawValue: name, caseName: try usable(SwiftName.lowerCamelCase([name], path: path), path),
+                        colors: colors))
             }
         } catch let problem as SwiftName.Problem {
             throw AppleTokens.Failure([problem.description])
@@ -452,7 +455,7 @@ extension AppleTokenModel {
                 family.replacingOccurrences(of: " ", with: "") + "-" + postScriptWeights[Int(value.fontWeight.value)]!
         }
         return TextRole(
-            path: token.path, name: try SwiftName.member(token.path, dropping: "typography"), doc: Doc(token),
+            path: token.path, members: try SwiftName.members(token.path, dropping: "typography"), doc: Doc(token),
             textStyle: textStyle.rawValue, design: design, weight: weight, font: font,
             size: try points(value.fontSize, token.path), lineHeight: value.lineHeight,
             letterSpacing: try points(value.letterSpacing, token.path))
@@ -461,7 +464,7 @@ extension AppleTokenModel {
     static func transition(_ token: ResolvedToken) throws -> Transition {
         guard case .transition(let value) = token.value else { preconditionFailure("a transition token") }
         return Transition(
-            path: token.path, name: try SwiftName.member(token.path, dropping: "motion"), doc: Doc(token),
+            path: token.path, members: try SwiftName.members(token.path, dropping: "motion"), doc: Doc(token),
             duration: value.duration.milliseconds / 1000, delay: value.delay.milliseconds / 1000,
             curve: value.timingFunction, spring: token.westron.spring)
     }
@@ -495,14 +498,14 @@ extension AppleTokenModel {
             }
         }
         return Shadow(
-            path: token.path, name: try SwiftName.member(token.path, dropping: "shadow"), doc: Doc(token),
+            path: token.path, members: try SwiftName.members(token.path, dropping: "shadow"), doc: Doc(token),
             layers: layers)
     }
 
     static func dimension(_ token: ResolvedToken) throws -> Dimension {
         guard case .dimension(let value) = token.value else { preconditionFailure("a dimension token") }
         return Dimension(
-            path: token.path, name: try SwiftName.member(token.path, dropping: nil), doc: Doc(token),
+            path: token.path, members: try SwiftName.members(token.path, dropping: nil), doc: Doc(token),
             value: try points(value, token.path))
     }
 
@@ -514,37 +517,48 @@ extension AppleTokenModel {
         return dimension.value
     }
 
-    /// Names that two tokens share on one Swift type, or that the type already has (`SwiftName.Reserved`).
+    /// The Swift names of each token type as trees, in token order.
+    var colorTree: MemberTree { MemberTree(colors.map(\.members)) }
+    var textRoleTree: MemberTree { MemberTree(textRoles.map(\.members)) }
+    var transitionTree: MemberTree { MemberTree(transitions.map(\.members)) }
+    var shadowTree: MemberTree { MemberTree(shadows.map(\.members)) }
+    var dimensionTree: MemberTree { MemberTree(dimensions.map(\.members)) }
+
+    /// Names that two tokens share in one place, or that the type already has (`SwiftName.Reserved`).
     func collisions() -> [String] {
-        var problems: [String] = []
-        func check(_ type: String, _ members: [(path: TokenPath, name: String)], reserved: Set<String>) {
+        typealias Reserved = SwiftName.Reserved
+        var problems =
+            colorTree.collisions(
+                type: "Color", paths: colors.map(\.path), reservedLeaf: Reserved.color.union(Reserved.shapeStyle),
+                reservedGroup: Reserved.color)
+            + textRoleTree.collisions(
+                type: "Westron.TextRole", paths: textRoles.map(\.path), reservedLeaf: Reserved.textRole,
+                reservedGroup: Reserved.textRole)
+            + transitionTree.collisions(
+                type: "Animation", paths: transitions.map(\.path), reservedLeaf: Reserved.animation,
+                reservedGroup: Reserved.animation)
+            + shadowTree.collisions(
+                type: "Westron.Shadow", paths: shadows.map(\.path), reservedLeaf: Reserved.shadow,
+                reservedGroup: Reserved.shadow)
+            + dimensionTree.collisions(
+                type: "CGFloat", paths: dimensions.map(\.path), reservedLeaf: Reserved.cgFloat,
+                reservedGroup: Reserved.cgFloat)
+        if let categories {
+            let rolePath = categories.group.appending("<name>")
             var seen: [String: TokenPath] = [:]
-            for member in members {
-                if reserved.contains(member.name) {
+            let roles = categories.roles.map { (TokenPath(rolePath.names + $0.segments), $0.name) }
+            let cases = categories.categories.map { (categories.group.appending($0.rawValue), $0.caseName) }
+            for (path, name) in roles + cases {
+                if Reserved.category.contains(name) {
                     problems.append(
-                        "\(member.path): its Swift name \(type).\(member.name) collides with a member the type "
-                            + "already has; rename the token")
-                } else if let other = seen[member.name] {
-                    problems.append("\(member.path) and \(other) have the same Swift name \(type).\(member.name)")
+                        "\(path): its Swift name Westron.Category.\(name) collides with a member the type already "
+                            + "has; rename the token")
+                } else if let other = seen[name] {
+                    problems.append("\(path) and \(other) have the same Swift name Westron.Category.\(name)")
                 } else {
-                    seen[member.name] = member.path
+                    seen[name] = path
                 }
             }
-        }
-        let categoryGroup = categories.map { $0.group.appending("<name>") }
-        check(
-            "Color",
-            colors.map { ($0.path, $0.name) }
-                + (categories?.roles ?? []).map { (TokenPath(categoryGroup!.names + $0.segments), $0.colorFunction) },
-            reserved: SwiftName.Reserved.color)
-        check("Font", textRoles.map { ($0.path, $0.name) }, reserved: SwiftName.Reserved.font)
-        check("Animation", transitions.map { ($0.path, $0.name) }, reserved: SwiftName.Reserved.animation)
-        check("Westron.Shadow", shadows.map { ($0.path, $0.name) }, reserved: SwiftName.Reserved.shadow)
-        check("CGFloat", dimensions.map { ($0.path, $0.name) }, reserved: SwiftName.Reserved.cgFloat)
-        if let categories {
-            let roles = categories.roles.map { (TokenPath(categoryGroup!.names + $0.segments), $0.name) }
-            let cases = categories.categories.map { (categories.group.appending($0.rawValue), $0.caseName) }
-            check("Westron.Category", roles + cases, reserved: SwiftName.Reserved.category)
         }
         return problems
     }

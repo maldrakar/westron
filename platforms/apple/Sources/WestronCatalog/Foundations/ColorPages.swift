@@ -84,9 +84,9 @@ private struct ThemeColorsPage: View {
         let shape = RoundedRectangle(cornerRadius: .radius75)
         switch sample {
         case .background:
-            shape.fill(.backgroundCanvas)
+            shape.fill(.background.canvas)
                 .overlay(shape.inset(by: .space75).fill(Color(color)))
-                .overlay(shape.strokeBorder(.borderDefault, lineWidth: .strokeThin))
+                .overlay(shape.strokeBorder(.border.default, lineWidth: .stroke.thin))
                 .frame(width: SampleMetrics.cell.width, height: SampleMetrics.cell.height)
         case .foreground:
             // No frame round the cell: it would read as part of a border sample.
@@ -101,7 +101,7 @@ private struct ThemeColorsPage: View {
     /// none.
     private func ground(_ color: Westron.Color) -> (names: [String], label: String) {
         guard let first = color.backgrounds.first else {
-            return ([Westron.Color.backgroundCanvas.name], "none declared; canvas")
+            return ([Westron.Color.background.canvas.name], "none declared; canvas")
         }
         return (first, "on " + first.map { Westron.Color.named($0)?.shortName ?? $0 }.joined(separator: " over "))
     }
@@ -114,11 +114,11 @@ private struct ForegroundSample: View {
     var body: some View {
         if color.name.hasPrefix("color.text.") {
             Text("Aa")
-                .font(.bodyRegular)
+                .textRole(.body.regular)
                 .foregroundStyle(Color(color))
         } else if color.name.hasPrefix("color.icon.") {
             Image(Westron.Icon.grip)
-                .font(.bodyRegular)
+                .textRole(.body.regular)
                 .foregroundStyle(Color(color))
         } else {
             RoundedRectangle(cornerRadius: .radius75)
@@ -130,8 +130,8 @@ private struct ForegroundSample: View {
     /// The stroke the border is drawn with where it is used (decisions/0013).
     private var lineWidth: CGFloat {
         switch color.name {
-        case Westron.Color.borderFocus.name: .strokeThick
-        default: .strokeThin
+        case Westron.Color.border.focus.name: .stroke.thick
+        default: .stroke.thin
         }
     }
 }
@@ -166,23 +166,23 @@ private struct CategoryColorsPage: View {
                             .gridColumnAlignment(.leading)
                         tile(category)
                         Circle()
-                            .strokeBorder(.categoryBorder(category), lineWidth: .strokeRegular)
+                            .strokeBorder(.category(category).border, lineWidth: .stroke.regular)
                             .frame(width: SampleMetrics.mark, height: SampleMetrics.mark)
                         Circle()
-                            .fill(.categoryIcon(category))
+                            .fill(.category(category).icon)
                             .frame(width: Size.dot, height: Size.dot)
                         Text("Aa")
-                            .font(.bodyStrong)
-                            .foregroundStyle(.categoryText(category))
+                            .textRole(.body.strong)
+                            .foregroundStyle(.category(category).text)
                         Circle()
-                            .fill(.categoryFill(category))
+                            .fill(.category(category).fill)
                             .frame(width: SampleMetrics.mark, height: SampleMetrics.mark)
                         Circle()
-                            .fill(.categoryFill(category))
+                            .fill(.category(category).fill)
                             .overlay {
                                 Image(Westron.Icon.check)
-                                    .font(.captionMedium.weight(.bold))
-                                    .foregroundStyle(.categoryOnFill(category))
+                                    .font(Font(.caption.medium).weight(.bold))
+                                    .foregroundStyle(.category(category).onFill)
                             }
                             .frame(width: SampleMetrics.mark, height: SampleMetrics.mark)
                     }
@@ -198,8 +198,8 @@ private struct CategoryColorsPage: View {
             .overlay {
                 if index % 2 == line {
                     Text(Self.roles[index])
-                        .font(.captionMedium.monospaced())
-                        .foregroundStyle(.textSecondary)
+                        .font(Font(.caption.medium).monospaced())
+                        .foregroundStyle(.text.secondary)
                         .fixedSize()
                 }
             }
@@ -208,11 +208,11 @@ private struct CategoryColorsPage: View {
     /// The tile under a list's glyph, with the glyph in the list's text color, as the sidebar draws it.
     private func tile(_ category: Westron.Category) -> some View {
         RoundedRectangle(cornerRadius: .radius100)
-            .fill(.categoryBackground(category))
+            .fill(.category(category).background)
             .overlay {
                 Image(Westron.Icon.tray)
-                    .font(.footnoteMedium)
-                    .foregroundStyle(.categoryText(category))
+                    .textRole(.footnote.medium)
+                    .foregroundStyle(.category(category).text)
             }
             .frame(width: SampleMetrics.tile, height: SampleMetrics.tile)
     }

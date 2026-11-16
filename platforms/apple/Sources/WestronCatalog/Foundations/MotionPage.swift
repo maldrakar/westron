@@ -38,8 +38,8 @@ private struct MotionPage: View {
                         TokenName(String(transition.name.dropFirst("motion.".count)))
                         if !curveInline {
                             Text(Self.describe(transition))
-                                .font(.captionMedium)
-                                .foregroundStyle(.textSecondary)
+                                .textRole(.caption.medium)
+                                .foregroundStyle(.text.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
@@ -48,13 +48,13 @@ private struct MotionPage: View {
                     Text(transition.delay > 0 ? Self.seconds(transition.delay) : "–")
                         .gridColumnAlignment(.trailing)
                     CurvePlot(curve: transition.curve)
-                        .stroke(.textAccent, lineWidth: .strokeRegular)
+                        .stroke(.text.accent, lineWidth: .stroke.regular)
                         .frame(width: SampleMetrics.mark, height: SampleMetrics.mark)
-                        .background(.backgroundMuted, in: RoundedRectangle(cornerRadius: .radius75))
+                        .background(.background.muted, in: RoundedRectangle(cornerRadius: .radius75))
                     if curveInline { Text(Self.describe(transition)).fixedSize() }
                 }
-                .font(.footnoteRegular.monospacedDigit())
-                .foregroundStyle(.textPrimary)
+                .font(Font(.footnote.regular).monospacedDigit())
+                .foregroundStyle(.text.primary)
             }
         }
     }

@@ -94,8 +94,8 @@ prefix.
 - **The overline is tracked out by 6 %.** Capitals at text spacing crowd each other. Spaced apart, a short label in
   capitals reads at a glance.
 - **On Apple, `.textRole(_:)` applies the tracking.** A SwiftUI font cannot carry tracking, so a view sets a heading
-  with `.textRole(.headingLarge)`, which applies the font and the token's `letterSpacing` together (decisions/0013).
-  `.font(.headingLarge)` alone gives the face without the tracking.
+  with `.textRole(.heading.large)`, which applies the font and the token's `letterSpacing` together (decisions/0013).
+  `Font(.heading.large)` alone gives the face without the tracking.
 - **On Apple, line height comes from the font.** The system font takes its leading from the text style; Onest and
   Geist Mono take theirs from their own metrics. Both follow Dynamic Type. The tokens carry the line heights of Apple's
   iOS text styles, so that the web and GNOME have numbers to start from.

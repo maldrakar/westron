@@ -84,16 +84,33 @@ The tools reject any other `dev.westron.*` key, so a misspelled key fails instea
   `Westron.Category` (the list colors: a `String`-backed `CaseIterable` enum of their names in the tokens, with a
   property per role), `Westron.TextRole`, `Westron.Transition`, `Westron.Shadow` and `Westron.Dimension`, each with
   an `all` list.
-- A Swift name is the token path in lowerCamelCase, without the first segment where the type already names it:
-  `color.text.secondary` is `Color.textSecondary`, `typography.heading.large` is `Font.headingLarge`,
-  `motion.move` is `Animation.move`, `shadow.raised` is `Westron.Shadow.raised`; a length keeps it:
-  `CGFloat.space100`, `.radius150`, `.strokeThin`. A list color's role is `Color.categoryText(_:)`. A name that
-  collides with a static SwiftUI already has on that type (`Color.primary`, `Font.body`, `Animation.default`) or with
-  another token's fails generation.
-- `WestronUI` re-exports `WestronTokens` and adds `public` statics: `Color` and `ShapeStyle where Self == Color`
-  from colorsets through `Bundle.module`, `Font` as `Font.system(_:design:weight:)`, `Animation` as
-  `.spring(duration:bounce:)` where the token has a spring and `.timingCurve` otherwise, with `.delay` when it waits,
-  and `CGFloat`; `View.shadow(_:)` takes a `Westron.Shadow`, with half its CSS blur as the radius.
+- A Swift name follows the token path, a member per segment, without the first segment where the type already
+  names it: `color.text.secondary` is `Westron.Color.text.secondary`, `color.status.danger.on-fill` is
+  `Westron.Color.status.danger.onFill`, `typography.heading.large` is `Westron.TextRole.heading.large`,
+  `motion.move` is `Westron.Transition.move`, `shadow.raised` is `Westron.Shadow.raised`; a length keeps it:
+  `radius.card` is `Westron.Dimension.radius.card`. A kebab-case segment is one member in lowerCamelCase. A segment
+  that starts with a digit joins the one before it, as a Swift name cannot start with one: `space.100` is `space100`,
+  `color.chart.1` is `chart1`. A keyword is declared in backticks and read after a dot as it is: `.border.default`.
+  The owner asked for names that follow the paths on 2026-11-16, in review of PR #54; until then a name was the whole
+  path in one word, `Color.textSecondary`.
+- A group of tokens is a struct of its own, `Westron.Color.Background<Value>`, with a member per token and
+  `map(_:)`. It is generic over its values, so that WestronUI holds the same group with SwiftUI values, and each
+  token's doc comment is written once. A list color is `Westron.Category`, by the name a product stores; its roles
+  are its members, and `roles` holds them as `Westron.Category.Roles`.
+- A name fails generation when two tokens or groups share it, or when it would collide with SwiftUI. A color or a
+  group directly on `Color` cannot take a `Color` static (`Color.primary` would be ambiguous), and a color cannot take
+  a `ShapeStyle` static either (`.background`). A group can: its static is a group, not a style, so
+  `.foregroundStyle(.background)` stays SwiftUI's and `.background.canvas` is westron's (a probe with Xcode 27.1,
+  2026-11-16).
+- `WestronUI` re-exports `WestronTokens` and adds `public` statics on `Color` and `ShapeStyle where Self == Color`:
+  colors from colorsets through `Bundle.module`, groups as WestronTokens' groups of them, and `category(_:)` for a
+  list's colors by role (`.category(.amber).text`). On `Animation`, a motion is `.spring(duration:bounce:)` where the
+  token has a spring and `.timingCurve` otherwise, with `.delay` when it waits; lengths are on `CGFloat`.
+  `View.shadow(_:)` takes a `Westron.Shadow`, with half its CSS blur as the radius.
+- Text roles get no statics on `Font`. A group named `body` there would make SwiftUI's own `Font.body` ambiguous
+  (`let font = Font.body` stops compiling, the same probe), and five of the seven groups share a text style's name. A
+  view takes a role with `.textRole(.body.strong)`, which also applies its tracking, or `Font(.body.strong)` where
+  only a font fits.
 - Icons are not tokens, but come out of the same `generate` and the same split (decisions/0011): `Westron.Icon` in
   `WestronTokens` is a `String`-backed `CaseIterable` enum of the names in `spec/icons/icons.yaml`, with
   `fallback` for a name it does not know; `WestronUI` adds `systemName`, the SF Symbol, and the hand-written

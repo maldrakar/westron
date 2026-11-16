@@ -31,21 +31,21 @@ private struct IconsPage: View {
     private func cell(_ icon: Westron.Icon) -> some View {
         VStack(spacing: .space50) {
             RoundedRectangle(cornerRadius: .radius100)
-                .fill(.backgroundSurface)
+                .fill(.background.surface)
                 .overlay {
                     RoundedRectangle(cornerRadius: .radius100)
                         .strokeBorder(
-                            icon == .fallback ? Color.borderFocus : Color.borderDefault, lineWidth: .strokeThin)
+                            icon == .fallback ? Color.border.focus : Color.border.default, lineWidth: .stroke.thin)
                 }
                 .overlay {
                     Image(icon)
-                        .font(.bodyRegular)
-                        .foregroundStyle(.textPrimary)
+                        .textRole(.body.regular)
+                        .foregroundStyle(.text.primary)
                 }
                 .frame(height: Size.tile)
             Text(icon.rawValue)
-                .font(.captionMedium.monospaced())
-                .foregroundStyle(.textPrimary)
+                .font(Font(.caption.medium).monospaced())
+                .foregroundStyle(.text.primary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }

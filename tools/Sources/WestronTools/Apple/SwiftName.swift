@@ -1,9 +1,55 @@
 /// Swift names of tokens, derived mechanically from their paths (decisions/0010, "Apple API").
 ///
-/// Each path segment is lowercase kebab-case, and the segments join in lowerCamelCase: `color.text.on-accent` is
-/// `textOnAccent`. The first segment is dropped where the Swift type already says it (`Color.textSecondary`,
-/// `Font.headingLarge`, `Animation.rowLeave`) and kept where it does not (`CGFloat.space100`, `CGFloat.strokeThin`).
+/// A token's Swift name follows its path, segment by segment: `color.text.on-accent` is `Color.text.onAccent`. Each
+/// segment is lowercase kebab-case and becomes one member in lowerCamelCase. The first segment is dropped where the
+/// Swift type already says it (`Color.text.secondary`, `Westron.TextRole.heading.large`, `Animation.rowLeave`) and
+/// kept where it does not (`CGFloat.stroke.thin`). A segment that starts with a digit joins the one before it, as a
+/// Swift name cannot start with a digit: `space.100` is `CGFloat.space100`.
 public enum SwiftName {
+    /// One member of a token's Swift name, and the token path up to it: `status` of `color.status`.
+    public struct Member: Equatable, Sendable {
+        public let name: String
+        public let path: TokenPath
+    }
+
+    /// The members of a token's Swift name: `color.status.danger.on-fill` dropping `color` is `status`, `danger`,
+    /// `onFill`; `space.100` is `space100`.
+    /// - Throws: `Problem` when a segment is not lowercase kebab-case, when the name would start with a digit, or when
+    ///   a member is a word Swift cannot use as one (`self`, `init`, `Type`).
+    public static func members(_ path: TokenPath, dropping group: String?) throws -> [Member] {
+        let skipped = group != nil && path.names.first == group ? 1 : 0
+        let segments = Array(path.names.dropFirst(skipped))
+        guard !segments.isEmpty else { throw Problem(path: path, "no name is left after the group the type names") }
+        var members: [(segments: [String], end: Int)] = []
+        for (index, segment) in segments.enumerated() {
+            if let first = segment.unicodeScalars.first, ("0"..."9").contains(first), !members.isEmpty {
+                members[members.count - 1].segments.append(segment)
+                members[members.count - 1].end = index
+            } else {
+                members.append(([segment], index))
+            }
+        }
+        return try members.map { member in
+            let name = try lowerCamelCase(member.segments, path: path)
+            guard !unusable.contains(name) else {
+                throw Problem(path: path, "the Swift name \(name) cannot be a member")
+            }
+            return Member(name: name, path: TokenPath(Array(path.names.prefix(skipped + member.end + 1))))
+        }
+    }
+
+    /// A member as declared: in backticks when it is a Swift keyword, `` `default` ``. After a dot it needs none.
+    public static func declared(_ name: String) -> String {
+        keywords.contains(name) ? "`\(name)`" : name
+    }
+
+    /// The type of a group of tokens: its members in UpperCamelCase, `status`, `danger` → `StatusDanger`.
+    public static func typeName(_ members: [String]) -> String {
+        members.map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined()
+    }
+
+    /// Words that cannot name a member even in backticks, because `x.self`, `x.init` and `x.Type` mean something else.
+    static let unusable: Set<String> = ["self", "Self", "init", "Type", "Protocol"]
     /// A name that cannot be derived, or that collides.
     public struct Problem: Error, Equatable, CustomStringConvertible {
         public let path: TokenPath
@@ -28,8 +74,7 @@ public enum SwiftName {
     }
 
     /// The lowerCamelCase name of path segments: `["text", "on-accent"]` → `textOnAccent`.
-    /// - Throws: `Problem` when a segment is not lowercase kebab-case, when the name would start with a digit, or when
-    ///   it is a Swift keyword.
+    /// - Throws: `Problem` when a segment is not lowercase kebab-case or when the name would start with a digit.
     public static func lowerCamelCase(_ segments: [String], path: TokenPath) throws -> String {
         guard !segments.isEmpty else { throw Problem(path: path, "no name is left after the group the type names") }
         var words: [String] = []
@@ -44,17 +89,7 @@ public enum SwiftName {
         guard let first = name.unicodeScalars.first, ("a"..."z").contains(first) else {
             throw Problem(path: path, "the Swift name \(name) would start with a digit")
         }
-        guard !keywords.contains(name) else {
-            throw Problem(path: path, "the Swift name \(name) is a Swift keyword")
-        }
         return name
-    }
-
-    /// The name of a token on a Swift type: its path in lowerCamelCase, without the first segment when that is
-    /// `dropping` (the group the type already names).
-    public static func member(_ path: TokenPath, dropping group: String?) throws -> String {
-        let segments = group != nil && path.names.first == group ? Array(path.names.dropFirst()) : path.names
-        return try lowerCamelCase(segments, path: path)
     }
 
     /// The Swift keywords a member name cannot be without backticks.
@@ -70,33 +105,38 @@ public enum SwiftName {
 
 extension SwiftName {
     /// Static members that SwiftUI and the standard library already declare on a type the generator extends, and the
-    /// members of westron's own types. A token whose Swift name is one of them fails generation: the call would be
+    /// members of westron's own types. A token whose first member is one of them fails generation: the call would be
     /// ambiguous or would shadow the system's (as `buttonStyle(.plain)` would, decisions/0003).
     ///
     /// The lists hold what SwiftUI declared on 2026-11-15 (Xcode 27.1), the deprecated members included; a member
     /// added to SwiftUI later fails the build of the generated code instead.
     public enum Reserved {
-        /// `Color` statics, and `ShapeStyle` statics that `.foregroundStyle(.name)` could also mean.
+        /// `Color` statics and the members of `Westron.Color`. No color and no group of colors can take one: an
+        /// explicit `Color.primary` would be ambiguous.
         public static let color: Set<String> = [
             // Color
             "accentColor", "black", "blue", "brown", "clear", "cyan", "gray", "green", "indigo", "mint", "orange",
             "pink", "primary", "purple", "red", "secondary", "teal", "white", "yellow", "init",
-            // ShapeStyle
+            // Westron.Color
+            "name", "light", "dark", "lightHighContrast", "darkHighContrast", "all", "category",
+        ]
+
+        /// `ShapeStyle` statics of other styles, which `.foregroundStyle(.name)` could also mean. A color cannot take
+        /// one, but a group of colors can: its static is a group, not a style, so `.background` stays SwiftUI's and
+        /// `.background.canvas` is westron's (probe, Xcode 27.1, 2026-11-16).
+        public static let shapeStyle: Set<String> = [
             "foreground", "background", "selection", "separator", "tint", "placeholder", "link", "fill",
             "windowBackground", "tertiary", "quaternary", "quinary", "ultraThinMaterial", "thinMaterial",
             "regularMaterial", "thickMaterial", "ultraThickMaterial", "bar", "image", "linearGradient",
             "radialGradient", "angularGradient", "conicGradient", "ellipticalGradient", "hierarchical", "shadow",
             "opacity", "blendMode", "palette", "multicolor", "monochrome", "rect", "scale", "resolve",
-            // Westron.Color
-            "name", "light", "dark", "lightHighContrast", "darkHighContrast", "all",
         ]
 
-        /// `Font` statics.
-        public static let font: Set<String> = [
-            "largeTitle", "title", "title2", "title3", "headline", "subheadline", "body", "callout", "footnote",
-            "caption", "caption2", "extraLargeTitle", "extraLargeTitle2", "system", "custom", "init",
-            // Westron.TextRole
-            "name", "textStyle", "design", "weight", "size", "lineHeight", "letterSpacing", "all",
+        /// The members of `Westron.TextRole`. Text roles have no statics on SwiftUI's `Font`: a group `body` there
+        /// would make `Font.body` ambiguous, so a role is `.textRole(.body.strong)` or `Font(.body.strong)`.
+        public static let textRole: Set<String> = [
+            "name", "textStyle", "design", "weight", "font", "size", "lineHeight", "letterSpacing", "platformSize",
+            "all", "init",
         ]
 
         /// `Animation` statics.
@@ -123,7 +163,16 @@ extension SwiftName {
 
         /// The members of `Westron.Category`, which its cases and its roles cannot be.
         public static let category: Set<String> = [
-            "rawValue", "allCases", "colors", "hashValue", "init",
+            "rawValue", "allCases", "colors", "roles", "hashValue", "init", "map",
+        ]
+
+        /// The members of a group's type, which the tokens in the group cannot be.
+        public static let group: Set<String> = ["map"]
+
+        /// The types nested in westron's token types and the generic parameters of a group's type, which no group's
+        /// type can be.
+        public static let types: Set<String> = [
+            "TextStyle", "Design", "Weight", "Curve", "Spring", "Layer", "Space", "Roles", "Value", "T",
         ]
 
         /// The members of `Westron.Icon` and of its WestronUI extension, which its cases cannot be.

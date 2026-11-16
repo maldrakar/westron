@@ -29,8 +29,8 @@ private struct SpacePage: View {
                         TokenName(step.name)
                         TokenDetail(Points(step.value).text)
                             .gridColumnAlignment(.trailing)
-                        RoundedRectangle(cornerRadius: .strokeThin)
-                            .fill(.backgroundAccent)
+                        RoundedRectangle(cornerRadius: .stroke.thin)
+                            .fill(.background.accent)
                             .frame(width: CGFloat(step), height: .space150)
                     }
                 }
@@ -60,10 +60,10 @@ private struct ShapePage: View {
                 ForEach(radii.ladder, id: \.name) { radius in
                     sample(radius.name, [Points(radius.value).text]) {
                         RoundedRectangle(cornerRadius: CGFloat(radius))
-                            .fill(.backgroundMuted)
+                            .fill(.background.muted)
                             .overlay(
                                 RoundedRectangle(cornerRadius: CGFloat(radius))
-                                    .strokeBorder(.borderDefault, lineWidth: .strokeThin)
+                                    .strokeBorder(.border.default, lineWidth: .stroke.thin)
                             )
                             .frame(width: Size.square, height: Size.square)
                     }
@@ -73,10 +73,10 @@ private struct ShapePage: View {
                 ForEach(radii.roles, id: \.name) { radius in
                     sample(radius.name, [Points(radius.value).text]) {
                         RoundedRectangle(cornerRadius: CGFloat(radius))
-                            .fill(.backgroundMuted)
+                            .fill(.background.muted)
                             .overlay(
                                 RoundedRectangle(cornerRadius: CGFloat(radius))
-                                    .strokeBorder(.borderDefault, lineWidth: .strokeThin)
+                                    .strokeBorder(.border.default, lineWidth: .stroke.thin)
                             )
                             .frame(width: Size.square, height: Size.square)
                     }
@@ -86,7 +86,7 @@ private struct ShapePage: View {
                 ForEach(Westron.Dimension.all.filter { $0.name.hasPrefix("stroke.") }, id: \.name) { stroke in
                     sample(stroke.name, [Points(stroke.value).text]) {
                         RoundedRectangle(cornerRadius: .radius100)
-                            .strokeBorder(.textPrimary, lineWidth: CGFloat(stroke))
+                            .strokeBorder(.text.primary, lineWidth: CGFloat(stroke))
                             .frame(width: Size.square, height: Size.square)
                     }
                 }
@@ -95,7 +95,7 @@ private struct ShapePage: View {
                 ForEach(Westron.Shadow.all, id: \.name) { shadow in
                     sample(shadow.name, details(shadow)) {
                         RoundedRectangle(cornerRadius: .radius150)
-                            .fill(.backgroundSurface)
+                            .fill(.background.surface)
                             .shadow(shadow)
                             .frame(width: Size.square, height: Size.square)
                     }
@@ -116,8 +116,8 @@ private struct ShapePage: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: .space100) {
             Text(title)
-                .font(.subheadlineStrong)
-                .foregroundStyle(.textPrimary)
+                .textRole(.subheadline.strong)
+                .foregroundStyle(.text.primary)
             LazyVGrid(
                 columns: [GridItem(.adaptive(minimum: column), spacing: .space100, alignment: .top)],
                 alignment: .leading, spacing: .space150
@@ -132,8 +132,8 @@ private struct ShapePage: View {
             shape()
             VStack(spacing: 0) {
                 Text(name.split(separator: ".").last.map(String.init) ?? name)
-                    .font(.footnoteMedium.monospaced())
-                    .foregroundStyle(.textPrimary)
+                    .font(Font(.footnote.medium).monospaced())
+                    .foregroundStyle(.text.primary)
                 ForEach(details, id: \.self) { TokenDetail($0) }
             }
         }

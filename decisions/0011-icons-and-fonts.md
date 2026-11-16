@@ -70,8 +70,8 @@ SF Pro and SF Symbols are licensed for Apple platforms only. The research is in 
 
 ## Consequences
 
-- The rule in `.claude/rules/apple.md` changes. A view takes a text role (`.textRole(.headingLarge)`, or
-  `.font(.bodyRegular)`) and never calls `Font.custom` or `Font.system` with a size of its own. A shipped font takes
+- The rule in `.claude/rules/apple.md` changes. A view takes a text role (`.textRole(.heading.large)`, or
+  `Font(.body.regular)`) and never calls `Font.custom` or `Font.system` with a size of its own. A shipped font takes
   the size the platform gives its text style, so headings keep their proportion to the system font on the Mac.
 - decisions/0007 lists the fonts under the SIL OFL.
 - Updating a font means cutting the instances again with the command above and checking the catalog's typography page.

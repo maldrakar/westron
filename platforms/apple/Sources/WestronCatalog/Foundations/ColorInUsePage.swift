@@ -46,13 +46,13 @@ private struct Card<Content: View>: View {
 
     var body: some View {
         content
-            .background(.backgroundSurface, in: RoundedRectangle(cornerRadius: .radiusCard))
-            .clipShape(RoundedRectangle(cornerRadius: .radiusCard))
+            .background(.background.surface, in: RoundedRectangle(cornerRadius: .radius.card))
+            .clipShape(RoundedRectangle(cornerRadius: .radius.card))
             .shadow(.raised)
             .overlay {
                 if contrast == .increased {
-                    RoundedRectangle(cornerRadius: .radiusCard)
-                        .strokeBorder(.borderDefault, lineWidth: .strokeThin)
+                    RoundedRectangle(cornerRadius: .radius.card)
+                        .strokeBorder(.border.default, lineWidth: .stroke.thin)
                 }
             }
     }
@@ -66,37 +66,37 @@ private struct TasksSample: View {
                 HStack(alignment: .center, spacing: .space100) {
                     VStack(alignment: .leading, spacing: 0) {
                         Text("Inbox")
-                            .textRole(.headingMedium)
-                            .foregroundStyle(.textPrimary)
+                            .textRole(.heading.medium)
+                            .foregroundStyle(.text.primary)
                         Text("4 open, 1 done")
-                            .font(.footnoteRegular)
-                            .foregroundStyle(.textSecondary)
+                            .textRole(.footnote.regular)
+                            .foregroundStyle(.text.secondary)
                     }
                     Spacer(minLength: .space100)
-                    FilledButton(title: "Task", icon: .plus, fill: .backgroundAccent, label: .textOnAccent)
+                    FilledButton(title: "Task", icon: .plus, fill: .background.accent, label: .text.onAccent)
                 }
                 // text.placeholder in a field ringed in border.strong.
                 Label("Find a task or a tag", icon: .magnifier)
-                    .font(.footnoteRegular)
-                    .foregroundStyle(.textPlaceholder)
+                    .textRole(.footnote.regular)
+                    .foregroundStyle(.text.placeholder)
                     .padding(.horizontal, .space100)
                     .frame(maxWidth: .infinity, minHeight: Metrics.control, alignment: .leading)
                     .overlay {
-                        RoundedRectangle(cornerRadius: .radiusControl)
-                            .strokeBorder(.borderStrong, lineWidth: .strokeThin)
+                        RoundedRectangle(cornerRadius: .radius.control)
+                            .strokeBorder(.border.strong, lineWidth: .stroke.thin)
                     }
                 VStack(spacing: 0) {
                     TaskRow(title: "Order the backsplash tiles") {
                         // status.danger.text: a missed deadline.
                         Label("Yesterday", icon: .flag)
-                            .foregroundStyle(.statusDangerText)
+                            .foregroundStyle(.status.danger.text)
                         Tag(title: "repair", category: .orange)
                     }
                     Rule()
                     // background.selected under text.primary and text.secondary.
                     TaskRow(title: "Call the electrician", selected: true) {
                         Text("14:00")
-                            .foregroundStyle(.textSecondary)
+                            .foregroundStyle(.text.secondary)
                         Tag(title: "repair", category: .orange)
                     }
                     Rule()
@@ -127,19 +127,19 @@ private struct TaskRow<Meta: View>: View {
             VStack(alignment: .leading, spacing: .space25) {
                 // A done title: text.secondary, struck through in icon.tertiary.
                 Text(title)
-                    .font(.bodyRegular)
-                    .foregroundStyle(done ? Color.textSecondary : .textPrimary)
-                    .strikethrough(done, color: .iconTertiary)
+                    .textRole(.body.regular)
+                    .foregroundStyle(done ? Color.text.secondary : .text.primary)
+                    .strikethrough(done, color: .icon.tertiary)
                 HStack(spacing: .space100) {
                     meta
                 }
-                .font(.footnoteRegular)
+                .textRole(.footnote.regular)
             }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, .space75)
         .padding(.vertical, .space50)
-        .background(selected ? Color.backgroundSelected : .clear, in: RoundedRectangle(cornerRadius: .radiusRow))
+        .background(selected ? Color.background.selected : .clear, in: RoundedRectangle(cornerRadius: .radius.row))
     }
 }
 
@@ -151,13 +151,13 @@ private struct Check: View {
         ZStack {
             if done {
                 Circle()
-                    .fill(.backgroundAccent)
+                    .fill(.background.accent)
                 Image(Westron.Icon.check)
-                    .font(.captionMedium.weight(.bold))
-                    .foregroundStyle(.textOnAccent)
+                    .font(Font(.caption.medium).weight(.bold))
+                    .foregroundStyle(.text.onAccent)
             } else {
                 Circle()
-                    .strokeBorder(.borderStrong, lineWidth: .strokeRegular)
+                    .strokeBorder(.border.strong, lineWidth: .stroke.regular)
             }
         }
         .frame(width: Metrics.check, height: Metrics.check)
@@ -171,11 +171,11 @@ private struct Tag: View {
 
     var body: some View {
         Text(title)
-            .font(.captionMedium)
-            .foregroundStyle(.categoryText(category))
+            .textRole(.caption.medium)
+            .foregroundStyle(.category(category).text)
             .padding(.horizontal, .space75)
             .frame(height: Metrics.tag)
-            .background(.categoryBackground(category), in: Capsule())
+            .background(.category(category).background, in: Capsule())
     }
 }
 
@@ -183,8 +183,8 @@ private struct Tag: View {
 private struct Rule: View {
     var body: some View {
         Rectangle()
-            .fill(.borderDefault)
-            .frame(height: .strokeThin)
+            .fill(.border.default)
+            .frame(height: .stroke.thin)
     }
 }
 
@@ -207,20 +207,20 @@ private struct DeploymentsSample: View {
                     Text("Status")
                     Text("Commit")
                 }
-                .font(.captionMedium)
-                .foregroundStyle(.textSecondary)
+                .textRole(.caption.medium)
+                .foregroundStyle(.text.secondary)
                 .frame(height: Metrics.header)
                 ForEach(rows, id: \.service) { row in
                     Rule()
                         .gridCellColumns(3)
                     GridRow {
                         Text(row.service)
-                            .foregroundStyle(.textPrimary)
+                            .foregroundStyle(.text.primary)
                         StatusBadge(status: row.status)
                         Text(row.commit)
-                            .foregroundStyle(.textAccent)
+                            .foregroundStyle(.text.accent)
                     }
-                    .font(.codeRegular)
+                    .textRole(.code.regular)
                     .frame(height: Metrics.tableRow)
                 }
             }
@@ -228,7 +228,7 @@ private struct DeploymentsSample: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(alignment: .top) {
                 Rectangle()
-                    .fill(.backgroundSunken)
+                    .fill(.background.sunken)
                     .frame(height: Metrics.header)
             }
         }
@@ -242,23 +242,23 @@ private struct NoticesSample: View {
             Notice(status: .warning, title: "Storage almost full", detail: "92% of the attachment space is used.")
             Notice(status: .danger, title: "Report not sent", detail: "The webhook returned 404. Check its address.")
             HStack(spacing: .space100) {
-                FilledButton(title: "Save", icon: nil, fill: .backgroundAccent, label: .textOnAccent)
+                FilledButton(title: "Save", icon: nil, fill: .background.accent, label: .text.onAccent)
                 // A secondary button: text.primary on background.surface, ringed in border.strong.
                 Text("Cancel")
-                    .font(.footnoteStrong)
-                    .foregroundStyle(.textPrimary)
+                    .textRole(.footnote.strong)
+                    .foregroundStyle(.text.primary)
                     .padding(.horizontal, .space150)
                     .frame(height: Metrics.control)
-                    .background(.backgroundSurface, in: RoundedRectangle(cornerRadius: .radiusControl))
+                    .background(.background.surface, in: RoundedRectangle(cornerRadius: .radius.control))
                     .overlay {
-                        RoundedRectangle(cornerRadius: .radiusControl)
-                            .strokeBorder(.borderStrong, lineWidth: .strokeThin)
+                        RoundedRectangle(cornerRadius: .radius.control)
+                            .strokeBorder(.border.strong, lineWidth: .stroke.thin)
                     }
-                FilledButton(title: "Delete", icon: .trash, fill: .statusDangerFill, label: .statusDangerOnFill)
+                FilledButton(title: "Delete", icon: .trash, fill: .status.danger.fill, label: .status.danger.onFill)
                 Text("Webhook help")
-                    .font(.footnoteStrong)
+                    .textRole(.footnote.strong)
                     .underline()
-                    .foregroundStyle(.textAccent)
+                    .foregroundStyle(.text.accent)
             }
         }
     }
@@ -276,16 +276,16 @@ private struct Notice: View {
                 .foregroundStyle(status.iconColor)
             VStack(alignment: .leading, spacing: 0) {
                 Text(title)
-                    .font(.footnoteStrong)
+                    .textRole(.footnote.strong)
                     .foregroundStyle(status.text)
                 Text(detail)
-                    .font(.footnoteRegular)
-                    .foregroundStyle(.textSecondary)
+                    .textRole(.footnote.regular)
+                    .foregroundStyle(.text.secondary)
             }
             Spacer(minLength: 0)
         }
         .padding(.space100)
-        .background(status.background, in: RoundedRectangle(cornerRadius: .radiusControl))
+        .background(status.background, in: RoundedRectangle(cornerRadius: .radius.control))
     }
 }
 
@@ -301,11 +301,11 @@ private struct FilledButton: View {
             if let icon { Image(icon) }
             Text(title)
         }
-        .font(.footnoteStrong)
+        .textRole(.footnote.strong)
         .foregroundStyle(label)
         .padding(.horizontal, .space150)
         .frame(height: Metrics.control)
-        .background(fill, in: RoundedRectangle(cornerRadius: .radiusControl))
+        .background(fill, in: RoundedRectangle(cornerRadius: .radius.control))
     }
 }
 

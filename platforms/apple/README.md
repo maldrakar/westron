@@ -23,28 +23,33 @@ A SwiftUI library for iOS, iPadOS, macOS and watchOS. The package manifest lives
 
 `tools/westron generate` writes them from `tokens/westron.resolver.json` (decisions/0010); the generated files are
 `Sources/WestronTokens/Generated/`, `Sources/WestronUI/Generated/` and `Sources/WestronUI/Tokens.xcassets`, and are not
-edited by hand. Only semantic tokens are exposed. A Swift name is the token path in lowerCamelCase, without the group
-the type already names.
+edited by hand. Only semantic tokens are exposed. A Swift name follows the token path, a member per segment, without
+the group the type already names: `color.text.secondary` is `Color.text.secondary`. A step joins its ladder:
+`space.100` is `.space100`.
 
 ```swift
 import WestronUI   // re-exports WestronTokens
 
 Text(list.name)
-    .font(.headingSmall)                          // typography.heading.small: Font.system(.headline, design: .rounded, weight: .heavy)
-    .foregroundStyle(.categoryText(list.color))   // color.category.<name>.text, by the name the store keeps
+    .textRole(.heading.small)                     // typography.heading.small: Onest SemiBold in the headline style
+    .foregroundStyle(.category(list.color).text)  // color.category.<name>.text, by the name the store keeps
     .padding(.horizontal, .space200)              // space.200: 16 pt
-    .background(.backgroundSurface, in: RoundedRectangle(cornerRadius: .radius150))
+    .background(.background.surface, in: RoundedRectangle(cornerRadius: .radius.card))
     .shadow(.raised)                              // shadow.raised
-withAnimation(.rowLeave) { remove(task) }         // motion.row-leave: its curve, after its delay
+withAnimation(.move) { reorder(task) }            // motion.move: its spring
 
-let color = Westron.Category(rawValue: stored) ?? .stone   // shared code: WestronTokens alone
-let ink = Westron.Color.textPrimary.dark                   // Westron.RGB(hex: 0xEEEAE3)
+let color = Westron.Category(rawValue: stored) ?? .blue   // shared code: WestronTokens alone
+let ink = Westron.Color.text.primary.dark                 // Westron.RGB(hex: 0xD7DFEA)
 ```
 
 - Colors come from colorsets with four variants (any, dark, high contrast, dark with high contrast), so they switch
   with the system and with the SwiftUI environment. watchOS asset catalogs take no appearances, so the watch gets the
   dark theme alone, whatever its contrast setting.
-- Text roles are `Font.system(_:design:weight:)` in the role's text style, so they follow Dynamic Type (decisions/0011).
+- A group of tokens is a type of its own, generic over its values: `Westron.Color.background` holds
+  `Westron.Color`s, `Color.background` the same group as SwiftUI colors.
+- Text roles are taken with `.textRole(_:)` or `Font(_:)`, in the role's text style, so they follow Dynamic Type:
+  Onest and Geist Mono through `Font.custom(_:size:relativeTo:)`, the rest `Font.system` (decisions/0011). `Font` has
+  no westron statics, so SwiftUI's `Font.body` stays as it is.
 - Motions with a spring are `.spring(duration:bounce:)`; the others are `.timingCurve`, and `.delay` when they wait.
 - The adapters from WestronTokens values to SwiftUI values are hand-written in `Sources/WestronUI/TokenAdapters.swift`.
 
@@ -57,8 +62,8 @@ let ink = Westron.Color.textPrimary.dark                   // Westron.RGB(hex: 0
 let icon = Westron.Icon(rawValue: list.icon) ?? .fallback   // by the name the store keeps; bullets when unknown
 
 Image(icon)                                       // its SF Symbol, which takes the font of the text it goes with
-    .font(.bodyRegular)
-    .foregroundStyle(.categoryText(list.color))
+    .textRole(.body.regular)
+    .foregroundStyle(.category(list.color).text)
 Label("Rename", icon: .pen)                       // as Label(_:systemImage:)
 Button("Add", systemImage: Westron.Icon.plus.systemName) { add() }   // any call that takes systemImage:
 ```

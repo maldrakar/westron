@@ -1,5 +1,5 @@
 // The adapters that turn WestronTokens values into SwiftUI values. The generated statics in
-// Generated/Tokens+SwiftUI.swift call them: `Color.textSecondary` is `Color(Westron.Color.textSecondary)`. An icon
+// Generated/Tokens+SwiftUI.swift call them: `Color.text.secondary` is `Color(Westron.Color.text.secondary)`. An icon
 // draws the SF Symbol that Generated/Icons+SwiftUI.swift names for it.
 
 import CoreText
@@ -108,7 +108,7 @@ extension View {
     /// Sets a text role: its font and its tracking, which a font cannot carry. Headings are tracked
     /// (decisions/0013), so they take this rather than `.font(_:)` alone:
     ///
-    ///     Text("Inbox").textRole(.headingMedium)
+    ///     Text("Inbox").textRole(.heading.medium)
     public func textRole(_ role: Westron.TextRole) -> some View {
         font(Font(role)).tracking(CGFloat(role.letterSpacing))
     }
@@ -244,8 +244,8 @@ extension Image {
     /// letter and scales with Dynamic Type, and the color of that text (design-language/07-icons.md):
     ///
     ///     Image(Westron.Icon(rawValue: list.icon) ?? .fallback)
-    ///         .font(.bodyRegular)
-    ///         .foregroundStyle(.categoryText(.amber))
+    ///         .textRole(.body.regular)
+    ///         .foregroundStyle(.category(.amber).text)
     public init(_ icon: Westron.Icon) {
         self.init(systemName: icon.systemName)
     }

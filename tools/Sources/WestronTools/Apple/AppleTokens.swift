@@ -55,7 +55,9 @@ public struct AppleTokens: Generator {
                 switch entry {
                 case .plain(let index): model.colors[index]
                 case .category(let caseName, let role):
-                    model.categories!.categories.first { $0.caseName == caseName }!.colors.first { $0.name == role }!
+                    model.categories!.categories.first { $0.caseName == caseName }!.colors.first {
+                        $0.members.last?.name == role
+                    }!
                 }
             }
         return [

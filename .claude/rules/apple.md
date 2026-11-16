@@ -22,16 +22,18 @@ paths:
 - Tokens only. The hook and `tools/westron lint raw-values` catch raw colors, sizes, spacing, radii, opacity and animation
   in `WestronUI`. An exception is `// westron-lint: allow <reason>`, with a real reason.
 - Tokens come from `tools/westron generate` (decisions/0010): never edit `WestronTokens/Generated/`,
-  `WestronUI/Generated/` or `WestronUI/Tokens.xcassets`; change the tokens and generate again. Names are the token
-  path in lowerCamelCase, without the group the type already names:
-  - colors: `Color.textSecondary`, `.foregroundStyle(.textSecondary)`, `Color(Westron.Color.textSecondary)`; they come
-    from colorsets, so they switch with the theme and the contrast setting by themselves;
-  - list colors: `Westron.Category(rawValue: name)` with `.background`, `.text`, … and `Color.categoryText(.amber)`;
-  - text: a text role in its text style, `.textRole(.headingLarge)` for a heading (the font and its tracking) and
-    `.font(.bodyRegular)` for the rest: headings in Onest and code in Geist Mono through
+  `WestronUI/Generated/` or `WestronUI/Tokens.xcassets`; change the tokens and generate again. Names follow the token
+  path, a member per segment, without the group the type already names; a step joins its ladder (`space100`):
+  - colors: `Color.text.secondary`, `.foregroundStyle(.text.secondary)`, `.background(.background.surface)`,
+    `Color(Westron.Color.text.secondary)`; they come from colorsets, so they switch with the theme and the contrast
+    setting by themselves;
+  - list colors: `Westron.Category(rawValue: name)` with `.background`, `.text`, … and `.category(.amber).text`;
+  - text: a text role in its text style, `.textRole(.heading.large)`, which applies the font and its tracking, or
+    `Font(.body.regular)` where only a font fits (`.font(Font(.caption.medium).monospaced())`). `Font` has no westron
+    statics, so SwiftUI's `Font.body` stays unambiguous. Headings in Onest and code in Geist Mono go through
     `Font.custom(_:size:relativeTo:)`, the rest `Font.system`. A view never calls either with a size of its own, so
     that Dynamic Type works (decisions/0011, 0013);
-  - space, radius, stroke: `CGFloat.space100`, `.radiusCard`, `.strokeThin`; motion: `withAnimation(.move)`;
+  - space, radius, stroke: `CGFloat.space100`, `.radius.card`, `.stroke.thin`; motion: `withAnimation(.move)`;
     shadow: `.shadow(.raised)`, which picks the layers of the environment's theme.
   - icons: `Image(Westron.Icon.sun)`, `Label("Rename", icon: .pen)`, not `Image(systemName:)` with a symbol spelled
     out; a stored name reads as `Westron.Icon(rawValue: name) ?? .fallback`. The names and their SF Symbols are in

@@ -15,11 +15,11 @@ struct TokenPage<Content: View>: View {
             VStack(alignment: .leading, spacing: SampleMetrics.pagePadding) {
                 VStack(alignment: .leading, spacing: .space25) {
                     Text(title)
-                        .textRole(.headingSmall)
-                        .foregroundStyle(.textPrimary)
+                        .textRole(.heading.small)
+                        .foregroundStyle(.text.primary)
                     Text(summary)
-                        .font(.footnoteRegular)
-                        .foregroundStyle(.textSecondary)
+                        .textRole(.footnote.regular)
+                        .foregroundStyle(.text.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 content
@@ -27,7 +27,7 @@ struct TokenPage<Content: View>: View {
             .padding(SampleMetrics.pagePadding)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .background(.backgroundCanvas)
+        .background(.background.canvas)
     }
 }
 
@@ -61,8 +61,8 @@ struct TokenName: View {
 
     var body: some View {
         Text(name)
-            .font(.footnoteMedium.monospaced())
-            .foregroundStyle(.textPrimary)
+            .font(Font(.footnote.medium).monospaced())
+            .foregroundStyle(.text.primary)
             .lineLimit(1)
             .minimumScaleFactor(0.8)
     }
@@ -78,8 +78,8 @@ struct TokenDetail: View {
 
     var body: some View {
         Text(text)
-            .font(.captionMedium)
-            .foregroundStyle(.textSecondary)
+            .textRole(.caption.medium)
+            .foregroundStyle(.text.secondary)
             .lineLimit(1)
             .minimumScaleFactor(0.8)
     }

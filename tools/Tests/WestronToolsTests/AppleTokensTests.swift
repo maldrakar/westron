@@ -172,7 +172,7 @@ struct AppleTokensTests {
     @Test("a name that collides with SwiftUI's or with another token's fails, naming both")
     func collisions() {
         let semantic = AppleFixture.semantic
-            .replacingOccurrences(of: #""label": {"#, with: #""body": {"#)
+            .replacingOccurrences(of: #""label": {"#, with: #""font": {"#)
             .replacingOccurrences(of: #""row-leave": {"#, with: #""linear": {"#)
             .replacingOccurrences(
                 of: #""space": {"#,
@@ -182,8 +182,11 @@ struct AppleTokensTests {
                 of: #""text": {"#,
                 with: #"""
                     "primary": { "$value": "{color.paper}" },
-                    "text-secondary": { "$value": "{color.ink}" },
-                    "text": { "secondary": { "$value": "{color.ink}" },
+                    "tint": { "$value": "{color.ink}" },
+                    "chart": { "1": { "$value": "{color.ink}" } },
+                    "chart1": { "$value": "{color.ink}" },
+                    "text-x": { "y": { "$value": "{color.ink}" } },
+                    "text": { "map": { "$value": "{color.ink}" }, "x": { "y": { "$value": "{color.ink}" } },
                     """#)
         }
         let problems = AppleFixture.problems([
@@ -194,32 +197,52 @@ struct AppleTokensTests {
         #expect(
             Set(problems) == [
                 "color.primary: its Swift name Color.primary \(collides)",
-                "color.text.secondary and color.text-secondary have the same Swift name Color.textSecondary",
-                "typography.body: its Swift name Font.body \(collides)",
+                "color.tint: its Swift name Color.tint \(collides)",
+                "color.chart1 and color.chart.1 have the same Swift name Color.chart1",
+                "color.text.map: its Swift name Color.text.map collides with a member a group's type already has; "
+                    + "rename the token",
+                "color.text.x and color.text-x have the same Swift type TextX",
+                "typography.font: its Swift name Westron.TextRole.font \(collides)",
                 "motion.linear: its Swift name Animation.linear \(collides)",
                 "pi: its Swift name CGFloat.pi \(collides)",
             ])
     }
 
-    @Test("names in lowerCamelCase from the path, without the group the Swift type names")
-    func names() throws {
-        #expect(try SwiftName.member("color.text.on-accent", dropping: "color") == "textOnAccent")
-        #expect(
-            try SwiftName.member("color.category.blue.background-subtle", dropping: "color")
-                == "categoryBlueBackgroundSubtle")
-        #expect(try SwiftName.member("typography.heading.large", dropping: "typography") == "headingLarge")
-        #expect(try SwiftName.member("motion.row-leave", dropping: "motion") == "rowLeave")
-        #expect(try SwiftName.member("space.100", dropping: nil) == "space100")
-        #expect(try SwiftName.member("radius.150", dropping: nil) == "radius150")
-        #expect(try SwiftName.member("stroke.thin", dropping: nil) == "strokeThin")
-        #expect(try SwiftName.member("brand.accent", dropping: "color") == "brandAccent", "another group stays")
+    @Test("a group may share its name with a ShapeStyle of SwiftUI, a color may not")
+    func groupNames() throws {
+        // The fixture's `color.background.vivid` is in a group named like SwiftUI's `.background`.
+        let tokens = try #require(AppleFixture.file(try AppleFixture.generate(), AppleTokens.tokensFile))
+        #expect(tokens.contains("    public static let background = Background("))
     }
 
-    @Test("a segment that is not lowercase kebab-case, a leading digit or a keyword fails")
+    @Test("a name follows the path, a member per segment, without the group the Swift type names")
+    func names() throws {
+        func names(_ path: TokenPath, dropping group: String?) throws -> [String] {
+            try SwiftName.members(path, dropping: group).map(\.name)
+        }
+        #expect(try names("color.text.on-accent", dropping: "color") == ["text", "onAccent"])
+        #expect(try names("color.status.danger.on-fill", dropping: "color") == ["status", "danger", "onFill"])
+        #expect(try names("typography.heading.large", dropping: "typography") == ["heading", "large"])
+        #expect(try names("motion.row-leave", dropping: "motion") == ["rowLeave"])
+        #expect(try names("space.100", dropping: nil) == ["space100"], "a step joins its ladder")
+        #expect(try names("color.chart.1", dropping: "color") == ["chart1"])
+        #expect(try names("radius.card", dropping: nil) == ["radius", "card"])
+        #expect(try names("brand.accent", dropping: "color") == ["brand", "accent"], "another group stays")
+        #expect(
+            try SwiftName.members("color.status.danger.text", dropping: "color").map(\.path) == [
+                "color.status", "color.status.danger", "color.status.danger.text",
+            ])
+        #expect(try SwiftName.members("space.100", dropping: nil).map(\.path) == ["space.100"])
+        #expect(SwiftName.typeName(["status", "danger"]) == "StatusDanger")
+        #expect(SwiftName.declared("default") == "`default`", "a keyword is declared in backticks")
+        #expect(SwiftName.declared("canvas") == "canvas")
+    }
+
+    @Test("a segment that is not lowercase kebab-case, a leading digit or a word Swift cannot use as a member fails")
     func invalidNames() {
         func problem(_ path: TokenPath, dropping group: String?) -> String? {
             do {
-                _ = try SwiftName.member(path, dropping: group)
+                _ = try SwiftName.members(path, dropping: group)
                 return nil
             } catch {
                 return (error as? SwiftName.Problem)?.message
@@ -231,7 +254,8 @@ struct AppleTokensTests {
             problem("color.text_x", dropping: "color")
                 == "\"text_x\" is not a lowercase kebab-case name (decisions/0010)")
         #expect(problem("color.100", dropping: "color") == "the Swift name 100 would start with a digit")
-        #expect(problem("motion.default", dropping: "motion") == "the Swift name default is a Swift keyword")
+        #expect(problem("motion.self", dropping: "motion") == "the Swift name self cannot be a member")
+        #expect(problem("motion.default", dropping: "motion") == nil, "a keyword is declared in backticks")
         #expect(problem("color", dropping: "color") == "no name is left after the group the type names")
     }
 
@@ -240,37 +264,65 @@ struct AppleTokensTests {
         // (decisions/0010).
         //
         // The values of westron's semantic tokens as plain Swift, with no imports, so that shared code and its WebAssembly
-        // build can use them; their types are in Westron.swift, their SwiftUI accessors in WestronUI.
+        // build can use them; their types are in Westron.swift, their SwiftUI accessors in WestronUI. A group of tokens is a
+        // type of its own, `Westron.Color.background.canvas`, generic over its values so that WestronUI holds the same group as
+        // SwiftUI values.
 
         extension Westron.Color {
-            /// Words and glyphs.
-            ///
-            /// Use for: body text, titles. Avoid: Words on the accent: use text.on-accent.
-            public static let textPrimary = Westron.Color(
-                name: "color.text.primary",
-                light: Westron.RGB(hex: 0x1F1D1A),
-                dark: Westron.RGB(hex: 0xFFFFFF),
-                lightHighContrast: Westron.RGB(hex: 0x000000),
-                darkHighContrast: Westron.RGB(hex: 0xFFFFFF),
-                backgrounds: [["color.background.vivid"], ["color.category.blue.background", "color.background.vivid"]])
+            /// The colors `color.text.*`.
+            public static let text = Text(
+                primary: Westron.Color(
+                    name: "color.text.primary",
+                    light: Westron.RGB(hex: 0x1F1D1A),
+                    dark: Westron.RGB(hex: 0xFFFFFF),
+                    lightHighContrast: Westron.RGB(hex: 0x000000),
+                    darkHighContrast: Westron.RGB(hex: 0xFFFFFF),
+                    backgrounds: [["color.background.vivid"], ["color.category.blue.background", "color.background.vivid"]]))
 
-            /// A fill brighter than sRGB can show.
-            public static let backgroundVivid = Westron.Color(
-                name: "color.background.vivid",
-                light: Westron.RGB(.displayP3, red: 0, green: 0.8, blue: 0.3),
-                dark: Westron.RGB(.displayP3, red: 0.1, green: 0.9, blue: 0.4),
-                lightHighContrast: Westron.RGB(.displayP3, red: 0, green: 0.8, blue: 0.3),
-                darkHighContrast: Westron.RGB(.displayP3, red: 0.1, green: 0.9, blue: 0.4))
+            /// The colors `color.background.*`.
+            public static let background = Background(
+                vivid: Westron.Color(
+                    name: "color.background.vivid",
+                    light: Westron.RGB(.displayP3, red: 0, green: 0.8, blue: 0.3),
+                    dark: Westron.RGB(.displayP3, red: 0.1, green: 0.9, blue: 0.4),
+                    lightHighContrast: Westron.RGB(.displayP3, red: 0, green: 0.8, blue: 0.3),
+                    darkHighContrast: Westron.RGB(.displayP3, red: 0.1, green: 0.9, blue: 0.4)))
 
             /// Every semantic color in token order, the list colors included.
             public static let all: [Westron.Color] = [
-                textPrimary,
-                backgroundVivid,
+                text.primary,
+                background.vivid,
                 Westron.Category.blue.background,
                 Westron.Category.blue.onFill,
                 Westron.Category.lightGreen.background,
                 Westron.Category.lightGreen.onFill,
             ]
+
+            /// The colors `color.text.*`, one member per token. The group is generic over its values, so that WestronUI holds
+            /// the same group as SwiftUI values.
+            public struct Text<Value: Sendable>: Sendable {
+                /// Words and glyphs.
+                ///
+                /// Use for: body text, titles. Avoid: Words on the accent: use text.on-accent.
+                public let primary: Value
+
+                /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
+                public func map<T: Sendable>(_ transform: (Value) -> T) -> Text<T> {
+                    Text<T>(primary: transform(primary))
+                }
+            }
+
+            /// The colors `color.background.*`, one member per token. The group is generic over its values, so that WestronUI
+            /// holds the same group as SwiftUI values.
+            public struct Background<Value: Sendable>: Sendable {
+                /// A fill brighter than sRGB can show.
+                public let vivid: Value
+
+                /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
+                public func map<T: Sendable>(_ transform: (Value) -> T) -> Background<T> {
+                    Background<T>(vivid: transform(vivid))
+                }
+            }
         }
 
         extension Westron {
@@ -298,6 +350,25 @@ struct AppleTokensTests {
 
                 /// The colors of the category, one per role, in token order.
                 public var colors: [Westron.Color] { [background, onFill] }
+
+                /// The colors of the category by role, which WestronUI's `Color.category(_:)` holds as SwiftUI colors.
+                public var roles: Roles<Westron.Color> {
+                    Roles(background: background, onFill: onFill)
+                }
+
+                /// A list color's colors by role, generic over the value so that WestronUI holds them as SwiftUI colors.
+                public struct Roles<Value: Sendable>: Sendable {
+                    /// The tile under a glyph: the list color, translucent.
+                    public let background: Value
+
+                    /// The mark on a fill.
+                    public let onFill: Value
+
+                    /// The roles with every value transformed, as WestronUI makes SwiftUI colors of them.
+                    public func map<T: Sendable>(_ transform: (Value) -> T) -> Roles<T> {
+                        Roles<T>(background: transform(background), onFill: transform(onFill))
+                    }
+                }
 
                 /// The tile under a glyph: the list color blue, translucent.
                 private static let blueBackground = Westron.Color(
@@ -334,16 +405,17 @@ struct AppleTokensTests {
         }
 
         extension Westron.TextRole {
-            /// The title of a screen.
-            public static let headingLarge = Westron.TextRole(
-                name: "typography.heading.large",
-                textStyle: .largeTitle,
-                design: .default,
-                weight: .bold,
-                font: "Onest-Bold",
-                size: 34,
-                lineHeight: 1.206,
-                letterSpacing: 0)
+            /// The text roles `typography.heading.*`.
+            public static let heading = Heading(
+                large: Westron.TextRole(
+                    name: "typography.heading.large",
+                    textStyle: .largeTitle,
+                    design: .default,
+                    weight: .bold,
+                    font: "Onest-Bold",
+                    size: 34,
+                    lineHeight: 1.206,
+                    letterSpacing: 0))
 
             /// Main text.
             public static let label = Westron.TextRole(
@@ -358,9 +430,21 @@ struct AppleTokensTests {
 
             /// Every text role in token order.
             public static let all: [Westron.TextRole] = [
-                headingLarge,
+                heading.large,
                 label,
             ]
+
+            /// The text roles `typography.heading.*`, one member per token. The group is generic over its values, so that
+            /// WestronUI holds the same group as SwiftUI values.
+            public struct Heading<Value: Sendable>: Sendable {
+                /// The title of a screen.
+                public let large: Value
+
+                /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
+                public func map<T: Sendable>(_ transform: (Value) -> T) -> Heading<T> {
+                    Heading<T>(large: transform(large))
+                }
+            }
         }
 
         extension Westron.Transition {
@@ -414,14 +498,27 @@ struct AppleTokensTests {
             /// The token `space.100`.
             public static let space100 = Westron.Dimension(name: "space.100", value: 8)
 
-            /// Rules and dividers.
-            public static let strokeThin = Westron.Dimension(name: "stroke.thin", value: 1)
+            /// The lengths `stroke.*`.
+            public static let stroke = Stroke(
+                thin: Westron.Dimension(name: "stroke.thin", value: 1))
 
             /// Every dimension in token order.
             public static let all: [Westron.Dimension] = [
                 space100,
-                strokeThin,
+                stroke.thin,
             ]
+
+            /// The lengths `stroke.*`, one member per token. The group is generic over its values, so that WestronUI holds the
+            /// same group as SwiftUI values.
+            public struct Stroke<Value: Sendable>: Sendable {
+                /// Rules and dividers.
+                public let thin: Value
+
+                /// The group with every value transformed, as WestronUI makes SwiftUI values of it.
+                public func map<T: Sendable>(_ transform: (Value) -> T) -> Stroke<T> {
+                    Stroke<T>(thin: transform(thin))
+                }
+            }
         }
 
         """#
@@ -431,68 +528,40 @@ struct AppleTokensTests {
         // (decisions/0010).
         //
         // The public SwiftUI accessors of westron's semantic tokens. Each calls an adapter in TokenAdapters.swift with a value
-        // from WestronTokens: `Color.textSecondary` is `Color(Westron.Color.textSecondary)`, the colorset of that name.
+        // from WestronTokens: `Color.text.secondary` is `Color(Westron.Color.text.secondary)`, the colorset of that name, and
+        // `Color.text` is WestronTokens' group `Westron.Color.text` with SwiftUI colors. Text roles have no statics on `Font`,
+        // where `Font.body` would become ambiguous: a role is `.textRole(.body.strong)` or `Font(.body.strong)`.
 
         import SwiftUI
         import WestronTokens
 
         extension Color {
-            /// Words and glyphs.
-            ///
-            /// Use for: body text, titles. Avoid: Words on the accent: use text.on-accent.
-            public static var textPrimary: Color {
-                Color(Westron.Color.textPrimary)
-            }
+            /// The colors `color.text.*` as SwiftUI colors, from their colorsets.
+            public static let text = Westron.Color.text.map { Color($0) }
 
-            /// A fill brighter than sRGB can show.
-            public static var backgroundVivid: Color {
-                Color(Westron.Color.backgroundVivid)
-            }
+            /// The colors `color.background.*` as SwiftUI colors, from their colorsets.
+            public static let background = Westron.Color.background.map { Color($0) }
 
-            /// The tile under a glyph: the list color, translucent.
-            public static func categoryBackground(_ category: Westron.Category) -> Color {
-                Color(category.background)
-            }
-
-            /// The mark on a fill.
-            public static func categoryOnFill(_ category: Westron.Category) -> Color {
-                Color(category.onFill)
+            /// A list's colors by role, as SwiftUI colors from their colorsets: `.category(.amber).text`.
+            public static func category(_ category: Westron.Category) -> Westron.Category.Roles<Color> {
+                category.roles.map { Color($0) }
             }
         }
 
         extension ShapeStyle where Self == Color {
-            /// Words and glyphs.
-            ///
-            /// Use for: body text, titles. Avoid: Words on the accent: use text.on-accent.
-            public static var textPrimary: Color {
-                Color(Westron.Color.textPrimary)
+            /// The colors `color.text.*` as SwiftUI colors, from their colorsets.
+            public static var text: Westron.Color.Text<Color> {
+                Color.text
             }
 
-            /// A fill brighter than sRGB can show.
-            public static var backgroundVivid: Color {
-                Color(Westron.Color.backgroundVivid)
+            /// The colors `color.background.*` as SwiftUI colors, from their colorsets.
+            public static var background: Westron.Color.Background<Color> {
+                Color.background
             }
 
-            /// The tile under a glyph: the list color, translucent.
-            public static func categoryBackground(_ category: Westron.Category) -> Color {
-                Color(category.background)
-            }
-
-            /// The mark on a fill.
-            public static func categoryOnFill(_ category: Westron.Category) -> Color {
-                Color(category.onFill)
-            }
-        }
-
-        extension Font {
-            /// The title of a screen.
-            public static var headingLarge: Font {
-                Font(Westron.TextRole.headingLarge)
-            }
-
-            /// Main text.
-            public static var label: Font {
-                Font(Westron.TextRole.label)
+            /// A list's colors by role, as SwiftUI colors from their colorsets: `.category(.amber).text`.
+            public static func category(_ category: Westron.Category) -> Westron.Category.Roles<Color> {
+                Color.category(category)
             }
         }
 
@@ -514,10 +583,8 @@ struct AppleTokensTests {
                 CGFloat(Westron.Dimension.space100)
             }
 
-            /// Rules and dividers.
-            public static var strokeThin: CGFloat {
-                CGFloat(Westron.Dimension.strokeThin)
-            }
+            /// The lengths `stroke.*` in points.
+            public static let stroke = Westron.Dimension.stroke.map { CGFloat($0) }
         }
 
         """#
