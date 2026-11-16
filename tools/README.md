@@ -29,7 +29,8 @@ contract's option `order` (#62). The tools build on Linux, where there is no SDK
 `Sources/WestronTools/Contracts/SwiftUITypes.swift`: the public top-level types of the SwiftUI and SwiftUICore module
 interfaces of the macOS, iOS and watchOS SDKs of the Xcode in `.xcode-version`. On macOS, `SwiftUITypesTests` reads
 those interfaces and fails while the file differs from them; it also checks that every style modifier in
-`SystemStyles.swift` exists. After `.xcode-version` changes, refresh the file from the repository root:
+`SystemStyles.swift` exists. CI runs it in the `apple` job, which runs the tools tests on macOS too. After
+`.xcode-version` changes, refresh the file from the repository root:
 
 ```sh
 source tools/apple/xcode-env.sh && WESTRON_REFRESH_SWIFTUI_TYPES=1 swift test --package-path tools --filter SwiftUITypesTests

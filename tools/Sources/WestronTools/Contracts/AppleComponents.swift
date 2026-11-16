@@ -135,34 +135,40 @@ public struct AppleComponents: Generator {
         return problems
     }
 
-    /// Components styled on one base control each add an overload of its style modifier, told apart by the variant,
-    /// the first argument: `.buttonStyle(.primary)` is ambiguous when two variants have a `primary`, and a call
-    /// without a variant when either has none or a default. So each of them needs a variant without a default, and no
-    /// two share a value.
+    /// Components styled on one base control each add an overload of its style modifier, which a call tells apart by
+    /// the variant, the first argument (probed with Xcode 27.1, #62):
+    ///
+    /// - a value two variants share is ambiguous: `.buttonStyle(.primary)`;
+    /// - a call without a variant fits every overload whose variant has a default, or that has no variant. With two
+    ///   such overloads it is ambiguous when both have a variant, and when one has none Swift silently picks that
+    ///   one, even for `.buttonStyle(size: .m)` meant for the other.
+    ///
+    /// So no two of them share a variant value, and at most one can be called without a variant. A required variant
+    /// next to one with a default is fine: `.buttonStyle(.primary)`, `.buttonStyle()` and `.buttonStyle(.plain)` all
+    /// resolve.
     static func ambiguities(_ apis: [API]) -> [ContractProblem] {
         var problems: [ContractProblem] = []
+        func variant(_ api: API) -> API.Enum? { api.enums.first { $0.option.name == "variant" } }
+        func withoutVariant(_ api: API) -> Bool { variant(api).map { $0.defaultValue != nil } ?? true }
         for (index, api) in apis.enumerated() {
             for earlier in apis[..<index] where earlier.modifier == api.modifier {
-                let variants = [earlier, api].map { item in item.enums.first { $0.option.name == "variant" } }
-                guard let theirs = variants[0], let ours = variants[1], theirs.defaultValue == nil,
-                    ours.defaultValue == nil
-                else {
+                let both =
+                    "\(api.component) and \(earlier.component) (\(earlier.source)) both add a .\(api.modifier) overload"
+                if withoutVariant(api), withoutVariant(earlier) {
                     problems.append(
                         ContractProblem(
                             source: api.source, path: .root.key("options"),
-                            "\(api.component) and \(earlier.component) (\(earlier.source)) both add a "
-                                + ".\(api.modifier) overload, which a call tells apart by the variant: each needs an "
-                                + "option variant without a default"))
-                    continue
+                            both + " that a call without a variant fits, so .\(api.modifier)() would be ambiguous "
+                                + "or silently take one of them: give one of them a variant without a default"))
                 }
+                guard let ours = variant(api), let theirs = variant(earlier) else { continue }
                 let shared = ours.values.filter(theirs.values.contains)
                 if !shared.isEmpty {
                     problems.append(
                         ContractProblem(
                             source: api.source, path: .root.key("options").key("variant"),
-                            "\(api.component) and \(earlier.component) (\(earlier.source)) both add a "
-                                + ".\(api.modifier) overload and share the variant \(shared.joined(separator: ", ")), "
-                                + "so .\(api.modifier)(.\(shared[0])) would be ambiguous; rename it in one of them"))
+                            both + " and share the variant \(shared.joined(separator: ", ")), so "
+                                + ".\(api.modifier)(.\(shared[0])) would be ambiguous; rename it in one of them"))
                 }
             }
         }

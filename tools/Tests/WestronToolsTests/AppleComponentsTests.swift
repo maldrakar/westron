@@ -403,12 +403,26 @@ struct AppleComponentsTests {
             })
         let distinct = chip.replacingOccurrences(of: "values: [primary, secondary]", with: "values: [filled, outlined]")
         #expect(try generate(["button": contractYAML(), "chip": distinct]).count == 2)
+        // A required variant next to one with a default: .buttonStyle() can only be the chip's (probed, Xcode 27.1).
         let defaulted = distinct.replacingOccurrences(of: "outlined],", with: "outlined], default: filled,")
-        #expect(
-            try #require(try generationProblems(["button": contractYAML(), "chip": defaulted])).map(\.message).contains
-            {
-                $0.contains("each needs an option variant without a default")
-            })
+        #expect(try generate(["button": contractYAML(), "chip": defaulted]).count == 2)
+        // Two overloads a call without a variant fits: two variants with a default, or one with a default and one
+        // component without a variant, where Swift would silently take the one without.
+        let tag = contractYAML(
+            id: "tag", options: "  variant: { type: enum, values: [solid, hollow], default: solid }", states: "[]",
+            apple: plainApple)
+        let badge = contractYAML(
+            id: "badge", options: "  tone: { type: enum, values: [calm, loud], default: calm }", states: "[]",
+            apple: plainApple)
+        for (id, other) in [("tag", tag), ("badge", badge)] {
+            let problems = try #require(try generationProblems(["chip": defaulted, id: other]))
+            #expect(
+                problems.map(\.message).contains {
+                    $0.contains(
+                        "that a call without a variant fits, so .buttonStyle() would be ambiguous or silently "
+                            + "take one of them")
+                }, "\(id): \(problems)")
+        }
     }
 
     @Test("westron's Button contract generates ButtonVariant and ButtonSize, and no ButtonRole")

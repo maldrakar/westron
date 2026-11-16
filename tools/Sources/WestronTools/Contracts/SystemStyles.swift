@@ -4,9 +4,11 @@
 ///
 /// A contract whose Apple strategy is `style-on-system-control` names its base here; a base without an entry is an
 /// error, so the check never passes silently for a control nobody has looked at, and the generator never writes a
-/// modifier the control does not have: `SwiftUI.Slider`, `SwiftUI.Stepper` and `SwiftUI.SecureField` have none, so
-/// a style cannot go on them (#62). Add a control with its modifier and its styles; on macOS, a test checks that the
-/// modifier exists in SwiftUI's interface (`SwiftUITypesTests`).
+/// modifier the control does not have: `SwiftUI.Slider` and `SwiftUI.Stepper` have none, so a style cannot go on
+/// them (#62). The modifier is not always named after the control: `SwiftUI.SecureField` has no `secureFieldStyle`
+/// and takes `textFieldStyle`, as `SwiftUI.TextField` does; neither is here until a contract needs it. Add a control
+/// with its modifier and its styles; on macOS, a test checks that the modifier exists in SwiftUI's interface
+/// (`SwiftUITypesTests`).
 public enum SystemStyles {
     public struct Base: Equatable, Sendable {
         /// The style modifier, `buttonStyle` for `SwiftUI.Button`: the generated overload has its name.

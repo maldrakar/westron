@@ -58,9 +58,10 @@ struct ContractRules {
     }
 
     /// An unquoted word that YAML 1.1 reads as a boolean, other than `true` and `false`, is a mistake wherever it
-    /// stands: as a boolean the contract writes `true` or `false`, and as a name it must be quoted. A mapping key that
-    /// YAML reads as a boolean or a number is quoted too: the document keeps it as written, another YAML reader does
-    /// not.
+    /// stands: as a boolean the contract writes `true` or `false`, and as a name it must be quoted. Other problems of
+    /// that value only restate it, so they are dropped. A mapping key that YAML reads as a boolean or a number is
+    /// quoted too: the document keeps it as written, another YAML reader does not. The value under such a key is
+    /// still checked as usual, and so is the key as a name.
     mutating func checkYAMLWords() {
         for scalar in implicit {
             if scalar.isKey {
@@ -69,6 +70,7 @@ struct ContractRules {
                     scalar.path,
                     "YAML reads the key \(scalar.text) as a \(scalar.kind == .bool ? "boolean" : "number"), "
                         + "not a name: quote it, \"\(scalar.text)\"")
+                continue
             } else if scalar.kind == .bool, scalar.text != "true", scalar.text != "false" {
                 let value = ["yes", "true", "on"].contains(scalar.text.lowercased()) ? "true" : "false"
                 report(
@@ -321,63 +323,103 @@ struct ContractRules {
         }
     }
 
-    /// A case binding: each case's `when` names options, values and states that exist, its token can be bound, and
-    /// every case is reachable: some combination of options and states matches it before any earlier case (cases
-    /// apply first match).
+    /// A case binding: each case's `when` names options, values and states that exist, its token can be bound, every
+    /// case is reachable (some combination of options and states matches it before any earlier case, since cases
+    /// apply first match), and so is the binding's `token`, which applies where no case matches.
     private mutating func checkCases(_ binding: JSON, at path: DocumentPath) {
         if let token = binding["token"]?.string { checkToken(token, at: path.key("token")) }
-        var cases: [(index: Int, when: [String: Set<String>])] = []
+        var domains = enumOptions
+        for option in boolOptions { domains[option] = ["false", "true"] }
+        var cases: [(index: Int, when: CaseReachability.Case)] = []
+        var complete = true
         for (index, item) in (binding["cases"]?.elements ?? []).enumerated() {
             let place = path.key("cases").index(index)
             if let token = item["token"]?.string { checkToken(token, at: place.key("token")) }
-            guard let conditions = item["when"]?.members else { continue }
+            guard let conditions = item["when"]?.members else {
+                complete = false
+                continue
+            }
             let before = problems.count
             checkConditions(conditions, at: place.key("when"), states: true)
-            // A case whose conditions are wrong is reported there; reachability ignores it.
-            if problems.count == before, conditions.allSatisfy({ !yamlWords.contains(place.key("when").key($0.key)) }) {
-                cases.append((index, Self.conditionSets(conditions)))
+            // A case whose conditions are wrong is reported there, or by the schema (an empty list, a value that is
+            // not text, an option without values); reachability leaves it out.
+            let when = place.key("when").segments
+            let misread = yamlWords.contains { Array($0.segments.prefix(when.count)) == when }
+            if problems.count == before, !misread, let when = Self.reachabilityCase(conditions, domains: domains) {
+                cases.append((index, when))
+            } else {
+                complete = false
             }
         }
-        var domains = enumOptions
-        for option in boolOptions { domains[option] = ["false", "true"] }
-        let reachability = CaseReachability(
-            cases: cases.map(\.when), domains: domains, states: states ?? [], stateKey: Self.stateKey)
-        guard let unreachable = reachability.unreachable() else {
+        let reachability = CaseReachability(cases: cases.map(\.when), domains: domains)
+        guard let result = reachability.check() else {
+            let count = reachability.combinations == .max ? "more than \(Int.max)" : "\(reachability.combinations)"
             report(
                 path.key("cases"),
-                "the cases name too many option values and states to check every combination "
-                    + "(\(reachability.combinations), at most \(CaseReachability.limit))")
+                "the cases name too many combinations of option values to check that each is used (\(count), at "
+                    + "most \(CaseReachability.limit))")
             return
         }
-        // A case that matches nothing at all has an empty list, which the schema reports.
-        for (position, covering) in unreachable where !covering.isEmpty {
-            let (index, when) = cases[position]
+        func names(_ covering: [Int]) -> String {
             let names = covering.map { "cases[\(cases[$0].index)]" }
+            return names.count == 1 ? names[0] : names.dropLast().joined(separator: ", ") + " and " + names.last!
+        }
+        for (position, covering) in result.unreachable where !covering.isEmpty {
+            let (index, when) = cases[position]
             let message: String
             if covering.count == 1 {
                 message =
                     cases[covering[0]].when == when
-                    ? "repeats the when of \(names[0]), so this case is never used"
-                    : "\(names[0]) matches everything this case matches, so it is never used: put the narrower "
-                        + "case first"
+                    ? "repeats the when of \(names(covering)), so this case is never used"
+                    : "\(names(covering)) matches everything this case matches, so it is never used: put the "
+                        + "narrower case first"
             } else {
                 message =
-                    "\(names.dropLast().joined(separator: ", ")) and \(names.last!) together match everything this "
-                    + "case matches, so it is never used: put it before them, or remove it"
+                    "\(names(covering)) together match everything this case matches, so it is never used: put it "
+                    + "before them, or remove it"
             }
             report(path.key("cases").index(index).key("when"), message)
         }
+        // Only when every case was checked: one left out could be the one that leaves room for the token.
+        if complete, binding["token"] != nil, let covering = result.coverAll, !covering.isEmpty {
+            report(
+                path.key("token"),
+                "\(names(covering)) \(covering.count == 1 ? "matches" : "together match") every combination, so this "
+                    + "token is never used: remove it")
+        }
     }
 
-    /// Conditions as sets of the values each key accepts; `true` and `false` as text.
-    private static func conditionSets(_ conditions: [JSON.Member]) -> [String: Set<String>] {
+    /// A case's conditions for the reachability check, or nil when one names no value or a value that is not text,
+    /// or an option with no values.
+    private static func reachabilityCase(_ conditions: [JSON.Member], domains: [String: [String]])
+        -> CaseReachability.Case?
+    {
+        var options: [String: Set<String>] = [:]
+        var states: Set<String>?
+        for (key, values) in conditionSets(conditions) {
+            guard let values, !values.isEmpty else { return nil }
+            if key == stateKey {
+                states = values
+            } else {
+                guard domains[key]?.isEmpty == false else { return nil }
+                options[key] = values
+            }
+        }
+        return CaseReachability.Case(options: options, states: states)
+    }
+
+    /// Conditions as sets of the values each key accepts, `true` and `false` as text; nil for a key with a value
+    /// that is neither text nor a boolean.
+    private static func conditionSets(_ conditions: [JSON.Member]) -> [String: Set<String>?] {
         func text(_ value: JSON) -> String? {
             if case .bool(let flag) = value { return flag ? "true" : "false" }
             return value.string
         }
-        var result: [String: Set<String>] = [:]
+        var result: [String: Set<String>?] = [:]
         for member in conditions {
-            result[member.key] = Set((member.value.elements ?? [member.value]).compactMap(text))
+            let values = member.value.elements ?? [member.value]
+            let texts = values.compactMap(text)
+            result[member.key] = texts.count == values.count ? Set(texts) : nil
         }
         return result
     }

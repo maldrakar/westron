@@ -61,16 +61,23 @@ public enum ContractCheck {
         for scalar in implicit where !scalar.isKey && scalar.kind != .null { scalars[scalar.path] = scalar }
         let schemaProblems = schema.validate(document).filter { !rules.yamlWords.contains($0.path) }.map {
             problem -> (path: DocumentPath, message: String) in
-            guard let scalar = scalars[problem.path] else { return problem }
+            guard let scalar = scalars[problem.path], Self.expectsText(problem.message) else { return problem }
             let kind = scalar.kind == .bool ? "a boolean" : "a number"
             return (
                 problem.path,
-                "YAML reads \(scalar.text) as \(kind), not text: quote it, \"\(scalar.text)\", where a name is meant"
+                "YAML reads \(scalar.text) as \(kind), but text is expected here: quote it, \"\(scalar.text)\""
             )
         }
         var seen: Set<String> = []
         return (schemaProblems + rules.problems)
             .map { ContractProblem(source: source, path: $0.path, $0.message) }
             .filter { seen.insert($0.description).inserted }
+    }
+
+    /// Whether a schema problem is a type mismatch where the schema accepts a string: swift-json-schema says
+    /// `Expected type '[string]' but found 'boolean'` (after `ContractSchema` shortens the type names).
+    static func expectsText(_ message: String) -> Bool {
+        guard message.hasPrefix("Expected type"), let found = message.range(of: " but found") else { return false }
+        return message[..<found.lowerBound].contains("string")
     }
 }

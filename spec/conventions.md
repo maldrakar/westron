@@ -129,11 +129,13 @@ enum ButtonState: String, CaseIterable, Sendable {
   give one type name, counting `<Component>State` and the hand-written `<Component>VariantStyle`, fail generation.
   `spec check` rejects the words Swift cannot use as a case, `init`, `self` and `none`, and as an argument label,
   `inout`, `var` and `let`; other keywords are declared in backticks.
-- **One base control, several components.** Each adds an overload of the same modifier, told apart by the variant:
-  generation fails unless each has a variant without a default and no two share a value, since
-  `.buttonStyle(.primary)` would be ambiguous. A base control with no style modifier (`SwiftUI.Slider`,
-  `SwiftUI.Stepper`, `SwiftUI.SecureField`) takes no style: `SystemStyles.swift` names each base's modifier, and a base
-  it lacks fails `spec check`.
+- **One base control, several components.** Each adds an overload of the same modifier, told apart by the variant.
+  Generation fails when two variants share a value, since `.buttonStyle(.primary)` would be ambiguous, and when two
+  of the overloads can be called without a variant (a variant with a default, or none): `.buttonStyle()` is then
+  ambiguous, or, when one has no variant, Swift silently takes that one, `.buttonStyle(size: .m)` included. A
+  required variant next to one with a default is fine. `SystemStyles.swift` names each base's modifier, and a base it
+  lacks fails `spec check`: `SwiftUI.Slider` and `SwiftUI.Stepper` have no style modifier, and `SwiftUI.SecureField`
+  takes `textFieldStyle`, not one named after it.
 - **`String` raw values** are the contract's values as written, so the catalog, the snapshot matrix (#24) and the
   parity lint (#21) can match a case to the contract.
 - **The variant is unlabeled, every other option is labeled.** `.buttonStyle(.primary, size: .m)` reads as SwiftUI's

@@ -106,8 +106,9 @@ style reads (the `controlSize` mapping, each OS's fallbacks, the states). Its ex
 
 Generation fails, with every problem, when a contract does not pass the check below; when a generated name is a
 public SwiftUI type; when two contracts generate one type name (`button`'s option `groupSize` and `button-group`'s
-`size` are both `ButtonGroupSize`); and when two contracts on one base control could make a call ambiguous: each then
-needs a variant without a default, and no two of them share a value.
+`size` are both `ButtonGroupSize`); and when two contracts on one base control could make a call ambiguous or pick
+the wrong overload: their variants share no value, and at most one of them can be called without a variant (its
+variant has a default, or it has none).
 
 ## Check
 
@@ -126,12 +127,13 @@ Besides the schema, the check enforces what a schema cannot:
   generated API (above);
 - no option value is the name of a system style of the Apple base control, such as `plain` for `SwiftUI.Button`
   (decisions/0003); a base the check has no style modifier and style names for is an error until they are added to
-  `tools/Sources/WestronTools/Contracts/SystemStyles.swift`, and a control with no style modifier (`SwiftUI.Slider`,
-  `Stepper`, `SecureField`) takes no style at all;
+  `tools/Sources/WestronTools/Contracts/SystemStyles.swift`; a control with no style modifier (`SwiftUI.Slider`,
+  `SwiftUI.Stepper`) takes no style, and `SwiftUI.SecureField` takes `textFieldStyle`, as `SwiftUI.TextField` does;
 - constraints and cases name options, values and states that exist, a bool option with `true` or `false`;
-- a binding by value uses the values of one enum option, every one of them; every case is reachable, checked by
-  enumerating the values and states the cases name (Button's widest binding has 96 combinations; past 4 194 304 the
-  check reports the binding instead);
+- a binding by value uses the values of one enum option, every one of them; every case is reachable, and so is a
+  binding's `token`, which the cases leave no room for when they match every combination. The check enumerates the
+  values of the options the cases name, not the states (Button's widest binding has 6 combinations); past 20 000 it
+  reports the binding instead;
 - every bound token exists in `tokens/` in every mode and is semantic, not primitive;
 - a platform's restrictions are subsets of the declared values and states, an Apple OS's of Apple's; a fallback
   maps dropped values to kept ones; on Apple every value reaches, through Apple's fallback and then the OS's, a value
