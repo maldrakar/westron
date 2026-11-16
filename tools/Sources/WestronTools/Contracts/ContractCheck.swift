@@ -47,15 +47,29 @@ public enum ContractCheck {
         -> [ContractProblem]
     {
         let document: JSON
+        let implicit: [ContractYAML.ImplicitScalar]
         do {
-            document = try ContractYAML.parse(yaml, source: source)
+            (document, implicit) = try ContractYAML.read(yaml, source: source)
         } catch {
             return [error]
         }
-        var rules = ContractRules(document: document, source: source, tokens: tokens)
+        var rules = ContractRules(document: document, source: source, tokens: tokens, implicit: implicit)
         rules.run()
+        // Where the schema wanted text and YAML read an unquoted true, false or number, say so instead of naming
+        // the type; where the rules report a YAML word, the schema's problem only restates it.
+        var scalars: [DocumentPath: ContractYAML.ImplicitScalar] = [:]
+        for scalar in implicit where !scalar.isKey && scalar.kind != .null { scalars[scalar.path] = scalar }
+        let schemaProblems = schema.validate(document).filter { !rules.yamlWords.contains($0.path) }.map {
+            problem -> (path: DocumentPath, message: String) in
+            guard let scalar = scalars[problem.path] else { return problem }
+            let kind = scalar.kind == .bool ? "a boolean" : "a number"
+            return (
+                problem.path,
+                "YAML reads \(scalar.text) as \(kind), not text: quote it, \"\(scalar.text)\", where a name is meant"
+            )
+        }
         var seen: Set<String> = []
-        return (schema.validate(document) + rules.problems)
+        return (schemaProblems + rules.problems)
             .map { ContractProblem(source: source, path: $0.path, $0.message) }
             .filter { seen.insert($0.description).inserted }
     }

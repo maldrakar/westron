@@ -4,12 +4,19 @@ struct ContractRules {
     let document: JSON
     let source: String
     let tokens: ContractTokens
+    /// The unquoted scalars YAML did not read as text, from `ContractYAML.read`.
+    let implicit: [ContractYAML.ImplicitScalar]
     private(set) var problems: [(path: DocumentPath, message: String)] = []
+    /// The places where an unquoted YAML word is reported: other problems there only restate it.
+    private(set) var yamlWords: Set<DocumentPath> = []
 
-    init(document: JSON, source: String, tokens: ContractTokens) {
+    init(
+        document: JSON, source: String, tokens: ContractTokens, implicit: [ContractYAML.ImplicitScalar] = []
+    ) {
         self.document = document
         self.source = source
         self.tokens = tokens
+        self.implicit = implicit
     }
 
     /// The enum options, by name, with their values.
@@ -29,20 +36,86 @@ struct ContractRules {
         document["states"]?.elements?.compactMap(\.string)
     }
 
+    /// Records a problem, unless an unquoted YAML word is reported at the same place: the problem only restates it.
     private mutating func report(_ path: DocumentPath, _ message: String) {
+        guard !yamlWords.contains(path) else { return }
         problems.append((path, message))
     }
 
     mutating func run() {
+        checkYAMLWords()
         checkFileName()
         checkRepeats()
         checkOptions()
+        checkSwiftNames()
         checkSystemStyles()
         checkConstraints()
         checkTokens()
         checkPlatforms()
+        checkAppleFallbacks()
         checkSystemOptions()
         checkAccessibility()
+    }
+
+    /// An unquoted word that YAML 1.1 reads as a boolean, other than `true` and `false`, is a mistake wherever it
+    /// stands: as a boolean the contract writes `true` or `false`, and as a name it must be quoted. A mapping key that
+    /// YAML reads as a boolean or a number is quoted too: the document keeps it as written, another YAML reader does
+    /// not.
+    mutating func checkYAMLWords() {
+        for scalar in implicit {
+            if scalar.isKey {
+                guard scalar.kind != .null else { continue }
+                report(
+                    scalar.path,
+                    "YAML reads the key \(scalar.text) as a \(scalar.kind == .bool ? "boolean" : "number"), "
+                        + "not a name: quote it, \"\(scalar.text)\"")
+            } else if scalar.kind == .bool, scalar.text != "true", scalar.text != "false" {
+                let value = ["yes", "true", "on"].contains(scalar.text.lowercased()) ? "true" : "false"
+                report(
+                    scalar.path,
+                    "YAML 1.1 reads \(scalar.text) as the boolean \(value): write a boolean as true or false, and "
+                        + "quote a name, \"\(scalar.text)\"")
+            } else {
+                continue
+            }
+            yamlWords.insert(scalar.path)
+        }
+    }
+
+    /// Words that cannot be a case of a generated Swift enum (an option's value, a state), each with the reason; a
+    /// Swift keyword is fine, since it is declared in backticks. Probed with Xcode 27.1 (#62).
+    static let unusableCases: [String: String] = [
+        "init": "Swift reads .init as the enum's initializer, so the generated code does not compile",
+        "self": "Swift reads <Type>.self as the type itself, so a qualified reference never names the case",
+        "none": "where an optional is expected, such as the size: argument, Swift reads .none as nil, not the case",
+    ]
+
+    /// Words that cannot be an option's name, which becomes an argument label of the style overload: `inout` does not
+    /// compile there, and `var` and `let` compile only with a warning.
+    static let unusableLabels: Set<String> = ["inout", "var", "let"]
+
+    /// Option values, states and option names become Swift names on Apple, the pilot platform: none may be a word
+    /// Swift cannot use there.
+    mutating func checkSwiftNames() {
+        for member in document["options"]?.members ?? [] {
+            let path = DocumentPath.root.key("options").key(member.key)
+            if Self.unusableLabels.contains(member.key) {
+                report(
+                    path,
+                    "\(member.key) cannot name an option: in Swift it becomes an argument label of the style "
+                        + "overload, where \(member.key) is a keyword; choose another name")
+            }
+            guard member.value["type"] == .string("enum") else { continue }
+            for (index, element) in (member.value["values"]?.elements ?? []).enumerated() {
+                guard let value = element.string, let reason = Self.unusableCases[value] else { continue }
+                report(
+                    path.key("values").index(index), "\"\(value)\" cannot be a value: \(reason); choose another name")
+            }
+        }
+        for (index, element) in (document["states"]?.elements ?? []).enumerated() {
+            guard let state = element.string, let reason = Self.unusableCases[state] else { continue }
+            report(.root.key("states").index(index), "\"\(state)\" cannot be a state: \(reason); choose another name")
+        }
     }
 
     /// The key of a case's `when` that names states; no option may take it.
@@ -125,11 +198,13 @@ struct ContractRules {
         guard value(at: apple.key("strategy")) == .string("style-on-system-control"),
             let base = value(at: apple.key("base"))?.string
         else { return }
-        guard let styles = SystemStyles.byBase[base] else {
+        guard let styles = SystemStyles.byBase[base]?.styles else {
             report(
                 apple.key("base"),
-                "the validator does not know the system styles of \(base): add their names to SystemStyles.byBase "
-                    + "(tools/Sources/WestronTools/Contracts/SystemStyles.swift, decisions/0003)")
+                "the validator does not know the system styles of \(base): add its style modifier and their names "
+                    + "to SystemStyles.byBase (tools/Sources/WestronTools/Contracts/SystemStyles.swift, "
+                    + "decisions/0003); a control with no style modifier, such as SwiftUI.Slider, takes no style, so "
+                    + "its component is an own-component")
             return
         }
         for member in document["options"]?.members ?? [] where member.value["type"] == .string("enum") {
@@ -219,7 +294,16 @@ struct ContractRules {
                         path,
                         "the keys are values of several options (\(owners.joined(separator: ", "))): "
                             + "rename the values so that a binding names one option")
-                } else if owners.isEmpty {
+                } else if let owner = owners.first {
+                    let missing = enums[owner]!.filter { !keys.contains($0) }
+                    if !missing.isEmpty {
+                        report(
+                            path,
+                            "no token for \(missing.joined(separator: ", ")): a binding by value gives every value of "
+                                + "\(owner) a token (\(enums[owner]!.joined(separator: ", "))); a binding that leaves "
+                                + "values without one is written as cases, with token: null")
+                    }
+                } else {
                     let known = byValue.filter { key in enums.values.contains { $0.contains(key.key) } }
                     if known.count == byValue.count {
                         report(path, "the keys must all be values of one enum option")
@@ -238,25 +322,50 @@ struct ContractRules {
     }
 
     /// A case binding: each case's `when` names options, values and states that exist, its token can be bound, and
-    /// no case is shadowed by an earlier one, which would match everything it matches (cases apply first match).
+    /// every case is reachable: some combination of options and states matches it before any earlier case (cases
+    /// apply first match).
     private mutating func checkCases(_ binding: JSON, at path: DocumentPath) {
         if let token = binding["token"]?.string { checkToken(token, at: path.key("token")) }
-        var earlier: [(index: Int, when: [String: Set<String>])] = []
+        var cases: [(index: Int, when: [String: Set<String>])] = []
         for (index, item) in (binding["cases"]?.elements ?? []).enumerated() {
             let place = path.key("cases").index(index)
             if let token = item["token"]?.string { checkToken(token, at: place.key("token")) }
             guard let conditions = item["when"]?.members else { continue }
+            let before = problems.count
             checkConditions(conditions, at: place.key("when"), states: true)
-            let when = Self.conditionSets(conditions)
-            if let shadow = earlier.first(where: { Self.covers($0.when, when) }) {
-                report(
-                    place.key("when"),
-                    shadow.when == when
-                        ? "repeats the when of cases[\(shadow.index)], so this case is never used"
-                        : "cases[\(shadow.index)] matches everything this case matches, so it is never used: "
-                            + "put the narrower case first")
+            // A case whose conditions are wrong is reported there; reachability ignores it.
+            if problems.count == before, conditions.allSatisfy({ !yamlWords.contains(place.key("when").key($0.key)) }) {
+                cases.append((index, Self.conditionSets(conditions)))
             }
-            earlier.append((index, when))
+        }
+        var domains = enumOptions
+        for option in boolOptions { domains[option] = ["false", "true"] }
+        let reachability = CaseReachability(
+            cases: cases.map(\.when), domains: domains, states: states ?? [], stateKey: Self.stateKey)
+        guard let unreachable = reachability.unreachable() else {
+            report(
+                path.key("cases"),
+                "the cases name too many option values and states to check every combination "
+                    + "(\(reachability.combinations), at most \(CaseReachability.limit))")
+            return
+        }
+        // A case that matches nothing at all has an empty list, which the schema reports.
+        for (position, covering) in unreachable where !covering.isEmpty {
+            let (index, when) = cases[position]
+            let names = covering.map { "cases[\(cases[$0].index)]" }
+            let message: String
+            if covering.count == 1 {
+                message =
+                    cases[covering[0]].when == when
+                    ? "repeats the when of \(names[0]), so this case is never used"
+                    : "\(names[0]) matches everything this case matches, so it is never used: put the narrower "
+                        + "case first"
+            } else {
+                message =
+                    "\(names.dropLast().joined(separator: ", ")) and \(names.last!) together match everything this "
+                    + "case matches, so it is never used: put it before them, or remove it"
+            }
+            report(path.key("cases").index(index).key("when"), message)
         }
     }
 
@@ -273,17 +382,13 @@ struct ContractRules {
         return result
     }
 
-    /// Whether every combination `narrow` matches is also matched by `wide`.
-    private static func covers(_ wide: [String: Set<String>], _ narrow: [String: Set<String>]) -> Bool {
-        wide.allSatisfy { key, values in narrow[key].map { $0.isSubset(of: values) } ?? false }
-    }
-
     private mutating func checkToken(_ token: String, at path: DocumentPath) {
         if let problem = tokens.problem(TokenPath(token)) { report(path, problem) }
     }
 
     /// Each restriction of a platform offers a subset of an enum option's values and enters a subset of the states;
-    /// an Apple OS's restriction is a subset of Apple's.
+    /// an Apple OS's restriction is a subset of Apple's. An option the platform gives to its system's own API is not
+    /// restricted there: its values are the system's.
     mutating func checkPlatforms() {
         let enums = enumOptions
         let declaredStates = states
@@ -291,9 +396,20 @@ struct ContractRules {
         for (platform, path) in restrictions {
             // platforms.apple.watchos
             let isAppleOS = path.segments.count == 3
+            let owner = isAppleOS ? apple : path
+            let systemOptions = value(at: owner.key("systemOptions"))?.members ?? []
             for member in platform["options"]?.members ?? [] {
                 let option = member.key
                 let place = path.key("options").key(option)
+                if let api = systemOptions.first(where: { $0.key == option })?.value.string {
+                    report(
+                        place,
+                        "\(option) is a system option here (\(owner.key("systemOptions").key(option)): \(api)), so "
+                            + "its values are the system's: the generator makes no type for it, and a restriction or "
+                            + "a fallback would be dropped; remove them, or say in the description what the system "
+                            + "does")
+                    continue
+                }
                 guard let declared = enums[option] else {
                     report(
                         place,
@@ -332,12 +448,11 @@ struct ContractRules {
         }
     }
 
-    /// A fallback names an option this place restricts and maps the values it drops to values it keeps. On Apple,
-    /// whose OSes share one generated enum, every dropped value has one.
+    /// A fallback names an option this place restricts and maps the values it drops to values it keeps. That Apple
+    /// gives every dropped value one is `checkAppleFallbacks`.
     private mutating func checkFallbacks(_ platform: JSON, at path: DocumentPath, isAppleOS: Bool) {
         let enums = enumOptions
         let apple = DocumentPath.root.key("platforms").key("apple")
-        let onApple = path.segments.count >= 2 && path.segments[1] == .key("apple")
         let fallbacks = platform["fallback"]?.members ?? []
         // The values each restricted option keeps here and drops here, from what reaches this place.
         var restricted: [String: (kept: [String], dropped: [String])] = [:]
@@ -377,20 +492,70 @@ struct ContractRules {
                 continue
             }
         }
-        guard onApple else { return }
-        for (option, values) in restricted.sorted(by: { $0.key < $1.key }) where !values.dropped.isEmpty {
-            let fallback = fallbacks.first { $0.key == option }?.value
-            let missing: [String]
-            switch fallback {
-            case .string?: missing = []
-            case .object(let map)?: missing = values.dropped.filter { value in !map.contains { $0.key == value } }
-            default: missing = values.dropped
+    }
+
+    /// On Apple, whose OSes share one generated enum, every declared value of an enum option resolves on every OS to
+    /// a value that OS offers. The chain is the generator's (`AppleComponents.API.drawn`): Apple's fallback where all
+    /// of Apple drops the value, then the OS's fallback where the OS drops what Apple's leaves. So every value Apple
+    /// drops has a fallback on Apple, to a value Apple keeps (`checkFallbacks`), and every value Apple keeps, or
+    /// reaches through its fallback, that an OS drops has a fallback on that OS, to a value the OS keeps.
+    mutating func checkAppleFallbacks() {
+        let apple = DocumentPath.root.key("platforms").key("apple")
+        guard let entry = value(at: apple), entry.members != nil else { return }
+        let systemOptions = Set((entry["systemOptions"]?.members ?? []).map(\.key))
+        let enums = enumOptions
+        func fallback(_ place: JSON, _ option: String, _ value: String) -> String? {
+            switch place["fallback"]?[option] {
+            case .string(let target)?: return target
+            case .object(let map)?: return map.first { $0.key == value }?.value.string
+            default: return nil
             }
-            if !missing.isEmpty {
+        }
+        func message(_ option: String, _ missing: [String]) -> String {
+            "on Apple every dropped value needs a fallback, since the OSes share one generated enum: add "
+                + "fallback.\(option) for \(missing.joined(separator: ", "))"
+        }
+        for member in document["options"]?.members ?? [] where !systemOptions.contains(member.key) {
+            guard let declared = enums[member.key] else { continue }
+            let option = member.key
+            let appleKept = entry["options"]?[option]?.elements?.compactMap(\.string) ?? declared
+            // By declared value, the value all of Apple draws for it.
+            var drawn: [String: String] = [:]
+            var missing: [String] = []
+            for value in declared {
+                if appleKept.contains(value) {
+                    drawn[value] = value
+                } else if let target = fallback(entry, option, value) {
+                    drawn[value] = target
+                } else {
+                    missing.append(value)
+                }
+            }
+            if !missing.isEmpty { report(apple.key("options").key(option), message(option, missing)) }
+            for os in ComponentContract.appleOSes {
+                guard let target = entry[os], let osKept = target["options"]?[option]?.elements?.compactMap(\.string)
+                else { continue }
+                var osMissing: [String] = []
+                // By value the OS lacks a fallback for, the declared values Apple's fallback turns into it.
+                var through: [String: [String]] = [:]
+                for value in declared {
+                    // A value Apple's fallback sends where Apple does not keep is reported there.
+                    guard let reached = drawn[value], appleKept.contains(reached), !osKept.contains(reached),
+                        fallback(target, option, reached) == nil
+                    else { continue }
+                    if !osMissing.contains(reached) { osMissing.append(reached) }
+                    if reached != value { through[reached, default: []].append(value) }
+                }
+                guard !osMissing.isEmpty else { continue }
+                let chains = osMissing.compactMap { reached in
+                    through[reached].map { "\($0.joined(separator: ", ")) → \(reached)" }
+                }
                 report(
-                    path.key("options").key(option),
-                    "on Apple every dropped value needs a fallback, since the OSes share one generated enum: "
-                        + "add fallback.\(option) for \(missing.joined(separator: ", "))")
+                    apple.key(os).key("options").key(option),
+                    message(option, osMissing)
+                        + (chains.isEmpty
+                            ? ""
+                            : " (Apple's fallback comes first: \(chains.joined(separator: "; ")), then this OS's)"))
             }
         }
     }

@@ -390,9 +390,35 @@ struct ContractCheckTests {
                 "tokens.container.radius: color.cobalt.9 is a primitive token; bind a semantic one (tokens/README.md)"
             ])
         #expect(
-            byValue("s: radius.control, m: color.background.nothing") == [
+            byValue("s: radius.control, m: color.background.nothing, l: radius.control") == [
                 "tokens.container.radius.m: no token color.background.nothing in tokens/"
             ])
+    }
+
+    @Test("rule: a binding by value gives every value of its option a token; a partial binding is written as cases")
+    func partialBinding() {
+        let radius = "  container.radius: radius.control"
+        #expect(
+            contractProblems(replacing(radius, with: "  container.radius: { s: radius.control, m: radius.control }"))
+                == [
+                    "tokens.container.radius: no token for l: a binding by value gives every value of size a token "
+                        + "(s, m, l); a binding that leaves values without one is written as cases, with token: null"
+                ])
+        #expect(
+            has(
+                contractProblems(replacing(radius, with: "  container.radius: { m: radius.control }")),
+                "tokens.container.radius", "no token for s, l"))
+        // The same binding as cases, with no value for l, is valid.
+        #expect(
+            contractProblems(
+                replacing(
+                    radius,
+                    with: """
+                          container.radius:
+                            token: radius.control
+                            cases:
+                              - { when: { size: l }, token: null }
+                        """)) == [])
     }
 
     @Test("rule: a binding by value names one option; values shared by two options are ambiguous")
@@ -487,6 +513,132 @@ struct ContractCheckTests {
                     """)) == [])
     }
 
+    @Test("rule: a case that earlier cases cover together is never used, and the check names them")
+    func caseReachability() {
+        func problems(_ cases: String) -> [String] {
+            contractProblems(backgroundCases("    cases:\n" + cases))
+        }
+        // An earlier case that lists every value of an option matches everything for it.
+        #expect(
+            problems(
+                """
+                      - { when: { variant: [primary, secondary, tertiary] }, token: radius.control }
+                      - { when: { role: destructive }, token: radius.control }
+
+                """) == [
+                    "tokens.container.background.cases[1].when: cases[0] matches everything this case matches, so it "
+                        + "is never used: put the narrower case first"
+                ])
+        // Two earlier cases together: hover, then pressed, cover hover or pressed.
+        #expect(
+            problems(
+                """
+                      - { when: { state: hover }, token: radius.control }
+                      - { when: { state: pressed }, token: radius.control }
+                      - { when: { state: [hover, pressed] }, token: radius.control }
+
+                """) == [
+                    "tokens.container.background.cases[2].when: cases[0] and cases[1] together match everything this "
+                        + "case matches, so it is never used: put it before them, or remove it"
+                ])
+        // true and false of a bool option together match everything; the check names every case that takes a
+        // combination this one matches.
+        #expect(
+            problems(
+                """
+                      - { when: { iconOnly: true }, token: radius.control }
+                      - { when: { variant: primary }, token: radius.control }
+                      - { when: { iconOnly: false }, token: radius.control }
+                      - { when: { role: destructive }, token: radius.control }
+
+                """) == [
+                    "tokens.container.background.cases[3].when: cases[0], cases[1] and cases[2] together match "
+                        + "everything this case matches, so it is never used: put it before them, or remove it"
+                ])
+        // Three cases over two options: primary, the rest by role, then any destructive is covered.
+        #expect(
+            has(
+                problems(
+                    """
+                          - { when: { variant: primary }, token: radius.control }
+                          - { when: { variant: [secondary, tertiary], role: default }, token: radius.control }
+                          - { when: { variant: [secondary, tertiary], role: destructive }, token: radius.control }
+                          - { when: { role: destructive, iconOnly: true }, token: radius.control }
+
+                    """), "tokens.container.background.cases[3].when", "cases[0] and cases[2] together"))
+    }
+
+    @Test("rule: a component can be in several states at once, or in none, and a case without state matches every set")
+    func caseStates() {
+        func problems(_ cases: String) -> [String] {
+            contractProblems(backgroundCases("    cases:\n" + cases))
+        }
+        // hover alone does not cover hover or pressed: pressed alone still reaches the second case.
+        #expect(
+            problems(
+                """
+                      - { when: { state: hover }, token: radius.control }
+                      - { when: { state: [hover, pressed] }, token: radius.control }
+
+                """) == [])
+        // hover or pressed covers hover, in any set of states.
+        #expect(
+            problems(
+                """
+                      - { when: { state: [hover, pressed] }, token: radius.control }
+                      - { when: { state: hover }, token: radius.control }
+
+                """) == [
+                    "tokens.container.background.cases[1].when: cases[0] matches everything this case matches, so it "
+                        + "is never used: put the narrower case first"
+                ])
+        // Every state named still leaves the component in no state, so a case without state is reached.
+        #expect(
+            problems(
+                """
+                      - { when: { state: [hover, focus, pressed, disabled, loading] }, token: radius.control }
+                      - { when: { variant: primary }, token: radius.control }
+
+                """) == [])
+        // A state that excludes others goes first: a component in disabled and hover draws disabled, and hover alone
+        // still reaches the second case.
+        #expect(
+            problems(
+                """
+                      - { when: { state: disabled }, token: radius.control }
+                      - { when: { state: hover }, token: radius.control }
+                      - { when: { variant: primary }, token: radius.control }
+
+                """) == [])
+        // A case whose conditions are wrong is reported there and not counted as covering anything.
+        #expect(
+            problems(
+                """
+                      - { when: { state: selected }, token: radius.control }
+                      - { when: { state: hover }, token: radius.control }
+
+                """) == [
+                    "tokens.container.background.cases[0].when.state: \"selected\" is not one of the states: hover, "
+                        + "focus, pressed, disabled, loading"
+                ])
+    }
+
+    @Test("rule: cases that name too many values and states to enumerate are reported, not checked for hours")
+    func caseLimit() {
+        let names = (1...23).map { "s\($0)" }
+        let yaml = replacing(
+            "states: [hover, focus, pressed, disabled, loading]",
+            with: "states: [hover, focus, "
+                + "pressed, disabled, loading, \(names.joined(separator: ", "))]",
+            in: backgroundCases(
+                "    cases:\n      - { when: { state: [\(names.joined(separator: ", "))] }, token: radius.control }\n"))
+        #expect(
+            contractProblems(yaml) == [
+                "tokens.container.background.cases: the cases name too many option values and states to check every "
+                    + "combination (8388608, at most 4194304)"
+            ])
+    }
+
     @Test("rule: no option is named state, the key a case gives to states")
     func reservedStateName() {
         #expect(
@@ -567,6 +719,140 @@ struct ContractCheckTests {
             contractProblems(
                 replacing(linux, with: linux + "    options: { size: [m, l] }\n    fallback: { size: s }\n"))
                 == ["platforms.linux.fallback.size: \"s\" is not among the values kept here: m, l"])
+    }
+
+    @Test("rule: on Apple, Apple's fallback comes first, then the OS's, and every value reaches one the OS offers")
+    func fallbackChains() {
+        let apple = "    base: SwiftUI.Button\n"
+        let chained = replacing(apple, with: apple + "    options: { size: [m, l] }\n    fallback: { size: l }\n")
+        // s falls back to l on Apple, and l to m on watchOS: s draws m there.
+        #expect(contractProblems(chained) == [])
+        #expect(
+            contractProblems(replacing("fallback: { size: m }", with: "fallback: { size: { l: m } }", in: chained))
+                == [])
+        #expect(
+            contractProblems(replacing("      fallback: { size: m }\n", with: "", in: chained)) == [
+                "platforms.apple.watchos.options.size: on Apple every dropped value needs a fallback, since the OSes "
+                    + "share one generated enum: add fallback.size for l (Apple's fallback comes first: s → l, then "
+                    + "this OS's)"
+            ])
+        // The OS maps what Apple keeps; a value Apple already dropped is not the OS's to map.
+        #expect(
+            contractProblems(replacing("fallback: { size: m }", with: "fallback: { size: { s: m } }", in: chained)) == [
+                "platforms.apple.watchos.fallback.size.s: \"s\" is not a value dropped here; dropped: l",
+                "platforms.apple.watchos.options.size: on Apple every dropped value needs a fallback, since the OSes "
+                    + "share one generated enum: add fallback.size for l (Apple's fallback comes first: s → l, then "
+                    + "this OS's)",
+            ])
+    }
+
+    @Test(
+        "rule: an unquoted YAML 1.1 boolean word is reported by name, and true, false or a number where a name is meant"
+    )
+    func yamlWords() {
+        #expect(
+            contractProblems(
+                replacing("when: { iconOnly: true }", with: "when: { iconOnly: yes }", in: constrainedFixture))
+                == [
+                    "constraints[1].when.iconOnly: YAML 1.1 reads yes as the boolean true: write a boolean as true or "
+                        + "false, and quote a name, \"yes\""
+                ])
+        #expect(
+            contractProblems(backgroundCases("    cases:\n      - { when: { iconOnly: On }, token: radius.control }\n"))
+                == [
+                    "tokens.container.background.cases[0].when.iconOnly: YAML 1.1 reads On as the boolean true: write a "
+                        + "boolean as true or false, and quote a name, \"On\""
+                ])
+        #expect(
+            contractProblems(replacing("type: bool\n    default: false", with: "type: bool\n    default: off")) == [
+                "options.iconOnly.default: YAML 1.1 reads off as the boolean false: write a boolean as true or false, "
+                    + "and quote a name, \"off\""
+            ])
+        #expect(
+            contractProblems(replacing("values: [s, m, l]", with: "values: [s, m, on]")) == [
+                "options.size.values[2]: YAML 1.1 reads on as the boolean true: write a boolean as true or false, and "
+                    + "quote a name, \"on\""
+            ])
+        #expect(contractProblems(replacing("values: [s, m, l]", with: "values: [s, m, \"on\"]")) == [])
+        #expect(
+            contractProblems(replacing("values: [s, m, l]", with: "values: [s, m, true]")) == [
+                "options.size.values[2]: YAML reads true as a boolean, not text: quote it, \"true\", where a name is "
+                    + "meant"
+            ])
+        #expect(
+            contractProblems(replacing("values: [s, m, l]", with: "values: [s, m, 12]")) == [
+                "options.size.values[2]: YAML reads 12 as a number, not text: quote it, \"12\", where a name is meant"
+            ])
+        #expect(
+            contractProblems(replacing("slots: [label, icon]", with: "slots: [label, no]")) == [
+                "slots[1]: YAML 1.1 reads no as the boolean false: write a boolean as true or false, and quote a name, "
+                    + "\"no\""
+            ])
+        #expect(
+            contractProblems(
+                replacing(
+                    "  container.radius: radius.control",
+                    with:
+                        "  container.radius: { s: radius.control, m: radius.control, l: radius.control, off: radius.control }"
+                )) == [
+                    "tokens.container.radius.off: YAML reads the key off as a boolean, not a name: quote it, \"off\""
+                ])
+    }
+
+    @Test("rule: an option the platform gives to its system's API cannot be restricted there, on Apple or an Apple OS")
+    func restrictedSystemOption() {
+        let apple = "    base: SwiftUI.Button\n"
+        let system = replacing(apple, with: apple + "    systemOptions: { role: SwiftUI.ButtonRole }\n")
+        #expect(contractProblems(system) == [])
+        #expect(
+            contractProblems(
+                replacing(
+                    "options: { size: [m] }\n      fallback: { size: m }",
+                    with: "options: { size: [m], role: [default] }\n      fallback: { size: m, role: default }",
+                    in: system)) == [
+                    "platforms.apple.watchos.options.role: role is a system option here "
+                        + "(platforms.apple.systemOptions.role: SwiftUI.ButtonRole), so its values are the "
+                        + "system's: the generator makes no type for it, and a restriction or a fallback would be "
+                        + "dropped; remove them, or say in the description what the system does"
+                ])
+        #expect(
+            has(
+                contractProblems(
+                    replacing(
+                        "    systemOptions: { role: SwiftUI.ButtonRole }\n",
+                        with: "    systemOptions: { role: SwiftUI.ButtonRole }\n    options: { role: [default] }\n"
+                            + "    fallback: { role: default }\n", in: system)),
+                "platforms.apple.options.role", "role is a system option here"))
+    }
+
+    @Test("rule: no option value or state is a word Swift cannot use as a case, and no option an argument label")
+    func swiftNames() {
+        let variants = "[primary, secondary, tertiary]"
+        #expect(
+            contractProblems(replacing(variants, with: "[primary, secondary, tertiary, init]")) == [
+                "options.variant.values[3]: \"init\" cannot be a value: Swift reads .init as the enum's initializer, so "
+                    + "the generated code does not compile; choose another name"
+            ])
+        #expect(
+            has(
+                contractProblems(replacing(variants, with: "[primary, secondary, tertiary, self]")),
+                "options.variant.values[3]", "Swift reads <Type>.self as the type itself"))
+        #expect(
+            has(
+                contractProblems(replacing("values: [s, m, l]", with: "values: [s, m, l, none]")),
+                "options.size.values[3]", "Swift reads .none as nil"))
+        #expect(
+            has(
+                contractProblems(
+                    replacing("states: [hover, focus, pressed, disabled, loading]", with: "states: [hover, init]")),
+                "states[1]", "\"init\" cannot be a state"))
+        #expect(
+            contractProblems(replacing("  iconOnly:\n", with: "  inout:\n")) == [
+                "options.inout: inout cannot name an option: in Swift it becomes an argument label of the style "
+                    + "overload, where inout is a keyword; choose another name"
+            ])
+        // A keyword is declared in backticks, and some is not Optional's: both compile (probed with Xcode 27.1).
+        #expect(contractProblems(replacing(variants, with: "[primary, secondary, tertiary, some, in]")) == [])
     }
 
     @Test("rule: the states assistive technology announces are states of the contract")
