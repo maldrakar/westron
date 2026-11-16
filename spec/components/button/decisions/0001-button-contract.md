@@ -1,7 +1,7 @@
 # 0001. The Button contract
 
-Date: 2026-11-16. Status: draft for the owner's approval (#22). The owner's answers in the interview are decided; the
-bindings and rules in the last section are proposals.
+Date: 2026-11-16. Status: accepted. The owner answered the interview and, on 2026-11-16, approved the contract with
+every binding and rule proposed on top of the answers (#22).
 
 ## Context
 
@@ -83,9 +83,10 @@ The owner settled four open questions of `spec/conventions.md`, which now holds 
 3. A value a platform does not support keeps its enum case and falls back to the value the `platforms` block names.
 4. The variant is always written: `.buttonStyle(.secondary)`. There is no call without a variant.
 
-## Proposed, for the owner to confirm
+## Proposed and confirmed
 
-The decisions above leave these bindings and rules open. Each is a proposal, with its reason and its source.
+The answers above left these bindings and rules open. The agent proposed each one, with its reason and its source,
+and the owner confirmed P1–P15 as proposed on 2026-11-16, when approving the contract.
 
 | # | Proposal | Reason | Source |
 |---|---|---|---|
@@ -108,8 +109,9 @@ The decisions above leave these bindings and rules open. Each is a proposal, wit
 ## Consequences
 
 - The contract schema allows an enum option without a default, which every use must name; the variant is the first.
-- Some pairs this contract draws have no contrast declaration yet, so the contrast check does not prove them:
-  `color.text.accent` on `color.background.pressed`, and `color.status.danger.text` on `color.background.hover` and
-  `pressed`. They are declared in `tokens/` before the implementation (#23).
+- Three pairs this contract draws had no contrast declaration: `color.text.accent` on `color.background.pressed`,
+  and `color.status.danger.text` on `color.background.hover` and `pressed`. They are declared in `tokens/` now, and
+  `tools/westron tokens contrast` proves them in every theme: 260 pairs, none failed. The margins are thin on the
+  pressed fill, 4.52 for the accent text in light against a target of 4.5.
 - The schema has no machine-readable way to say that an option is the system's own API, as `role` is on Apple. The
   `platforms` block says it in prose until the generator (#20) needs a field.

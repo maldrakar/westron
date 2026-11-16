@@ -38,8 +38,9 @@ The reference is WCAG 2 ([WCAG 2.2](https://www.w3.org/TR/WCAG22/)). The kinds a
   that it is not for words.
 - **The targets hold by construction.** The palette generator solves each step of each ramp for its job's contrast
   in each theme, and it fails with the token and the theme when a target cannot be met (decisions/0012). The
-  contrast check then proves every declared pair: on 2026-11-16, `tools/westron tokens contrast` measured 257 pairs
-  in each of the four themes, and none failed.
+  contrast check then proves every declared pair: on 2026-11-16, `tools/westron tokens contrast` measured 260 pairs
+  in each of the four themes, and none failed, the three that the Button contract (#22) draws on the hover and
+  pressed fills among them.
 - **A stack is measured as it is seen.** A translucent color is composited over what is under it, in gamma-encoded
   sRGB, before its contrast is measured.
 

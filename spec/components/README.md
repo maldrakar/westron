@@ -9,7 +9,7 @@ Each component is a folder `spec/components/<id>/`:
 | `reference/` | Reference screenshots approved by the human |
 
 A new contract starts with the `/new-component` skill. The first contract is Button,
-[`button/button.spec.yaml`](button/button.spec.yaml), a draft for the owner's approval (#22).
+[`button/button.spec.yaml`](button/button.spec.yaml), approved by the owner on 2026-11-16 (#22).
 
 ## Format
 

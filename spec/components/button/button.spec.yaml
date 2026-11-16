@@ -1,7 +1,7 @@
-# westron's Button contract (#22). Draft for the owner's approval: decisions/0001-button-contract.md records the
-# owner's answers and lists every binding proposed on top of them.
+# westron's Button contract (#22), approved by the owner on 2026-11-16: decisions/0001-button-contract.md records the
+# owner's answers and the bindings the owner confirmed on top of them.
 id: button
-status: draft
+status: approved
 description: >-
   A push button that runs an action: westron's style on the platform's own button, with a label and a leading icon.
   Hover and pressed tint the container in motion.fade and motion.press, and a press also scales it down to 98 %,
