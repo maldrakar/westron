@@ -68,36 +68,66 @@ control, and westron adds one modifier.
 
 ### Generated enums, a generated signature, a hand-written style
 
-#20 generates, from the contract, the enums and the signature of the overload; the body of the style is written by
-hand (decisions/0001). The output looks like this; #20 decides its exact form:
+`tools/westron generate` (the `components-apple` generator, #20) generates, from every contract that is approved or
+later and whose Apple strategy is `style-on-system-control`, the enums and the signature of the overload, into
+`WestronUI/Generated/<Component>+Contract.swift`; the body of the style is written by hand (decisions/0001). For
+Button, without its doc comments:
 
 ```swift
-// Generated from spec/components/button/button.spec.yaml. Do not edit by hand.
 public enum ButtonVariant: String, CaseIterable, Sendable {
-    case primary, secondary, tertiary
+    case primary
+    case secondary
+    case tertiary
 }
 
 public enum ButtonSize: String, CaseIterable, Sendable {
-    case s, m, l
+    case s
+    case m
+    case l
 }
 
 extension View {
-    /// Without `size:`, the style takes the size from `controlSize`.
-    public func buttonStyle(
-        _ variant: ButtonVariant, size: ButtonSize? = nil, iconOnly: Bool = false
-    ) -> some View {
+    public func buttonStyle(_ variant: ButtonVariant, size: ButtonSize? = nil, iconOnly: Bool = false) -> some View {
         buttonStyle(ButtonVariantStyle(variant: variant, size: size, iconOnly: iconOnly))
     }
 }
+
+extension ButtonSize {
+    init(_ controlSize: ControlSize)  // mini, small → s; regular → the default, m; large, extraLarge → l
+    var offered: ButtonSize  // the size this OS draws: on watchOS every size draws m
+}
+
+extension ButtonVariant {
+    var offered: ButtonVariant  // every OS offers every variant: the value itself
+}
+
+enum ButtonState: String, CaseIterable, Sendable {
+    case hover, focus, pressed, disabled, loading  // one per line in the file
+    var isEntered: Bool  // whether this OS ever enters it: watchOS never enters hover
+}
 ```
 
+- **What the generator writes, and what it leaves.** The public API is the enums and the overload. The overload is
+  `<control>Style`, after the base control (`SwiftUI.Button` → `buttonStyle`), and applies the hand-written
+  `<Component>VariantStyle`, initialized with every generated option, labeled, in the contract's order. The rest is
+  internal tables the hand-written style reads instead of copying the contract: the `controlSize` mapping, `offered`
+  for every enum option (its restrictions and fallbacks on each Apple OS, as `#if os(…)`), and `<Component>State`
+  with `isEntered`. The hand-written style switches over these enums exhaustively, so a value renamed, added or
+  removed in the contract fails the build there until the style follows it (#20). A draft contract generates nothing,
+  so a contract in review never breaks the build, and an own component waits for Q2.
+- **An option that is the system's own API gets no type.** The Apple entry names it in `systemOptions`, with the
+  system type that carries it: Button's `role` is `systemOptions: { role: SwiftUI.ButtonRole }`, so no `ButtonRole`
+  is generated, which would shadow SwiftUI's, the overload takes no `role:`, and the style reads
+  `configuration.role`. A generated name that would shadow a SwiftUI type of the base control fails generation and
+  points at `systemOptions`.
 - **The names come from the contract.** The enum is `<Component><Option>` in UpperCamelCase. A case is the
   contract's value in lowerCamelCase. Renaming a value in the contract breaks the build (#20).
 - **`String` raw values** are the contract's values as written, so the catalog, the snapshot matrix (#24) and the
   parity lint (#21) can match a case to the contract.
 - **The variant is unlabeled, every other option is labeled.** `.buttonStyle(.primary, size: .m)` reads as SwiftUI's
   own `.buttonStyle(.bordered)` does, and the other options say what they are. A bool option is a labeled `Bool`
-  with the contract's default: `iconOnly: true`.
+  with the contract's default: `iconOnly: true`. The variant is the enum option named `variant`, the size the one
+  named `size`; an option without a default is a required argument, and one with a default takes it, except the size.
 - **The variant is always written.** There is no `.buttonStyle(size: .s)`: a call names its variant, so the code
   says which action is the primary one, and a reader never has to know a default. The contract gives a variant no
   default, and the schema allows an enum option without one.
@@ -116,7 +146,8 @@ takes its size from `@Environment(\.controlSize)` (`.claude/rules/apple.md`):
 | westron's size | `s` | `s` | `m` | `l` | `l` |
 
 - **Nothing set reads as `regular`.** SwiftUI cannot tell "not set" from "set to `regular`", so a contract's default
-  size is the one `regular` maps to: `m`.
+  size is the one `regular` maps to: `m`. The generator maps `regular` to the default, so a size option needs one,
+  and maps any other `ControlSize` whose westron size the contract does not declare to the default too.
 - **A size a platform drops falls back.** On a watch, where Button offers only `m`, the size from `controlSize` falls
   back as an explicit one does (below).
 

@@ -115,6 +115,7 @@ platforms:
   apple:
     strategy: style-on-system-control
     base: SwiftUI.Button
+    systemOptions: { role: SwiftUI.ButtonRole }
     description: >-
       role is SwiftUI's own ButtonRole, so no enum is generated for it, which would collide with SwiftUI's: a product
       writes Button(role: .destructive), and the style reads configuration.role; any other role draws as default.
