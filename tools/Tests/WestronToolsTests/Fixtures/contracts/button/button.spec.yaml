@@ -1,0 +1,54 @@
+# A test fixture, not westron's Button contract: that one is written after an interview with the human (#22).
+# It uses every part of the format once, so ContractCheckTests can break each part.
+id: button
+status: draft
+description: A push button that runs an action.
+consumers: [todo-app/list-screen, todo-app/lists-screen]
+
+options:
+  variant: { type: enum, values: [primary, secondary, tertiary, danger], default: secondary }
+  size: { type: enum, values: [s, m, l], default: m }
+  disabled: { type: bool, default: false }
+  loading: { type: bool, default: false, description: Shows progress instead of the label. }
+
+slots: [label, icon]
+states: [hover, focus, pressed, disabled, loading]
+
+constraints:
+  - when: { variant: tertiary }
+    require: { size: [s, m] }
+    severity: error
+  - when: { loading: true }
+    require: { disabled: false }
+    severity: warning
+    description: A loading button stays enabled, so it keeps focus.
+
+tokens:
+  container.background:
+    primary: color.background.accent
+    secondary: color.background.muted
+    danger: color.status.danger.fill
+  container.radius: radius.control
+  label.font: typography.body.strong
+
+accessibility:
+  role: button
+  intents: [activate]
+  keyboardIntents: [activate]
+
+platforms:
+  apple:
+    strategy: style-on-system-control
+    base: SwiftUI.Button
+    watchos:
+      options: { size: [m] }
+      states: [pressed, disabled, loading]
+      description: watchOS has no pointer or keyboard focus and one button size.
+  web:
+    strategy: style-on-system-control
+    base: button
+  linux:
+    strategy: style-on-system-control
+    base: GtkButton
+  android:
+    status: planned
