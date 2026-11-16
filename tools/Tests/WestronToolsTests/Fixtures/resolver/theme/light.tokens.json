@@ -1,0 +1,26 @@
+{
+  "color": {
+    "$type": "color",
+    "background": {
+      "canvas": { "$value": "{palette.white}", "$description": "The ground of a screen." },
+      "hover": {
+        "$value": { "colorSpace": "srgb", "components": [0, 0, 0], "alpha": 0.05 },
+        "$description": "Laid over a row under the pointer."
+      }
+    },
+    "text": {
+      "primary": {
+        "$value": "{palette.black}",
+        "$description": "Main text.",
+        "$extensions": {
+          "dev.westron.usage": { "use": ["body text"], "avoid": "Text on the accent: use text.on-accent." },
+          "dev.westron.contrast": [
+            { "kind": "text", "on": ["color.background.canvas", ["color.background.hover", "color.background.canvas"]] }
+          ],
+          "org.example.tool": { "kept": true }
+        }
+      }
+    },
+    "accent": { "$value": "{palette.blue}" }
+  }
+}

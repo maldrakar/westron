@@ -1,0 +1,40 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/resolver.json",
+  "name": "test",
+  "version": "2025.10",
+  "description": "A small resolver in the shape of westron's: a base set and three modifiers that never set the same token.",
+  "sets": {
+    "base": {
+      "sources": [{ "$ref": "base/palette.tokens.json" }, { "$ref": "base/space.tokens.json" }]
+    }
+  },
+  "modifiers": {
+    "theme": {
+      "contexts": {
+        "light": [{ "$ref": "theme/light.tokens.json" }],
+        "light-hc": [{ "$ref": "theme/light.tokens.json" }, { "$ref": "theme/light-hc.tokens.json" }],
+        "dark": [{ "$ref": "./theme/dark.tokens.json" }]
+      },
+      "default": "light"
+    },
+    "density": {
+      "contexts": {
+        "regular": [],
+        "compact": [{ "$ref": "density/compact.tokens.json" }]
+      },
+      "default": "regular"
+    },
+    "platform": {
+      "contexts": {
+        "ios": [],
+        "macos": [{ "$ref": "platform/macos.tokens.json" }]
+      }
+    }
+  },
+  "resolutionOrder": [
+    { "$ref": "#/sets/base" },
+    { "$ref": "#/modifiers/theme" },
+    { "$ref": "#/modifiers/density" },
+    { "$ref": "#/modifiers/platform" }
+  ]
+}

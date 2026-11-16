@@ -1,0 +1,16 @@
+{
+  "color": {
+    "$type": "color",
+    "$description": "Semantic colors, light theme",
+    "background": {
+      "$value": "{palette.white}",
+      "$description": "The window background",
+      "$extensions": { "dev.westron.usage": { "use": ["window background"], "avoid": "Cards: use a surface." } }
+    },
+    "text": { "$value": "{palette.black}" }
+  },
+  "inset": {
+    "$type": "dimension",
+    "card": { "$value": "{space.m}" }
+  }
+}

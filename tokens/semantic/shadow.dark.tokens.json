@@ -1,0 +1,24 @@
+{
+  "shadow": {
+    "$type": "shadow",
+    "$description": "The shadows of the dark themes. A raised surface casts none, its layer is transparent: it is lighter than the canvas, and a shadow does not show on a dark ground. Overlays and drags are three times as opaque as in light. The high-contrast themes keep these and outline every raised surface (decisions/0013).",
+    "raised": {
+      "$value": [{"color": {"colorSpace": "oklch", "components": [0, 0, "none"], "alpha": 0, "hex": "#000000"}, "offsetX": {"value": 0, "unit": "px"}, "offsetY": {"value": 0, "unit": "px"}, "blur": {"value": 0, "unit": "px"}, "spread": {"value": 0, "unit": "px"}}],
+      "$description": "A card or a panel raised off the canvas."
+    },
+    "overlay": {
+      "$value": [
+        {"color": {"colorSpace": "oklch", "components": [0, 0, "none"], "alpha": 0.24, "hex": "#000000"}, "offsetX": {"value": 0, "unit": "px"}, "offsetY": {"value": 4, "unit": "px"}, "blur": {"value": 12, "unit": "px"}, "spread": {"value": 0, "unit": "px"}},
+        {"color": {"colorSpace": "oklch", "components": [0, 0, "none"], "alpha": 0.36, "hex": "#000000"}, "offsetX": {"value": 0, "unit": "px"}, "offsetY": {"value": 12, "unit": "px"}, "blur": {"value": 32, "unit": "px"}, "spread": {"value": 0, "unit": "px"}}
+      ],
+      "$description": "A popover, a menu or a floating button westron draws over the content."
+    },
+    "dragged": {
+      "$value": [
+        {"color": {"colorSpace": "oklch", "components": [0, 0, "none"], "alpha": 0.3, "hex": "#000000"}, "offsetX": {"value": 0, "unit": "px"}, "offsetY": {"value": 8, "unit": "px"}, "blur": {"value": 16, "unit": "px"}, "spread": {"value": 0, "unit": "px"}},
+        {"color": {"colorSpace": "oklch", "components": [0, 0, "none"], "alpha": 0.48, "hex": "#000000"}, "offsetX": {"value": 0, "unit": "px"}, "offsetY": {"value": 16, "unit": "px"}, "blur": {"value": 40, "unit": "px"}, "spread": {"value": 0, "unit": "px"}}
+      ],
+      "$description": "Something a drag carries."
+    }
+  }
+}

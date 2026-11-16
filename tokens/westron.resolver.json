@@ -1,0 +1,69 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/resolver.json",
+  "name": "westron",
+  "version": "2025.10",
+  "description": "The westron tokens: primitives, the semantic roles that do not depend on a mode, and three modifiers that never set the same token (decisions/0010).",
+  "sets": {
+    "primitive": {
+      "description": "The raw scales that do not depend on a mode. The color ramps differ by theme, so the theme contexts merge them in. Components never use primitives directly.",
+      "sources": [
+        {"$ref": "primitive/easing.tokens.json"},
+        {"$ref": "primitive/font.tokens.json"}
+      ]
+    },
+    "semantic": {
+      "description": "Roles that do not depend on a mode: colors (aliases of the ramps), motion, radii, spacing, strokes, text roles.",
+      "sources": [
+        {"$ref": "semantic/color.tokens.json"},
+        {"$ref": "semantic/motion.tokens.json"},
+        {"$ref": "semantic/radius.tokens.json"},
+        {"$ref": "semantic/space.tokens.json"},
+        {"$ref": "semantic/stroke.tokens.json"},
+        {"$ref": "semantic/typography.tokens.json"}
+      ]
+    }
+  },
+  "modifiers": {
+    "theme": {
+      "description": "The color theme: the color ramps the palette generator solves for it, and the shadows. A high-contrast theme is its theme plus the colors that differ. Resolved at runtime, by the platform's own switching.",
+      "contexts": {
+        "light": [{"$ref": "primitive/color.light.tokens.json"}, {"$ref": "semantic/shadow.light.tokens.json"}],
+        "dark": [{"$ref": "primitive/color.dark.tokens.json"}, {"$ref": "semantic/shadow.dark.tokens.json"}],
+        "light-hc": [
+          {"$ref": "primitive/color.light.tokens.json"},
+          {"$ref": "primitive/color.light-hc.tokens.json"},
+          {"$ref": "semantic/shadow.light.tokens.json"}
+        ],
+        "dark-hc": [
+          {"$ref": "primitive/color.dark.tokens.json"},
+          {"$ref": "primitive/color.dark-hc.tokens.json"},
+          {"$ref": "semantic/shadow.dark.tokens.json"}
+        ]
+      },
+      "default": "light"
+    },
+    "density": {
+      "description": "Spacing and control sizes. compact has no values until the dense components (#33) need them. Resolved at runtime, through the environment.",
+      "contexts": {
+        "regular": [],
+        "compact": []
+      },
+      "default": "regular"
+    },
+    "platform": {
+      "description": "Values that differ by platform, in platform/<platform>.tokens.json when there are any. No default: each platform's generator names its own. Resolved at build time.",
+      "contexts": {
+        "ios": [],
+        "macos": [],
+        "watchos": []
+      }
+    }
+  },
+  "resolutionOrder": [
+    {"$ref": "#/sets/primitive"},
+    {"$ref": "#/sets/semantic"},
+    {"$ref": "#/modifiers/theme"},
+    {"$ref": "#/modifiers/density"},
+    {"$ref": "#/modifiers/platform"}
+  ]
+}

@@ -1,5 +1,8 @@
 // The westron module of styles and components for SwiftUI.
 //
-// Empty for now: the first tokens arrive in phase 1, the first component (Button) in phase 2.
-// The module's rules are in .claude/rules/apple.md: tokens only, no raw values;
+// It re-exports WestronTokens, so `import WestronUI` gives a view both the SwiftUI side of the tokens
+// (`.foregroundStyle(.text.secondary)`, `.textRole(.heading.large)`, `Animation.move`, `CGFloat.radius.card`) and the
+// plain values it comes from (`Westron.Color`, `Westron.Category`). The module's rules are in .claude/rules/apple.md: tokens only, no raw values;
 // styles on top of system controls instead of custom wrappers (decisions/0003).
+
+@_exported import WestronTokens

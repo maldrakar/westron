@@ -1,0 +1,131 @@
+# westron's icon registry (decisions/0011, design-language/07-icons.md): every icon's name, what its glyph draws, and
+# the glyph each platform draws for it. `tools/westron icons check` validates this file, and `tools/westron generate`
+# writes `Westron.Icon` and its SwiftUI adapter from it; nothing else spells a name.
+#
+# - `name` says what the glyph draws, not what it means on a screen. Products store it (the pilot keeps a list's icon
+#   by it and syncs it between devices), so a released name is never renamed or removed. It is a lowerCamelCase Swift
+#   identifier; the names are the pilot's own, byte for byte.
+# - `description` is one line on what the glyph draws; it becomes the doc comment of the Swift case.
+# - `apple` is the SF Symbol, which must exist on iOS 17, macOS 14 and watchOS 10. The other platforms get their
+#   glyphs with their phases: 6 (web), 7 (GNOME), 8 (Android).
+# - `default` is the icon drawn for a name this version does not know, such as one a newer version of a product wrote.
+# - The order of `icons` is the order of `Westron.Icon.allCases`. A new icon goes at the end.
+
+default: bullets
+
+icons:
+  # The glyphs of lists, as the pilot's store keeps them.
+  - name: tray
+    description: An open tray, as for incoming mail.
+    apple: tray
+  - name: sun
+    description: The sun with its rays.
+    apple: sun.max
+  - name: calendar
+    description: A calendar page.
+    apple: calendar
+  - name: week
+    description: A calendar page with a clock badge.
+    apple: calendar.badge.clock
+  - name: logbook
+    description: A closed book with lines of text on its cover.
+    apple: text.book.closed
+  - name: trash
+    description: A trash can.
+    apple: trash
+  - name: briefcase
+    description: A briefcase.
+    apple: briefcase
+  - name: house
+    description: A house.
+    apple: house
+  - name: hourglass
+    description: An hourglass.
+    apple: hourglass
+  - name: pen
+    description: A pencil.
+    apple: pencil
+  - name: bag
+    description: A shopping bag.
+    apple: bag
+  - name: wrench
+    description: A wrench.
+    apple: wrench
+  - name: book
+    description: An open book.
+    apple: book
+  - name: folder
+    description: A folder.
+    apple: folder
+  - name: list
+    description: Lines of text, each after a round check box, the first one checked.
+    apple: checklist
+  - name: bullets
+    description: Lines of text, each after a dot.
+    apple: list.bullet
+
+  # The glyphs of controls.
+  - name: ellipsis
+    description: Three dots in a row.
+    apple: ellipsis
+  - name: plus
+    description: A plus sign.
+    apple: plus
+  - name: check
+    description: A check mark.
+    apple: checkmark
+  - name: chevron
+    description: A chevron pointing down.
+    apple: chevron.down
+  - name: grip
+    description: Three horizontal lines, one above another.
+    apple: line.3.horizontal
+  - name: magnifier
+    description: A magnifying glass.
+    apple: magnifyingglass
+  - name: microphone
+    description: A microphone.
+    apple: mic
+  - name: newWindow
+    description: A window with a plus badge.
+    apple: macwindow.badge.plus
+  - name: checkCircle
+    description: A check mark in a circle.
+    apple: checkmark.circle
+  - name: divider
+    description: A rectangle split by a horizontal line into a top and a bottom half.
+    apple: rectangle.split.1x2
+
+  # The glyphs of a list's tasks and views.
+  - name: flag
+    description: A flag on a pole.
+    apple: flag
+  - name: hash
+    description: A number sign.
+    apple: number
+  - name: note
+    description: A note card with lines of text.
+    apple: note.text
+  - name: expand
+    description: Two diagonal arrows pointing away from each other.
+    apple: arrow.up.left.and.arrow.down.right
+  - name: columns
+    description: A rectangle split into three columns.
+    apple: rectangle.split.3x1
+  - name: chevronLeft
+    description: A chevron pointing left.
+    apple: chevron.left
+
+  # The glyphs of the statuses: a status always shows an icon beside its word (decisions/0012).
+  - name: checkCircleFill
+    description: A check mark cut out of a filled circle.
+    apple: checkmark.circle.fill
+  - name: xmarkCircleFill
+    description: An x cut out of a filled circle.
+    apple: xmark.circle.fill
+  - name: exclamationTriangleFill
+    description: An exclamation mark cut out of a filled triangle.
+    apple: exclamationmark.triangle.fill
+  - name: infoCircleFill
+    description: A lowercase i cut out of a filled circle.
+    apple: info.circle.fill

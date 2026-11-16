@@ -1,0 +1,58 @@
+{
+  "space": {
+    "$type": "dimension",
+    "$description": "Gaps, paddings and insets on a 4 px grid with an 8 px base: a name is a step where 100 is the base unit. A density never changes the ladder; it changes the sizes and insets of components (decisions/0013).",
+    "25": {
+      "$value": {"value": 2, "unit": "px"},
+      "$description": "Step 25 of the space ladder: 2 px."
+    },
+    "50": {
+      "$value": {"value": 4, "unit": "px"},
+      "$description": "Step 50 of the space ladder: 4 px."
+    },
+    "75": {
+      "$value": {"value": 6, "unit": "px"},
+      "$description": "Step 75 of the space ladder: 6 px."
+    },
+    "100": {
+      "$value": {"value": 8, "unit": "px"},
+      "$description": "Step 100 of the space ladder: 8 px."
+    },
+    "125": {
+      "$value": {"value": 10, "unit": "px"},
+      "$description": "Step 125 of the space ladder: 10 px."
+    },
+    "150": {
+      "$value": {"value": 12, "unit": "px"},
+      "$description": "Step 150 of the space ladder: 12 px."
+    },
+    "200": {
+      "$value": {"value": 16, "unit": "px"},
+      "$description": "Step 200 of the space ladder: 16 px."
+    },
+    "250": {
+      "$value": {"value": 20, "unit": "px"},
+      "$description": "Step 250 of the space ladder: 20 px."
+    },
+    "300": {
+      "$value": {"value": 24, "unit": "px"},
+      "$description": "Step 300 of the space ladder: 24 px."
+    },
+    "400": {
+      "$value": {"value": 32, "unit": "px"},
+      "$description": "Step 400 of the space ladder: 32 px."
+    },
+    "500": {
+      "$value": {"value": 40, "unit": "px"},
+      "$description": "Step 500 of the space ladder: 40 px."
+    },
+    "600": {
+      "$value": {"value": 48, "unit": "px"},
+      "$description": "Step 600 of the space ladder: 48 px."
+    },
+    "800": {
+      "$value": {"value": 64, "unit": "px"},
+      "$description": "Step 800 of the space ladder: 64 px."
+    }
+  }
+}

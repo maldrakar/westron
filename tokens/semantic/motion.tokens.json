@@ -1,0 +1,44 @@
+{
+  "motion": {
+    "$type": "transition",
+    "$description": "Motions by what moves. Where a motion has a spring (`dev.westron.spring`, duration and bounce), platforms with springs use it; the others use its curve and duration. Under Reduce Motion a spring loses its bounce and travel becomes a fade of at most 150 ms (decisions/0013).",
+    "fade": {
+      "$value": {"duration": {"value": 200, "unit": "ms"}, "delay": {"value": 0, "unit": "ms"}, "timingFunction": "{easing.ease}"},
+      "$description": "A change of color or opacity: a hover tint, a selection, a fade in or out. It has no spring and no bounce."
+    },
+    "press": {
+      "$value": {"duration": {"value": 150, "unit": "ms"}, "delay": {"value": 0, "unit": "ms"}, "timingFunction": "{easing.standard}"},
+      "$description": "A control answering a press: its tint, and its scale down to 98 %.",
+      "$extensions": {"dev.westron.spring": {"duration": 0.15, "bounce": 0}}
+    },
+    "toggle": {
+      "$value": {"duration": {"value": 250, "unit": "ms"}, "delay": {"value": 0, "unit": "ms"}, "timingFunction": "{easing.standard}"},
+      "$description": "A small thing changing place: a switch's thumb, a segmented control's selection, a checkbox.",
+      "$extensions": {"dev.westron.spring": {"duration": 0.25, "bounce": 0.1}}
+    },
+    "check": {
+      "$value": {"duration": {"value": 350, "unit": "ms"}, "delay": {"value": 0, "unit": "ms"}, "timingFunction": "{easing.standard}"},
+      "$description": "A check popping into a done task. The one motion with a visible overshoot.",
+      "$extensions": {"dev.westron.spring": {"duration": 0.35, "bounce": 0.2}}
+    },
+    "move": {
+      "$value": {"duration": {"value": 350, "unit": "ms"}, "delay": {"value": 0, "unit": "ms"}, "timingFunction": "{easing.standard}"},
+      "$description": "Something moving to a new place: a reordered row, a dropped item, a section folding or unfolding.",
+      "$extensions": {"dev.westron.spring": {"duration": 0.35, "bounce": 0.15}}
+    },
+    "enter": {
+      "$value": {"duration": {"value": 350, "unit": "ms"}, "delay": {"value": 0, "unit": "ms"}, "timingFunction": "{easing.enter}"},
+      "$description": "Something appearing: a popover, a menu, an inserted row.",
+      "$extensions": {"dev.westron.spring": {"duration": 0.35, "bounce": 0.15}}
+    },
+    "leave": {
+      "$value": {"duration": {"value": 200, "unit": "ms"}, "delay": {"value": 0, "unit": "ms"}, "timingFunction": "{easing.exit}"},
+      "$description": "Something leaving: a deleted row, a closing popover. Leaving is quicker than entering and does not bounce."
+    },
+    "reveal": {
+      "$value": {"duration": {"value": 500, "unit": "ms"}, "delay": {"value": 0, "unit": "ms"}, "timingFunction": "{easing.standard}"},
+      "$description": "A large surface appearing: a sheet, a side panel, an opened card.",
+      "$extensions": {"dev.westron.spring": {"duration": 0.5, "bounce": 0.1}}
+    }
+  }
+}

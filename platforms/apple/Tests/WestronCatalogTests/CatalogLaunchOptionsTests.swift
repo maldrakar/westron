@@ -15,6 +15,7 @@ struct CatalogLaunchOptionsTests {
         let options = try CatalogLaunchOptions(arguments: [
             "-WestronEntry", "environment",
             "-WestronAppearance", "dark",
+            "-WestronContrast", "high",
             "-WestronDynamicType", "accessibility2",
         ])
         #expect(
@@ -22,6 +23,7 @@ struct CatalogLaunchOptionsTests {
                 == CatalogLaunchOptions(
                     entryID: "environment",
                     appearance: .dark,
+                    contrast: .high,
                     dynamicTypeSize: .accessibility2
                 )
         )
@@ -56,6 +58,25 @@ struct CatalogLaunchOptionsTests {
         ) {
             try CatalogLaunchOptions(arguments: ["-WestronAppearance", "sepia"])
         }
+        #expect(
+            throws: CatalogLaunchOptions.ParseError.invalidValue(
+                flag: "-WestronContrast",
+                value: "increased",
+                allowed: ["standard", "high"]
+            )
+        ) {
+            try CatalogLaunchOptions(arguments: ["-WestronContrast", "increased"])
+        }
+    }
+
+    @Test("Contrast maps to SwiftUI's color scheme contrast")
+    func contrast() throws {
+        #expect(try CatalogLaunchOptions(arguments: ["-WestronContrast", "standard"]).contrast == .standard)
+        #expect(CatalogLaunchOptions.Contrast.standard.colorSchemeContrast == .standard)
+        #expect(CatalogLaunchOptions.Contrast.high.colorSchemeContrast == .increased)
+        #expect(throws: CatalogLaunchOptions.ParseError.missingValue(flag: "-WestronContrast")) {
+            try CatalogLaunchOptions(arguments: ["-WestronContrast"])
+        }
     }
 
     @Test("Font size names cover every DynamicTypeSize")
@@ -72,6 +93,15 @@ struct CatalogRegistryTests {
         let ids = Catalog.entries.map(\.id)
         #expect(Set(ids).count == ids.count)
         #expect(ids.allSatisfy { !$0.isEmpty })
+    }
+
+    @Test("Foundations hold the token samples")
+    func foundations() {
+        #expect(
+            Catalog.entries(in: .foundations).map(\.id) == [
+                "color-backgrounds", "color-foregrounds", "color-categories", "color-status", "color-in-use",
+                "typography", "space", "shape", "motion", "icons",
+            ])
     }
 
     @Test("An entry is found by its id")

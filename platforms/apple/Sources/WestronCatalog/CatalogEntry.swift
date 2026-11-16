@@ -9,7 +9,7 @@ public struct CatalogEntry: Identifiable, Sendable {
     public enum Section: String, CaseIterable, Sendable {
         /// Components from `spec/components/`.
         case components
-        /// Token samples: color, typography, spacing (they arrive in phase 1).
+        /// Token samples: color, typography, space, shape, motion.
         case foundations
         /// Utility pages of the catalog.
         case utilities

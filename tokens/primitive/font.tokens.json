@@ -1,0 +1,26 @@
+{
+  "font": {
+    "family": {
+      "$type": "fontFamily",
+      "system": {
+        "$value": ["system-ui"],
+        "$description": "The platform's system font, for body text and controls: SF Pro on Apple, Adwaita Sans on GNOME, Roboto on Android (decisions/0011)."
+      },
+      "heading": {
+        "$value": ["Onest", "system-ui"],
+        "$description": "westron's heading font, Onest (SIL OFL 1.1), which every platform ships with westron; the system font where it is missing (decisions/0011)."
+      },
+      "mono": {
+        "$value": ["Geist Mono", "ui-monospace"],
+        "$description": "westron's monospaced font, Geist Mono (SIL OFL 1.1), for code, logs and identifiers; the system's monospaced font where it is missing (decisions/0011)."
+      }
+    },
+    "weight": {
+      "$type": "fontWeight",
+      "regular": {"$value": 400},
+      "medium": {"$value": 500},
+      "semibold": {"$value": 600},
+      "bold": {"$value": 700}
+    }
+  }
+}

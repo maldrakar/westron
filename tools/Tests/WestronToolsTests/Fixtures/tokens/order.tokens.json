@@ -1,0 +1,17 @@
+{
+  "zeta": {
+    "$type": "number",
+    "9": { "$value": 9 },
+    "10": { "$value": 10 },
+    "1": { "$value": 1 }
+  },
+  "alpha": {
+    "$type": "number",
+    "z": { "$value": "{zeta.1}" },
+    "a": { "$value": "{alpha.z}" }
+  },
+  "mid": {
+    "Upper": { "$type": "number", "$value": 2 },
+    "lower": { "$type": "number", "$value": 3 }
+  }
+}

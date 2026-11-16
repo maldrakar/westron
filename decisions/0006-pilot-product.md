@@ -1,11 +1,12 @@
 # 0006. Pilot product: todo-app
 
-Date: 2026-11-14. Status: accepted.
+Date: 2026-11-14. Status: accepted. Revised 2026-11-15: westron's look is its own, and the pilot adopts it.
 
 ## Context
 
 westron components appear only for a real product need (decisions/0005). We need a product that will be the first
-to adopt westron on Apple, and from which components will be extracted rather than invented.
+to adopt westron on Apple, and whose screens say which components westron needs, so that none is invented without a
+consumer.
 
 ## Decision
 
@@ -44,21 +45,31 @@ What it draws:
 - columns; a "Done today" strip; "+ Add list"; a round "+" button;
 - an empty state; a "Show as" menu.
 
-## Where the look comes from
+## What the pilot gives westron and what it takes
 
-- The look of both screens is set by the canvas "Todo — дизайн", which the owner approved. Where the canvas and the spec
-  disagree, the canvas is right about the look and the spec is right about behavior.
-- The decisions about the look are already written in the pilot's code. The `DesignSystem` module holds the palette per theme, the accent #3653C9,
-  eleven list colors, the SF Pro Rounded heading font, icons and animations. `DesignSystemComponents`
-  holds the models and styles of the components on these screens.
-- Phase 1 extracts the tokens from here, and phases 2–4 extract the components.
+- **The pilot gives the need.** Its screens decide which components come first and what they must do. Its specs in
+  todo-app are right about behavior, and the pilot's own motions, such as a done row lingering before it leaves,
+  stay the product's behavior (decisions/0013).
+- **westron gives the look.** Color, type, icons, space, shape, shadows and motion are westron's own
+  (decisions/0011, 0012, 0013). The pilot adopts them as their first consumer.
+- **Icon names carry over.** The pilot stores icons by name, and its 32 names stay as they are in westron's registry
+  (decisions/0011).
 
 ### What happens to the pilot's look modules
 
-As westron gets tokens, styles and components, the pilot moves to them and deletes its own `DesignSystem`
-and `DesignSystemComponents`: two implementations of the same look are not needed. The move happens in parts, as
-westron covers what these modules contain: phase 1 tokens replace `DesignSystem`, and components from phases 2–4 replace
-`DesignSystemComponents`.
+The pilot keeps its own look in two modules: `DesignSystem` holds its palette, fonts, icons and animations, and
+`DesignSystemComponents` holds the models and styles of the components on these screens. As westron gets tokens,
+styles and components, the pilot moves to them and deletes both modules. The move happens in parts, as westron
+covers what these modules contain: phase 1 tokens replace `DesignSystem`, and components from phases 2–4 replace
+`DesignSystemComponents`. With each part, the pilot's screens take westron's look.
+
+## Revision of 2026-11-15
+
+The first version of this decision took westron's look from the pilot: the canvas "Todo — дизайн" set the look of
+both screens, and phase 1 extracted the tokens from the pilot's `DesignSystem` module. On 2026-11-15 the owner
+decided that westron's look is designed for many products, everyday and technical, and that nothing is kept from
+the pilot's look. The owner chose it on direction specimens: direction B, the cobalt palette, Onest for headings.
+The pilot adopts this look as westron's first consumer.
 
 ## Consequences
 
@@ -67,9 +78,12 @@ westron covers what these modules contain: phase 1 tokens replace `DesignSystem`
 - The `consumers` field in a component contract refers to a pilot screen: `todo-app/lists-screen` or
   `todo-app/list-screen`.
 - The phase 4 component list (issue #32) is drawn up from the inventory above.
-- westron tokens and components must cover everything the pilot takes from its own modules; otherwise the pilot cannot
-  delete them. The inventory of what these modules contain is input for phase 1 (issues #10, #11, #16) and for #32.
-- The pilot's `DesignSystem` does not depend on SwiftUI and builds for WASM. If the pilot needs the same numbers on WASM,
-  the Apple token generator (issue #14) must account for it. For example, the values can live in a module
-  without SwiftUI, and the SwiftUI adapter in `WestronUI`. Decided in #14.
+- westron tokens and components must cover every role the pilot takes from its own modules, such as a list color, a
+  text role or an icon; otherwise the pilot cannot delete them. They cover the roles, not the pilot's values. The
+  inventory of these modules, `research_notes/pilot-inventory.md`, is a checklist of roles for phase 1 and for #32.
+- The pilot stores eleven list color names. Two of them, rose and stone, are not among westron's twelve
+  (decisions/0012), so the pilot maps them when it moves.
+- The pilot's `DesignSystem` does not depend on SwiftUI and builds for WASM. Decided in #14: `WestronTokens` holds
+  the values with no SwiftUI and builds for WebAssembly and Linux, so the pilot's shared code can use it
+  (decisions/0010).
 - Moving the pilot over is work in the todo-app repository; its tasks are opened there once a replacement is ready.

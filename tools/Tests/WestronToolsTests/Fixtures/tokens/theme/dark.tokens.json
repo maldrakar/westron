@@ -1,0 +1,9 @@
+{
+  "color": {
+    "$type": "color",
+    "$description": "Semantic colors, dark theme",
+    "text": { "$value": "{palette.white}" },
+    "border": { "$value": "{palette.gray}" },
+    "background": { "$value": "{palette.black}" }
+  }
+}

@@ -1,8 +1,8 @@
 # westron
 
-A design system for technical products with a cross-platform core and a native UI on each platform.
+A design system for everyday and technical products with a cross-platform core and a native UI on each platform.
 
-**Status:** phase 0 "Scaffold". There is a SwiftPM package, a catalog app for iOS and macOS with screenshots for the agent, CI and a Claude Code setup. There are no components yet. The pilot product is [todo-app](https://github.com/maldrakar/todo-app).
+**Status:** phase 1 "Design language and tokens". There are DTCG tokens in four themes with a palette generator and a contrast check, the Apple token output (`WestronTokens`, `WestronUI`), a catalog app for iOS and macOS with screenshots, CI and a Claude Code setup. There are no components yet. The pilot product is [todo-app](https://github.com/maldrakar/todo-app): its screens decide which components come first, and it is the first to adopt westron's look.
 
 ## The idea
 
@@ -52,3 +52,7 @@ Code, tokens and contracts: [MIT](LICENSE). Design language texts in `design-lan
 - [0007. Licenses](decisions/0007-license.md)
 - [0008. Apple: versions, toolchain, catalog and screenshots](decisions/0008-apple-toolchain-and-catalog.md)
 - [0009. Tools in Swift](decisions/0009-tools-in-swift.md)
+- [0010. Token structure, modes and the Apple output](decisions/0010-token-structure-and-modes.md)
+- [0011. Icons and fonts](decisions/0011-icons-and-fonts.md)
+- [0012. Color](decisions/0012-color.md)
+- [0013. Typography, space, shape and motion](decisions/0013-typography-space-shape-motion.md)

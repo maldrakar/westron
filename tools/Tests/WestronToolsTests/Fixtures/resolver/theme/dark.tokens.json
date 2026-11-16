@@ -1,0 +1,16 @@
+{
+  "color": {
+    "$type": "color",
+    "background": {
+      "canvas": { "$value": "{palette.black}" },
+      "hover": { "$value": { "colorSpace": "srgb", "components": [1, 1, 1], "alpha": 0.06 } }
+    },
+    "text": {
+      "primary": {
+        "$value": "{palette.white}",
+        "$extensions": { "dev.westron.contrast": [{ "kind": "text", "on": ["color.background.canvas"] }] }
+      }
+    },
+    "accent": { "$value": "{palette.blue}" }
+  }
+}
