@@ -41,6 +41,7 @@ struct ContractRules {
         checkConstraints()
         checkTokens()
         checkPlatforms()
+        checkSystemOptions()
         checkAccessibility()
     }
 
@@ -411,6 +412,17 @@ struct ContractRules {
                 report(
                     path.key("keyboardIntents").index(index),
                     "\"\(intent)\" is already in Apple's keyboardIntents; list here only what this OS adds")
+            }
+        }
+    }
+
+    /// A platform's `systemOptions` name options of the contract.
+    mutating func checkSystemOptions() {
+        let names = (document["options"]?.members ?? []).map(\.key)
+        for platform in ["apple", "web", "linux", "android"] {
+            let path = DocumentPath.root.key("platforms").key(platform).key("systemOptions")
+            for member in value(at: path)?.members ?? [] where !names.contains(member.key) {
+                report(path.key(member.key), unknownOption(member.key))
             }
         }
     }

@@ -1,0 +1,153 @@
+# westron's Button contract (#22), approved by the owner on 2026-11-16: decisions/0001-button-contract.md records the
+# owner's answers and the bindings the owner confirmed on top of them.
+id: button
+status: approved
+description: >-
+  A push button that runs an action: westron's style on the platform's own button, with a label and a leading icon.
+  Hover and pressed tint the container in motion.fade and motion.press, and a press also scales it down to 98 %,
+  which Reduce Motion drops (chapter 05). Disabled draws the whole button at opacity.disabled, with no colors of its
+  own. A disabled or loading button never enters hover or pressed: its fill stays as at rest and it does not scale,
+  on every platform; container.background's leading cases bind that. Loading puts a progress indicator in the icon's place, before the label when there is no icon, and in
+  icon-only in place of the icon; the label stays, the width does not change, presses are not accepted, and the
+  button does not dim. Floating glass buttons over content are not this component: products use the system's glass
+  styles (chapter 09).
+consumers: [todo-app/lists-screen, todo-app/list-screen]
+
+options:
+  variant:
+    type: enum
+    values: [primary, secondary, tertiary]
+    description: >-
+      No default: every use names its variant. primary is filled with the accent, the one main action on a screen;
+      secondary is outlined; tertiary has no background and an accent label.
+  size:
+    type: enum
+    values: [s, m, l]
+    default: m
+    description: >-
+      The height is size.control.s, m or l: 24, 32 and 40 with a pointer (macOS), 32, 44 and 52 on touch. It is a
+      minimum, so the button grows with its text. The hit area is at least the platform's recommended target
+      (chapter 08), also where the drawn height is smaller.
+  role:
+    type: enum
+    values: [default, destructive]
+    default: default
+    description: destructive recolors any variant in the danger colors; it is not a variant of its own.
+  iconOnly:
+    type: bool
+    default: false
+    description: >-
+      The same button showing only its icon: a square whose side equals its height, with the same radius; padding and
+      gap do not apply. The label is still there as the accessible label.
+
+slots: [label, icon]
+states: [hover, focus, pressed, disabled, loading]
+
+tokens:
+  container.height: { s: size.control.s, m: size.control.m, l: size.control.l }
+  container.radius: radius.control
+  container.paddingHorizontal: { s: space.100, m: space.150, l: space.200 }
+  container.gap: { s: space.50, m: space.75, l: space.100 }
+  container.background:
+    cases:
+      # Disabled and loading come first: they exclude hover and pressed, so the resting fill holds.
+      - { when: { variant: primary, role: destructive, state: [disabled, loading] }, token: color.status.danger.fill }
+      - { when: { variant: primary, state: [disabled, loading] }, token: color.background.accent }
+      - { when: { variant: [secondary, tertiary], state: [disabled, loading] }, token: null }
+      - { when: { variant: primary, role: destructive, state: pressed }, token: color.status.danger.fill-pressed }
+      - { when: { variant: primary, role: destructive, state: hover }, token: color.status.danger.fill-hover }
+      - { when: { variant: primary, role: destructive }, token: color.status.danger.fill }
+      - { when: { variant: primary, state: pressed }, token: color.background.accent-pressed }
+      - { when: { variant: primary, state: hover }, token: color.background.accent-hover }
+      - { when: { variant: primary }, token: color.background.accent }
+      - { when: { variant: [secondary, tertiary], state: pressed }, token: color.background.pressed }
+      - { when: { variant: [secondary, tertiary], state: hover }, token: color.background.hover }
+  container.borderColor:
+    cases:
+      - { when: { variant: secondary, role: destructive }, token: color.status.danger.border }
+      - { when: { variant: secondary }, token: color.border.strong }
+  container.borderWidth:
+    cases:
+      - { when: { variant: secondary }, token: stroke.thin }
+  container.opacity:
+    cases:
+      - { when: { state: disabled }, token: opacity.disabled }
+  container.pressMotion: motion.press
+  container.hoverMotion: motion.fade
+  label.font: { s: typography.footnote.strong, m: typography.subheadline.strong, l: typography.subheadline.strong }
+  label.color:
+    cases:
+      - { when: { variant: primary, role: destructive }, token: color.status.danger.on-fill }
+      - { when: { variant: primary }, token: color.text.on-accent }
+      - { when: { variant: [secondary, tertiary], role: destructive }, token: color.status.danger.text }
+      - { when: { variant: secondary }, token: color.text.primary }
+      - { when: { variant: tertiary }, token: color.text.accent }
+  icon.font: { s: typography.footnote.strong, m: typography.subheadline.strong, l: typography.subheadline.strong }
+  icon.color:
+    cases:
+      - { when: { variant: primary, role: destructive }, token: color.status.danger.on-fill }
+      - { when: { variant: primary }, token: color.text.on-accent }
+      - { when: { variant: [secondary, tertiary], role: destructive }, token: color.status.danger.text }
+      - { when: { variant: secondary }, token: color.text.primary }
+      - { when: { variant: tertiary }, token: color.text.accent }
+  progress.color:
+    cases:
+      - { when: { variant: primary, role: destructive }, token: color.status.danger.on-fill }
+      - { when: { variant: primary }, token: color.text.on-accent }
+      - { when: { variant: [secondary, tertiary], role: destructive }, token: color.status.danger.text }
+      - { when: { variant: secondary }, token: color.text.primary }
+      - { when: { variant: tertiary }, token: color.text.accent }
+  focusRing.color: color.border.focus
+  focusRing.width: stroke.thick
+
+accessibility:
+  role: button
+  intents: [activate]
+  keyboardIntents: [activate]
+  label: required
+  states: { disabled: disabled, loading: busy }
+  description: >-
+    The label is the accessible name, also when iconOnly hides it, and names the action ("More", not "Ellipsis"). An
+    icon beside a visible label is decorative and hidden. In loading, assistive technology announces the label and
+    busy; in disabled, the button is announced as unavailable.
+
+platforms:
+  apple:
+    strategy: style-on-system-control
+    base: SwiftUI.Button
+    systemOptions: { role: SwiftUI.ButtonRole }
+    description: >-
+      role is SwiftUI's own ButtonRole, so no enum is generated for it, which would collide with SwiftUI's: a product
+      writes Button(role: .destructive), and the style reads configuration.role; any other role draws as default.
+      iconOnly is a labeled argument of the style, .buttonStyle(.primary, iconOnly: true): the style hides the title,
+      keeps it as the accessible label and draws the square. A product's own .labelStyle(.iconOnly) is not the way to
+      it: the style's label style overrides it, and the style cannot read it to draw the square (spec/conventions.md).
+      A call without size: takes it from controlSize (spec/conventions.md). The focus ring is the system's, so the focusRing bindings do not apply. Corners are
+      continuous.
+    ios:
+      description: Hover only with a pointer, on iPad; an iPhone never enters it.
+    macos:
+      keyboardIntents: [defaultAction, cancelAction]
+      description: Return triggers the default action and Escape the cancel action.
+    watchos:
+      options: { size: [m] }
+      fallback: { size: m }
+      states: [focus, pressed, disabled, loading]
+      description: >-
+        One size, m: the Swift enum keeps every size and the style falls back to m. No pointer, so no hover.
+  web:
+    strategy: style-on-system-control
+    base: button
+    description: >-
+      A native <button> with westron's CSS, provisional until phase 6 (#40). The focus ring is an outline in
+      focusRing.color and focusRing.width on :focus-visible. Hover only under a pointer, (hover: hover). A native
+      <button> still matches :hover while disabled, and :hover and :active while aria-busy, so the CSS excludes them
+      in those states and keeps the resting fill. Corners are circular.
+  linux:
+    strategy: style-on-system-control
+    base: GtkButton
+    description: >-
+      Provisional until phase 7: how the variants and the role map to style classes is decided there. The focus ring
+      is the system's, so the focusRing bindings do not apply. Corners are circular.
+  android:
+    status: planned

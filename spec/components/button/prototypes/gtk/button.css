@@ -1,0 +1,158 @@
+/* Prototype (#26): westron's Button contract as GTK 4.20 CSS on a stock GtkButton. Throwaway evidence for
+   spec/components/button/decisions/0002-portability-to-web-and-gtk.md, not the start of the GTK library (phase 7).
+   NOT RUN: GTK was not available where it was written. Every selector and property here is checked against the
+   GTK 4 and libadwaita documentation only; button.py loads tokens.css first, then this file.
+
+   Classes on the GtkButton (button.py sets them):
+     westron                          every westron button
+     westron-s | westron-m | westron-l  the size: libadwaita has no size classes
+     suggested-action                 primary (stock: accent fill)
+     westron-secondary                secondary (libadwaita has no outlined button)
+     flat                             tertiary (stock: transparent until hovered)
+     destructive-action               the destructive role, on any variant (stock: a tinted red, not a fill)
+     westron-icon-only                icon-only; GtkButton adds .image-button itself when its child is an icon
+     westron-loading                  loading: GTK has no busy button
+
+   libadwaita draws hover and active differently per class (an overlay background-image on .suggested-action, a
+   currentColor mix on the default button, $hover_color on .flat). westron replaces all of it with the contract's
+   fills, so every rule below sets background-color and clears background-image and box-shadow. */
+
+button.westron {
+  --wb-height: var(--westron-size-control-m);
+  --wb-padding: var(--westron-space-150);
+  --wb-gap: var(--westron-space-75);
+  --wb-border-width: 0px;
+  font-size: var(--westron-typography-subheadline-strong-font-size);
+  font-weight: var(--westron-typography-subheadline-strong-font-weight);
+  line-height: var(--westron-typography-subheadline-strong-line-height);
+  letter-spacing: var(--westron-typography-subheadline-strong-letter-spacing);
+
+  /* GTK has no box-sizing: min-height sizes the content box, so the border comes off the height. */
+  min-height: calc(var(--wb-height) - 2 * var(--wb-border-width));
+  min-width: 0;
+  padding: 0 var(--wb-padding);
+  border-radius: var(--westron-radius-control); /* circular corners */
+  border: var(--wb-border-width) solid var(--wb-border-color, transparent);
+  background-color: var(--wb-background, transparent);
+  background-image: none;
+  box-shadow: none;
+  color: var(--wb-label-color);
+  /* hoverMotion: motion.fade; pressMotion: motion.press. No spring: its cubic curve and duration (chapter 05). */
+  transition:
+    background-color var(--westron-motion-fade-duration) var(--westron-motion-fade-easing),
+    transform var(--westron-motion-press-duration) var(--westron-motion-press-easing);
+}
+
+button.westron.westron-s {
+  --wb-height: var(--westron-size-control-s);
+  --wb-padding: var(--westron-space-100);
+  --wb-gap: var(--westron-space-50);
+  font-size: var(--westron-typography-footnote-strong-font-size);
+  font-weight: var(--westron-typography-footnote-strong-font-weight);
+  line-height: var(--westron-typography-footnote-strong-line-height);
+  letter-spacing: var(--westron-typography-footnote-strong-letter-spacing);
+}
+
+button.westron.westron-l {
+  --wb-height: var(--westron-size-control-l);
+  --wb-padding: var(--westron-space-200);
+  --wb-gap: var(--westron-space-100);
+}
+
+/* container.gap: AdwButtonContent spaces its icon and label with border-spacing on its box. */
+button.westron buttoncontent > box {
+  border-spacing: var(--wb-gap);
+}
+
+/* icon.font: a GTK icon has a pixel size, not a font; the prototype sizes it to the label's font size. */
+button.westron image {
+  -gtk-icon-size: 1em;
+}
+
+/* Variant × role. */
+button.westron.suggested-action {
+  --wb-background: var(--westron-color-background-accent);
+  --wb-background-hover: var(--westron-color-background-accent-hover);
+  --wb-background-pressed: var(--westron-color-background-accent-pressed);
+  --wb-label-color: var(--westron-color-text-on-accent);
+}
+
+button.westron.suggested-action.destructive-action {
+  --wb-background: var(--westron-color-status-danger-fill);
+  --wb-background-hover: var(--westron-color-status-danger-fill-hover);
+  --wb-background-pressed: var(--westron-color-status-danger-fill-pressed);
+  --wb-label-color: var(--westron-color-status-danger-on-fill);
+}
+
+button.westron.westron-secondary,
+button.westron.flat {
+  --wb-background: transparent;
+  --wb-background-hover: var(--westron-color-background-hover);
+  --wb-background-pressed: var(--westron-color-background-pressed);
+}
+
+button.westron.westron-secondary {
+  --wb-border-width: var(--westron-stroke-thin);
+  --wb-border-color: var(--westron-color-border-strong);
+  --wb-label-color: var(--westron-color-text-primary);
+}
+
+button.westron.westron-secondary.destructive-action {
+  --wb-border-color: var(--westron-color-status-danger-border);
+  --wb-label-color: var(--westron-color-status-danger-text);
+}
+
+button.westron.flat {
+  --wb-label-color: var(--westron-color-text-accent);
+}
+
+button.westron.flat.destructive-action {
+  --wb-label-color: var(--westron-color-status-danger-text);
+}
+
+/* Hover and pressed, never while disabled or loading (the contract's first cases). GTK sets :hover only for a
+   pointer that hovers, so no (hover: hover) query is needed. */
+button.westron:hover:not(:disabled):not(.westron-loading) {
+  background-color: var(--wb-background-hover);
+  background-image: none;
+}
+
+button.westron:active:not(:disabled):not(.westron-loading) {
+  background-color: var(--wb-background-pressed);
+  background-image: none;
+  transform: scale(0.98); /* raw: the 98 % press scale is prose in chapter 05, not a token */
+  transition:
+    background-color var(--westron-motion-press-duration) var(--westron-motion-press-easing),
+    transform var(--westron-motion-press-duration) var(--westron-motion-press-easing);
+}
+
+/* GTK's own value is `reduced`, not CSS's `reduce` (GtkReducedMotion, GTK 4.22). A media query adds no specificity,
+   so the selector repeats the pressed rule's in full and wins by coming later. GTK's CSS documentation does not
+   mention !important, so the prototype does not rely on it. */
+@media (prefers-reduced-motion: reduced) {
+  button.westron:active:not(:disabled):not(.westron-loading) {
+    transform: none;
+  }
+}
+
+/* Disabled: the whole control at opacity.disabled. libadwaita dims a disabled button with
+   filter: opacity(var(--disabled-opacity)) (50 %, 40 % in high contrast) and a flat one more strongly; its variables
+   "should not be overridden", so westron sets its own filter on every variant. */
+button.westron:disabled,
+button.westron.flat:disabled {
+  filter: opacity(var(--westron-opacity-disabled));
+}
+
+/* Icon-only: a square of the height, no padding. */
+button.westron.westron-icon-only {
+  padding: 0;
+  min-width: calc(var(--wb-height) - 2 * var(--wb-border-width));
+}
+
+/* Focus: the system's ring (libadwaita's outline), so the focusRing bindings do not apply. Nothing to write. */
+
+/* Loading: the spinner and the label in the overlay that button.py builds, spaced like the content. Hover and
+   pressed are excluded above; the button does not dim. */
+button.westron box.westron-loading-content {
+  border-spacing: var(--wb-gap);
+}

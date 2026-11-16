@@ -168,8 +168,10 @@ struct ContractCheckTests {
                 "options.variant.defualt", "unknown key"))
     }
 
-    @Test("the schema checks options: an enum has values and a default name, a bool a boolean default")
+    @Test("the schema checks options: an enum has values and may have a default name, a bool a boolean default")
     func optionShapes() {
+        // Without a default, every use names a value, as the SwiftUI variant does (spec/conventions.md).
+        #expect(contractProblems(replacing("tertiary], default: secondary }", with: "tertiary] }")) == [])
         #expect(
             has(
                 contractProblems(replacing("type: bool\n    default: false", with: "type: bool\n    default: no-no")),
@@ -574,6 +576,29 @@ struct ContractCheckTests {
                 "accessibility.states.selected: \"selected\" is not one of the states: hover, focus, pressed, "
                     + "disabled, loading"
             ])
+    }
+
+    @Test("rule: a platform's systemOptions name options of the contract, each with the system API that carries it")
+    func systemOptions() {
+        let apple = "    base: SwiftUI.Button\n    description: The focus ring is the system's.\n    ios:"
+        func with(_ field: String) -> String {
+            replacing(
+                apple,
+                with:
+                    "    base: SwiftUI.Button\n    \(field)\n    description: The focus ring is the system's.\n    ios:"
+            )
+        }
+        #expect(contractProblems(with("systemOptions: { role: SwiftUI.ButtonRole }")) == [])
+        #expect(
+            contractProblems(with("systemOptions: { kind: SwiftUI.ButtonRole }")) == [
+                "platforms.apple.systemOptions.kind: no option kind; the options are variant, size, role, iconOnly"
+            ])
+        #expect(
+            contractProblems(with("systemOptions: { role: 'not a type' }")).contains {
+                $0.hasPrefix("platforms.apple.systemOptions.role: ")
+            })
+        #expect(
+            contractProblems(with("systemOptions: {}")).contains { $0.hasPrefix("platforms.apple.systemOptions: ") })
     }
 
     @Test("rule: a platform's keyboard intents add to the component's, an OS's to Apple's")
