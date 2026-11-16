@@ -1,0 +1,38 @@
+{
+  "size": {
+    "$type": "dimension",
+    "$description": "Sizes that differ by platform: the input decides them, since touch needs larger targets than a pointer (decisions/0010, chapter 06). Every platform's file names the same tokens with the same descriptions; only the values differ.",
+    "control": {
+      "s": {
+        "$value": {"value": 24, "unit": "px"},
+        "$description": "The height of a control at size s: 24 on macOS, 32 on iOS, iPadOS and watchOS. On touch platforms it is below the recommended target, so its hit area stays the target's size (chapter 08).",
+        "$extensions": {
+          "dev.westron.usage": {
+            "use": ["small button", "small field", "control in a toolbar or a table row"],
+            "avoid": "The default size: use size.control.m. A row's height: rows have heights of their own."
+          }
+        }
+      },
+      "m": {
+        "$value": {"value": 32, "unit": "px"},
+        "$description": "The height of a control at the default size m: a button, a field, a segmented control. 32 on macOS, westron's control (decisions/0013); 44 on iOS, iPadOS and watchOS, the touch target (chapter 08).",
+        "$extensions": {
+          "dev.westron.usage": {
+            "use": ["button", "field", "segmented control"],
+            "avoid": "A row's height: rows have heights of their own. A fixed height where text can grow: the height is a minimum."
+          }
+        }
+      },
+      "l": {
+        "$value": {"value": 40, "unit": "px"},
+        "$description": "The height of a control at size l: the one prominent action of a form, a sheet or an empty state. 40 on macOS, 52 on iOS, iPadOS and watchOS.",
+        "$extensions": {
+          "dev.westron.usage": {
+            "use": ["prominent button", "call to action"],
+            "avoid": "Every control on a screen: the large size marks the one action that leads."
+          }
+        }
+      }
+    }
+  }
+}

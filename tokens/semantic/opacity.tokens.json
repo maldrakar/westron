@@ -1,0 +1,16 @@
+{
+  "opacity": {
+    "$type": "number",
+    "$description": "Opacities that apply to a whole element, from 0 (transparent) to 1 (opaque).",
+    "disabled": {
+      "$value": 0.4,
+      "$description": "A disabled control, drawn whole at this opacity: its fill, border, label and icon together, so it keeps its shape and its variant but reads as unavailable. It sits between Apple's disabled labels (iOS's tertiary label is 30 %) and libadwaita's --disabled-opacity (50 %, 40 % in high contrast). WCAG exempts an inactive control from contrast (chapter 08).",
+      "$extensions": {
+        "dev.westron.usage": {
+          "use": ["disabled button", "disabled field", "disabled toggle", "disabled row"],
+          "avoid": "Colors of its own for the disabled state, or dimming the parts one by one; and something that is only secondary, which takes text.secondary and stays readable. A system control that the platform disables keeps the platform's look."
+        }
+      }
+    }
+  }
+}

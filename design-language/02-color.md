@@ -32,6 +32,9 @@ values, the ramps and the rules that solve them are in decisions/0012; the token
   on a screen, a checked box, a switch that is on. Its usage note asks agents to avoid large areas and more than one
   filled control on a screen (chapter 00, principle 3; [HIG Branding](https://developer.apple.com/design/human-interface-guidelines/branding)).
   `background.selected` and `accent-subtle` lay the accent lightly under a selected row or an empty state's tile.
+- **A filled control darkens as it is pressed.** `accent-hover` and `accent-pressed` are the accent fill under the
+  pointer and pressed, each one step further from its words, so `text.on-accent` reads on them as on the resting fill.
+  In dark high contrast, where the fill is light, they step lighter.
 - **The accent also means "info".** A running job, a tip and a link share the blue. So a screen holds four hues at
   most: the accent, and danger, warning and success when something needs them.
 - **As a fill, it is the same in light and dark.** White words on `#2863D7` pass in either theme. As text and as a
@@ -47,7 +50,8 @@ values, the ramps and the rules that solve them are in decisions/0012; the token
   - `neutral`: no verdict, such as queued, skipped or cancelled.
 - **Six roles each.** `background` is the quiet ground of a badge, a banner or a row. `icon` is its glyph or dot,
   `text` its words, and `border` the outline of a field in error. `fill` is a solid fill, such as a destructive
-  button, and `on-fill` the words on it.
+  button, and `on-fill` the words on it. Danger, which fills a destructive button, also has `fill-hover` and
+  `fill-pressed`, a step and two steps further from its words, as the accent has.
 - **The hues are chosen to stay apart.** Danger is a dark red, warning a bright amber with dark words on it, and
   success a bluish green. Red and green of the same lightness merge for people with deuteranopia; a darker red and a
   bluer green do not (decisions/0012).
@@ -96,6 +100,9 @@ solves for each theme (decisions/0012):
 - **In dark high contrast, solid fills turn light, with dark words on them.** It is the only way a filled button
   reaches 7:1 with its words and still stands out from a dark screen.
 - **In high contrast, every raised surface gets a border.** A shadow alone does not mark its edge (chapter 04).
+
+A disabled control has no colors of its own: it is drawn whole at `opacity.disabled`, so it keeps its variant and
+reads as unavailable in every theme (chapter 08).
 
 watchOS always shows the dark themes.
 

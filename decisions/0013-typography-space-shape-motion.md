@@ -1,7 +1,7 @@
 # 0013. Typography, space, shape and motion
 
 Date: 2026-11-15. Status: accepted. The owner chose direction B on the direction specimens. Its default density is
-comfortable.
+comfortable. Revised 2026-11-16: control heights and the disabled opacity.
 
 ## Context
 
@@ -130,6 +130,24 @@ The owner chose B: the soft shape and its rhythm, with the cobalt palette (decis
   - Scale and depth changes are dropped.
   - Color fades stay, and so does a pause that lets a person read.
   - "Off" (`gtk-enable-animations = false`, an animator scale of 0) means instant.
+
+## Revision of 2026-11-16
+
+In the Button interview (#22) the owner chose the control heights and how a disabled control looks; #56 added the
+tokens.
+
+- **Control heights come before the dense components.** `size.control.s`, `m` and `l` differ by platform, because
+  the input decides the size: 24, 32 and 40 on macOS; 32, 44 and 52 on iOS, iPadOS and watchOS. Size `m` is the 32 px
+  control above on a pointer and the 44 pt touch target of chapter 08 on touch. They live in
+  `tokens/platform/<platform>.tokens.json` (decisions/0010). Row heights and the compact column still come with #33;
+  until then `compact` is empty and both densities take these heights. `radius.control` stays 8, a quarter of 32;
+  whether a taller control takes a larger radius is for its contract to say.
+- **A disabled control is dimmed whole.** `opacity.disabled` is 0.4, and a disabled control is drawn at it, fill,
+  border, label and icon together, instead of in colors of its own. It sits between Apple's disabled ink, about
+  25–30 % (iOS's tertiary label is 30 %), and libadwaita's `--disabled-opacity`, 50 % and 40 % in high contrast: dim
+  enough that a disabled filled button never reads as the primary action next to an enabled one, and clear enough to
+  keep its label and its variant recognizable. One value serves every theme; WCAG exempts an inactive control from
+  contrast (chapter 08).
 
 ## Why
 

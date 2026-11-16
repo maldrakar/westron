@@ -12,6 +12,7 @@ public enum Catalog {
         .typography,
         .space,
         .shape,
+        .controls,
         .motion,
         .icons,
         .environment,

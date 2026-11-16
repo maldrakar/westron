@@ -11,9 +11,10 @@ primitive/color.<theme>.tokens.json the color ramps of a theme, generated from p
                                     what high contrast changes
 primitive/*.tokens.json             easing curves, font families and weights
 semantic/*.tokens.json              roles that do not depend on a mode: colors, text roles, spacing, radii, strokes,
-                                    shadows, motion
+                                    opacities, shadows, motion
 density/<density>.tokens.json       none yet: compact gets values with the dense components (#33)
-platform/<platform>.tokens.json     none yet: only where a value differs by platform
+platform/<platform>.tokens.json     only what differs by platform: the control heights, size.control.*; every
+                                    platform's file names the same tokens with the same descriptions
 ```
 
 ## Modes
@@ -32,7 +33,8 @@ modifiers set the same token, so their order never changes a result; the check f
 - Two tiers: primitive tokens are raw values that components never use; semantic tokens say what a value is for and
   alias primitives. Every semantic token has a `$description` (decisions/0010).
 - Colors come from `palette.json`: `tools/westron generate` solves it into twelve-step ramps for each theme, each step
-  with its job and its contrast target (decisions/0012). Change a color there, never in a generated ramp file.
+  with its job and its contrast target, plus each ramp's label (`contrast`) and pressed fill (`fill-pressed`)
+  (decisions/0012). Change a color there, never in a generated ramp file.
 - What DTCG lacks lives in `$extensions` under `dev.westron.usage`, `dev.westron.contrast`, `dev.westron.apple` and
   `dev.westron.spring`; any other `dev.westron.*` key is an error. Contrast backgrounds are whole token paths:
   `color.background.canvas` (decisions/0012).

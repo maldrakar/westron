@@ -27,7 +27,7 @@ enum AppleTokensSwift {
             out += ["", "extension Westron.Color {"]
             out += members(
                 model.colorTree.roots, indent: 1, noun: "colors", doc: { model.colors[$0].doc },
-                value: { colorValue(model.colors[$0], indent: $1) })
+                value: { item in [Variant { colorValue(model.colors[item], indent: $0) }] })
             out +=
                 [""]
                 + doc(Doc(description: "Every semantic color in token order, the list colors included."), indent: 1)
@@ -48,50 +48,121 @@ enum AppleTokensSwift {
         if !model.textRoles.isEmpty {
             out += tokenType(
                 "Westron.TextRole", model.textRoleTree, noun: "text roles", summary: "Every text role in token order.",
-                doc: { model.textRoles[$0].doc }, value: { textRoleValue(model.textRoles[$0], indent: $1) })
+                doc: { model.textRoles[$0].doc },
+                value: { item in [Variant { textRoleValue(model.textRoles[item], indent: $0) }] })
         }
         if !model.transitions.isEmpty {
             out += tokenType(
                 "Westron.Transition", model.transitionTree, noun: "motions", summary: "Every motion in token order.",
-                doc: { model.transitions[$0].doc }, value: { transitionValue(model.transitions[$0], indent: $1) })
+                doc: { model.transitions[$0].doc },
+                value: { item in [Variant { transitionValue(model.transitions[item], indent: $0) }] })
         }
         if !model.shadows.isEmpty {
             out += tokenType(
                 "Westron.Shadow", model.shadowTree, noun: "shadows", summary: "Every shadow in token order.",
-                doc: { model.shadows[$0].doc }, value: { shadowValue(model.shadows[$0], indent: $1) })
+                doc: { model.shadows[$0].doc },
+                value: { item in [Variant { shadowValue(model.shadows[item], indent: $0) }] })
         }
         if !model.dimensions.isEmpty {
             out += tokenType(
                 "Westron.Dimension", model.dimensionTree, noun: "lengths", summary: "Every dimension in token order.",
-                doc: { model.dimensions[$0].doc }, value: { dimensionValue(model.dimensions[$0], indent: $1) })
+                doc: { model.dimensions[$0].doc },
+                value: { scalarVariants("Westron.Dimension", model.dimensions[$0]) })
+        }
+        if !model.numbers.isEmpty {
+            out += tokenType(
+                "Westron.Number", model.numberTree, noun: "numbers", summary: "Every number in token order.",
+                doc: { model.numbers[$0].doc }, value: { scalarVariants("Westron.Number", model.numbers[$0]) })
         }
         return out.joined(separator: "\n") + "\n"
+    }
+
+    /// One declaration of a token's static: on every system (no condition), or behind `#if <condition>`. `lines`
+    /// writes the value relative to the indent it is given.
+    struct Variant {
+        var condition: String?
+        let lines: (Int) -> [String]
+
+        init(_ condition: String? = nil, lines: @escaping (Int) -> [String]) {
+            self.condition = condition
+            self.lines = lines
+        }
+    }
+
+    /// The Swift conditions of the Apple platforms other than the base, which takes `#else` and so every other
+    /// system too: iPadOS and visionOS as `os(iOS)` does, Linux and WebAssembly (decisions/0010).
+    static let platformConditions = ["macos": "os(macOS)", "watchos": "os(watchOS)"]
+
+    /// A length or a number: one declaration when every platform has the same value; otherwise one per value, the
+    /// platforms that share it joined by `||`, and the base platform's value under `#else`.
+    static func scalarVariants(_ type: String, _ scalar: AppleTokenModel.Scalar) -> [Variant] {
+        func lines(_ value: Double) -> (Int) -> [String] {
+            { indent in
+                oneLineOrCall(
+                    "\(type)(", ["name: \(literal(scalar.path.description))", "value: \(number(value))"],
+                    indent: indent, relative: true)
+            }
+        }
+        let base = scalar.values[0]
+        guard scalar.values.contains(where: { $0 != base }) else { return [Variant(lines: lines(base))] }
+        var groups: [(value: Double, conditions: [String])] = []
+        for (platform, value) in zip(AppleTokenModel.platforms, scalar.values).dropFirst() where value != base {
+            let condition = platformConditions[platform]!
+            if let index = groups.firstIndex(where: { $0.value == value }) {
+                groups[index].conditions.append(condition)
+            } else {
+                groups.append((value, [condition]))
+            }
+        }
+        return groups.map { Variant($0.conditions.joined(separator: " || "), lines: lines($0.value)) }
+            + [Variant(lines: lines(base))]
     }
 
     /// `extension Westron.TextRole { members, all }`.
     static func tokenType(
         _ type: String, _ tree: MemberTree, noun: String, summary: String, doc docOf: (Int) -> Doc,
-        value: (Int, Int) -> [String]
+        value: (Int) -> [Variant]
     ) -> [String] {
         var out = ["", "extension \(type) {"]
         out += members(tree.roots, indent: 1, noun: noun, doc: docOf, value: value)
-        out += [""] + doc(Doc(description: summary), indent: 1) + ["    public static let all: [\(type)] = ["]
-        let paths = tree.leafPaths.sorted { $0.item < $1.item }
-        out += paths.map { "        \(reference($0.path.split(separator: ".").map(String.init)))," } + ["    ]", "}"]
+        out += [""] + doc(Doc(description: summary), indent: 1)
+        let names = tree.leafPaths.sorted { $0.item < $1.item }.map {
+            reference($0.path.split(separator: ".").map(String.init))
+        }
+        // One token on one line, as swift format writes a literal of one element when it fits; more, one per line.
+        let opening = "    public static let all: [\(type)] = ["
+        if names.count == 1, opening.count + names[0].count + 1 <= lineLength {
+            return out + [opening + names[0] + "]", "}"]
+        }
+        out.append(opening)
+        out += names.map { "        \($0)," } + ["    ]", "}"]
         return out
     }
 
     /// A static per token and an enum per group, with its members inside, each with its doc, a blank line between.
+    /// A token with a value per platform is declared once per value, each with its doc, behind `#if os(...)`.
     static func members(
-        _ nodes: [MemberTree.Node], indent: Int, noun: String, doc docOf: (Int) -> Doc, value: (Int, Int) -> [String]
+        _ nodes: [MemberTree.Node], indent: Int, noun: String, doc docOf: (Int) -> Doc, value: (Int) -> [Variant]
     ) -> [String] {
         let pad = String(repeating: "    ", count: indent)
         let blocks = nodes.map { node -> [String] in
             switch node {
             case .leaf(let name, let item):
-                return doc(docOf(item), indent: indent)
-                    + indented(
-                        assigned("public static let \(SwiftName.declared(name)) = ", value(item, indent)), indent)
+                func declaration(_ variant: Variant, _ indent: Int) -> [String] {
+                    doc(docOf(item), indent: indent)
+                        + indented(
+                            assigned("public static let \(SwiftName.declared(name)) = ", variant.lines(indent)),
+                            indent)
+                }
+                let variants = value(item)
+                guard variants.count > 1 else { return declaration(variants[0], indent) }
+                var lines: [String] = []
+                for (index, variant) in variants.enumerated() {
+                    let directive =
+                        variant.condition.map { index == 0 ? "#if \($0)" : "#elseif \($0)" } ?? "#else"
+                    lines += [pad + directive] + declaration(variant, indent + 1)
+                }
+                return lines + [pad + "#endif"]
             case .group(let group):
                 return doc(groupDoc(group, noun: noun), indent: indent)
                     + [pad + "public enum \(SwiftName.declared(group.name)) {"]
@@ -222,13 +293,6 @@ enum AppleTokensSwift {
         return callLines("Westron.Shadow(", [["name: \(literal(shadow.path.description))"]] + themes)
     }
 
-    static func dimensionValue(_ dimension: AppleTokenModel.Dimension, indent: Int) -> [String] {
-        oneLineOrCall(
-            "Westron.Dimension(",
-            ["name: \(literal(dimension.path.description))", "value: \(number(dimension.value))"], indent: indent,
-            relative: true)
-    }
-
     // MARK: Layout
 
     /// A call with one argument per line, each argument lines of its own, the closing parenthesis after the last.
@@ -290,9 +354,10 @@ enum AppleTokensSwift {
     static func swiftUI(_ model: AppleTokenModel) -> String {
         var out = header(
             model.resolver,
-            "The public SwiftUI accessors of westron's lengths and motions. Each calls an adapter in "
+            "The public SwiftUI accessors of westron's lengths, numbers and motions. Each calls an adapter in "
                 + "TokenAdapters.swift with a value from WestronTokens: `CGFloat.radius.card` is "
-                + "`CGFloat(Westron.Dimension.radius.card)`. Colors and text roles need none: a view passes "
+                + "`CGFloat(Westron.Dimension.radius.card)`, `Double.opacity.disabled` is "
+                + "`Double(Westron.Number.opacity.disabled)`. Colors and text roles need none: a view passes "
                 + "`Westron.Color` to the overloads in TokenAdapters.swift, `.foregroundStyle(.text.primary)`, and "
                 + "a role to `.textRole(.body.strong)`.")
         out += ["", "import SwiftUI", "import WestronTokens"]
@@ -303,6 +368,9 @@ enum AppleTokensSwift {
         out += swiftUIStatics(
             "CGFloat", "Westron.Dimension", model.dimensionTree, noun: "lengths", converted: "in points",
             doc: { model.dimensions[$0].doc })
+        out += swiftUIStatics(
+            "Double", "Westron.Number", model.numberTree, noun: "numbers", converted: "as Double",
+            doc: { model.numbers[$0].doc })
         return out.joined(separator: "\n") + "\n"
     }
 

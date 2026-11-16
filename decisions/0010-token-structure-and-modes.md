@@ -1,6 +1,6 @@
 # 0010. Token structure, modes and the Apple output
 
-Date: 2026-11-15. Status: accepted.
+Date: 2026-11-15. Status: accepted. Revised 2026-11-16: the first values that differ by platform, and numbers.
 
 ## Context
 
@@ -127,6 +127,27 @@ The tools reject any other `dev.westron.*` key, so a misspelled key fails instea
   when any value differs between them, or when a token other than a color or a shadow differs by theme. The
   mechanism comes with the first token that needs it. Shadows switch by theme since 2026-11-15: `Westron.Shadow`
   holds the layers of each theme, and `View.shadow(_:)` picks them from the environment (decisions/0013).
+
+## Revision of 2026-11-16
+
+The Button contract (#22) needs control heights that the input decides, so the `platform` modifier got its first
+values in #56, and the Apple generator got the mechanism that "Density and platform switch nothing yet" put off.
+
+- **Control heights by platform.** `platform/<platform>.tokens.json` holds `size.control.s`, `m` and `l`: 24, 32 and
+  40 on macOS, which a pointer drives; 32, 44 and 52 on iOS, iPadOS and watchOS, which touch drives. The owner chose
+  the values in the Button interview. The three files name the same tokens with the same descriptions; only the
+  values differ.
+- **`compact` stays empty.** The platform files supply only the regular heights, so both densities take them. When
+  the dense components (#33) give `compact` values, the platform files supply both columns and each density context
+  points `size.control.<size>` at its own, so no token is set by two modifiers and no name a contract binds changes.
+- **Apple: a value per platform behind `#if os(...)`.** A length or a number whose value differs by platform is
+  declared once per value: `#if os(macOS)`, `#elseif os(watchOS)` where watchOS differs from iOS, and iOS's value under
+  `#else`, which every other system takes too, iPadOS, visionOS, Linux and WebAssembly. Only the value may differ: a
+  token one platform lacks, another description, or a color that differs by platform fails generation, since a
+  colorset switches by theme only. Density still switches nothing, and a value that differs by density still fails.
+- **Numbers.** A semantic `number` token is a `Westron.Number` in WestronTokens and a `Double` in WestronUI. Its name
+  keeps its group, as a length's does: `opacity.disabled` is `Westron.Number.opacity.disabled` and
+  `.opacity(.opacity.disabled)` in a view.
 
 ## Why
 
