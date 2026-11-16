@@ -12,10 +12,11 @@
       ]
     },
     "semantic": {
-      "description": "Roles that do not depend on a mode: colors (aliases of the ramps), motion, radii, spacing, strokes, text roles.",
+      "description": "Roles that do not depend on a mode: colors (aliases of the ramps), motion, opacities, radii, spacing, strokes, text roles.",
       "sources": [
         {"$ref": "semantic/color.tokens.json"},
         {"$ref": "semantic/motion.tokens.json"},
+        {"$ref": "semantic/opacity.tokens.json"},
         {"$ref": "semantic/radius.tokens.json"},
         {"$ref": "semantic/space.tokens.json"},
         {"$ref": "semantic/stroke.tokens.json"},
@@ -43,7 +44,7 @@
       "default": "light"
     },
     "density": {
-      "description": "Spacing and control sizes. compact has no values until the dense components (#33) need them. Resolved at runtime, through the environment.",
+      "description": "Spacing and control sizes. compact has no values until the dense components (#33) need them; until then both densities take the control sizes the platform gives. Resolved at runtime, through the environment.",
       "contexts": {
         "regular": [],
         "compact": []
@@ -51,11 +52,11 @@
       "default": "regular"
     },
     "platform": {
-      "description": "Values that differ by platform, in platform/<platform>.tokens.json when there are any. No default: each platform's generator names its own. Resolved at build time.",
+      "description": "Values that differ by platform, in platform/<platform>.tokens.json: the control sizes, which the input decides. No default: each platform's generator names its own. Resolved at build time.",
       "contexts": {
-        "ios": [],
-        "macos": [],
-        "watchos": []
+        "ios": [{"$ref": "platform/ios.tokens.json"}],
+        "macos": [{"$ref": "platform/macos.tokens.json"}],
+        "watchos": [{"$ref": "platform/watchos.tokens.json"}]
       }
     }
   },

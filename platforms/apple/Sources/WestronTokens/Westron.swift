@@ -276,9 +276,24 @@ extension Westron {
         }
     }
 
-    /// A length: a step of the space or radius ladder, or a stroke width, in points (CSS px).
+    /// A length: a step of the space or radius ladder, a stroke width or a control's height, in points (CSS px).
+    ///
+    /// A length that differs by platform, such as `size.control.m`, holds the value of the platform it is built for
+    /// (decisions/0010).
     public struct Dimension: Hashable, Sendable {
         /// The token's path, `space.100`.
+        public let name: String
+        public let value: Double
+
+        init(name: String, value: Double) {
+            self.name = name
+            self.value = value
+        }
+    }
+
+    /// A number without a unit, such as an opacity from 0 to 1.
+    public struct Number: Hashable, Sendable {
+        /// The token's path, `opacity.disabled`.
         public let name: String
         public let value: Double
 

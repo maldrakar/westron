@@ -81,6 +81,14 @@ struct AppleTokensTests {
         let tokens = try #require(AppleFixture.file(files, AppleTokens.tokensFile))
         #expect(tokens.contains("public enum Category: String, CaseIterable, Sendable {"))
         #expect(!tokens.contains("color.neutral."), "primitives stay out, also the ramps the theme contexts merge in")
+        // The control heights: macOS's pointer sizes behind #if, the touch sizes of iOS and watchOS under #else.
+        for (name, pointer, touch) in [("s", 24, 32), ("m", 32, 44), ("l", 40, 52)] {
+            let declaration = "public static let \(name) = Westron.Dimension(name: \"size.control.\(name)\", value: "
+            #expect(tokens.contains("#if os(macOS)\n") && tokens.contains(declaration + "\(pointer))"))
+            #expect(tokens.contains(declaration + "\(touch))"))
+        }
+        #expect(!tokens.contains("os(watchOS)"), "watchOS takes the iOS values")
+        #expect(tokens.contains(#"public static let disabled = Westron.Number(name: "opacity.disabled", value: 0.4)"#))
     }
 
     @Test("the same input gives the same bytes")
@@ -97,28 +105,147 @@ struct AppleTokensTests {
         #expect(
             AppleFixture.problems(["compact.tokens.json": compact]) == [
                 "space.100: differs between theme=light, density=regular, platform=ios and theme=light, "
-                    + "density=compact, platform=ios; values that differ by density or platform are not generated for "
-                    + "Apple yet"
+                    + "density=compact, platform=ios; values that differ by density are not generated for Apple yet"
             ])
     }
 
-    @Test("a value that differs by platform fails, and so does a token only one platform has")
+    @Test("a density compares with its own platform: a platform's value is not a density's difference")
+    func densityOnEachPlatform() throws {
+        let macos = #"{ "space": { "100": { "$type": "dimension", "$value": { "value": 6, "unit": "px" } } } }"#
+        #expect(throws: Never.self) { try AppleFixture.generate(["macos.tokens.json": macos]) }
+    }
+
+    @Test("a length or a number that differs by platform is declared per value behind #if os(...), iOS's under #else")
+    func platformValues() throws {
+        let resolver = AppleFixture.resolver.replacingOccurrences(
+            of: #""watchos": []"#, with: #""watchos": [{ "$ref": "watchos.tokens.json" }]"#)
+        let macos = #"{ "space": { "100": { "$type": "dimension", "$value": { "value": 6, "unit": "px" } } } }"#
+        let watchos = ##"""
+            {
+              "space": { "100": { "$type": "dimension", "$value": { "value": 6, "unit": "px" } } },
+              "stroke": {
+                "thin": {
+                  "$type": "dimension", "$value": { "value": 2, "unit": "px" }, "$description": "Rules and dividers."
+                }
+              }
+            }
+            """##
+        let files = try AppleFixture.generate([
+            "r.resolver.json": resolver, "macos.tokens.json": macos, "watchos.tokens.json": watchos,
+        ])
+        let tokens = try #require(AppleFixture.file(files, AppleTokens.tokensFile))
+        #expect(
+            tokens.contains(
+                """
+                    #if os(macOS) || os(watchOS)
+                        /// The token `space.100`.
+                        public static let space100 = Westron.Dimension(name: "space.100", value: 6)
+                    #else
+                        /// The token `space.100`.
+                        public static let space100 = Westron.Dimension(name: "space.100", value: 8)
+                    #endif
+
+                """))
+        #expect(
+            tokens.contains(
+                """
+                        #if os(watchOS)
+                            /// Rules and dividers.
+                            public static let thin = Westron.Dimension(name: "stroke.thin", value: 2)
+                        #else
+                            /// Rules and dividers.
+                            public static let thin = Westron.Dimension(name: "stroke.thin", value: 1)
+                        #endif
+
+                """))
+        #expect(tokens.contains("        space100,\n        stroke.thin,\n"), "`all` names each token once")
+        #expect(AppleFixture.file(files, AppleTokens.swiftUIFile) == Self.swiftUI, "SwiftUI reads the value as built")
+    }
+
+    @Test(
+        "only the value of a length or a number differs by platform: a color, a description, a token one platform has")
     func platformGuard() {
         let macos = ##"""
             {
               "stroke": { "thin": { "$type": "dimension", "$value": { "value": 0.5, "unit": "px" } } },
-              "space": { "200": { "$type": "dimension", "$value": { "value": 16, "unit": "px" } } }
+              "space": { "200": { "$type": "dimension", "$value": { "value": 16, "unit": "px" } } },
+              "color": {
+                "edge": {
+                  "$type": "color", "$value": { "colorSpace": "srgb", "components": [0, 0, 0], "hex": "#000000" },
+                  "$description": "An edge."
+                }
+              }
             }
             """##
-        let problems = AppleFixture.problems(["macos.tokens.json": macos])
+        // A color in the semantic set, with the same description on macOS and another value.
+        let semantic = AppleFixture.semantic.replacingOccurrences(
+            of: #""space": {"#,
+            with: ##"""
+                "color": {
+                  "edge": {
+                    "$type": "color", "$value": { "colorSpace": "srgb", "components": [1, 1, 1], "hex": "#FFFFFF" },
+                    "$description": "An edge."
+                  }
+                },
+                "space": {
+                """##)
+        let differs =
+            "differs between theme=light, density=regular, platform=ios and theme=light, density=regular, "
+            + "platform=macos; on Apple only a length or a number differs by platform, and only in its value"
         #expect(
-            problems == [
-                "stroke.thin: differs between theme=light, density=regular, platform=ios and theme=light, "
-                    + "density=regular, platform=macos; values that differ by density or platform are not generated "
-                    + "for Apple yet",
-                "space.200: differs between theme=light, density=regular, platform=ios and theme=light, "
-                    + "density=regular, platform=macos; values that differ by density or platform are not generated "
-                    + "for Apple yet",
+            Set(AppleFixture.problems(["macos.tokens.json": macos, "semantic.tokens.json": semantic])) == [
+                "stroke.thin: \(differs)", "color.edge: \(differs)", "space.200: \(differs)",
+            ])
+    }
+
+    @Test("a number is a Westron.Number, its name keeping its group, and a Double in SwiftUI")
+    func numbers() throws {
+        let semantic = AppleFixture.semantic.replacingOccurrences(
+            of: #""space": {"#,
+            with: #"""
+                "opacity": {
+                  "$type": "number",
+                  "disabled": { "$value": 0.4, "$description": "A disabled control." }
+                },
+                "space": {
+                """#)
+        let files = try AppleFixture.generate(["semantic.tokens.json": semantic])
+        let tokens = try #require(AppleFixture.file(files, AppleTokens.tokensFile))
+        #expect(
+            tokens.hasSuffix(
+                """
+                extension Westron.Number {
+                    /// The numbers `opacity.*`.
+                    public enum opacity {
+                        /// A disabled control.
+                        public static let disabled = Westron.Number(name: "opacity.disabled", value: 0.4)
+                    }
+
+                    /// Every number in token order.
+                    public static let all: [Westron.Number] = [opacity.disabled]
+                }
+
+                """))
+        let swiftUI = try #require(AppleFixture.file(files, AppleTokens.swiftUIFile))
+        #expect(
+            swiftUI.hasSuffix(
+                """
+                extension Double {
+                    /// The numbers `opacity.*` as Double.
+                    public enum opacity {
+                        /// A disabled control.
+                        public static var disabled: Double {
+                            Double(Westron.Number.opacity.disabled)
+                        }
+                    }
+                }
+
+                """))
+        let zero = AppleFixture.semantic.replacingOccurrences(
+            of: #""space": {"#, with: #""zero": { "$type": "number", "$value": 0 }, "space": {"#)
+        #expect(
+            AppleFixture.problems(["semantic.tokens.json": zero]) == [
+                "zero: its Swift name Double.zero collides with a member the type already has; rename the token"
             ])
     }
 
@@ -438,9 +565,7 @@ struct AppleTokensTests {
                 ])
 
             /// Every shadow in token order.
-            public static let all: [Westron.Shadow] = [
-                raised,
-            ]
+            public static let all: [Westron.Shadow] = [raised]
         }
 
         extension Westron.Dimension {
@@ -466,10 +591,11 @@ struct AppleTokensTests {
         // Generated from r.resolver.json by `tools/westron generate`. Do not edit: change the tokens and generate again
         // (decisions/0010).
         //
-        // The public SwiftUI accessors of westron's lengths and motions. Each calls an adapter in TokenAdapters.swift with a
-        // value from WestronTokens: `CGFloat.radius.card` is `CGFloat(Westron.Dimension.radius.card)`. Colors and text roles
-        // need none: a view passes `Westron.Color` to the overloads in TokenAdapters.swift, `.foregroundStyle(.text.primary)`,
-        // and a role to `.textRole(.body.strong)`.
+        // The public SwiftUI accessors of westron's lengths, numbers and motions. Each calls an adapter in TokenAdapters.swift
+        // with a value from WestronTokens: `CGFloat.radius.card` is `CGFloat(Westron.Dimension.radius.card)`,
+        // `Double.opacity.disabled` is `Double(Westron.Number.opacity.disabled)`. Colors and text roles need none: a view
+        // passes `Westron.Color` to the overloads in TokenAdapters.swift, `.foregroundStyle(.text.primary)`, and a role to
+        // `.textRole(.body.strong)`.
 
         import SwiftUI
         import WestronTokens

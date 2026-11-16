@@ -100,7 +100,7 @@ struct CatalogRegistryTests {
         #expect(
             Catalog.entries(in: .foundations).map(\.id) == [
                 "color-backgrounds", "color-foregrounds", "color-categories", "color-status", "color-in-use",
-                "typography", "space", "shape", "motion", "icons",
+                "typography", "space", "shape", "controls", "motion", "icons",
             ])
     }
 

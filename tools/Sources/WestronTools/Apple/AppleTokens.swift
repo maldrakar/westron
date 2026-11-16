@@ -8,8 +8,9 @@ import Foundation
 /// - `WestronUI/Generated/Tokens+SwiftUI.swift`: the `public` SwiftUI statics, which call the hand-written adapters
 ///   in `WestronUI/TokenAdapters.swift`.
 ///
-/// Themes switch at run time through the colorsets. Density and platform switch nothing yet: a value that differs
-/// by either fails generation until a token needs that mechanism.
+/// Themes switch at run time through the colorsets. Platforms switch at build time: a length or a number whose value
+/// differs by platform is declared once per value behind `#if os(...)`, iOS's value under `#else`. Density switches
+/// nothing yet: a value that differs by density fails generation until a token needs that mechanism.
 public struct AppleTokens: Generator {
     public let name = "tokens-apple"
     /// The resolver, relative to the repository root.

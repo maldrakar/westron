@@ -103,6 +103,18 @@ extension Westron.Color {
             dark: Westron.RGB(hex: 0x1C56C9),
             lightHighContrast: Westron.RGB(hex: 0x0844B6),
             darkHighContrast: Westron.RGB(hex: 0x7EACFF))
+
+        /// The accent fill while it is pressed: one step beyond accent-hover, further from its label, so text.on-accent
+        /// reads on it as on the resting fill.
+        ///
+        /// Use for: pressed primary button, pressed checked box. Avoid: A resting or hovered fill: use
+        /// background.accent or background.accent-hover. A pressed row or a quiet control: use background.pressed.
+        public static let accentPressed = Westron.Color(
+            name: "color.background.accent-pressed",
+            light: Westron.RGB(hex: 0x0F4ABC),
+            dark: Westron.RGB(hex: 0x0F4ABC),
+            lightHighContrast: Westron.RGB(hex: 0x0038A5),
+            darkHighContrast: Westron.RGB(hex: 0x93B9FF))
     }
 
     /// The colors `color.text.*`.
@@ -157,15 +169,19 @@ extension Westron.Color {
                 ["color.background.muted"],
             ])
 
-        /// Text and glyphs on the accent fill: white, and the canvas's color in dark high contrast, where the fill
-        /// turns light.
+        /// Text and glyphs on the accent fill, also under the pointer and pressed: white, and the canvas's color in
+        /// dark high contrast, where the fill turns light.
         public static let onAccent = Westron.Color(
             name: "color.text.on-accent",
             light: Westron.RGB(hex: 0xFFFFFF),
             dark: Westron.RGB(hex: 0xFFFFFF),
             lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
             darkHighContrast: Westron.RGB(hex: 0x101318),
-            backgrounds: [["color.background.accent"], ["color.background.accent-hover"]])
+            backgrounds: [
+                ["color.background.accent"],
+                ["color.background.accent-hover"],
+                ["color.background.accent-pressed"],
+            ])
 
         /// Links and accent text.
         ///
@@ -310,14 +326,39 @@ extension Westron.Color {
                 lightHighContrast: Westron.RGB(hex: 0xA72120),
                 darkHighContrast: Westron.RGB(hex: 0xFE7469))
 
-            /// Text and glyphs on the danger fill.
+            /// The danger fill under the pointer: a destructive filled button that is hovered.
+            ///
+            /// Use for: hovered destructive button. Avoid: A resting fill or a count badge: use status.danger.fill.
+            public static let fillHover = Westron.Color(
+                name: "color.status.danger.fill-hover",
+                light: Westron.RGB(hex: 0x990D13),
+                dark: Westron.RGB(hex: 0x990D13),
+                lightHighContrast: Westron.RGB(hex: 0x990D13),
+                darkHighContrast: Westron.RGB(hex: 0xFF8B7F))
+
+            /// The danger fill while it is pressed: one step beyond fill-hover, further from its label, so on-fill
+            /// reads on it as on the resting fill.
+            ///
+            /// Use for: pressed destructive button. Avoid: A resting fill or a count badge: use status.danger.fill.
+            public static let fillPressed = Westron.Color(
+                name: "color.status.danger.fill-pressed",
+                light: Westron.RGB(hex: 0x88000A),
+                dark: Westron.RGB(hex: 0x88000A),
+                lightHighContrast: Westron.RGB(hex: 0x88000A),
+                darkHighContrast: Westron.RGB(hex: 0xFFA196))
+
+            /// Text and glyphs on the danger fill, also under the pointer and pressed.
             public static let onFill = Westron.Color(
                 name: "color.status.danger.on-fill",
                 light: Westron.RGB(hex: 0xFFFFFF),
                 dark: Westron.RGB(hex: 0xFFFFFF),
                 lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
                 darkHighContrast: Westron.RGB(hex: 0x101318),
-                backgrounds: [["color.status.danger.fill"]])
+                backgrounds: [
+                    ["color.status.danger.fill"],
+                    ["color.status.danger.fill-hover"],
+                    ["color.status.danger.fill-pressed"],
+                ])
         }
 
         /// The colors `color.status.warning.*`.
@@ -685,6 +726,7 @@ extension Westron.Color {
         background.accentSubtle,
         background.accent,
         background.accentHover,
+        background.accentPressed,
         text.primary,
         text.secondary,
         text.placeholder,
@@ -699,6 +741,8 @@ extension Westron.Color {
         status.danger.icon,
         status.danger.text,
         status.danger.fill,
+        status.danger.fillHover,
+        status.danger.fillPressed,
         status.danger.onFill,
         status.warning.background,
         status.warning.border,
@@ -2157,6 +2201,60 @@ extension Westron.Dimension {
         public static let thick = Westron.Dimension(name: "stroke.thick", value: 2)
     }
 
+    /// The lengths `size.*`.
+    public enum size {
+        /// The lengths `size.control.*`.
+        public enum control {
+            #if os(macOS)
+                /// The height of a control at size s: 24 on macOS, 32 on iOS, iPadOS and watchOS. On touch platforms it
+                /// is below the recommended target, so its hit area stays the target's size (chapter 08).
+                ///
+                /// Use for: small button, small field, control in a toolbar or a table row. Avoid: The default size:
+                /// use size.control.m. A row's height: rows have heights of their own.
+                public static let s = Westron.Dimension(name: "size.control.s", value: 24)
+            #else
+                /// The height of a control at size s: 24 on macOS, 32 on iOS, iPadOS and watchOS. On touch platforms it
+                /// is below the recommended target, so its hit area stays the target's size (chapter 08).
+                ///
+                /// Use for: small button, small field, control in a toolbar or a table row. Avoid: The default size:
+                /// use size.control.m. A row's height: rows have heights of their own.
+                public static let s = Westron.Dimension(name: "size.control.s", value: 32)
+            #endif
+
+            #if os(macOS)
+                /// The height of a control at the default size m: a button, a field, a segmented control. 32 on macOS,
+                /// westron's control (decisions/0013); 44 on iOS, iPadOS and watchOS, the touch target (chapter 08).
+                ///
+                /// Use for: button, field, segmented control. Avoid: A row's height: rows have heights of their own. A
+                /// fixed height where text can grow: the height is a minimum.
+                public static let m = Westron.Dimension(name: "size.control.m", value: 32)
+            #else
+                /// The height of a control at the default size m: a button, a field, a segmented control. 32 on macOS,
+                /// westron's control (decisions/0013); 44 on iOS, iPadOS and watchOS, the touch target (chapter 08).
+                ///
+                /// Use for: button, field, segmented control. Avoid: A row's height: rows have heights of their own. A
+                /// fixed height where text can grow: the height is a minimum.
+                public static let m = Westron.Dimension(name: "size.control.m", value: 44)
+            #endif
+
+            #if os(macOS)
+                /// The height of a control at size l: the one prominent action of a form, a sheet or an empty state. 40
+                /// on macOS, 52 on iOS, iPadOS and watchOS.
+                ///
+                /// Use for: prominent button, call to action. Avoid: Every control on a screen: the large size marks
+                /// the one action that leads.
+                public static let l = Westron.Dimension(name: "size.control.l", value: 40)
+            #else
+                /// The height of a control at size l: the one prominent action of a form, a sheet or an empty state. 40
+                /// on macOS, 52 on iOS, iPadOS and watchOS.
+                ///
+                /// Use for: prominent button, call to action. Avoid: Every control on a screen: the large size marks
+                /// the one action that leads.
+                public static let l = Westron.Dimension(name: "size.control.l", value: 52)
+            #endif
+        }
+    }
+
     /// Every dimension in token order.
     public static let all: [Westron.Dimension] = [
         radius25,
@@ -2189,5 +2287,26 @@ extension Westron.Dimension {
         stroke.thin,
         stroke.regular,
         stroke.thick,
+        size.control.s,
+        size.control.m,
+        size.control.l,
     ]
+}
+
+extension Westron.Number {
+    /// The numbers `opacity.*`.
+    public enum opacity {
+        /// A disabled control, drawn whole at this opacity: its fill, border, label and icon together, so it keeps its
+        /// shape and its variant but reads as unavailable. It sits between Apple's disabled labels (iOS's tertiary
+        /// label is 30 %) and libadwaita's --disabled-opacity (50 %, 40 % in high contrast). WCAG exempts an inactive
+        /// control from contrast (chapter 08).
+        ///
+        /// Use for: disabled button, disabled field, disabled toggle, disabled row. Avoid: Colors of its own for the
+        /// disabled state, or dimming the parts one by one; and something that is only secondary, which takes
+        /// text.secondary and stays readable. A system control that the platform disables keeps the platform's look.
+        public static let disabled = Westron.Number(name: "opacity.disabled", value: 0.4)
+    }
+
+    /// Every number in token order.
+    public static let all: [Westron.Number] = [opacity.disabled]
 }
