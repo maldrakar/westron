@@ -45,6 +45,7 @@ tools/apple/catalog-screenshot.sh macos --entry environment                     
 
 tools/check.sh                    # build and test tools/, then the checks below (CI runs it on Linux)
 tools/westron lint raw-values     # no raw values in WestronUI
+tools/westron lint api-parity     # WestronUI's public API is exactly the component API the contracts give
 tools/westron generate            # regenerate code from the sources
 tools/westron generate --check    # generated code matches a fresh generation
 tools/westron icons check         # the icon registry spec/icons/icons.yaml is valid

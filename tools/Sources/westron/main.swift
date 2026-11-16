@@ -6,6 +6,7 @@ import WestronTools
 
 let usage = """
     usage: tools/westron lint raw-values [FILE.swift | DIRECTORY …]
+           tools/westron lint api-parity
            tools/westron generate [--check]
            tools/westron tokens check [RESOLVER.json]
            tools/westron tokens contrast [--all] [RESOLVER.json]
@@ -56,6 +57,20 @@ func lintRawValues(_ paths: [String]) throws -> Int32 {
         return 1
     }
     print("raw-values: files checked: \(files.count), no violations")
+    return 0
+}
+
+/// The API parity lint (#21): WestronUI's public API against the contracts and spec/conventions.md.
+func lintAPIParity() throws -> Int32 {
+    let report = try APIParity.run()
+    for problem in report.problems { printError(problem.description) }
+    if !report.problems.isEmpty {
+        printError("api-parity: problems: \(report.problems.count)")
+        return 1
+    }
+    print(
+        "api-parity: contracts: \(report.contracts), files: \(report.files), public declarations: "
+            + "\(report.publicDeclarations), of them the contracts' component API: \(report.expected), no problems")
     return 0
 }
 
@@ -184,6 +199,8 @@ do {
     switch (arguments.first, arguments.dropFirst().first) {
     case ("lint", "raw-values"):
         exit(try lintRawValues(Array(arguments.dropFirst(2))))
+    case ("lint", "api-parity") where arguments.count == 2:
+        exit(try lintAPIParity())
     case ("generate", nil):
         exit(try generate(check: false))
     case ("generate", "--check") where arguments.count == 2:

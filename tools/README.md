@@ -4,9 +4,10 @@ The westron generators and checks are a separate SwiftPM package (decisions/0009
 
 | Path | What it does |
 |---|---|
-| `westron` | Runs the `westron` executable: `lint raw-values`, `generate [--check]`, `tokens check`, `tokens contrast`, `icons check`, `spec check`. Builds the package if needed |
-| `check.sh` | Builds and tests the package, then runs the lint, `generate --check`, `tokens check`, `tokens contrast`, `icons check` and `spec check`; CI runs it on Linux |
+| `westron` | Runs the `westron` executable: `lint raw-values`, `lint api-parity`, `generate [--check]`, `tokens check`, `tokens contrast`, `icons check`, `spec check`. Builds the package if needed |
+| `check.sh` | Builds and tests the package, then runs the raw-values lint, `generate --check`, `tokens check`, `tokens contrast`, `icons check`, `spec check` and the API parity lint; CI runs it on Linux |
 | `Sources/WestronTools/RawValues.swift` | The raw-values lint ("no raw values") for `WestronUI` |
+| `Sources/WestronTools/APIParity/` | The API parity lint (#21, below): `SwiftDeclarations.swift` reads declarations and their effective access with swift-syntax, `APIParity.swift` derives the expected API from the contracts and compares |
 | `Sources/WestronTools/Generate.swift` | Generator registry; `--check` compares the committed code with a fresh generation and reports stale files in the directories generators own |
 | `Sources/WestronTools/Apple/` | The Apple token generator (`tokens-apple`): `WestronTokens` values, the `WestronUI` asset catalog and SwiftUI accessors (decisions/0010) |
 | `Sources/WestronTools/Icons/` | The icon registry reader (`spec/icons/icons.yaml`, YAML through Yams) and the Apple icon generator (`icons-apple`): `Westron.Icon` and its SF Symbols (decisions/0011) |
@@ -35,3 +36,53 @@ those interfaces and fails while the file differs from them; it also checks that
 ```sh
 source tools/apple/xcode-env.sh && WESTRON_REFRESH_SWIFTUI_TYPES=1 swift test --package-path tools --filter SwiftUITypesTests
 ```
+
+## The API parity lint
+
+`tools/westron lint api-parity` checks that the public API of `platforms/apple/Sources/WestronUI` is exactly the
+component API the contracts give through `spec/conventions.md` (AGENTS.md, rules 4 and 5; #21). The generator makes
+the names equal by construction; the lint checks the result from the sources, so hand-written code cannot quietly add,
+rename or drop component API. It prints `file:line: message` for each problem and exits with 1.
+
+**Expected**, from each contract that is approved or later and styled on an Apple system control, as the generator
+decides (`AppleComponents.generates`):
+
+- `public enum <Component><Option>: String, CaseIterable, Sendable` for each enum option not in
+  `platforms.apple.systemOptions`: the contract's values as cases, in order, raw values as written, no other public
+  member or conformance. Button: `ButtonVariant` (`primary`, `secondary`, `tertiary`) and `ButtonSize` (`s`, `m`,
+  `l`); `role` is `SwiftUI.ButtonRole`, so no `ButtonRole`;
+- in `extension View`, the overload of the base's style modifier: the variant unlabeled, with a default only when the
+  contract gives one, then the other options in the contract's order, labeled; `size: <Component>Size? = nil`; a bool
+  option `<name>: Bool = <default>`; no attributes, generics or effects; `-> some View`. Button:
+  `public func buttonStyle(_ variant: ButtonVariant, size: ButtonSize? = nil, iconOnly: Bool = false) -> some View`;
+- in `extension View`, one shared modifier per state the system control lacks, named as the state:
+  `public func loading(_ isLoading: Bool) -> some View`. The system's states are pressed, hover, focus and disabled,
+  for every control, as the conventions name them (`APIParity.systemStates`); a contract does not mark them.
+
+**The boundary.** Component API is: a type named after a component (`Button…` for `button`), a member or a
+conformance of one, an overload of a style modifier (`SystemStyles`), a function named after a component
+(`buttonLoading`) or as a contract's state, and a type named like component API of no contract (`…Variant`, `…State`,
+`…Style`, or conforming to a `…Style` protocol). Component API that no contract gives is an error, with the reason when
+its contract is draft or its Apple strategy gives no API yet. The token area is three files, `TokenAdapters.swift`,
+`Generated/Tokens+SwiftUI.swift` and `Generated/Icons+SwiftUI.swift` (`APIParity.tokenArea`): its token accessors,
+adapters and icons are not compared with contracts, and it may only extend existing types, so a new public top-level
+type there is an error. Any other public declaration in `WestronUI` is an error, so new public API cannot appear
+unnoticed: add it to a contract, or, if it is token API, to the token area.
+
+**Per OS.** A public declaration under `#if` is an error: a component's public API is the same on every Apple OS, and
+`platforms.apple.<os>` entries act through the style's fallbacks (`offered`), not through the API.
+
+**Exceptions.** `// westron-lint: allow <reason>` on the declaration's line or a comment line just above excuses it
+from the last three rules, never from the expected API. Access is the effective one: a `public` member of an internal
+type is not public, a member of a `public extension` is.
+
+**Not checked:** doc comments; the bodies (what a style draws, that `.loading(_:)` sets the environment, that the
+overload applies `<Component>VariantStyle`): the build, `generate --check` and `spec-reviewer` cover them; type
+spellings are compared as written, so `Optional<ButtonSize>` differs from `ButtonSize?`; own components, whose API
+conventions question Q2 leaves open; public API of `WestronTokens`.
+
+**swift-syntax** (`exact: "604.0.0"`) is the parser: Swift's own, so the lint reads exactly what the compiler reads,
+`#if` clauses, attributes and effects included, where a regular expression parser would guess. It is the version
+swift-json-schema already resolves for Swift 6.4, so the package resolves one copy. It builds from source in debug: on
+an M4 Pro with Xcode 27.1, a clean `swift build` of `tools/` went from 12 s to 18 s, `swift build --build-tests` from
+18 s to 21 s (CPU time 34 s to 76 s); a runner with fewer cores pays more.

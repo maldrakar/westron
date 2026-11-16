@@ -3,7 +3,7 @@
 # and the agent's Stop hook runs it on macOS with the Xcode from .xcode-version.
 #
 #   tools/check.sh    build and test tools/, the raw-values lint, generate --check, tokens check and contrast,
-#                     icons check, spec check
+#                     icons check, spec check, the API parity lint (after spec check, since it reads the contracts)
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -28,3 +28,5 @@ echo "== icons check"
 tools/westron icons check
 echo "== spec check"
 tools/westron spec check
+echo "== api-parity lint"
+tools/westron lint api-parity
