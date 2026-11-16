@@ -197,6 +197,7 @@ extension Westron.Color {
                 ["color.background.surface"],
                 ["color.background.sunken"],
                 ["color.background.hover"],
+                ["color.background.pressed"],
                 ["color.background.selected"],
                 ["color.background.accent-subtle"],
             ])
@@ -315,6 +316,8 @@ extension Westron.Color {
                     ["color.background.canvas"],
                     ["color.background.surface"],
                     ["color.background.sunken"],
+                    ["color.background.hover"],
+                    ["color.background.pressed"],
                     ["color.status.danger.background"],
                 ])
 

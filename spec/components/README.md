@@ -8,7 +8,8 @@ Each component is a folder `spec/components/<id>/`:
 | `decisions/` | Decisions about the component, with the options considered |
 | `reference/` | Reference screenshots approved by the human |
 
-A new contract starts with the `/new-component` skill. The first contract is Button (issue #22).
+A new contract starts with the `/new-component` skill. The first contract is Button,
+[`button/button.spec.yaml`](button/button.spec.yaml), approved by the owner on 2026-11-16 (#22).
 
 ## Format
 
@@ -20,7 +21,7 @@ id: button                      # lowercase words joined by hyphens; the file is
 status: draft                   # draft → approved → stable → deprecated
 consumers: [todo-app/list-screen]   # <product>/<screen>, at least one (decisions/0006)
 options:                        # no option is named `state`: cases use that key for states
-  variant: { type: enum, values: [primary, secondary], default: secondary }
+  variant: { type: enum, values: [primary, secondary] }   # no default: every use names a value
   size: { type: enum, values: [s, m, l], default: m }
   role: { type: enum, values: [default, destructive], default: default }
   iconOnly: { type: bool, default: false }
@@ -60,12 +61,14 @@ platforms:                      # all four; each is `status: planned` or a strat
   android: { status: planned }
 ```
 
+An enum option without a `default` must be named in every use; a variant has none (`spec/conventions.md`).
 Names of options, values, slots, states and intents are lowerCamelCase: they become identifiers on every platform.
 `description` is allowed on the contract, an option, a constraint, `accessibility`, a platform and an Apple OS.
 
 - **Cases.** A case's `when` takes the same values as a constraint's (one value, a list, or `true`/`false` for a bool
   option) plus the key `state`, which names one state or a list of them. Put the narrower case first: a case that an
-  earlier one fully covers is never used, and the check reports it.
+  earlier one fully covers is never used, and the check reports it. A component can be in several states at once;
+  `state` matches when it is in any of the named ones, so a state that excludes others goes first.
 - **Restrictions.** A platform, or an Apple OS (`ios`, `macos`, `watchos`), restricts the contract with `options` (the
   values of an enum option it offers) and `states` (the states it enters); what it does not name, it keeps whole. An
   Apple OS restricts what Apple keeps.
@@ -83,7 +86,7 @@ tools/westron spec check path/to/x.spec.yaml  # the given files
 Besides the schema, the check enforces what a schema cannot:
 
 - the file is `<id>/<id>.spec.yaml`;
-- no list repeats a name; an enum option's default is one of its values; no option is named `state`;
+- no list repeats a name; an enum option's default, when it has one, is one of its values; no option is named `state`;
 - no option value is the name of a system style of the Apple base control, such as `plain` for `SwiftUI.Button`
   (decisions/0003); a base the check has no style names for is an error until they are added to
   `tools/Sources/WestronTools/Contracts/SystemStyles.swift`;

@@ -168,8 +168,10 @@ struct ContractCheckTests {
                 "options.variant.defualt", "unknown key"))
     }
 
-    @Test("the schema checks options: an enum has values and a default name, a bool a boolean default")
+    @Test("the schema checks options: an enum has values and may have a default name, a bool a boolean default")
     func optionShapes() {
+        // Without a default, every use names a value, as the SwiftUI variant does (spec/conventions.md).
+        #expect(contractProblems(replacing("tertiary], default: secondary }", with: "tertiary] }")) == [])
         #expect(
             has(
                 contractProblems(replacing("type: bool\n    default: false", with: "type: bool\n    default: no-no")),

@@ -137,7 +137,8 @@ chose fills one step apart, solved by the palette like every other color (#56).
 
   White on the accent reaches 5.44, 6.51 and 7.70 in light and dark; the canvas's color on the inverted dark
   high-contrast fills 7.04, 8.18 and 9.41. On 2026-11-16, `tools/westron tokens contrast` measured 257 declared pairs
-  in each of the four themes, and none failed.
+  in each of the four themes, and none failed. The Button contract (#22) declared three more the same day, accent
+  and danger text on the hover and pressed fills: 260 pairs, none failed.
 - **Disabled is not a color.** A disabled control is drawn whole at `opacity.disabled` (decisions/0013), not in
   colors of its own; WCAG exempts it from contrast (chapter 08).
 
