@@ -10,6 +10,7 @@ let usage = """
            tools/westron tokens check [RESOLVER.json]
            tools/westron tokens contrast [--all] [RESOLVER.json]
            tools/westron icons check [REGISTRY.yaml]
+           tools/westron spec check [FILE.spec.yaml …]
     """
 
 func printError(_ message: String) {
@@ -118,6 +119,29 @@ func checkIcons(_ file: String?) throws -> Int32 {
     }
 }
 
+/// Component contracts (#18): the given files, or every `spec/components/*/*.spec.yaml`.
+func checkSpecs(_ files: [String]) throws -> Int32 {
+    let files = files.isEmpty ? try ContractCheck.files(in: ContractCheck.defaultDirectory) : files
+    guard !files.isEmpty else {
+        print("spec check: contracts: 0")
+        return 0
+    }
+    do {
+        let problems = try ContractCheck.run(files: files)
+        for problem in problems { printError(problem.description) }
+        if !problems.isEmpty {
+            printError("spec check: contracts: \(files.count), problems: \(problems.count)")
+            return 1
+        }
+        print("spec check: contracts: \(files.count), all valid")
+        return 0
+    } catch let errors as TokenErrors {
+        for error in errors.errors { printError(error.description) }
+        printError("spec check: the tokens do not load; run tools/westron tokens check")
+        return 1
+    }
+}
+
 /// The WCAG 2 contrast of every declared "text/background" pair in every theme (#15). Prints the failures and a
 /// summary; with `--all`, every pair.
 func checkContrast(_ options: [String]) throws -> Int32 {
@@ -170,6 +194,8 @@ do {
         exit(try checkContrast(Array(arguments.dropFirst(2))))
     case ("icons", "check") where arguments.count <= 3:
         exit(try checkIcons(arguments.dropFirst(2).first))
+    case ("spec", "check"):
+        exit(try checkSpecs(Array(arguments.dropFirst(2))))
     default:
         printError(usage)
         exit(2)

@@ -1,0 +1,38 @@
+# A test fixture that passes the schema but breaks each rule added for the Button decisions: case bindings, the
+# reserved option name `state`, fallbacks, accessibility states and platform keyboard intents.
+id: invalid-cases
+status: draft
+consumers: [todo-app/list-screen]
+options:
+  variant: { type: enum, values: [primary, secondary], default: secondary }
+  size: { type: enum, values: [s, m, l], default: m }
+  state: { type: bool, default: false }
+states: [hover, pressed, disabled]
+tokens:
+  container.background:
+    token: color.background.muted
+    cases:
+      - { when: { variant: primary, state: selected }, token: color.background.accent }
+      - { when: { variant: ghost }, token: color.background.accent }
+      - { when: { variant: primary }, token: color.background.accent }
+      - { when: { variant: primary, state: hover }, token: color.background.accent-hover }
+      - { when: { variant: primary }, token: color.background.nothing }
+accessibility:
+  role: button
+  keyboardIntents: [activate]
+  states: { loading: busy }
+platforms:
+  apple:
+    strategy: style-on-system-control
+    base: SwiftUI.Button
+    macos: { keyboardIntents: [activate, defaultAction] }
+    watchos:
+      options: { size: [m] }
+      fallback: { size: { s: l } }
+  web: { status: planned }
+  linux:
+    strategy: style-on-system-control
+    base: GtkButton
+    options: { size: [m, l] }
+    fallback: { variant: primary, size: { m: l } }
+  android: { status: planned }
