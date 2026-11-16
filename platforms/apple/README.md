@@ -8,7 +8,7 @@ A SwiftUI library for iOS, iPadOS, macOS and watchOS. The package manifest lives
 | `Sources/WestronUI/` | Styles, components and the SwiftUI accessors of the tokens: what products import |
 | `Sources/WestronCatalog/` | Catalog entries, their host and launch arguments |
 | `Tests/` | Package tests (Swift Testing) |
-| `Catalog/` | Catalog app for iOS and macOS and the screenshot UI test |
+| `Catalog/` | Catalog app for iOS and macOS and its UI tests: screenshots and the accessibility audit |
 
 ## Adding the package
 
@@ -86,6 +86,39 @@ review the colors in every mode:
 ```sh
 tools/apple/catalog-screenshot.sh ios --entry color-in-use --appearance dark --contrast high
 ```
+
+### Accessibility audit
+
+`tools/apple/check.sh a11y` runs the UI test `CatalogAccessibilityAuditTests` on the iOS simulator (`iPhone 17` or
+`$WESTRON_SIM_DEVICE`): it opens every entry of `Catalog.entries` in isolation, so a new entry is audited with no
+change to the test, and runs `XCUIApplication.performAccessibilityAudit` on it. Every issue fails the test. CI runs it
+in the `apple` job. The log goes to `.build/logs/a11y-ios.log`, the result bundle to
+`.build/xcode/results/a11y-ios.xcresult`; the script prints each issue as a line starting with `a11y:`.
+
+| Test | Launch arguments | Audit types on iOS |
+|---|---|---|
+| `testDefaultSettings` | `-WestronAppearance light`; the system's font size | all: contrast, element detection, hit region, sufficient element description, Dynamic Type, text clipped, trait |
+| `testAccessibilityDynamicType` | `-WestronAppearance light -WestronDynamicType accessibility5` | all except Dynamic Type |
+| `testIncreasedContrast` | `-WestronAppearance light -WestronContrast high` | contrast |
+| `testDarkAppearance` | `-WestronAppearance dark` | contrast |
+| `testDarkIncreasedContrast` | `-WestronAppearance dark -WestronContrast high` | contrast |
+
+- The Dynamic Type and text clipped audits change the font size themselves, so they find text that does not scale or
+  would be cut at a larger size even in `testDefaultSettings`. `-WestronDynamicType` pins the size in the view tree,
+  where the system size the audit sets cannot reach it, so the Dynamic Type audit does not run there.
+- The theme and the contrast change only colors, so their tests run the contrast audit alone.
+- The audit sees what is on screen. A page that scrolls at a large font size is audited down to the screen's edge.
+- The audit loses track of the cells of a lazy container (`LazyVGrid`, `List`, `Form`) when it changes the text
+  size, and reports their text as not following Dynamic Type. A sample page lays its cells out with `AdaptiveGrid`,
+  the same columns as an adaptive `LazyVGrid`, made eagerly.
+- An issue that is not the entry's fault, or that the catalog cannot fix, is suppressed one by one, with its reason,
+  in `CatalogAccessibilityAuditTests.suppressions`; an audit type is never turned off as a whole.
+- `WESTRON_ENTRY=<id> tools/apple/check.sh a11y` audits one entry while its issues are being fixed.
+- `tools/apple/check.sh a11y macos` runs the same tests on macOS, with the macOS audit types (contrast, element
+  detection, hit region, sufficient element description, action, parent–child; macOS has no Dynamic Type or text
+  clipped audit). It needs Automation Mode (below) and takes over the screen while it runs, so it is not a CI gate.
+  Its issues are not triaged yet: the first run (2026-11-16, entry `icons`, on a machine whose screen was in use)
+  reported every icon cell as failing contrast, and a group and the window as lacking a description.
 
 ### Screenshots on macOS: turn on Automation Mode once
 

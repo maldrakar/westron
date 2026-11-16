@@ -41,6 +41,16 @@ jobs:
         run: tools/apple/check.sh platforms
       - name: Catalog and UI tests
         run: tools/apple/check.sh catalog
+      - name: Accessibility audit of the catalog (iOS)
+        run: tools/apple/check.sh a11y
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: a11y-audit
+          path: |
+            .build/logs/a11y-*.log
+            .build/xcode/results/a11y-*.xcresult
+          if-no-files-found: ignore
 
   catalog-screenshots:
     name: Catalog screenshots

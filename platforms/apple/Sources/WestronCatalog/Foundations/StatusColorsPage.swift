@@ -60,8 +60,10 @@ struct StatusBadge: View {
         }
         .textRole(.caption.medium)
         .padding(.horizontal, .space75)
-        .frame(height: StatusMetrics.badge)
+        .frame(minHeight: StatusMetrics.badge)
         .background(status.background, in: Capsule())
+        // A badge keeps its word on one line; the columns beside it give way.
+        .fixedSize(horizontal: true, vertical: false)
     }
 }
 
@@ -93,7 +95,7 @@ private struct StatusColorsPage: View {
                             .textRole(.footnote.regular)
                             .foregroundStyle(status.text)
                             .padding(.horizontal, .space100)
-                            .frame(height: StatusMetrics.badge)
+                            .frame(minHeight: StatusMetrics.badge)
                             .overlay {
                                 RoundedRectangle(cornerRadius: .radius100)
                                     .strokeBorder(status.border, lineWidth: .stroke.thin)
@@ -102,8 +104,9 @@ private struct StatusColorsPage: View {
                             .textRole(.caption.medium)
                             .foregroundStyle(status.onFill)
                             .padding(.horizontal, .space100)
-                            .frame(height: StatusMetrics.badge)
+                            .frame(minHeight: StatusMetrics.badge)
                             .background(status.fill, in: RoundedRectangle(cornerRadius: .radius100))
+                            .fixedSize(horizontal: true, vertical: false)
                     }
                 }
             }

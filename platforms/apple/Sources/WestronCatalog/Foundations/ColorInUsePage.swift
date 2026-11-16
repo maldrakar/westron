@@ -174,7 +174,7 @@ private struct Tag: View {
             .textRole(.caption.medium)
             .foregroundStyle(category.text)
             .padding(.horizontal, .space75)
-            .frame(height: Metrics.tag)
+            .frame(minHeight: Metrics.tag)
             .background(category.background, in: Capsule())
     }
 }
@@ -209,7 +209,7 @@ private struct DeploymentsSample: View {
                 }
                 .textRole(.caption.medium)
                 .foregroundStyle(.text.secondary)
-                .frame(height: Metrics.header)
+                .frame(minHeight: Metrics.header)
                 ForEach(rows, id: \.service) { row in
                     Rule()
                         .gridCellColumns(3)
@@ -221,7 +221,7 @@ private struct DeploymentsSample: View {
                             .foregroundStyle(.text.accent)
                     }
                     .textRole(.code.regular)
-                    .frame(height: Metrics.tableRow)
+                    .frame(minHeight: Metrics.tableRow)
                 }
             }
             .padding(.horizontal, .space150)
@@ -248,7 +248,7 @@ private struct NoticesSample: View {
                     .textRole(.footnote.strong)
                     .foregroundStyle(.text.primary)
                     .padding(.horizontal, .space150)
-                    .frame(height: Metrics.control)
+                    .frame(minHeight: Metrics.control)
                     .background(.background.surface, in: RoundedRectangle(cornerRadius: .radius.control))
                     .overlay {
                         RoundedRectangle(cornerRadius: .radius.control)
@@ -304,12 +304,13 @@ private struct FilledButton: View {
         .textRole(.footnote.strong)
         .foregroundStyle(label)
         .padding(.horizontal, .space150)
-        .frame(height: Metrics.control)
+        .frame(minHeight: Metrics.control)
         .background(fill, in: RoundedRectangle(cornerRadius: .radius.control))
     }
 }
 
-/// The sizes of the samples on a Mac and on a phone.
+/// The sizes of the samples on a Mac and on a phone. A control's or a row's height is its least: it grows with its
+/// text at a large Dynamic Type size, so the text is never clipped.
 private enum Metrics {
     #if os(macOS)
         static let tasksWidth: CGFloat = 300

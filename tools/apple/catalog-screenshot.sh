@@ -43,24 +43,9 @@ rm -f "$out"
 log=".build/logs/catalog-$name.log"
 
 if [ "$platform" = ios ]; then
-  # The newest iOS runtime with this device, no newer than the SDK of the current Xcode.
-  sdk_version="$(xcrun --sdk iphonesimulator --show-sdk-version)"
-  # jq ships with macOS. Versions become [major, minor, patch] and compare as arrays.
-  udid="$(xcrun simctl list devices available -j | jq -r --arg device "$device" --arg sdk "$sdk_version" '
-    def version: split(".") | map(tonumber) | (. + [0, 0, 0])[0:3];
-    ($sdk | version) as $max
-    | [.devices | to_entries[]
-        | (.key | capture("SimRuntime\\.iOS-(?<v>[0-9]+(-[0-9]+)*)$").v | gsub("-"; ".") | version) as $v
-        | .value[] | select(.name == $device) | {udid, v: $v}]
-    | (map(select(.v <= $max))) as $fits
-    | (if ($fits | length) > 0 then $fits else . end)
-    | sort_by(.v) | last | .udid // empty
-  ')"
-  if [ -z "$udid" ]; then
-    echo "catalog-screenshot: no simulator \"$device\"; list the available ones: xcrun simctl list devices available" >&2
-    exit 1
-  fi
-  xcrun simctl bootstatus "$udid" -b > /dev/null
+  # shellcheck source=tools/apple/simulator.sh
+  source tools/apple/simulator.sh
+  udid="$(westron_simulator_udid "$device")" || exit 1
   # The same status bar on every screenshot.
   xcrun simctl status_bar "$udid" override --time 9:41 --batteryState charged --batteryLevel 100 \
     --wifiBars 3 --cellularMode active --cellularBars 4 --dataNetwork wifi

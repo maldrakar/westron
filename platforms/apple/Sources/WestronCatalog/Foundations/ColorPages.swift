@@ -50,32 +50,67 @@ private struct ThemeColorsPage: View {
     let group: String
     let colors: [Westron.Color]
     let sample: Sample
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         TokenPage(title: title, summary: summary) {
+            if dynamicTypeSize.isAccessibilitySize {
+                TokenDetail(group + "*")
+            }
             Grid(alignment: .leading, horizontalSpacing: .space100, verticalSpacing: SampleMetrics.rowSpacing) {
-                GridRow {
-                    TokenDetail(group + "*")
-                    ForEach(Westron.Theme.allCases, id: \.self) { theme in
-                        TokenDetail(theme.title)
-                            .gridColumnAlignment(.center)
-                    }
-                }
-                ForEach(colors, id: \.name) { color in
+                if dynamicTypeSize.isAccessibilitySize {
+                    // At an accessibility size a name takes a line of its own, above its cells: beside them it would
+                    // get a column too narrow for one word.
                     GridRow {
-                        VStack(alignment: .leading, spacing: 0) {
-                            TokenName(String(color.name.dropFirst(group.count)))
-                            if sample == .foreground {
-                                TokenDetail(ground(color).label)
-                            }
+                        themeTitles
+                    }
+                    ForEach(colors, id: \.name) { color in
+                        GridRow {
+                            label(color)
+                                .gridCellColumns(Westron.Theme.allCases.count)
                         }
-                        ForEach(Westron.Theme.allCases, id: \.self) { theme in
-                            cell(color)
-                                .theme(theme)
+                        GridRow {
+                            cells(color)
+                        }
+                    }
+                } else {
+                    GridRow {
+                        TokenDetail(group + "*")
+                        themeTitles
+                    }
+                    ForEach(colors, id: \.name) { color in
+                        GridRow {
+                            label(color)
+                            cells(color)
                         }
                     }
                 }
             }
+        }
+    }
+
+    private var themeTitles: some View {
+        ForEach(Westron.Theme.allCases, id: \.self) { theme in
+            TokenDetail(theme.title)
+                .gridColumnAlignment(.center)
+        }
+    }
+
+    /// The color's name and, for a foreground, the background it is drawn on.
+    private func label(_ color: Westron.Color) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            TokenName(String(color.name.dropFirst(group.count)))
+            if sample == .foreground {
+                TokenDetail(ground(color).label)
+            }
+        }
+    }
+
+    /// The color in each theme.
+    private func cells(_ color: Westron.Color) -> some View {
+        ForEach(Westron.Theme.allCases, id: \.self) { theme in
+            cell(color)
+                .theme(theme)
         }
     }
 

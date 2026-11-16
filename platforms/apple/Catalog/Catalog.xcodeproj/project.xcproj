@@ -76,6 +76,12 @@
         "compile-sources",
         "frameworks",
       ],
+      "package-product-members": [
+        {
+          "product-name": "WestronCatalog",
+          "build-phase": { "build-phase": "frameworks" },
+        },
+      ],
       "build-settings": {
         "ALWAYS_SEARCH_USER_PATHS": "NO",
         "CODE_SIGN_IDENTITY": "-",
