@@ -118,8 +118,10 @@ platforms:
     description: >-
       role is SwiftUI's own ButtonRole, so no enum is generated for it, which would collide with SwiftUI's: a product
       writes Button(role: .destructive), and the style reads configuration.role; any other role draws as default.
-      iconOnly is the system's .labelStyle(.iconOnly). A call without size: takes it from controlSize
-      (spec/conventions.md). The focus ring is the system's, so the focusRing bindings do not apply. Corners are
+      iconOnly is a labeled argument of the style, .buttonStyle(.primary, iconOnly: true): the style hides the title,
+      keeps it as the accessible label and draws the square. A product's own .labelStyle(.iconOnly) is not the way to
+      it: the style's label style overrides it, and the style cannot read it to draw the square (spec/conventions.md).
+      A call without size: takes it from controlSize (spec/conventions.md). The focus ring is the system's, so the focusRing bindings do not apply. Corners are
       continuous.
     ios:
       description: Hover only with a pointer, on iPad; an iPhone never enters it.

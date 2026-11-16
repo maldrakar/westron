@@ -41,7 +41,20 @@ and the parity lint (#21) are proved on it before a second component starts. The
 ### Slots and icon-only
 
 - **Chosen: `label` and a leading `icon`.** Icon-only is the same button, not another component: a square whose side
-  equals its height, with a required accessible label. On Apple it is `.labelStyle(.iconOnly)`.
+  equals its height, with a required accessible label. On Apple it is an argument of the style,
+  `.buttonStyle(.primary, iconOnly: true)`; the interview first named `.labelStyle(.iconOnly)`, which the review
+  showed cannot work (below).
+- **Icon-only on Apple** (decided 2026-11-16, after review).
+  - A probe on macOS showed that the system's `.labelStyle(.iconOnly)` cannot drive westron's style. The label style
+    is an environment value: the label style westron's `ButtonStyle` applies to `configuration.label` inside
+    `makeBody` overrides the product's outer one, and a `ButtonStyle` has no public way to read the outer label style,
+    so it could not know to draw the square either.
+  - Considered: a labeled argument of the style overload; a westron environment modifier `.iconOnly()`.
+  - **Chosen: the argument, `.buttonStyle(.primary, size: .m, iconOnly: true)`.** The style hides the title, keeps
+    it as the accessible label and draws the square. The modifier was rejected: it would make a bool option look
+    like a state, and it is easy to confuse with the system's `.labelStyle(.iconOnly)`.
+  - This also settles how every bool option that is not a state looks in Swift: a labeled `Bool` argument of the style
+    overload, named as in the contract, with the contract's default (`spec/conventions.md`).
 
 ### Floating glass buttons
 
@@ -82,13 +95,16 @@ and the parity lint (#21) are proved on it before a second component starts. The
 
 ### Swift API conventions
 
-The owner settled four open questions of `spec/conventions.md`, which now holds them as rules:
+The owner settled four open questions of `spec/conventions.md` in the interview and a fifth in the review; the
+document now holds them as rules:
 
 1. A call without `size:` takes its size from `@Environment(\.controlSize)`: `mini` and `small` → `s`, `regular` →
    `m`, `large` and `extraLarge` → `l`. An explicit `size:` wins.
 2. One shared state modifier, `.loading(_:)`, not `.buttonLoading(_:)`.
 3. A value a platform does not support keeps its enum case and falls back to the value the `platforms` block names.
 4. The variant is always written: `.buttonStyle(.secondary)`. There is no call without a variant.
+5. A bool option that is not a state is a labeled `Bool` argument of the style overload, with the contract's
+   default: `iconOnly: true` (above).
 
 ## Proposed and confirmed
 
