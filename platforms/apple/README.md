@@ -95,21 +95,26 @@ tools/apple/catalog-screenshot.sh ios --entry color-in-use --appearance dark --c
 change to the test, and runs `XCUIApplication.performAccessibilityAudit` on it. Every issue fails the test. The log
 goes to `.build/logs/a11y-ios[-<tests>].log`, the result bundle to `.build/xcode/results/a11y-ios[-<tests>].xcresult`
 (the tests named, if any, are in the names); the script prints each issue as a line starting with `a11y:`. A full run
-takes about 16 minutes (2026-11-17, iPhone 17 Pro simulator).
+takes about 28 minutes with the Button entries (1689 s on 2026-11-17, iPhone 17 Pro simulator).
 
 ```sh
 tools/apple/check.sh a11y                                  # all five tests below
 tools/apple/check.sh a11y ios testDarkAppearance           # one or more of them, by name
 WESTRON_ENTRY=controls,icons tools/apple/check.sh a11y     # those entries only
+WESTRON_ENTRY_SHARD=2/3 tools/apple/check.sh a11y          # every third entry, from the second (after WESTRON_ENTRY)
 ```
 
-CI runs the audit in its own job, `accessibility-audit`, a matrix of the five tests, one job each, side by side
-(`fail-fast: false`, 35 minutes each). The runner is 2.2–2.3 times slower than a local Mac: in one serial run
-(2026-11-17) `testAccessibilityDynamicType` took 13.5 minutes, the two dark tests 4 minutes each, and the run passed
-the 40 minutes of its step before `testDefaultSettings` (about 11 minutes there, by the local time) ended. The cost is
-five parallel jobs and about 40 runner-minutes of tests per pull request, plus a catalog build in each job. To run it
-on `main` only, uncomment the `if: github.event_name == 'push'` line of the job in `.github/workflows/ci.yml`. If one
-test outgrows its 35 minutes as pages are added, `WESTRON_ENTRY` takes a list, so a test can be split by entries.
+CI runs the audit in its own job, `accessibility-audit`, side by side (`fail-fast: false`, 35 minutes each): one job
+for each of the three contrast tests, and the two slow tests split by entries, `testAccessibilityDynamicType` into three
+shards and `testDefaultSettings` into two (`WESTRON_ENTRY_SHARD`). The runner is about 3 times slower than a local Mac:
+with the Button entries (PR #66, 2026-11-17) it took over 36.6 minutes for `testAccessibilityDynamicType`, past the
+timeout, 32.4 minutes for `testDefaultSettings`, and 16–19 minutes for each of the others, against 627 s, 476 s and
+194–196 s locally. The cost is eight parallel jobs, each with its own catalog build, about two runner-hours per run, so
+the audit runs on every push to `main` and on a pull request only when it changes a path the audit depends on:
+`platforms/apple/`, `tokens/`, `spec/`, `tools/apple/`, `Package.swift`, `Package.resolved`, `.xcode-version` or
+`.github/workflows/ci.yml`. The job `audit-scope` decides, from the pull request's merge commit; otherwise the audit's
+jobs show as skipped. If `audit-scope` itself fails, the audit runs. A job that nears its 35 minutes as pages are added
+gets another shard.
 
 | Test | Launch arguments | Audit types on iOS |
 |---|---|---|
@@ -149,6 +154,13 @@ test outgrows its 35 minutes as pages are added, `WESTRON_ENTRY` takes a list, s
   in `CatalogAccessibilityAuditTests.suppressions`; an audit type is never turned off as a whole.
 - `WESTRON_ENTRY=<id>[,<id>…] tools/apple/check.sh a11y` audits those entries only: one while its issues are being
   fixed, or a share of the catalog.
+- When a run ends, passed, failed or interrupted, the script stops the simulator's `testmanagerd` (launchd starts it
+  again for the next test): after audits it has been seen to keep running at 400–1400 % CPU for hours with no test
+  left (2026-11-17). A daemon that another `xcodebuild` on the same simulator still uses is left alone.
+- `WESTRON_ENTRY_SHARD=<i>/<n>` then audits every n-th of those entries, in registry order, from the i-th (1-based):
+  the n shards hold each entry exactly once (`CatalogShard`, tested in `CatalogShardTests`). The log and the result
+  bundle get `-shard<i>of<n>` in their names, and the run logs the entries of its shard (`a11y: shard 2/3: …`). A
+  value that is not `<i>/<n>` with 1 ≤ i ≤ n fails the test without auditing anything.
 - `tools/apple/check.sh a11y macos` runs the same tests on macOS, with the macOS audit types (contrast, element
   detection, hit region, sufficient element description, action, parent–child; macOS has no Dynamic Type or text
   clipped audit). It needs Automation Mode (below) and takes over the screen while it runs, so it is not a CI gate.

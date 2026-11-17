@@ -66,13 +66,36 @@ and the parity lint (#21) are proved on it before a second component starts. The
 - **Chosen: `s`, `m`, `l`, default `m`.** The heights are `size.control.s|m|l`: 24, 32 and 40 with a pointer, 32,
   44 and 52 on touch. The hit area is at least the platform's recommended target (chapter 08).
 - **Chosen: `radius.control` everywhere,** icon-only included.
+- **Narrower than the longest word** (decided 2026-11-17, after the Apple implementation, #23).
+  - Considered, side by side in the catalog at sizes m and l, at the default text size and at accessibility3: a
+    minimum width inside the style, the width of the label's longest word, so the label wraps only between words and
+    the button grows past its container; one line with an ellipsis; the word breaking inside, as the platforms do
+    when nothing stops them.
+  - **Chosen: a usage rule for products, not a mechanism in the style.** The button is not meant for a width smaller
+    than its label's longest word; the label wraps only between words; the product provides the room, by stacking
+    buttons, giving the button the full width, a shorter label, or icon-only.
+  - Why the rule sits with the product: the style cannot see the label's words (on Apple the label is an opaque view,
+    and its width alone does not show where a word breaks); an ellipsis contradicts "the button grows with its text"
+    (P11) and loses the label at large text sizes, down to a clipped first letter or the icon alone; and a button that
+    enforces its own minimum width runs off the screen at large text sizes.
+  - If a product breaks the rule, the label breaks inside a word ("Delet/e"). That is unsupported, not a behavior of
+    this contract, and not a bug to fix in the style.
 
 ### States
 
 - **Chosen: hover, focus, pressed, disabled, loading.**
-- **Loading.** A progress indicator takes the icon's place; without an icon it sits before the label, and in
-  icon-only it replaces the icon. The label stays and the width does not change. Presses are not accepted. It does
-  not dim as disabled does. Assistive technology announces the label and "busy".
+- **Loading.** A progress indicator takes the icon's place, and in icon-only it replaces the icon, so the width does
+  not change. Without an icon it goes before the label, and the button widens by the indicator and the gap (P13,
+  below). The label stays. Presses are not accepted. It does not dim as disabled does. Assistive technology
+  announces the label and "busy".
+- **Loading without an icon** (decided 2026-11-17, after the Apple implementation, #23).
+  - Considered, side by side in the catalog: the indicator, the gap and the label share the resting width, the
+    label truncating (P13 as first confirmed); the button widens by the indicator and the gap; the indicator's slot
+    kept at rest too; the indicator replaces the label.
+  - **Chosen: the button widens by the indicator and the gap; the label is neither truncated nor hidden.** The
+    shared width cut short labels to almost nothing ("Save cha…", "Save" to the indicator alone; "Ad…" and "D…" on
+    the web prototype, decisions/0002), and the accessibility audit reported the truncated label as clipped text.
+    The width still holds wherever the label has an icon.
 - **Disabled.** The whole button is drawn at `opacity.disabled`, with no disabled colors.
 - **Hover and pressed.**
   - `primary`: `color.background.accent-hover` and `accent-pressed`.
@@ -92,6 +115,12 @@ and the parity lint (#21) are proved on it before a second component starts. The
 - Hover exists only with a pointer: never on iPhone or watchOS.
 - The focus ring is the system's on Apple and GTK; on the web it is an outline in `color.border.focus`.
 - On macOS, Return and Escape trigger the default and cancel actions.
+- **Known issue on Apple (#23): the `trash` glyph and the accessibility audit.** With `trash` as the destructive
+  samples' icon, the Dynamic Type accessibility audit of the catalog's `button-destructive` page times out ("Audit
+  failed to complete in time") on the screenful of size m and l samples at accessibility5, on the code before and
+  after the icon-only changes; with any other glyph the page passes. The cause is not found. A product's icon-only
+  trash button may hit the same in its own audit. The catalog's destructive samples use `xmarkCircleFill`, which the
+  owner chose on 2026-11-17.
 
 ### Swift API conventions
 
@@ -125,7 +154,7 @@ and the owner confirmed P1–P15 as proposed on 2026-11-16, when approving the c
 | P10 | `focusRing.color` `color.border.focus` and `focusRing.width` `stroke.thick`, on the web only | The owner chose `border.focus` for the web; chapter 04 gives the thick width to focus rings. Apple and GTK draw their own | chapter 04, chapter 08 |
 | P11 | The height is a minimum: the button grows with its text, and icon-only stays square at that height | A fixed height clips text at large text sizes | chapter 06, chapter 08 |
 | P12 | watchOS enters focus as the system decides; only hover is dropped there | The owner named hover only; a watch button can take focus from the Digital Crown, and the system draws it | the owner's platforms decision, chapter 08 |
-| P13 | Loading without an icon keeps the resting width: the indicator, the gap and the label share it | The owner's "the width does not change" with an indicator added before the label leaves no other reading; a long label can then truncate. The alternative is to let the width grow in this one case | the owner's loading decision |
+| P13 | Loading without an icon widens the button by the indicator and the gap; the label is not truncated or hidden. Changed by the owner on 2026-11-17 (above): first confirmed as keeping the resting width, with the indicator, the gap and the label sharing it | The shared width truncated short labels ("Save cha…"), which the accessibility audit reported as clipped text; with an icon, the indicator takes its place and the width holds | the owner's loading decision of 2026-11-17 |
 | P14 | On Apple, `role` is SwiftUI's `ButtonRole`: no enum is generated for it, and `.cancel` or no role draws as `default` | A generated `ButtonRole` would collide with SwiftUI's, and the system already carries the role to VoiceOver and dialogs | decisions/0003, point 3; spec/conventions.md |
 | P15 | Hover on the web only under `(hover: hover)` | The owner's "hover only with a pointer", in CSS terms | the owner's platforms decision |
 

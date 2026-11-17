@@ -7,10 +7,15 @@ description: >-
   Hover and pressed tint the container in motion.fade and motion.press, and a press also scales it down to 98 %,
   which Reduce Motion drops (chapter 05). Disabled draws the whole button at opacity.disabled, with no colors of its
   own. A disabled or loading button never enters hover or pressed: its fill stays as at rest and it does not scale,
-  on every platform; container.background's leading cases bind that. Loading puts a progress indicator in the icon's place, before the label when there is no icon, and in
-  icon-only in place of the icon; the label stays, the width does not change, presses are not accepted, and the
-  button does not dim. Floating glass buttons over content are not this component: products use the system's glass
-  styles (chapter 09).
+  on every platform; container.background's leading cases bind that. Loading puts a progress indicator in the icon's
+  place, and in icon-only in place of the icon, so the width does not change; when there is no icon, the indicator
+  goes before the label and the button widens by the indicator and the gap, so the label is neither truncated nor
+  hidden (the owner's decision of 2026-11-17, decisions/0001, P13). The label stays, presses are not accepted, and
+  the button does not dim. The button is not meant for a width smaller than its label's longest word: the label wraps
+  only between words, and the product provides the room, by stacking buttons, giving the button the full width, a
+  shorter label, or icon-only. In a narrower container the label breaks inside a word; that is unsupported, not a
+  behavior of this contract (decisions/0001). Floating glass buttons over content are not this component: products
+  use the system's glass styles (chapter 09).
 consumers: [todo-app/lists-screen, todo-app/list-screen]
 
 options:

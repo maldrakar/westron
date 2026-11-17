@@ -188,6 +188,9 @@ as written.
        kept its resting width to 0.01 px.
      - The consequence of P13 is visible: at size m, a label-only "Add list" reads "Ad…" and "Delete" reads "D…"
        ([`web-light.png`](../prototypes/evidence/web-light.png), "loading"). A two-word label keeps two letters.
+     - Since 2026-11-17 P13 is changed (decisions/0001): without an icon the button widens by the indicator and the
+       gap, so the label is not truncated. The width holds only where the indicator takes an icon's place, and the
+       prototypes' label-only loading layout (`web/button.css`, `gtk/button.py`) is out of date.
      - GTK, unverified: the same needs a `GtkOverlay` whose overlay child is not measured
        (`set_measure_overlay(false)`), over the resting content made transparent. `AdwButtonContent` cannot hold a
        spinner (it takes an icon name only), so the content is rebuilt.
@@ -343,7 +346,7 @@ None is applied. Each needs the owner's decision.
 | C2 | Contract `platforms.web` | Name `:active` as well as `:hover` while disabled; record `data-role`; record that loading needs a script; record the offset | WebKit probe |
 | C3 | Contract, loading | Say what the indicator is where the platform has none: its size (the icon's), its stroke, its motion (a token), and its form under Reduce Motion | Raw values in `web/button.css` |
 | C4 | Conventions, states the system lacks | State that refusing presses is behavior: a script on the web; on GTK a mechanism still to be found, since a signal guard likely misses action-bound buttons (unverified); and check it on Apple | [`web-probe.txt`](../prototypes/evidence/web-probe.txt); `button.py` |
-| C5 | Contract, P13 | Reconsider the fixed width without an icon: let it grow, or keep the width only when an icon slot exists | "Ad…" and "D…" at size m |
+| C5 | Contract, P13 | Reconsider the fixed width without an icon: let it grow, or keep the width only when an icon slot exists. Decided 2026-11-17: it grows (decisions/0001, P13) | "Ad…" and "D…" at size m |
 | C6 | Contract `accessibility`, conventions | Map the abstract `busy` per platform rather than to one state | ARIA's definition of `aria-busy`; no busy trait on UIKit |
 | C7 | Conventions, token bindings | A rule for `icon.font` where icons are images: the icon's box is 1 em of the role, or an icon-size token per size | Both prototypes |
 | C8 | Contract `size`, tokens | Describe the heights by input ("a fine pointer", "touch"), and give the web a runtime switch: a `web` platform context with both sets, or an input modifier | `tokens.css`, `(pointer: coarse)` |

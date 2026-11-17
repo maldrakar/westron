@@ -4,6 +4,11 @@
 /// Snapshot tests (phase 2) iterate over the same entries, so the registry lives in the package, not in the app.
 public enum Catalog {
     public static let entries: [CatalogEntry] = [
+        .button,
+        .buttonDestructive,
+        .buttonStates,
+        .buttonStatesDestructive,
+        .buttonBehavior,
         .colorBackgrounds,
         .colorForegrounds,
         .colorCategories,
