@@ -72,7 +72,8 @@ jobs:
           fi
           # Only a merge commit has a second parent; anything else fails the step, and the audit then runs.
           git rev-parse --verify --quiet HEAD^2 > /dev/null
-          git diff --name-only HEAD^1 HEAD > "$RUNNER_TEMP/changed.txt"
+          # Without rename detection, a file moved out of a watched path is listed under its old path too.
+          git diff --name-only --no-renames HEAD^1 HEAD > "$RUNNER_TEMP/changed.txt"
           pattern='^(platforms/apple/|tokens/|spec/|tools/apple/|Package\.swift$|Package\.resolved$|\.xcode-version$|\.github/workflows/ci\.yml$)'
           if grep -E "$pattern" "$RUNNER_TEMP/changed.txt"; then
             echo "audit=true" >> "$GITHUB_OUTPUT"
@@ -86,7 +87,9 @@ jobs:
       Accessibility audit — ${{ matrix.test }}${{ matrix.shard && format(' ({0}/{1})', matrix.shard, matrix.shards) || '' }}
     # Eight parallel jobs, each with its own catalog build, about two runner-hours in all: on every push to main, and on
     # a pull request only when audit-scope finds a changed path the audit depends on; otherwise they show as skipped.
-    # If audit-scope fails, they run (fail open): only its "audit=false" skips them.
+    # If audit-scope fails, they run (fail open): only its "audit=false" skips them. When this `if:` is false, GitHub
+    # reports one skipped check under the unexpanded matrix name, so the legs must never be required checks: a pull
+    # request that skips them would wait for them forever.
     needs: audit-scope
     if: >-
       !cancelled() && (github.event_name == 'push' || needs.audit-scope.result != 'success'

@@ -199,9 +199,12 @@ private struct ButtonContent<Label: View>: View {
     let iconOnly: Bool
     let isLoading: Bool
 
-    /// Whether the label is a `Label`, which has an icon slot: its label style reports it, read a frame late.
-    /// It starts true, so a `Label` never shows a second indicator; a loading label without an icon gets its indicator
-    /// on the next frame.
+    /// Whether the label is a `Label`, which has an icon slot: its label style reports it through a preference, copied
+    /// here one update later. It starts true, so a `Label` never shows a second indicator. A button that appears
+    /// already loading with a label without an icon draws its first update without the indicator; in a recording of
+    /// the catalog's launch, stepped frame by frame, no drawn frame showed that update (#23). Not measured: a label that
+    /// changes between `Text` and `Label` while loading shows two indicators, or none, for one update. A layout value
+    /// set by `ButtonLabelStyle` would avoid the lag, but it does not reach a layout outside the label.
     @State private var hasIcon = true
 
     var body: some View {

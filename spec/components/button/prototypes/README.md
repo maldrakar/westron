@@ -10,11 +10,13 @@ do.
 **Out of date since 2026-11-17:** the owner changed P13 (decisions/0001), so a loading label without an icon now
 widens the button by the indicator and the gap instead of sharing the resting width. The prototypes still keep the
 resting width there: `web/button.css` (the `data-label` copy and the overlaid row, from line 177), `web/index.html`
-(`data-label`), `gtk/button.py` (the measured-off overlay, lines 73–83).
+(`data-label`, and the section "Loading keeps the width", line 54, whose check at lines 174–180 expects every loading
+button as wide as its resting twin: a label-only button is now wider by design), `gtk/button.py` (the measured-off
+overlay, lines 73–83).
 
 | File | What it is |
 |---|---|
-| `web/index.html` | A static page, no framework and no build step: every variant × role × size, icon + label and icon-only, a state matrix, a width check for loading, live buttons, hit areas |
+| `web/index.html` | A static page, no framework and no build step: every variant × role × size, icon + label and icon-only, a state matrix, a width check for loading (out of date for label-only buttons, above), live buttons, hit areas |
 | `web/button.css` | westron's CSS on a native `<button>` |
 | `web/tokens.css` | Generated: the tokens the contract binds, as CSS custom properties in four themes |
 | `web/resolve-tokens.swift` | Writes `web/tokens.css` and `gtk/tokens.css` from `tokens/` and the contract's `tokens:` block |
