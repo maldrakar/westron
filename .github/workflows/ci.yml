@@ -17,7 +17,7 @@ jobs:
     container: swift:6.4-noble
     steps:
       - uses: actions/checkout@v7
-      - name: Build and test tools, the raw-values lint, generate --check
+      - name: "Tools: build, test and every check in tools/check.sh"
         run: tools/check.sh
 
   apple:
