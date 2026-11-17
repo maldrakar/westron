@@ -20,7 +20,6 @@ struct Manifest: Codable {
     var os: String
     var device: String
     var scale: Double
-    var window: [Double]
     var pinned: [String]
     var themes: [String]
     var components: [Component]
@@ -43,6 +42,7 @@ struct Sheet: Codable {
     var found: [String: Int]
     var fits: [String: Bool]
     var settled: [String: Bool]
+    var sizes: [String: [Double]]?
 }
 
 // MARK: - Output
@@ -134,9 +134,7 @@ func index(_ directory: URL) -> Int32 {
     let combinations = manifest.components.map(\.combinations).reduce(0, +)
     body += "<dl>"
     body += "<dt>Platform</dt><dd>\(html(manifest.os)), \(html(manifest.device))</dd>"
-    body +=
-        "<dt>Picture</dt><dd>\(manifest.window.map { String(Int($0)) }.joined(separator: " × ")) pt at "
-        + "\(String(format: "%g", manifest.scale))×</dd>"
+    body += "<dt>Scale</dt><dd>\(String(format: "%g", manifest.scale))×</dd>"
     body += "<dt>Pinned</dt><dd><code>\(html(manifest.pinned.joined(separator: " ")))</code></dd>"
     body += "<dt>Themes</dt><dd>\(html(manifest.themes.joined(separator: ", ")))</dd>"
     body += "<dt>Combinations</dt><dd>\(combinations) per theme</dd>"
@@ -173,6 +171,9 @@ func index(_ directory: URL) -> Int32 {
                 } else {
                     problems.append("missing \(name)")
                     body += "<span class=\"bad\">missing</span>"
+                }
+                if let size = sheet.sizes?[theme], size.count == 2 {
+                    body += "<div class=\"meta\">\(Int(size[0])) × \(Int(size[1])) pt</div>"
                 }
                 var marks: [String] = []
                 if let found = sheet.found[theme], found != sheet.cells {

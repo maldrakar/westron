@@ -19,6 +19,7 @@ extension ComponentMatrix {
             Option("iconOnly", values: ["false", "true"]),
         ],
         states: ["hover", "focus", "pressed", "disabled", "loading"],
+        unbound: ["focus"],
         columns: "variant",
         platforms: [Platform("watchos", drawn: ["size": ["s": "m", "l": "m"]], notEntered: ["hover"])],
         excluded: [],
@@ -320,14 +321,22 @@ extension ComponentMatrix {
 
 /// One combination of Button's matrix, typed for `ButtonMatrixCell`: the generated enum of each enum option, `Bool` for
 /// a bool option, and the contract's value of an option that is the system's own API.
+///
+/// The values are private: a cell takes them all at once from `fields`, so an option added to the contract changes the
+/// tuple and fails the cell's build until it draws the option too.
 struct ButtonMatrixValues {
-    let variant: ButtonVariant
-    let size: ButtonSize
+    private let variant: ButtonVariant
+    private let size: ButtonSize
     /// The contract's value of `role`, which is the system's `SwiftUI.ButtonRole`.
-    let role: String
-    let iconOnly: Bool
+    private let role: String
+    private let iconOnly: Bool
     /// The state; nil at rest.
-    let state: String?
+    private let state: String?
+
+    /// Every value, in the contract's order of the options, then the state.
+    typealias Fields = (variant: ButtonVariant, size: ButtonSize, role: String, iconOnly: Bool, state: String?)
+
+    var fields: Fields { (variant, size, role, iconOnly, state) }
 
     init(_ combination: ComponentMatrix.Combination) {
         self.variant = ButtonVariant(rawValue: combination.values[0])!

@@ -71,8 +71,19 @@ out="$(absolute "${out:-.build/snapshot-matrix/$platform}")"
 name="snapshot-matrix-$platform${component:+-$component}"
 log=".build/logs/$name.log"
 mkdir -p "$out" .build/logs .build/xcode/results
-# Only what a capture writes is removed, so --out can name a directory that holds other files.
-find "$out" -maxdepth 1 \( -name '*.png' -o -name 'matrix.json' -o -name 'index.html' \) -delete
+# Only a capture's own files are removed, so --out can name a directory that holds other files: the images the previous
+# manifest names, any <component>.<sheet>.<theme>.png of a component in spec/components (a capture that failed before
+# its manifest), the manifest and the page.
+if [ -f "$out/matrix.json" ]; then
+  jq -r '.components[].sheets[].images[]?' "$out/matrix.json" 2> /dev/null | while read -r file; do
+    case "$file" in */* | "") ;; *) rm -f -- "$out/$file" ;; esac
+  done
+fi
+for contract in spec/components/*/; do
+  id="$(basename "$contract")"
+  for theme in light dark light-hc dark-hc; do rm -f -- "$out/$id."*".$theme.png"; done
+done
+rm -f -- "$out/matrix.json" "$out/index.html"
 
 udid=""
 if [ "$platform" = ios ]; then

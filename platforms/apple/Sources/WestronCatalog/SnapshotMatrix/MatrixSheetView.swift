@@ -31,6 +31,12 @@ struct MatrixSheetView: View {
                 .textRole(.footnote.regular)
                 .foregroundStyle(.text.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+                if let note = matrix.unboundNote {
+                    Text(note)
+                        .textRole(.footnote.regular)
+                        .foregroundStyle(.text.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             Grid(alignment: .leading, horizontalSpacing: .space150, verticalSpacing: .space100) {
                 GridRow {
@@ -72,10 +78,13 @@ struct MatrixSheetView: View {
     private func cells(_ row: String?) -> some View {
         ForEach(sheet.columns, id: \.self) { column in
             switch matrix.cell(sheet, row: row, column: column) {
-            case .drawn(let combination, let fallbacks):
+            case .drawn(let combination, let fallbacks, let advisedAgainst):
                 VStack(alignment: .leading, spacing: .space25) {
                     matrix.content(combination)
                         .accessibilityIdentifier(CatalogAccessibilityID.matrixCell)
+                    if let advisedAgainst {
+                        TokenDetail("advised against: constraints[\(advisedAgainst)]")
+                    }
                     if !fallbacks.isEmpty {
                         TokenDetail(
                             fallbacks.map { "\($0.option) \($0.value) draws \($0.drawn)" }.joined(separator: ", "))

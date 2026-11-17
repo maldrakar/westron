@@ -179,6 +179,37 @@ struct SnapshotMatrixTests {
         #expect(regenerated[0].contents.contains(#"Combination(["quiet", "l", "true"], state: "pressed"),"#))
     }
 
+    @Test("a state no token binding names in a case is unbound: it draws as rest")
+    func unboundStates() throws {
+        let button = try SnapshotMatrix(try buttonContract(), source: buttonSource)
+        #expect(button.unboundStates == ["focus"], "the system draws Button's focus ring; no binding names focus")
+        let bound = matrixYAML().replacingOccurrences(
+            of: "accessibility: { role: button }",
+            with: """
+                tokens:
+                  container.background:
+                    cases:
+                      - { when: { state: [hover] }, token: color.background.hover }
+                      - { when: { variant: primary }, token: color.background.accent }
+                accessibility: { role: button }
+                """)
+        #expect(try matrix(bound).unboundStates == ["pressed"])
+        #expect(try matrix(matrixYAML()).unboundStates == ["hover", "pressed"], "no bindings at all")
+    }
+
+    @Test("an option added to the contract changes the typed values' tuple, which the hand-written cell destructures")
+    func addingAnOption() throws {
+        let yaml = matrixYAML().replacingOccurrences(
+            of: "  iconOnly: { type: bool, default: false }",
+            with: "  iconOnly: { type: bool, default: false }\n  dense: { type: bool, default: false }")
+        let files = try AppleSnapshotMatrix.files(for: [(ComponentContract(yaml: yaml, source: source), source)])
+        #expect(
+            files[0].contents.contains(
+                "    typealias Fields = (variant: BadgeButtonVariant, size: BadgeButtonSize, iconOnly: Bool, "
+                    + "dense: Bool, state: String?)\n"))
+        #expect(files[0].contents.contains("    var fields: Fields { (variant, size, iconOnly, dense, state) }\n"))
+    }
+
     @Test("more states than a sheet's rows split the rows over sheets")
     func rowsSplit() throws {
         let matrix = try matrix(matrixYAML(states: "[hover, focus, pressed, selected, disabled, loading]"))
@@ -207,8 +238,15 @@ struct SnapshotMatrixTests {
         #expect(swift.components(separatedBy: "\n            Combination(").count - 1 == 216)
         #expect(swift.components(separatedBy: "\n            Sheet(").count - 1 == 12)
         #expect(swift.contains("    ) { ButtonMatrixCell(ButtonMatrixValues($0)) }\n"))
-        #expect(swift.contains("    let variant: ButtonVariant\n    let size: ButtonSize\n"))
-        #expect(swift.contains("    let role: String\n"))
+        #expect(swift.contains("        unbound: [\"focus\"],\n"), "no token binding names focus")
+        // The values are private; the cell takes them all through one tuple, whose arity an added option changes.
+        #expect(swift.contains("    private let variant: ButtonVariant\n    private let size: ButtonSize\n"))
+        #expect(swift.contains("    private let role: String\n"))
+        #expect(
+            swift.contains(
+                "    typealias Fields = (variant: ButtonVariant, size: ButtonSize, role: String, iconOnly: Bool, "
+                    + "state: String?)\n"))
+        #expect(swift.contains("    var fields: Fields { (variant, size, role, iconOnly, state) }\n"))
         #expect(swift.contains("        self.size = ButtonSize(rawValue: combination.values[1])!\n"))
         #expect(swift.contains("        self.iconOnly = combination.values[3] == \"true\"\n"))
         #expect(files[1].contents.contains("    public static let all: [ComponentMatrix] = [.button]\n"))

@@ -36,8 +36,6 @@ final class SnapshotMatrixTests: XCTestCase {
         var os: String
         var device: String
         var scale: Double = 0
-        /// The size of the picture in points: the screen on iOS, the sheet inside the window on macOS.
-        var window: [Double] = []
         var pinned: [String]
         var themes: [String]
         var components: [Component] = []
@@ -65,6 +63,8 @@ final class SnapshotMatrixTests: XCTestCase {
         var found: [String: Int] = [:]
         var fits: [String: Bool] = [:]
         var settled: [String: Bool] = [:]
+        /// By theme, the picture's width and height in points: the screen on iOS, the sheet's content on macOS.
+        var sizes: [String: [Double]] = [:]
     }
 
     @MainActor
@@ -118,6 +118,7 @@ final class SnapshotMatrixTests: XCTestCase {
                         entry.found[theme.rawValue] = result.found
                         entry.fits[theme.rawValue] = result.fits
                         entry.settled[theme.rawValue] = result.settled
+                        entry.sizes[theme.rawValue] = [result.size.width, result.size.height].map(Double.init)
                         manifest.components[componentIndex].sheets[sheetIndex] = entry
                         let attachment = XCTAttachment(data: result.png, uniformTypeIdentifier: "public.png")
                         attachment.name = Self.attachmentPrefix + file
@@ -141,7 +142,7 @@ final class SnapshotMatrixTests: XCTestCase {
     private func capture(
         _ matrix: ComponentMatrix, _ sheet: ComponentMatrix.Sheet, theme: ComponentMatrix.Theme,
         manifest: inout Manifest
-    ) -> (png: Data, found: Int, fits: Bool, settled: Bool)? {
+    ) -> (png: Data, found: Int, fits: Bool, settled: Bool, size: CGSize)? {
         let key = matrix.key(of: sheet)
         let app = XCUIApplication()
         app.launchArguments = ["-WestronMatrixSheet", key] + theme.launchArguments + Self.pinnedArguments
@@ -195,8 +196,7 @@ final class SnapshotMatrixTests: XCTestCase {
             let size = bounds.size
         #endif
         manifest.scale = scale
-        manifest.window = [size.width, size.height].map(Double.init)
-        return (png, cells.count, outside.isEmpty, settled)
+        return (png, cells.count, outside.isEmpty, settled, size)
     }
 
     #if os(macOS)

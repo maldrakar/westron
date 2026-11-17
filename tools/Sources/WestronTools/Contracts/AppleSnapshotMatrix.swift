@@ -5,13 +5,16 @@ import Foundation
 /// catalog, `WestronCatalog/Generated/<Component>+Matrix.swift`, and the registry of every matrix,
 /// `ComponentMatrix+All.swift`:
 ///
-/// - `ComponentMatrix.<component>`: the axes, the states, every combination, what a constraint excludes or advises
-///   against, what each Apple OS draws differently and the sheets, for the catalog to draw and
-///   `tools/apple/snapshot-matrix.sh` to capture. Each cell is drawn by the hand-written `<Component>MatrixCell`, the
-///   way a style body is hand-written (decisions/0001), so a new contract fails the catalog's build until its cell
-///   exists;
+/// - `ComponentMatrix.<component>`: the axes, the states and those no token binding names, every combination, what a
+///   constraint excludes or advises against, what each Apple OS draws differently and the sheets, for the catalog to
+///   draw and `tools/apple/snapshot-matrix.sh` to capture. Each cell is drawn by the hand-written
+///   `<Component>MatrixCell`, the way a style body is hand-written (decisions/0001), so a new contract fails the
+///   catalog's build until its cell exists;
 /// - `<Component>MatrixValues`: one combination typed for that cell: the generated enum of each enum option, `Bool` for
-///   a bool option, and the contract's value of an option that is the system's own API.
+///   a bool option, and the contract's value of an option that is the system's own API. Its values are private and the
+///   cell takes them through one tuple, `fields`, so an option added to an existing contract changes the tuple and
+///   fails the cell's build where it destructures `fields`, until the cell draws the new option. A new value of an
+///   existing option still builds; it reaches the cell through the generated enum.
 ///
 /// The catalog is not public API of WestronUI, so the parity lint does not see these files.
 public struct AppleSnapshotMatrix: Generator {
@@ -127,6 +130,7 @@ public struct AppleSnapshotMatrix: Generator {
                 return "Option(\(literal(axis.name)), values: \(list(axis.values.map(literal)))\(system))"
             }, indent: 2)
         out += argument("states", matrix.states.map(literal), indent: 2)
+        out += argument("unbound", matrix.unboundStates.map(literal), indent: 2)
         out += ["        columns: \(literal(matrix.columnAxis)),"]
         let platforms = matrix.platforms.map { platform in
             let drawn =
@@ -185,22 +189,42 @@ public struct AppleSnapshotMatrix: Generator {
             [
                 "One combination of \(component)'s matrix, typed for `\(cell)`: the generated enum of each enum "
                     + "option, `Bool` for a bool option, and the contract's value of an option that is the "
-                    + "system's own API."
+                    + "system's own API.",
+                "The values are private: a cell takes them all at once from `fields`, so an option added to the "
+                    + "contract changes the tuple and fails the cell's build until it draws the option too.",
             ], indent: 0)
         out += ["struct \(values) {"]
+        var elements: [String] = []
         for axis in matrix.axes {
             let name = SwiftName.declared(axis.name)
+            let type: String
             if let system = axis.systemType {
                 out += doc(["The contract's value of `\(axis.name)`, which is the system's `\(system)`."], indent: 1)
-                out += ["    let \(name): String"]
+                type = "String"
             } else if axis.isBool {
-                out += ["    let \(name): Bool"]
+                type = "Bool"
             } else {
-                out += ["    let \(name): \(component)\(axis.name.prefix(1).uppercased() + axis.name.dropFirst())"]
+                type = "\(component)\(axis.name.prefix(1).uppercased() + axis.name.dropFirst())"
             }
+            out += ["    private let \(name): \(type)"]
+            elements.append("\(name): \(type)")
         }
         out += doc(["The state; nil at rest."], indent: 1)
-        out += ["    let state: String?", ""]
+        out += ["    private let state: String?", ""]
+        elements.append("state: String?")
+        out += doc(["Every value, in the contract's order of the options, then the state."], indent: 1)
+        let fields = "    typealias Fields = (" + elements.joined(separator: ", ") + ")"
+        if fields.count <= AppleTokensSwift.lineLength {
+            out.append(fields)
+        } else {
+            out += ["    typealias Fields = ("]
+            out += elements.enumerated().map { index, element in
+                "        " + element + (index == elements.count - 1 ? "" : ",")
+            }
+            out += ["    )"]
+        }
+        let names = matrix.axes.map { SwiftName.declared($0.name) } + ["state"]
+        out += ["", "    var fields: Fields { (" + names.joined(separator: ", ") + ") }", ""]
         out += ["    init(_ combination: ComponentMatrix.Combination) {"]
         for (index, axis) in matrix.axes.enumerated() {
             let value = "combination.values[\(index)]"

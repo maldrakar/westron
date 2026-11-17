@@ -99,7 +99,9 @@ its columns, rest and the states its rows, at most 3 × 6, so it fits an iPhone 
 The hand-written `<Component>MatrixCell` (Button's is in `Components/ButtonPages.swift`) draws one cell with the real
 component: hover, focus and pressed forced as on the `button-states` pages, disabled and loading with the real
 modifiers. The rows of a state the OS never enters are left out, as on those pages; a value the OS does not offer is
-drawn with its fallback and marked. The sheets are not catalog entries, so the accessibility audit does not walk them;
+drawn with its fallback and marked, and a combination a `warning` constraint advises against is drawn with a caption.
+A state no token binding names in a case looks as rest, and the sheet and the review page say so: Button's focus,
+whose ring the system draws. The sheets are not catalog entries, so the accessibility audit does not walk them;
 `-WestronMatrixSheet <component>.<sheet>` shows one.
 
 ```sh
@@ -113,7 +115,7 @@ screen matches the matrix and that each lies inside the picture, and attaches th
 sheet without the title bar on macOS. It pins the text size, the language and the locale, the window's size on macOS,
 and freezes Core Animation in the sheet's window so a loading indicator draws the same frame every time. The script exports the PNGs, `<component>.<sheet>.<theme>.png`, with the manifest `matrix.json` to
 `.build/snapshot-matrix/<platform>/`, writes the review page `index.html` there (sheets down, themes across, with the
-OS version, device and scale) and prints its path; it fails when an image is missing or a sheet failed a check. The
+OS version, device and scale, and each picture's size) and prints its path; it fails when an image is missing or a sheet failed a check. The
 comparison writes `before/`, `after/`, `diff/` and its `index.html` to `.build/snapshot-matrix/compare/` (`--out` to
 change it). Compare only captures from the same environment: two local runs, or two CI artifacts (decisions/0008).
 CI's `snapshot-matrix` job uploads both platforms' pages as the `snapshot-matrix` artifact.

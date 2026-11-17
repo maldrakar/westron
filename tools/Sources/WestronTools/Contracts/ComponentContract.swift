@@ -106,10 +106,14 @@ public struct ComponentContract: Equatable, Sendable {
     public let apple: Apple?
     /// In the contract's order.
     public let constraints: [Constraint]
+    /// The states some case of a token binding names in its `when` (`state: pressed`), in the contract's order of
+    /// `states`. A state none names changes no token: it draws as rest, and only what the platform adds itself, such
+    /// as the system's focus ring, tells it apart.
+    public let boundStates: [String]
 
     public init(
         id: String, status: String, options: [Option], states: [String], apple: Apple?,
-        constraints: [Constraint] = []
+        constraints: [Constraint] = [], boundStates: [String]? = nil
     ) {
         self.id = id
         self.status = status
@@ -117,6 +121,7 @@ public struct ComponentContract: Equatable, Sendable {
         self.states = states
         self.apple = apple
         self.constraints = constraints
+        self.boundStates = boundStates ?? states
     }
 
     /// Reads a contract's YAML text; `source` is its path, for messages.
@@ -188,8 +193,19 @@ public struct ComponentContract: Equatable, Sendable {
                     require: try Self.conditions(entry["require"], at: path.key("require"), source: source),
                     severity: severity))
         }
+        var named: Set<String> = []
+        for binding in document["tokens"]?.members ?? [] {
+            for entry in binding.value["cases"]?.elements ?? [] {
+                switch entry["when"]?["state"] {
+                case .string(let state)?: named.insert(state)
+                case .array(let list)?: named.formUnion(list.compactMap(\.string))
+                default: break
+                }
+            }
+        }
         self.init(
-            id: id, status: status, options: options, states: states, apple: apple, constraints: constraints)
+            id: id, status: status, options: options, states: states, apple: apple, constraints: constraints,
+            boundStates: states.filter(named.contains))
     }
 
     /// A constraint's `when` or `require`: by option name, a value, a list of values, or `true` or `false`.

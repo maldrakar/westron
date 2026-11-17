@@ -7,7 +7,9 @@
 /// - Each combination of the axes is drawn at rest and in each state of the contract alone: the matrix shows what each
 ///   state does, and the contract's cases resolve states held at once.
 /// - A combination that breaks a constraint of severity `error` is left out (spec/conventions.md, "Constraints between
-///   options"); one that breaks a `warning` stays, marked as advised against.
+///   options"); one that breaks a `warning` stays, and the catalog marks its cells as advised against.
+/// - A state that no token binding of the contract names in a case changes no token, so it draws as rest
+///   (`unboundStates`): Button's focus, whose ring the system draws on Apple. The catalog says so on the sheet.
 /// - What each Apple OS does with it comes from `platforms.apple` and its OS entries: the value it draws for a value it
 ///   does not offer, and the states it never enters. The catalog leaves out the rows of states an OS never enters, as
 ///   the `button-states` pages do, and marks a cell whose value falls back.
@@ -81,6 +83,8 @@ public struct SnapshotMatrix: Equatable, Sendable {
     public let axes: [Axis]
     /// The contract's states, in its order; the matrix adds rest before them.
     public let states: [String]
+    /// The states no case of a token binding names, in the contract's order: they draw as rest.
+    public let unboundStates: [String]
     /// The axis of the columns; nil when the contract has no options.
     public let columnAxis: String?
     /// In order: the first axis outermost, the state innermost, rest first.
@@ -109,6 +113,7 @@ public struct SnapshotMatrix: Equatable, Sendable {
         }
         self.axes = axes
         states = contract.states
+        unboundStates = contract.states.filter { !contract.boundStates.contains($0) }
         let names = axes.map(\.name)
 
         var tuples: [[String]] = [[]]

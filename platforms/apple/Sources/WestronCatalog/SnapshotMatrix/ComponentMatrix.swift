@@ -81,8 +81,10 @@ public struct ComponentMatrix: Sendable {
 
     /// What a cell of a sheet holds.
     public enum Cell: Sendable {
-        /// A combination the current OS draws; `fallbacks` names the values it draws in place of the combination's.
-        case drawn(Combination, fallbacks: [(option: String, value: String, drawn: String)])
+        /// A combination the current OS draws; `fallbacks` names the values it draws in place of the combination's,
+        /// `advisedAgainst` the index of a constraint of severity `warning` the combination breaks.
+        case drawn(
+            Combination, fallbacks: [(option: String, value: String, drawn: String)], advisedAgainst: Int?)
         /// The combination a constraint forbids, by the constraint's index.
         case excluded(constraint: Int)
     }
@@ -110,6 +112,9 @@ public struct ComponentMatrix: Sendable {
     let options: [Option]
     /// The contract's states, in its order.
     public let states: [String]
+    /// The states no case of a token binding names: they draw as rest, and only what the platform adds itself, such
+    /// as the system's focus ring, which a screenshot does not show, would tell them apart.
+    public let unboundStates: [String]
     let columnOption: String?
     let platforms: [Platform]
     let excluded: [Exclusion]
@@ -120,13 +125,15 @@ public struct ComponentMatrix: Sendable {
     private let makeCell: @MainActor @Sendable (Combination) -> AnyView
 
     init<Content: View>(
-        component: String, options: [Option], states: [String], columns: String?, platforms: [Platform],
+        component: String, options: [Option], states: [String], unbound: [String], columns: String?,
+        platforms: [Platform],
         excluded: [Exclusion], advisedAgainst: [Exclusion], combinations: [Combination], sheets: [Sheet],
         @ViewBuilder cell: @escaping @MainActor @Sendable (Combination) -> Content
     ) {
         self.component = component
         self.options = options
         self.states = states
+        self.unboundStates = unbound
         self.columnOption = columns
         self.platforms = platforms
         self.excluded = excluded
@@ -191,7 +198,8 @@ public struct ComponentMatrix: Sendable {
         for (option, value) in zip(options, values) {
             if let drawn = platform?.drawn[option.name]?[value] { fallbacks.append((option.name, value, drawn)) }
         }
-        return .drawn(combination, fallbacks: fallbacks)
+        let advised = advisedAgainst.first { $0.values == values }?.constraint
+        return .drawn(combination, fallbacks: fallbacks, advisedAgainst: advised)
     }
 
     /// How many cells of a sheet the current OS draws.
@@ -227,7 +235,17 @@ public struct ComponentMatrix: Sendable {
     /// The file name of a sheet's capture in a theme: `button.size-s_role-default_iconOnly-false.dark-hc.png`.
     public func fileName(of sheet: Sheet, theme: Theme) -> String { "\(key(of: sheet)).\(theme.rawValue).png" }
 
-    /// Lines for the review page: what the current OS draws differently and what the constraints change.
+    /// What the sheet and the review page say about the states that draw as rest; nil when every state is bound.
+    public var unboundNote: String? {
+        guard !unboundStates.isEmpty else { return nil }
+        let names = unboundStates.joined(separator: ", ")
+        let rows = unboundStates.count == 1 ? "its row looks" : "their rows look"
+        return "No token binding of the contract depends on \(names), so \(rows) at rest; what the platform draws "
+            + "itself, such as the system's focus ring, is not in the picture."
+    }
+
+    /// Lines for the review page: what the current OS draws differently, the states that draw as rest, and what the
+    /// constraints change.
     public var notes: [String] {
         var notes: [String] = []
         if let platform {
@@ -246,6 +264,7 @@ public struct ComponentMatrix: Sendable {
                 "\(excluded.count) combinations of options are forbidden by a constraint and left out with every state."
             )
         }
+        if let note = unboundNote { notes.append(note) }
         if !advisedAgainst.isEmpty {
             notes.append("\(advisedAgainst.count) combinations of options are advised against by a constraint; drawn.")
         }

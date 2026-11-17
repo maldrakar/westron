@@ -200,11 +200,13 @@ struct ButtonMatrixCell: View {
     }
 
     var body: some View {
-        let state = values.state.flatMap(ButtonCatalogState.init(named:))
+        // Every option at once: an option added to the contract changes `fields` and fails the build here.
+        let (variant, size, role, iconOnly, stateName) = values.fields
+        let state = stateName.flatMap(ButtonCatalogState.init(named:))
         SampleButton(
-            kind: values.iconOnly ? .iconOnly : .iconAndLabel, variant: values.variant, size: values.size,
+            kind: iconOnly ? .iconOnly : .iconAndLabel, variant: variant, size: size,
             // The style draws any role other than destructive as default (the contract's platforms.apple).
-            destructive: values.role == "destructive"
+            destructive: role == "destructive"
         )
         .forcingButtonStates(state.map { $0.isForced ? [$0] : [] } ?? [])
         .disabled(state?.isDisabled ?? false)
