@@ -211,7 +211,7 @@ private struct ButtonContent<Label: View>: View {
         Group {
             if isLoading && !hasIcon {
                 HStack(spacing: gap) {
-                    ButtonProgress(color: tokens.progress)
+                    indicatorWithoutIcon
                     styled(isLoading: true)
                 }
             } else {
@@ -226,6 +226,21 @@ private struct ButtonContent<Label: View>: View {
                     hasIcon = value
                 }
         }
+    }
+
+    /// The indicator before a label without an icon. On macOS it takes an icon's slot, as it does beside an icon: a
+    /// glyph in `icon.font`, not drawn, sizes the slot, and the indicator fits it (`ButtonProgress`). On iOS and watchOS
+    /// the indicator keeps its own size, which already fits an icon's slot.
+    @ViewBuilder private var indicatorWithoutIcon: some View {
+        #if os(macOS)
+            Image(Westron.Icon.checkCircle)
+                .textRole(metrics.iconFont)
+                .hidden()
+                .accessibilityHidden(true)
+                .overlay { ButtonProgress(color: tokens.progress) }
+        #else
+            ButtonProgress(color: tokens.progress)
+        #endif
     }
 
     private func styled(isLoading: Bool) -> some View {
@@ -310,18 +325,34 @@ private struct ButtonLabelStyle: LabelStyle {
 /// The system's spinning progress indicator, at its small control size, in `progress.color`. It is decorative: the
 /// button announces loading as its value.
 ///
+/// It is drawn in the icon's slot, which it must fit (`ButtonProgressTests`). macOS draws its spinner at fixed sizes,
+/// 16 pt at the small control size and 10 pt at mini, whatever the frame around it, and its icons are 11 to 14 pt: so
+/// on macOS the largest spinner that fits what it is offered is drawn, which is mini in a button's icon slot (#23). On
+/// iOS the small spinner, 14 pt, fits.
+///
 /// macOS draws its spinner in its own gray and ignores `tint`, so the color is laid over the spinner's shape with
 /// `sourceAtop`, inside a compositing group, the same way on every platform. The spinner's spokes are translucent,
 /// its leading spoke about half opaque, so its shape is first stacked on itself with three shadows that do not blur:
 /// each one doubles the cover, and the leading spoke reaches about 94 % of the color while the trailing spokes keep
 /// their fade. One spinner, no mask: a mask over an animating view costs an offscreen pass on every frame.
-private struct ButtonProgress: View {
+struct ButtonProgress: View {
     let color: Westron.Color
 
     var body: some View {
+        #if os(macOS)
+            ViewThatFits {
+                spinner(.small)
+                spinner(.mini)
+            }
+        #else
+            spinner(.small)
+        #endif
+    }
+
+    private func spinner(_ size: ControlSize) -> some View {
         ProgressView()
             .progressViewStyle(.circular)
-            .controlSize(.small)
+            .controlSize(size)
             .shadow(color: Color(color), radius: 0)
             .shadow(color: Color(color), radius: 0)
             .shadow(color: Color(color), radius: 0)
