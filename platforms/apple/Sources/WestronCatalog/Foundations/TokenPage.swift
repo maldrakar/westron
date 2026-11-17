@@ -63,8 +63,7 @@ struct TokenName: View {
         Text(name)
             .font(Font(.footnote.medium).monospaced())
             .foregroundStyle(.text.primary)
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
+            .modifier(SampleLabelFit())
     }
 }
 
@@ -80,8 +79,21 @@ struct TokenDetail: View {
         Text(text)
             .textRole(.caption.medium)
             .foregroundStyle(.text.secondary)
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
+            .modifier(SampleLabelFit())
+    }
+}
+
+/// How a sample's label fits its place. A page is laid out for one screenshot at the default text size, where a long
+/// label keeps to one line and shrinks a little. Above the default it wraps instead, so that no label is cut off at a
+/// large Dynamic Type size (the accessibility audit, #25).
+private struct SampleLabelFit: ViewModifier {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    func body(content: Content) -> some View {
+        let fitsOneLine = dynamicTypeSize <= .large
+        content
+            .lineLimit(fitsOneLine ? 1 : nil)
+            .minimumScaleFactor(fitsOneLine ? 0.8 : 1)
     }
 }
 

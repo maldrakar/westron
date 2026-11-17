@@ -2,6 +2,7 @@
 # The westron generators and checks from the tools/ package; builds it first if needed.
 #
 #   tools/westron lint raw-values [FILE.swift | DIRECTORY …]   no raw values in component code
+#   tools/westron lint api-parity                              WestronUI's public API is what the contracts give
 #   tools/westron generate [--check]                           regenerate code, or compare it with a fresh generation
 #   tools/westron tokens check [RESOLVER.json]                 validate the tokens and resolve every mode (decisions/0010)
 #   tools/westron icons check [REGISTRY.yaml]                  validate the icon registry (decisions/0011)

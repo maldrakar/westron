@@ -118,10 +118,7 @@ private struct ShapePage: View {
             Text(title)
                 .textRole(.subheadline.strong)
                 .foregroundStyle(.text.primary)
-            LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: column), spacing: .space100, alignment: .top)],
-                alignment: .leading, spacing: .space150
-            ) {
+            AdaptiveGrid(minimum: column, spacing: .space100, rowSpacing: .space150) {
                 content()
             }
         }

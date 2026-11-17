@@ -7,13 +7,17 @@
 /// modifier the control does not have: `SwiftUI.Slider` and `SwiftUI.Stepper` have none, so a style cannot go on
 /// them (#62). The modifier is not always named after the control: `SwiftUI.SecureField` has no `secureFieldStyle`
 /// and takes `textFieldStyle`, as `SwiftUI.TextField` does; neither is here until a contract needs it. Add a control
-/// with its modifier and its styles; on macOS, a test checks that the modifier exists in SwiftUI's interface
+/// with its modifier, its styles and the states it carries; on macOS, a test checks that the modifier exists in SwiftUI's interface
 /// (`SwiftUITypesTests`).
 public enum SystemStyles {
     public struct Base: Equatable, Sendable {
         /// The style modifier, `buttonStyle` for `SwiftUI.Button`: the generated overload has its name.
         public let modifier: String
         public let styles: [String]
+        /// The states the control carries itself, which its style reads from the system: no westron modifier sets
+        /// them (spec/conventions.md, "States the system control has"). A contract's other states each get the shared
+        /// modifier named as the state, such as `.loading(_:)`; the API parity lint (#21) expects it.
+        public let states: [String]
     }
 
     public static let byBase: [String: Base] = [
@@ -23,6 +27,8 @@ public enum SystemStyles {
             modifier: "buttonStyle",
             styles: [
                 "automatic", "bordered", "borderedProminent", "borderless", "glass", "glassProminent", "link", "plain",
-            ])
+            ],
+            // configuration.isPressed, onHover, @Environment(\.isFocused), @Environment(\.isEnabled).
+            states: ["pressed", "hover", "focus", "disabled"])
     ]
 }

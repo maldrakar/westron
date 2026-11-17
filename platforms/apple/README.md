@@ -8,7 +8,7 @@ A SwiftUI library for iOS, iPadOS, macOS and watchOS. The package manifest lives
 | `Sources/WestronUI/` | Styles, components and the SwiftUI accessors of the tokens: what products import |
 | `Sources/WestronCatalog/` | Catalog entries, their host and launch arguments |
 | `Tests/` | Package tests (Swift Testing) |
-| `Catalog/` | Catalog app for iOS and macOS and the screenshot UI test |
+| `Catalog/` | Catalog app for iOS and macOS and its UI tests: screenshots and the accessibility audit |
 
 ## Adding the package
 
@@ -73,7 +73,8 @@ Button("Add", systemImage: Westron.Icon.plus.systemName) { add() }   // any call
 Open in Xcode 27.1: `platforms/apple/Catalog/Catalog.xcodeproj`. Without arguments, the catalog shows navigation
 across all entries. With `-WestronEntry <id>`, it shows one entry full screen; this is how
 `tools/apple/catalog-screenshot.sh` captures it. `-WestronAppearance light|dark`, `-WestronContrast standard|high` and
-`-WestronDynamicType <size>` set the conditions.
+`-WestronDynamicType <size>` set the conditions; `-WestronScrollAnchor <0…1>` holds a point of the entry's scroll
+content in view (the accessibility audit uses it).
 
 The Foundations section holds the token samples, each fitting one screenshot on an iPhone 17 and in the macOS window:
 `color-backgrounds` and `color-foregrounds` draw every color in the four themes side by side, each cell under its own
@@ -86,6 +87,73 @@ review the colors in every mode:
 ```sh
 tools/apple/catalog-screenshot.sh ios --entry color-in-use --appearance dark --contrast high
 ```
+
+### Accessibility audit
+
+`tools/apple/check.sh a11y` runs the UI test `CatalogAccessibilityAuditTests` on the iOS simulator (`iPhone 17` or
+`$WESTRON_SIM_DEVICE`): it opens every entry of `Catalog.entries` in isolation, so a new entry is audited with no
+change to the test, and runs `XCUIApplication.performAccessibilityAudit` on it. Every issue fails the test. The log
+goes to `.build/logs/a11y-ios[-<tests>].log`, the result bundle to `.build/xcode/results/a11y-ios[-<tests>].xcresult`
+(the tests named, if any, are in the names); the script prints each issue as a line starting with `a11y:`. A full run
+takes about 16 minutes (2026-11-17, iPhone 17 Pro simulator).
+
+```sh
+tools/apple/check.sh a11y                                  # all five tests below
+tools/apple/check.sh a11y ios testDarkAppearance           # one or more of them, by name
+WESTRON_ENTRY=controls,icons tools/apple/check.sh a11y     # those entries only
+```
+
+CI runs the audit in its own job, `accessibility-audit`, a matrix of the five tests, one job each, side by side
+(`fail-fast: false`, 35 minutes each). The runner is 2.2–2.3 times slower than a local Mac: in one serial run
+(2026-11-17) `testAccessibilityDynamicType` took 13.5 minutes, the two dark tests 4 minutes each, and the run passed
+the 40 minutes of its step before `testDefaultSettings` (about 11 minutes there, by the local time) ended. The cost is
+five parallel jobs and about 40 runner-minutes of tests per pull request, plus a catalog build in each job. To run it
+on `main` only, uncomment the `if: github.event_name == 'push'` line of the job in `.github/workflows/ci.yml`. If one
+test outgrows its 35 minutes as pages are added, `WESTRON_ENTRY` takes a list, so a test can be split by entries.
+
+| Test | Launch arguments | Audit types on iOS |
+|---|---|---|
+| `testDefaultSettings` | `-WestronAppearance light`; the system's font size | all: contrast, element detection, hit region, sufficient element description, Dynamic Type, text clipped, trait |
+| `testAccessibilityDynamicType` | `-WestronAppearance light -WestronDynamicType accessibility5` | all except Dynamic Type |
+| `testIncreasedContrast` | `-WestronAppearance light -WestronContrast high` | contrast |
+| `testDarkAppearance` | `-WestronAppearance dark` | contrast |
+| `testDarkIncreasedContrast` | `-WestronAppearance dark -WestronContrast high` | contrast |
+
+- The Dynamic Type and text clipped audits change the font size themselves, so they find text that does not scale or
+  would be cut at a larger size even in `testDefaultSettings`. `-WestronDynamicType` pins the size in the view tree,
+  where the system size the audit sets cannot reach it, so the Dynamic Type audit does not run there.
+- The theme and the contrast change only colors, so their tests run the contrast audit alone.
+- The audit sees only what is on screen, so every test audits a page a screenful at a time: it waits until the page
+  is still, audits it, drags it up by about two thirds of the screen without momentum, and stops when a drag no
+  longer moves the page. A page that is still moving after 5 s (an animation that runs on) is audited as it is, with
+  a line in the log, and is not waited for again.
+- After a drag, the contrast audit also reports an element under the status bar or off the screen, measured on the
+  clock or on nothing. Such an element is not counted there; the screenful before showed it whole.
+- The Dynamic Type and text clipped audits enlarge the page's text. A dragged scroll view goes back to its top when
+  its content grows, so after a drag they would measure only the top of the page; and after them, the page's
+  accessibility tree and its pixels disagree for a while, so that the next audit reads every text as failing
+  contrast. In `testDefaultSettings` they run in a pass of their own, without drags: a fresh launch for each window
+  of the page, one more window than the page has screenfuls, each held in place by `-WestronScrollAnchor` (0 the top
+  of the page, 1 its bottom), from the top to the bottom. A line of fixed-size text at the top, in the middle and at
+  the end of the typography page is reported in each place (2026-11-17).
+- Limits. The windows of the separate pass are spread evenly over the page, and a window shows what the enlarged
+  text leaves on screen; a page several screenfuls long can leave a line between two windows. The drags start low in
+  the page: a control there that takes vertical drags itself would end the page early. On macOS the scroll call that
+  moves the page is not verified to reach it; a page that does not move after the first scroll is logged
+  ("did not move when scrolled") and audited on its first screenful only.
+- The audit loses track of the cells of a lazy container (`LazyVGrid`, `List`, `Form`) when it changes the text
+  size, and reports their text as not following Dynamic Type. A catalog page lays its content out eagerly: the
+  sample grids with `AdaptiveGrid`, the same columns as an adaptive `LazyVGrid`, and the environment page with
+  stacks in a scroll view rather than a `Form`.
+- An issue that is not the entry's fault, or that the catalog cannot fix, is suppressed one by one, with its reason,
+  in `CatalogAccessibilityAuditTests.suppressions`; an audit type is never turned off as a whole.
+- `WESTRON_ENTRY=<id>[,<id>…] tools/apple/check.sh a11y` audits those entries only: one while its issues are being
+  fixed, or a share of the catalog.
+- `tools/apple/check.sh a11y macos` runs the same tests on macOS, with the macOS audit types (contrast, element
+  detection, hit region, sufficient element description, action, parent–child; macOS has no Dynamic Type or text
+  clipped audit). It needs Automation Mode (below) and takes over the screen while it runs, so it is not a CI gate.
+  Its issues are not triaged yet: the first run (2026-11-16, entry `icons`, on a machine whose screen was in use)
+  reported every icon cell as failing contrast, and a group and the window as lacking a description.
 
 ### Screenshots on macOS: turn on Automation Mode once
 

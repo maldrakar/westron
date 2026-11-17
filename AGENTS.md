@@ -37,14 +37,17 @@ If you call `swift` or `xcodebuild` directly, run `source tools/apple/xcode-env.
 tools/apple/check.sh package      # swift build + swift test (macOS)
 tools/apple/check.sh platforms    # compile for iOS and watchOS
 tools/apple/check.sh catalog      # build the catalog app and the UI tests
+tools/apple/check.sh a11y         # accessibility audit of every catalog entry on the iOS simulator (macOS: a11y macos);
+                                  # a11y ios <test>… runs some of its five tests, WESTRON_ENTRY=<id>,… some entries
 tools/apple/check.sh format       # swift format lint; to fix: tools/apple/check.sh fix-format
-tools/apple/check.sh all          # everything at once
+tools/apple/check.sh all          # everything at once, except a11y
 
 tools/apple/catalog-screenshot.sh ios   --entry environment --appearance dark   # prints the path to the PNG
 tools/apple/catalog-screenshot.sh macos --entry environment                     # the same on macOS
 
 tools/check.sh                    # build and test tools/, then the checks below (CI runs it on Linux)
 tools/westron lint raw-values     # no raw values in WestronUI
+tools/westron lint api-parity     # WestronUI's public API is exactly the component API the contracts give
 tools/westron generate            # regenerate code from the sources
 tools/westron generate --check    # generated code matches a fresh generation
 tools/westron icons check         # the icon registry spec/icons/icons.yaml is valid

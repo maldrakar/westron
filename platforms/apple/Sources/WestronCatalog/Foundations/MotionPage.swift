@@ -9,16 +9,27 @@ extension CatalogEntry {
 }
 
 private struct MotionPage: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
         TokenPage(
             title: "Motion",
             summary: "motion.*: Apple runs the spring where a motion has one, otherwise the curve. The plot is the "
                 + "token's curve, progress over time; under Reduce Motion a spring loses its bounce."
         ) {
-            // The curve beside the numbers where the window is wide enough, under the name otherwise.
-            ViewThatFits(in: .horizontal) {
-                table(curveInline: true)
-                table(curveInline: false)
+            if dynamicTypeSize.isAccessibilitySize {
+                // At an accessibility size the table's columns are too narrow for a word: each motion is a stack.
+                VStack(alignment: .leading, spacing: .space200) {
+                    ForEach(Westron.Transition.all, id: \.name) { transition in
+                        stack(transition)
+                    }
+                }
+            } else {
+                // The curve beside the numbers where the window is wide enough, under the name otherwise.
+                ViewThatFits(in: .horizontal) {
+                    table(curveInline: true)
+                    table(curveInline: false)
+                }
             }
         }
     }
@@ -56,6 +67,24 @@ private struct MotionPage: View {
                 .font(Font(.footnote.regular).monospacedDigit())
                 .foregroundStyle(.text.primary)
             }
+        }
+    }
+
+    /// A motion as a stack: its name, its timing, its curve and how Apple runs it.
+    private func stack(_ transition: Westron.Transition) -> some View {
+        VStack(alignment: .leading, spacing: .space50) {
+            TokenName(String(transition.name.dropFirst("motion.".count)))
+            TokenDetail(
+                "duration \(Self.seconds(transition.duration)), delay "
+                    + (transition.delay > 0 ? Self.seconds(transition.delay) : "none"))
+            CurvePlot(curve: transition.curve)
+                .stroke(.text.accent, lineWidth: .stroke.regular)
+                .frame(width: SampleMetrics.mark, height: SampleMetrics.mark)
+                .background(.background.muted, in: RoundedRectangle(cornerRadius: .radius75))
+            Text(Self.describe(transition))
+                .textRole(.caption.medium)
+                .foregroundStyle(.text.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 

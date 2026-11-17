@@ -46,6 +46,18 @@ Date: 2026-11-14. Status: accepted.
 - UI tests on macOS require Automation Mode. It is on for GitHub runners. On your own machine the human turns it on
   once: `sudo automationmodetool enable-automationmode-without-authentication`.
 - The same UI test target will host the `performAccessibilityAudit` audit in phase 2 (issue #25).
+  2026-11-16: it does. `CatalogAccessibilityAuditTests` audits every entry of `Catalog.entries` in five
+  configurations (default, accessibility5, increased contrast, dark, dark with increased contrast);
+  `tools/apple/check.sh a11y` runs it on the iOS simulator, and the CI `apple` job runs it as a gate.
+  `tools/apple/check.sh a11y macos` runs it on macOS by hand: it needs Automation Mode and the screen to itself.
+  Suppressed issues, each with its reason, are listed in the test; the matrix is in `platforms/apple/README.md`.
+  2026-11-17: every test audits each page a screenful at a time, down to its end; the Dynamic Type and text clipped
+  audits of the default test run on windows of the page held in place by `-WestronScrollAnchor`, because a dragged
+  scroll view goes back to its top when they enlarge the text. The README lists what the audit still cannot see.
+  The same day the audit outgrew one CI step: the runner is 2.2–2.3 times slower than a local Mac, and a serial run
+  passed 40 minutes (`testAccessibilityDynamicType` alone took 13.5). CI now runs the five tests as a matrix job,
+  `accessibility-audit`, one job each in parallel, 35 minutes each: about 40 runner-minutes per pull request. Whether
+  it runs on every pull request or on `main` only is the owner's call: one commented `if:` line in the job.
 
 ## Consequences
 
