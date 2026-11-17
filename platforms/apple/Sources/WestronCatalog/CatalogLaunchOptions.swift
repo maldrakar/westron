@@ -8,6 +8,7 @@ import SwiftUI
 /// -WestronAppearance light|dark      appearance
 /// -WestronContrast standard|high     contrast: high is the system's increased contrast, the -hc themes
 /// -WestronDynamicType <size>         xSmall … xxxLarge, accessibility1 … accessibility5
+/// -WestronScrollAnchor <0…1>         the point of the entry's scroll content held in view, 0 top, 1 bottom
 /// ```
 ///
 /// Unknown arguments are skipped: Xcode and the system add their own.
@@ -52,15 +53,20 @@ public struct CatalogLaunchOptions: Equatable, Sendable {
     public var appearance: Appearance?
     public var contrast: Contrast?
     public var dynamicTypeSize: DynamicTypeSize?
+    /// The point of the entry's scroll content, from 0 at the top to 1 at the bottom, that the scroll view shows
+    /// first and holds in place when the content grows. The accessibility audit (#25) enlarges the text of the page:
+    /// a scroll view without an anchor goes back to the top, and the audit would measure only the top of the page.
+    public var scrollAnchor: Double?
 
     public init(
         entryID: String? = nil, appearance: Appearance? = nil, contrast: Contrast? = nil,
-        dynamicTypeSize: DynamicTypeSize? = nil
+        dynamicTypeSize: DynamicTypeSize? = nil, scrollAnchor: Double? = nil
     ) {
         self.entryID = entryID
         self.appearance = appearance
         self.contrast = contrast
         self.dynamicTypeSize = dynamicTypeSize
+        self.scrollAnchor = scrollAnchor
     }
 
     /// Parses the process arguments without the first element (the path to the executable).
@@ -96,6 +102,11 @@ public struct CatalogLaunchOptions: Equatable, Sendable {
                     throw .invalidValue(flag: flag, value: value, allowed: Self.dynamicTypeSizes.map(\.name))
                 }
                 dynamicTypeSize = parsed
+            case "-WestronScrollAnchor":
+                guard let parsed = Double(value), parsed >= 0, parsed <= 1 else {
+                    throw .invalidValue(flag: flag, value: value, allowed: ["a number from 0 to 1"])
+                }
+                scrollAnchor = parsed
             default:
                 break
             }
@@ -110,7 +121,9 @@ public struct CatalogLaunchOptions: Equatable, Sendable {
         }
     }
 
-    static let flags: Set<String> = ["-WestronEntry", "-WestronAppearance", "-WestronContrast", "-WestronDynamicType"]
+    static let flags: Set<String> = [
+        "-WestronEntry", "-WestronAppearance", "-WestronContrast", "-WestronDynamicType", "-WestronScrollAnchor",
+    ]
 
     /// The size names match the names of the `DynamicTypeSize` cases.
     static let dynamicTypeSizes: [(name: String, size: DynamicTypeSize)] = [

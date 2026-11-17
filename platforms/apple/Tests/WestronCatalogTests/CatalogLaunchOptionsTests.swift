@@ -69,6 +69,20 @@ struct CatalogLaunchOptionsTests {
         }
     }
 
+    @Test("The scroll anchor is a number from 0 to 1")
+    func scrollAnchor() throws {
+        #expect(try CatalogLaunchOptions(arguments: ["-WestronScrollAnchor", "0.5"]).scrollAnchor == 0.5)
+        #expect(try CatalogLaunchOptions(arguments: []).scrollAnchor == nil)
+        for value in ["-0.1", "1.5", "bottom", "nan"] {
+            #expect(
+                throws: CatalogLaunchOptions.ParseError.invalidValue(
+                    flag: "-WestronScrollAnchor", value: value, allowed: ["a number from 0 to 1"])
+            ) {
+                try CatalogLaunchOptions(arguments: ["-WestronScrollAnchor", value])
+            }
+        }
+    }
+
     @Test("Contrast maps to SwiftUI's color scheme contrast")
     func contrast() throws {
         #expect(try CatalogLaunchOptions(arguments: ["-WestronContrast", "standard"]).contrast == .standard)
