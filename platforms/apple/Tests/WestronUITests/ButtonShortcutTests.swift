@@ -117,5 +117,24 @@
                 #expect(presses.count == 0)
             }
         }
+
+        /// `.loading(_:)` on a container takes the shortcut set outside it away from every control inside while it
+        /// loads, a system button that knows nothing of loading included (the caveat on `.loading(_:)`).
+        @Test("on a container, loading takes the outer shortcut from a system button inside")
+        func containerTakesTheShortcutFromSystemControls() {
+            // At rest the shortcut reaches the system button: the control.
+            for isLoading in [false, true] {
+                let presses = Presses()
+                let host = Host(
+                    VStack {
+                        Button("Publish") { presses.count += 1 }
+                    }
+                    .loading(isLoading)
+                    .keyboardShortcut(.defaultAction))
+                host.pressReturn()
+                host.close()
+                #expect(presses.count == (isLoading ? 0 : 1), "loading: \(isLoading)")
+            }
+        }
     }
 #endif

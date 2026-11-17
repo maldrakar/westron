@@ -31,7 +31,8 @@ extension View {
     /// Put `.loading(_:)` on the button itself, not on a container. On a container it sets the state for every
     /// westron component inside, but while loading assistive technology can activate nothing in it, not even a system
     /// `Toggle` or `Button` that knows nothing of loading: the refusal is the container's default accessibility action,
-    /// and SwiftUI gives it to every element inside (#23).
+    /// and SwiftUI gives it to every element inside (#23). Nor does any control inside take a keyboard shortcut set
+    /// outside the container while it loads, a system one included: the shortcut is taken away for the whole subtree.
     ///
     /// A loading button announces "Loading" as its accessibility value. A value the product gives the same button,
     /// `.accessibilityValue("3 selected")`, wins over it, and then loading is not announced.
