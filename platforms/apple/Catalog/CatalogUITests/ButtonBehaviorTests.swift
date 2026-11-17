@@ -147,32 +147,27 @@ final class ButtonBehaviorTests: XCTestCase {
     }
 
     /// Return triggers the window's default action, which the live "Publish" button is
-    /// (`.keyboardShortcut(.defaultAction)`): it does at rest, and should not while loading. ⌘E triggers Export, whose
-    /// shortcut the catalog drops while it loads, as `.loading(_:)` tells a product to.
+    /// (`.keyboardShortcut(.defaultAction)`, set outside `.loading(_:)`): it does at rest, and does not while loading,
+    /// since `.loading(_:)` takes the shortcut away. ⌘E triggers Export, whose shortcut the catalog drops while it
+    /// loads itself, the way a product may.
     ///
     /// macOS only. In the iOS 26.3 simulator `typeKey` reaches no shortcut, not even a system `.borderedProminent`
     /// button's default action, so the iOS (iPad hardware keyboard) behavior is not measured.
-    ///
-    /// A known contract gap (#23): on macOS SwiftUI runs a shortcut's button action itself, around the button's style
-    /// and modifiers, so westron cannot refuse it. The expected failure fails the test once that changes.
     @MainActor
     func testKeyboardShortcutsWhileLoading() throws {
         #if os(macOS)
             app.windows.firstMatch.click()
             app.typeKey(.return, modifierFlags: [])
-            let afterReturn = accepted
-            XCTExpectFailure("contract gap #23: on macOS a keyboard shortcut runs the action of a loading button") {
-                XCTAssertEqual(afterReturn, 0, "Return triggered a loading default button")
-            }
+            XCTAssertEqual(accepted, 0, "Return triggered a loading default button")
             // A product that drops the shortcut while loading: ⌘E does nothing.
             app.typeKey("e", modifierFlags: .command)
-            XCTAssertEqual(accepted, afterReturn, "⌘E triggered Export while its shortcut is dropped")
+            XCTAssertEqual(accepted, 0, "⌘E triggered Export while its shortcut is dropped")
             // The control: out of loading, both keys trigger their buttons.
             stopLoading()
             app.typeKey(.return, modifierFlags: [])
-            XCTAssertEqual(accepted, afterReturn + 1, "Return did not trigger the default button at rest")
+            XCTAssertEqual(accepted, 1, "Return did not trigger the default button at rest")
             app.typeKey("e", modifierFlags: .command)
-            XCTAssertEqual(accepted, afterReturn + 2, "⌘E did not trigger Export at rest")
+            XCTAssertEqual(accepted, 2, "⌘E did not trigger Export at rest")
         #else
             throw XCTSkip("the iOS simulator's typeKey reaches no keyboard shortcut")
         #endif

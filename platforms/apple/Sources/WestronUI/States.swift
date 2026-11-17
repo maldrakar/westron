@@ -17,14 +17,16 @@ extension View {
     /// A loading westron button refuses a touch, a click and an activation by assistive technology (VoiceOver, Switch
     /// Control, Voice Control), and stays enabled: it is not drawn or announced as unavailable.
     ///
-    /// It cannot refuse a keyboard shortcut on macOS: SwiftUI runs a shortcut's action itself, around any style or
-    /// modifier. A product that gives a loading button a shortcut guards its action or drops the shortcut while
-    /// loading:
+    /// It also refuses the button's keyboard shortcut, which it takes away while loading, when the shortcut is set
+    /// outside it, after it in the chain:
     ///
     ///     Button("Save") { save() }
     ///         .buttonStyle(.primary)
     ///         .loading(isSaving)
-    ///         .keyboardShortcut(isSaving ? nil : .defaultAction)
+    ///         .keyboardShortcut(.defaultAction)
+    ///
+    /// A shortcut set before it, closer to the button, wins over it, and SwiftUI runs that shortcut's action itself,
+    /// around the button's style: `.keyboardShortcut(.defaultAction).loading(isSaving)` still saves on Return.
     ///
     /// Put `.loading(_:)` on the button itself, not on a container. On a container it sets the state for every
     /// westron component inside, but while loading assistive technology can activate nothing in it, not even a system
@@ -38,16 +40,28 @@ extension View {
     }
 }
 
-/// Sets the state, and while loading replaces the default accessibility action of the element it is applied to with
-/// one that does nothing: that action is what VoiceOver, Switch Control and Voice Control run, and SwiftUI runs a
-/// button's own action for it without the button's style, so the style alone cannot refuse it.
+/// Sets the state, and while loading refuses the two activations SwiftUI runs a button's own action for without the
+/// button's style, so the style alone cannot refuse them:
+/// - assistive technology: the default accessibility action of the element it is applied to is replaced with one that
+///   does nothing; that action is what VoiceOver, Switch Control and Voice Control run;
+/// - a keyboard shortcut: the button takes its shortcut from the environment, the closest `.keyboardShortcut(_:)`
+///   winning, so the shortcut set outside this modifier is passed on at rest and replaced with none while loading.
 ///
 /// Both branches have the same type, so the view keeps its identity, and its state, when loading toggles.
 private struct LoadingModifier: ViewModifier {
     let isLoading: Bool
+    #if !os(watchOS)
+        @Environment(\.keyboardShortcut) private var keyboardShortcut
+    #endif
 
     func body(content: Content) -> some View {
         let gated = isLoading ? content.accessibilityAction {} : content.accessibilityAddTraits([])
-        gated.environment(\.isLoading, isLoading)
+        #if os(watchOS)
+            gated.environment(\.isLoading, isLoading)
+        #else
+            gated
+                .keyboardShortcut(isLoading ? nil : keyboardShortcut)
+                .environment(\.isLoading, isLoading)
+        #endif
     }
 }

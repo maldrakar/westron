@@ -8,9 +8,10 @@
 // only a `ButtonStyle` sees `isPressed`.
 //
 // The gate refuses a touch and a click. SwiftUI runs the product's action for two other inputs itself, on the product's
-// `Button`, around its style: an accessibility activation (VoiceOver, Switch Control, Voice Control), which
-// `.loading(_:)` refuses from outside the button (States.swift), and a keyboard shortcut on macOS, which nothing in
-// westron can refuse (a contract gap, #23). The catalog's UI tests measure each (CatalogUITests/ButtonBehaviorTests).
+// `Button`, around its style: an accessibility activation (VoiceOver, Switch Control, Voice Control) and a keyboard
+// shortcut. `.loading(_:)` refuses both from outside the button (States.swift): the shortcut only when it is set
+// outside `.loading(_:)`. The catalog's UI tests measure each (CatalogUITests/ButtonBehaviorTests), and
+// ButtonShortcutTests the shortcut's two orders.
 
 import SwiftUI
 
