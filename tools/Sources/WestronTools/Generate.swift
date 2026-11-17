@@ -35,7 +35,8 @@ public enum Generate {
     /// `generate` writes their files before it runs the rest.
     public static let sourceGenerators: [any Generator] = [PaletteTokens()]
     /// The generator registry, in order.
-    public static let generators: [any Generator] = sourceGenerators + [AppleTokens(), AppleIcons(), AppleComponents()]
+    public static let generators: [any Generator] =
+        sourceGenerators + [AppleTokens(), AppleIcons(), AppleComponents(), AppleSnapshotMatrix()]
 
     /// The files of all generators and the directories they own.
     public struct Output: Equatable, Sendable {

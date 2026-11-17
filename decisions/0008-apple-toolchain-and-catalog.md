@@ -75,5 +75,28 @@ Date: 2026-11-14. Status: accepted.
   Snapshots must not depend on these machine settings. What it can, the test sets itself: theme, font size, locale.
   The capture environment pins the rest: SwiftUI only reads some accessibility settings, and a test cannot change
   the scale or the OS version.
+
+  2026-11-18, #24 decides: the environments are not aligned; captures are compared only within one.
+  - **No reference images in the repository.** A matrix is generated from the contract and captured on demand
+    (`tools/apple/snapshot-matrix.sh ios|macos`); nothing captured is committed. A committed reference would have to
+    be taken in exactly one environment, and every other machine would see a diff of the OS version, the scale or a
+    system setting rather than of the component.
+  - **A matrix is compared only with a matrix from the same environment:** two local runs (before and after a change,
+    on the same Mac and simulator), or two CI artifacts (`main` against the pull request, on the same runner image).
+    `tools/apple/snapshot-matrix.sh compare <before> <after>` compares two captures pixel by pixel; its report names
+    both environments, so a comparison across them is visible as such. The review page of each capture
+    (`index.html`) names its OS version, device, scale and picture size.
+  - **The capture sets what it can itself:** the theme and the contrast for each image, the text size (`large`, the
+    default), the language and the locale (`en`, `en_US`), on macOS the window's size (720 × 540, whatever size the
+    system restores) and the picture of the sheet alone, without the title bar and the desktop at the window's
+    corners, the status bar on iOS, and Core Animation frozen in the sheet's window, so that a loading indicator shows the same frame on
+    every capture. What it cannot set (the OS version, the scale, Reduce Motion and Reduce Transparency on macOS)
+    stays the environment's.
+  - **Proposed next step, for the owner to decide:** a CI job on pull requests that downloads the matrix artifact of
+    the latest `main` run, captures the pull request's matrix on the same runner image and attaches the compare
+    report, informational and not a required check. It is not wired yet: it doubles the matrix's runner time on every
+    pull request, and a runner image update would show as a diff of every image until `main` is captured again.
 - The CI job with screenshots takes about 16 minutes: each shot calls `xcodebuild` separately. The snapshot matrix
-  needs one run per platform; that is also #24.
+  needs one run per platform; that is also #24. 2026-11-18: `tools/apple/snapshot-matrix.sh` takes the whole matrix
+  in one `xcodebuild test` invocation per platform, relaunching the catalog for each sheet and theme inside it; the
+  CI job `snapshot-matrix` runs it for iOS and macOS and uploads the pages as an artifact.

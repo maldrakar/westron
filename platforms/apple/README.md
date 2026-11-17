@@ -8,7 +8,7 @@ A SwiftUI library for iOS, iPadOS, macOS and watchOS. The package manifest lives
 | `Sources/WestronUI/` | Styles, components and the SwiftUI accessors of the tokens: what products import |
 | `Sources/WestronCatalog/` | Catalog entries, their host and launch arguments |
 | `Tests/` | Package tests (Swift Testing) |
-| `Catalog/` | Catalog app for iOS and macOS and its UI tests: screenshots and the accessibility audit |
+| `Catalog/` | Catalog app for iOS and macOS and its UI tests: screenshots, the snapshot matrix and the accessibility audit |
 
 ## Adding the package
 
@@ -87,6 +87,36 @@ review the colors in every mode:
 ```sh
 tools/apple/catalog-screenshot.sh ios --entry color-in-use --appearance dark --contrast high
 ```
+
+### Snapshot matrix
+
+The owner approves a component's look from its snapshot matrix (decisions/0005, the second gate; #24). `tools/westron
+generate` writes it from each approved contract into `Sources/WestronCatalog/Generated/<Component>+Matrix.swift`:
+every option's values (a bool as `false` and `true`, an option that is the system's own API such as Button's `role`
+included), rest and each state alone, the combinations a constraint of severity `error` leaves out, what each Apple OS
+draws differently (`platforms.apple`), and the sheets. A sheet fixes every option but the variant: the variants are
+its columns, rest and the states its rows, at most 3 × 6, so it fits an iPhone 17 in portrait and the macOS window.
+The hand-written `<Component>MatrixCell` (Button's is in `Components/ButtonPages.swift`) draws one cell with the real
+component: hover, focus and pressed forced as on the `button-states` pages, disabled and loading with the real
+modifiers. The rows of a state the OS never enters are left out, as on those pages; a value the OS does not offer is
+drawn with its fallback and marked. The sheets are not catalog entries, so the accessibility audit does not walk them;
+`-WestronMatrixSheet <component>.<sheet>` shows one.
+
+```sh
+tools/apple/snapshot-matrix.sh ios                       # or macos; --component button for one component
+tools/apple/snapshot-matrix.sh compare <before> <after>  # exit 0 when every image is the same, 1 otherwise
+```
+
+The capture runs the UI test `SnapshotMatrixTests` once (one `xcodebuild test`), which launches the catalog for every
+sheet in light, dark, light-hc and dark-hc, waits until the sheet stands still, checks that the number of cells on
+screen matches the matrix and that each lies inside the picture, and attaches the screenshot: the screen on iOS, the
+sheet without the title bar on macOS. It pins the text size, the language and the locale, the window's size on macOS,
+and freezes Core Animation in the sheet's window so a loading indicator draws the same frame every time. The script exports the PNGs, `<component>.<sheet>.<theme>.png`, with the manifest `matrix.json` to
+`.build/snapshot-matrix/<platform>/`, writes the review page `index.html` there (sheets down, themes across, with the
+OS version, device and scale) and prints its path; it fails when an image is missing or a sheet failed a check. The
+comparison writes `before/`, `after/`, `diff/` and its `index.html` to `.build/snapshot-matrix/compare/` (`--out` to
+change it). Compare only captures from the same environment: two local runs, or two CI artifacts (decisions/0008).
+CI's `snapshot-matrix` job uploads both platforms' pages as the `snapshot-matrix` artifact.
 
 ### Accessibility audit
 

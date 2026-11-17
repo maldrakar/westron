@@ -188,6 +188,30 @@ private struct SampleButton: View {
     }
 }
 
+/// One cell of Button's snapshot matrix (#24; `ComponentMatrix.button`, generated from the contract): the real button
+/// with the combination's variant, size, role and iconOnly, an icon and a label, in the combination's state. Hover,
+/// focus and pressed are forced, as on the `button-states` pages; disabled and loading are set with the real
+/// `.disabled(_:)` and `.loading(_:)`.
+struct ButtonMatrixCell: View {
+    let values: ButtonMatrixValues
+
+    init(_ values: ButtonMatrixValues) {
+        self.values = values
+    }
+
+    var body: some View {
+        let state = values.state.flatMap(ButtonCatalogState.init(named:))
+        SampleButton(
+            kind: values.iconOnly ? .iconOnly : .iconAndLabel, variant: values.variant, size: values.size,
+            // The style draws any role other than destructive as default (the contract's platforms.apple).
+            destructive: values.role == "destructive"
+        )
+        .forcingButtonStates(state.map { $0.isForced ? [$0] : [] } ?? [])
+        .disabled(state?.isDisabled ?? false)
+        .loading(state?.isLoading ?? false)
+    }
+}
+
 /// Variants × sizes × the three kinds of label, in one role.
 private struct ButtonMatrixPage: View {
     let destructive: Bool

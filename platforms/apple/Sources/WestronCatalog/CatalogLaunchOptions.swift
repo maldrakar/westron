@@ -9,6 +9,8 @@ import SwiftUI
 /// -WestronContrast standard|high     contrast: high is the system's increased contrast, the -hc themes
 /// -WestronDynamicType <size>         xSmall … xxxLarge, accessibility1 … accessibility5
 /// -WestronScrollAnchor <0…1>         the point of the entry's scroll content held in view, 0 top, 1 bottom
+/// -WestronMatrixSheet <key>          show one sheet of a snapshot matrix instead of an entry (#24), by its key,
+///                                    `button.size-s_role-default_iconOnly-false`
 /// ```
 ///
 /// Unknown arguments are skipped: Xcode and the system add their own.
@@ -57,16 +59,19 @@ public struct CatalogLaunchOptions: Equatable, Sendable {
     /// first and holds in place when the content grows. The accessibility audit (#25) enlarges the text of the page:
     /// a scroll view without an anchor goes back to the top, and the audit would measure only the top of the page.
     public var scrollAnchor: Double?
+    /// The key of a snapshot matrix sheet to show (`ComponentMatrix.key(of:)`); it wins over `entryID`.
+    public var matrixSheet: String?
 
     public init(
         entryID: String? = nil, appearance: Appearance? = nil, contrast: Contrast? = nil,
-        dynamicTypeSize: DynamicTypeSize? = nil, scrollAnchor: Double? = nil
+        dynamicTypeSize: DynamicTypeSize? = nil, scrollAnchor: Double? = nil, matrixSheet: String? = nil
     ) {
         self.entryID = entryID
         self.appearance = appearance
         self.contrast = contrast
         self.dynamicTypeSize = dynamicTypeSize
         self.scrollAnchor = scrollAnchor
+        self.matrixSheet = matrixSheet
     }
 
     /// Parses the process arguments without the first element (the path to the executable).
@@ -107,6 +112,8 @@ public struct CatalogLaunchOptions: Equatable, Sendable {
                     throw .invalidValue(flag: flag, value: value, allowed: ["a number from 0 to 1"])
                 }
                 scrollAnchor = parsed
+            case "-WestronMatrixSheet":
+                matrixSheet = value
             default:
                 break
             }
@@ -123,6 +130,7 @@ public struct CatalogLaunchOptions: Equatable, Sendable {
 
     static let flags: Set<String> = [
         "-WestronEntry", "-WestronAppearance", "-WestronContrast", "-WestronDynamicType", "-WestronScrollAnchor",
+        "-WestronMatrixSheet",
     ]
 
     /// The size names match the names of the `DynamicTypeSize` cases.

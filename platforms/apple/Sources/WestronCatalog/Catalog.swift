@@ -1,7 +1,9 @@
 /// The registry of catalog entries.
 ///
 /// A new component adds its entry here in the same pull request as its implementation.
-/// Snapshot tests (phase 2) iterate over the same entries, so the registry lives in the package, not in the app.
+/// The accessibility audit (`CatalogAccessibilityAuditTests`) iterates over the same entries, so the registry lives in
+/// the package, not in the app. The snapshot matrix (#24) has a registry of its own, `ComponentMatrix.all`, generated
+/// from the contracts, so its sheets are not audited.
 public enum Catalog {
     public static let entries: [CatalogEntry] = [
         .button,

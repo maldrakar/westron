@@ -65,6 +65,9 @@ paths:
 - Every component adds an entry to `Catalog.entries` (`platforms/apple/Sources/WestronCatalog/Catalog.swift`)
   in the same pull request; the entry's `id` equals the component's `id` in the contract.
 - The entry renders the matrix of variants, sizes and states from the contract, with no navigation inside.
+- The snapshot matrix (#24) is generated from the contract into `WestronCatalog/Generated/<Component>+Matrix.swift`;
+  the component adds the hand-written `<Component>MatrixCell`, which draws one combination with the real component.
+  `tools/apple/snapshot-matrix.sh ios|macos` captures every sheet in four themes and prints the path to `index.html`.
 - The catalog project is `Catalog.xcodeproj/project.xcproj` in Xcode 27 format. Files are picked up from the
   `Catalog/` and `CatalogUITests/` folders automatically; edit the project only to change settings or targets.
 - Look at the result: `tools/apple/catalog-screenshot.sh ios|macos --entry <id>` prints the path to the PNG.

@@ -10,7 +10,11 @@ public struct CatalogScene: Scene {
         }
         #if os(macOS)
             // The window size is fixed so that macOS screenshots have the same size from run to run.
-            .defaultSize(width: 720, height: 540)
+            .defaultSize(CatalogScene.windowSize)
         #endif
     }
+
+    /// The size of the catalog's window on macOS. A window the system restores with another size keeps it, except on a
+    /// snapshot matrix sheet, which sets this size itself (`MatrixSheetView`).
+    static let windowSize = CGSize(width: 720, height: 540)
 }

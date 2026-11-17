@@ -67,6 +67,33 @@ public struct ComponentContract: Equatable, Sendable {
         }
     }
 
+    /// A rule between options: when the options have the values in `when`, they must have the values in `require`.
+    public struct Constraint: Equatable, Sendable {
+        /// By option name, the values that match: an enum option's values, or `true` or `false` for a bool option.
+        public let when: [String: [String]]
+        public let require: [String: [String]]
+        /// `error`: the combination is not allowed; `warning`: allowed, but advised against.
+        public let severity: String
+
+        public init(when: [String: [String]], require: [String: [String]], severity: String) {
+            self.when = when
+            self.require = require
+            self.severity = severity
+        }
+
+        /// Whether the constraint forbids what breaks it, rather than advising against it.
+        public var forbids: Bool { severity == "error" }
+
+        /// Whether a combination, by option name its value (`true` or `false` for a bool option), breaks the rule: it
+        /// matches every condition of `when` and misses one of `require`.
+        public func isBroken(by values: [String: String]) -> Bool {
+            func matches(_ conditions: [String: [String]]) -> Bool {
+                conditions.allSatisfy { option, allowed in values[option].map(allowed.contains) ?? false }
+            }
+            return matches(when) && !matches(require)
+        }
+    }
+
     public static let appleOSes = ["ios", "macos", "watchos"]
 
     public let id: String
@@ -77,13 +104,19 @@ public struct ComponentContract: Equatable, Sendable {
     public let states: [String]
     /// nil when Apple is planned.
     public let apple: Apple?
+    /// In the contract's order.
+    public let constraints: [Constraint]
 
-    public init(id: String, status: String, options: [Option], states: [String], apple: Apple?) {
+    public init(
+        id: String, status: String, options: [Option], states: [String], apple: Apple?,
+        constraints: [Constraint] = []
+    ) {
         self.id = id
         self.status = status
         self.options = options
         self.states = states
         self.apple = apple
+        self.constraints = constraints
     }
 
     /// Reads a contract's YAML text; `source` is its path, for messages.
@@ -145,7 +178,37 @@ public struct ComponentContract: Equatable, Sendable {
         } else {
             apple = nil
         }
-        self.init(id: id, status: status, options: options, states: states, apple: apple)
+        var constraints: [Constraint] = []
+        for (index, entry) in (document["constraints"]?.elements ?? []).enumerated() {
+            let path = root.key("constraints").index(index)
+            guard let severity = entry["severity"]?.string else { throw problem(path.key("severity"), "missing") }
+            constraints.append(
+                Constraint(
+                    when: try Self.conditions(entry["when"], at: path.key("when"), source: source),
+                    require: try Self.conditions(entry["require"], at: path.key("require"), source: source),
+                    severity: severity))
+        }
+        self.init(
+            id: id, status: status, options: options, states: states, apple: apple, constraints: constraints)
+    }
+
+    /// A constraint's `when` or `require`: by option name, a value, a list of values, or `true` or `false`.
+    private static func conditions(_ entry: JSON?, at path: DocumentPath, source: String) throws(ContractProblem)
+        -> [String: [String]]
+    {
+        var conditions: [String: [String]] = [:]
+        for member in entry?.members ?? [] {
+            switch member.value {
+            case .string(let value): conditions[member.key] = [value]
+            case .bool(let value): conditions[member.key] = [String(value)]
+            case .array(let values) where values.allSatisfy({ $0.string != nil }):
+                conditions[member.key] = values.compactMap(\.string)
+            default:
+                throw ContractProblem(
+                    source: source, path: path.key(member.key), "name a value, a list of values, or true or false")
+            }
+        }
+        return conditions
     }
 
     private static func restriction(_ entry: JSON, at path: DocumentPath, source: String) throws(ContractProblem)
