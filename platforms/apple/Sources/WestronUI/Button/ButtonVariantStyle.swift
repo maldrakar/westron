@@ -242,21 +242,16 @@ private struct ButtonContent<Label: View>: View {
                 styled(isLoading: isLoading)
             }
         } else {
-            // A label without an icon, loading: what is drawn may truncate or hide the label, so it is hidden from
-            // accessibility, and the button takes its name, whole, from the system's icon-only label, which carries
-            // its title with no text of its own on screen.
+            // A label without an icon, loading: what is drawn may truncate the label or leave it out. It is drawn as
+            // a mask, the label's color through the shape of the indicator and the text, so it has no accessibility
+            // element (a hidden one still reads as clipped text to the accessibility audit), and the button takes its
+            // name, whole, from `ButtonName`.
             loadingWithoutIcon
-                .accessibilityHidden(true)
-                .background {
-                    SwiftUI.Label {
-                        styled(isLoading: true)
-                    } icon: {
-                        EmptyView()
-                    }
-                    .labelStyle(.iconOnly)
-                    // At its own size: laid out in what is drawn, the title it carries would read as clipped.
-                    .fixedSize()
+                .hidden()
+                .overlay {
+                    Color(tokens.label).mask { loadingWithoutIcon }
                 }
+                .background { ButtonName(title: styled(isLoading: true)) }
         }
     }
 
@@ -338,9 +333,26 @@ private struct ButtonLabelHasIconKey: PreferenceKey {
     static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
 }
 
+/// The button's accessible name where its title is not drawn as text: the system's icon-only label style carries the
+/// title as a label with nothing drawn, an empty icon, at the title's own size (laid out in a smaller frame, the title
+/// it carries would read as clipped to the accessibility audit).
+private struct ButtonName<Title: View>: View {
+    let title: Title
+
+    var body: some View {
+        SwiftUI.Label {
+            title
+        } icon: {
+            EmptyView()
+        }
+        .labelStyle(.iconOnly)
+        .fixedSize()
+    }
+}
+
 /// Lays out a `Label` in the button: the icon before the title with the size's gap, the icon decorative; in icon-only,
-/// the icon alone, hidden from accessibility, with the title as the button's label; in loading, the indicator in the
-/// icon's place.
+/// the icon alone, hidden from accessibility, with the title as the button's name (`ButtonName`); in loading, the
+/// indicator in the icon's place.
 private struct ButtonLabelStyle: LabelStyle {
     let tokens: ButtonTokens
     let metrics: ButtonMetrics
@@ -351,16 +363,11 @@ private struct ButtonLabelStyle: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
         Group {
             if iconOnly {
-                // The system's icon-only style keeps the title as the button's label, with no text of its own to clip
-                // at large text sizes. The glyph's own traits would leak into the button's (the checkmark symbol
-                // reads as "Selected"), so they are taken away.
-                SwiftUI.Label {
-                    configuration.title
-                } icon: {
-                    icon(configuration)
-                }
-                .labelStyle(.iconOnly)
-                .accessibilityRemoveTraits([.isSelected, .isImage])
+                // The glyph is hidden from accessibility, or its own traits would leak into the button's (the
+                // checkmark reads as "Selected"); the button takes its name from `ButtonName`.
+                icon(configuration)
+                    .accessibilityHidden(true)
+                    .background { ButtonName(title: configuration.title) }
             } else {
                 HStack(spacing: gap) {
                     icon(configuration)

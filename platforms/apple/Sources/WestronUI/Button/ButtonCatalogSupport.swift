@@ -18,7 +18,10 @@ extension EnvironmentValues {
 /// chooses one, and then the others go (#23). A label with an icon is laid out the same in every one: the indicator
 /// takes the icon's place.
 package enum ButtonLoadingLayout: String, CaseIterable, Sendable {
-    /// P13, the default today: the indicator, the gap and the label share the resting width; the label truncates.
+    /// P13, the default today: the indicator, the gap and the label share the resting width; the label truncates, or
+    /// is left out when less than two thirds of it would show. The accessible name stays whole. Drawn as plain text,
+    /// the truncated label failed the accessibility audit's "Text clipped" in any product; it is drawn as a mask now,
+    /// which the audit does not read, but a sighted reader still sees it cut.
     case sharedWidth
     /// The button grows by the indicator and the gap while it loads.
     case grows

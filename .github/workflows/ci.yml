@@ -47,35 +47,53 @@ jobs:
         run: tools/apple/check.sh catalog
 
   accessibility-audit:
-    name: Accessibility audit — ${{ matrix.test }}
-    # The full audit on every pull request: five parallel jobs, about 40 runner-minutes of tests plus a catalog build in
-    # each. To run it on main only, remove the "#" in front of the next line.
+    name: >-
+      Accessibility audit — ${{ matrix.test }}${{ matrix.shard && format(' ({0}/{1})', matrix.shard, matrix.shards) || '' }}
+    # The full audit on every pull request: eight parallel jobs, each with its own catalog build, about two runner-hours
+    # in all. To run it on main only, remove the "#" in front of the next line.
     # if: github.event_name == 'push'
     runs-on: xcode-27
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     strategy:
       fail-fast: false
-      # One job per configuration of CatalogAccessibilityAuditTests. On the runner (2026-11-17), 2.2–2.3 times slower
-      # than a local Mac: testAccessibilityDynamicType 13.5 min, testDarkAppearance and testDarkIncreasedContrast 4 min
-      # each; testDefaultSettings about 11 min (estimated from 290 s locally); one serial run passed 40 min.
+      # One job per configuration of CatalogAccessibilityAuditTests, and the two slow ones split into shards of the
+      # catalog's entries (WESTRON_ENTRY_SHARD=<i>/<n>, every n-th entry). With the Button entries (PR #66, head
+      # 1c62267), the runner took over 36.6 min for testAccessibilityDynamicType (killed by the timeout) and 32.4 min
+      # for testDefaultSettings, and 16–19 min for each of the other three, about 3 times a local Mac (627 s, 476 s and
+      # 194–196 s on 2026-11-17). So three shards and two, about 13 and 16 min of tests each, plus the build.
       matrix:
-        test:
-          - testDefaultSettings
-          - testAccessibilityDynamicType
-          - testIncreasedContrast
-          - testDarkAppearance
-          - testDarkIncreasedContrast
-    # The slowest configuration with the margin for the pages still to come (the Button entries add about 40 %).
+        include:
+          - test: testAccessibilityDynamicType
+            shard: 1
+            shards: 3
+          - test: testAccessibilityDynamicType
+            shard: 2
+            shards: 3
+          - test: testAccessibilityDynamicType
+            shard: 3
+            shards: 3
+          - test: testDefaultSettings
+            shard: 1
+            shards: 2
+          - test: testDefaultSettings
+            shard: 2
+            shards: 2
+          - test: testIncreasedContrast
+          - test: testDarkAppearance
+          - test: testDarkIncreasedContrast
+    # The slowest job with the margin for the pages still to come; a job that nears it gets another shard.
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v7
       - name: Audit (iOS)
+        env:
+          WESTRON_ENTRY_SHARD: ${{ matrix.shard && format('{0}/{1}', matrix.shard, matrix.shards) || '' }}
         run: tools/apple/check.sh a11y ios ${{ matrix.test }}
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: a11y-${{ matrix.test }}
+          name: a11y-${{ matrix.test }}${{ matrix.shard && format('-shard{0}of{1}', matrix.shard, matrix.shards) || '' }}
           path: |
             .build/logs/a11y-*.log
             .build/xcode/results/a11y-*.xcresult

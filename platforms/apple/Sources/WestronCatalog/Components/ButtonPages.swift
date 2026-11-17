@@ -37,7 +37,7 @@ extension CatalogEntry {
     }
 
     static let buttonBehavior = CatalogEntry(
-        id: "button-behavior", title: "Button: presses, loading, text size", section: .components
+        id: "button-behavior", title: "Button: presses, loading, neighbors", section: .components
     ) {
         ButtonBehaviorPage()
     }
@@ -65,7 +65,9 @@ enum ButtonCatalogID {
     static let loading = "button.live.loading"
     /// The switch that puts `loading` in and out of loading.
     static let loadingToggle = "button.live.loading-toggle"
-    /// The test control that presses `loading` through the accessibility API.
+    /// A secondary button with a label and no icon, loading with Publish.
+    static let loadingWithoutIcon = "button.live.loading-without-icon"
+    /// The test control that presses `loading` and `loadingWithoutIcon` through the accessibility API.
     static let accessibilityPress = "button.live.accessibility-press"
     /// A secondary button, loading with Publish, whose ⌘E shortcut is dropped while it loads.
     static let export = "button.live.export"
@@ -141,9 +143,11 @@ enum AccessibilityPress {
 
 /// The two words and icons the pages use, by role.
 ///
-/// The destructive samples do not use `trash`: with that glyph at accessibility5, on the `button-destructive` page,
-/// `performAccessibilityAudit` gives up ("Audit failed to complete in time") on every run while the catalog is idle,
-/// and with any other glyph the same page passes in about 35 s (iPhone 17 Pro, iOS 26.3, #23).
+/// The destructive samples do not use `trash`: with that glyph at accessibility5, on the third screenful of the
+/// `button-destructive` page, `performAccessibilityAudit` gives up ("Audit failed to complete in time") on every run
+/// on iPhone 17 Pro, iOS 26.3, while the catalog idles, whatever the icon-only button's accessibility is built from
+/// (the system's icon-only label, a separate name with or without its own size, a representation, a masked glyph),
+/// and also with the code of 3d5208a. With any other glyph the page passes (#23).
 private struct ButtonSample {
     let title: LocalizedStringKey
     let icon: Westron.Icon
@@ -327,19 +331,25 @@ struct FlowLayout: Layout {
 private struct ButtonStatesPage: View {
     let destructive: Bool
 
-    /// A row of the matrix: the states it shows, forced or real.
+    /// A row of the matrix: the states it shows, forced or real, on buttons with an icon and a label or icon-only.
     private struct Row: Hashable {
         let states: [ButtonCatalogState]
-        var name: String { states.isEmpty ? "rest" : states.map(\.name).joined(separator: " + ") }
+        var kind = SampleButton.Kind.iconAndLabel
+        var name: String {
+            (states.isEmpty ? "rest" : states.map(\.name).joined(separator: " + "))
+                + (kind == .iconOnly ? ", icon-only" : "")
+        }
     }
 
-    /// Rest, each state alone, then each state that excludes hover and pressed combined with each of them.
+    /// Rest, each state alone, then each state that excludes hover and pressed combined with each of them; last,
+    /// loading on icon-only buttons, where the indicator replaces the icon.
     private static var rows: [Row] {
         let entered = ButtonCatalogState.all.filter(\.isEntered)
         let excluding = entered.filter(\.excludesTint)
         let excluded = entered.filter(\.isTint)
         return [Row(states: [])] + entered.map { Row(states: [$0]) }
             + excluding.flatMap { state in excluded.map { Row(states: [state, $0]) } }
+            + [Row(states: entered.filter(\.isLoading), kind: .iconOnly)]
     }
 
     var body: some View {
@@ -358,7 +368,7 @@ private struct ButtonStatesPage: View {
 
     private func cell(_ row: Row, variant: ButtonVariant) -> some View {
         // Size s: the states' colors do not depend on the size, and three buttons of s fit beside the names on a phone.
-        SampleButton(kind: .iconAndLabel, variant: variant, size: .s, destructive: destructive)
+        SampleButton(kind: row.kind, variant: variant, size: .s, destructive: destructive)
             .forcingButtonStates(Set(row.states.filter(\.isForced)))
             .disabled(row.states.contains(where: \.isDisabled))
             .loading(row.states.contains(where: \.isLoading))
@@ -392,8 +402,12 @@ private struct ButtonBehaviorPage: View {
                     Button("Save") { accepted += 1 }
                         .buttonStyle(.primary)
                         .accessibilityIdentifier(ButtonCatalogID.rest)
-                    // With icons: how a loading label without one is laid out is still the owner's choice, shown on
-                    // the `button-loading-layouts` pages (#23); this page is about presses.
+                    // A label without an icon, in today's default loading layout (P13): the indicator and a
+                    // truncated label share the resting width.
+                    Button("Publish now") { accepted += 1 }
+                        .buttonStyle(.secondary)
+                        .loading(isPublishing)
+                        .accessibilityIdentifier(ButtonCatalogID.loadingWithoutIcon)
                     Button {
                         accepted += 1
                     } label: {
@@ -433,12 +447,13 @@ private struct ButtonBehaviorPage: View {
                     .accessibilityIdentifier(ButtonCatalogID.iconOnly)
                 }
                 FlowLayout(spacing: .space200) {
-                    Toggle("Publish and Export are loading", isOn: $isPublishing)
+                    Toggle("Loading: Publish, Publish now, Export", isOn: $isPublishing)
                         .fixedSize()
                         .accessibilityIdentifier(ButtonCatalogID.loadingToggle)
                     // A test control: it presses Publish as assistive technology does.
                     Button("Press Publish via accessibility") {
-                        accessibilityPress = AccessibilityPress.press(identifier: ButtonCatalogID.loading)
+                        accessibilityPress = [ButtonCatalogID.loading, ButtonCatalogID.loadingWithoutIcon]
+                            .map { AccessibilityPress.press(identifier: $0) }.joined(separator: ", ")
                     }
                     .buttonStyle(.tertiary)
                     .accessibilityIdentifier(ButtonCatalogID.accessibilityPress)

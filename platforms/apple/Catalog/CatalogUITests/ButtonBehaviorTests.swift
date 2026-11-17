@@ -9,6 +9,7 @@ final class ButtonBehaviorTests: XCTestCase {
     private enum ID {
         static let rest = "button.live.rest"
         static let loading = "button.live.loading"
+        static let loadingWithoutIcon = "button.live.loading-without-icon"
         static let loadingToggle = "button.live.loading-toggle"
         static let accessibilityPress = "button.live.accessibility-press"
         static let export = "button.live.export"
@@ -73,7 +74,7 @@ final class ButtonBehaviorTests: XCTestCase {
         #endif
     }
 
-    /// Takes Publish and Export out of loading.
+    /// Takes Publish, "Publish now" and Export out of loading.
     @MainActor
     private func stopLoading() {
         let toggle = app.descendants(matching: .any)[ID.loadingToggle].firstMatch
@@ -93,17 +94,21 @@ final class ButtonBehaviorTests: XCTestCase {
         XCTAssertEqual(accepted, 1)
     }
 
+    /// Publish has an icon, which the indicator replaces; "Publish now" has a label and no icon, which today's loading
+    /// layout truncates while the button keeps its whole name.
     @MainActor
     func testLoadingButtonRefusesTouchAndPointerAndStaysEnabled() {
-        let loading = button(ID.loading)
-        // Not announced or treated as unavailable: enabled, with its label and "Loading" as its value.
-        XCTAssertTrue(loading.isEnabled)
-        XCTAssertEqual(loading.label, "Publish")
-        XCTAssertEqual(loading.value as? String, "Loading")
+        // Not announced or treated as unavailable: enabled, with its whole label and "Loading" as its value.
+        for (id, label) in [(ID.loading, "Publish"), (ID.loadingWithoutIcon, "Publish now")] {
+            let loading = button(id)
+            XCTAssertTrue(loading.isEnabled, "\(label) is not enabled")
+            XCTAssertEqual(loading.label, label)
+            XCTAssertEqual(loading.value as? String, "Loading", "\(label) is not announced as loading")
+            press(loading)
+            press(loading)
+            XCTAssertEqual(accepted, 0, "\(label), loading, accepted a touch or a click")
+        }
         XCTAssertEqual(button(ID.rest).value as? String ?? "", "")
-        press(loading)
-        press(loading)
-        XCTAssertEqual(accepted, 0, "a loading button accepted a touch or a click")
         // The control: the same input reaches a button at rest.
         press(button(ID.rest))
         XCTAssertEqual(accepted, 1)
@@ -111,19 +116,21 @@ final class ButtonBehaviorTests: XCTestCase {
 
     /// VoiceOver, Switch Control and Voice Control press a button through the accessibility API: AXPress on macOS,
     /// `accessibilityActivate()` on iOS. The runner is not trusted for that API, so the catalog makes the press itself,
-    /// on Publish's own accessibility element, when its test control is pressed. `.loading(_:)` refuses it.
+    /// on the own accessibility elements of Publish (with an icon) and "Publish now" (without one), when its test
+    /// control is pressed. `.loading(_:)` refuses it.
     @MainActor
     func testLoadingButtonRefusesTheAccessibilityPress() {
         let trigger = button(ID.accessibilityPress)
         press(trigger)
-        XCTAssertNotEqual(
-            trigger.value as? String, "not found", "the catalog found no accessibility element for Publish")
+        XCTAssertEqual(
+            trigger.value as? String, "pressed, pressed",
+            "the catalog did not find both buttons' accessibility elements")
         press(trigger)
         XCTAssertEqual(accepted, 0, "an accessibility press triggered a loading button")
-        // The control: out of loading, the same press reaches it.
+        // The control: out of loading, the same press reaches both.
         stopLoading()
         press(trigger)
-        XCTAssertEqual(accepted, 1, "an accessibility press did not reach the button at rest: \(trigger.value ?? "")")
+        XCTAssertEqual(accepted, 2, "an accessibility press did not reach the buttons at rest: \(trigger.value ?? "")")
     }
 
     /// Return triggers the window's default action, which the live "Publish" button is

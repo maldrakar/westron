@@ -111,10 +111,23 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
     @MainActor
     private func audit(_ configuration: Configuration) {
         // WESTRON_ENTRY=<id>[,<id>…] narrows the run to those entries: to fix an entry's issues, or to split a run.
-        let entries =
-            ProcessInfo.processInfo.environment["WESTRON_ENTRY"].map { $0.split(separator: ",").map(String.init) }
+        let environment = ProcessInfo.processInfo.environment
+        var entries =
+            environment["WESTRON_ENTRY"].map { $0.split(separator: ",").map(String.init) }
             ?? Catalog.entries.map(\.id)
         XCTAssertFalse(entries.isEmpty, "the catalog registry has no entries")
+        // WESTRON_ENTRY_SHARD=<i>/<n> then takes every n-th of them from the i-th: parallel jobs split a run with it.
+        if let text = environment["WESTRON_ENTRY_SHARD"] {
+            do throws(CatalogShard.ParseError) {
+                let shard = try CatalogShard(text)
+                entries = shard.select(entries)
+                print("a11y: shard \(shard): \(entries.joined(separator: ", "))")
+            } catch {
+                XCTFail("\(error)")
+                return
+            }
+            XCTAssertFalse(entries.isEmpty, "WESTRON_ENTRY_SHARD=\(text) selects no entry")
+        }
         for entryID in entries {
             XCTContext.runActivity(named: "\(entryID) \(configuration.arguments.joined(separator: " "))") { _ in
                 audit(entryID: entryID, configuration)
@@ -425,14 +438,6 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             }
         }
         #if os(iOS)
-            // "Text clipped" on a loading label without an icon on the TEMPORARY pages that compare the ways to lay
-            // it out (#23): the shared-width layout, P13 in the contract today, truncates it by design. Which layout
-            // stays is the owner's choice; the pages and this rule go with it.
-            suppressions += ["button-loading-layouts", "button-loading-layouts-2"].map { entryID in
-                Suppression(
-                    .entry(entryID), type: .textClipped, reason: "temporary comparison of loading layouts (#23)"
-                ) { ["Save", "Save changes"].contains($0 ?? "") }
-            }
             suppressions += [
                 // "Text clipped" with no element on the background colors. It appeared when the page got its
                 // layout for accessibility sizes, which puts a name on a line above its cells. The audit names no
