@@ -46,12 +46,51 @@ jobs:
       - name: Catalog and UI tests
         run: tools/apple/check.sh catalog
 
+  audit-scope:
+    name: Accessibility audit — scope
+    # Whether this run needs the audit: always on a push to main; on a pull request only when it changes a path the
+    # audit depends on (what the catalog renders, how it is built, how the audit runs). Generated Swift lives under
+    # platforms/apple, so a change in tools/ alone does not count.
+    runs-on: ubuntu-24.04
+    outputs:
+      audit: ${{ steps.scope.outputs.audit }}
+    steps:
+      - uses: actions/checkout@v7
+        if: github.event_name == 'pull_request'
+        with:
+          # The pull request's merge commit and its first parent, the base it merges into.
+          fetch-depth: 2
+      - name: Changed paths
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != pull_request ]; then
+            echo "audit=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Only a merge commit has a second parent; anything else fails the step, and the audit then runs.
+          git rev-parse --verify --quiet HEAD^2 > /dev/null
+          git diff --name-only HEAD^1 HEAD > "$RUNNER_TEMP/changed.txt"
+          pattern='^(platforms/apple/|tokens/|spec/|tools/apple/|Package\.swift$|Package\.resolved$|\.xcode-version$|\.github/workflows/ci\.yml$)'
+          if grep -E "$pattern" "$RUNNER_TEMP/changed.txt"; then
+            echo "audit=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No changed path the audit depends on."
+            echo "audit=false" >> "$GITHUB_OUTPUT"
+          fi
+
   accessibility-audit:
     name: >-
       Accessibility audit — ${{ matrix.test }}${{ matrix.shard && format(' ({0}/{1})', matrix.shard, matrix.shards) || '' }}
-    # The full audit on every pull request: eight parallel jobs, each with its own catalog build, about two runner-hours
-    # in all. To run it on main only, remove the "#" in front of the next line.
-    # if: github.event_name == 'push'
+    # Eight parallel jobs, each with its own catalog build, about two runner-hours in all: on every push to main, and on
+    # a pull request only when audit-scope finds a changed path the audit depends on; otherwise they show as skipped.
+    # If audit-scope fails, they run (fail open): only its "audit=false" skips them.
+    needs: audit-scope
+    if: >-
+      !cancelled() && (github.event_name == 'push' || needs.audit-scope.result != 'success'
+      || needs.audit-scope.outputs.audit != 'false')
     runs-on: xcode-27
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer

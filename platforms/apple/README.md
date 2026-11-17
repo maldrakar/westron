@@ -109,9 +109,12 @@ for each of the three contrast tests, and the two slow tests split by entries, `
 shards and `testDefaultSettings` into two (`WESTRON_ENTRY_SHARD`). The runner is about 3 times slower than a local Mac:
 with the Button entries (PR #66, 2026-11-17) it took over 36.6 minutes for `testAccessibilityDynamicType`, past the
 timeout, 32.4 minutes for `testDefaultSettings`, and 16–19 minutes for each of the others, against 627 s, 476 s and
-194–196 s locally. The cost is eight parallel jobs, each with its own catalog build, about two runner-hours per pull
-request. To run it on `main` only, uncomment the `if: github.event_name == 'push'` line of the job in
-`.github/workflows/ci.yml`. A job that nears its 35 minutes as pages are added gets another shard.
+194–196 s locally. The cost is eight parallel jobs, each with its own catalog build, about two runner-hours per run, so
+the audit runs on every push to `main` and on a pull request only when it changes a path the audit depends on:
+`platforms/apple/`, `tokens/`, `spec/`, `tools/apple/`, `Package.swift`, `Package.resolved`, `.xcode-version` or
+`.github/workflows/ci.yml`. The job `audit-scope` decides, from the pull request's merge commit; otherwise the audit's
+jobs show as skipped. If `audit-scope` itself fails, the audit runs. A job that nears its 35 minutes as pages are added
+gets another shard.
 
 | Test | Launch arguments | Audit types on iOS |
 |---|---|---|
