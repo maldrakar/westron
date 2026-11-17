@@ -242,40 +242,31 @@ private struct ButtonContent<Label: View>: View {
                 styled(isLoading: isLoading)
             }
         } else {
-            // A label without an icon, loading: what is drawn may truncate the label or leave it out. It is drawn as
-            // masks, so it has no accessibility element (a hidden one still reads as clipped text to the
-            // accessibility audit): `label.color` through the shape of the text, and `progress.color` through the
-            // shape of the indicator, each from a copy of the layout with the other part transparent. A mask keeps
-            // only shapes, so a label's own inner colors (a styled run of text) are flattened to `label.color` while
-            // it loads. The button takes its name, whole, from `ButtonName`.
-            loadingWithoutIcon(showsText: true, showsProgress: true)
-                .hidden()
-                .overlay {
-                    ZStack {
-                        Color(tokens.label).mask { loadingWithoutIcon(showsText: true, showsProgress: false) }
-                        Color(tokens.progress).mask { loadingWithoutIcon(showsText: false, showsProgress: true) }
-                    }
-                }
+            // A label without an icon, loading: what is drawn may truncate the label or leave it out. The text is
+            // drawn as a mask, `label.color` through its shape over a hidden copy of the same size, so it has no
+            // accessibility element (a hidden one still reads as clipped text to the accessibility audit); a mask
+            // keeps only shapes, so a label's own inner colors (a styled run of text) are flattened to `label.color`
+            // while it loads. The indicator is drawn as it is, once, in `progress.color`. The button takes its name,
+            // whole, from `ButtonName`.
+            loadingWithoutIcon
                 .background { ButtonName(title: styled(isLoading: true)) }
         }
     }
 
-    /// The layout of a loading label without an icon; `showsText` and `showsProgress` make a part transparent and
-    /// keep its place.
-    @ViewBuilder private func loadingWithoutIcon(showsText: Bool, showsProgress: Bool) -> some View {
-        let progress = progress.opacity(showsProgress ? 1 : 0)
+    /// The layout of a loading label without an icon.
+    @ViewBuilder private var loadingWithoutIcon: some View {
         switch loadingLayout {
         case .sharedWidth:
             // The indicator, the gap and the label share the resting width; the label truncates on one line, or
             // gives its place up whole when less than two thirds of it would show.
             ButtonSharedWidthLayout(gap: gap) {
                 progress
-                styled(isLoading: true).lineLimit(1).opacity(showsText ? 1 : 0)
+                maskedText(styled(isLoading: true).lineLimit(1))
             }
         case .grows, .reservedSlot:
             HStack(spacing: gap) {
                 progress
-                styled(isLoading: true).opacity(showsText ? 1 : 0)
+                maskedText(styled(isLoading: true))
             }
         case .replacesLabel:
             // The indicator takes the label's place, centered.
@@ -283,6 +274,16 @@ private struct ButtonContent<Label: View>: View {
                 .hidden()
                 .overlay { progress }
         }
+    }
+
+    /// Text drawn as `label.color` through its own shape, over a hidden copy that keeps its size: neither is an
+    /// accessibility element.
+    private func maskedText(_ text: some View) -> some View {
+        text
+            .hidden()
+            .overlay {
+                Color(tokens.label).mask { text }
+            }
     }
 
     private var progress: some View {
@@ -403,34 +404,29 @@ private struct ButtonLabelStyle: LabelStyle {
     }
 }
 
-/// The system's spinning progress indicator, at its small control size, in the label's color. It is decorative: the
+/// The system's spinning progress indicator, at its small control size, in `progress.color`. It is decorative: the
 /// button announces loading as its value.
 ///
-/// macOS draws its spinner in its own gray and ignores `tint`, so the label's color is painted through the spinner's
-/// shape, the same way on every platform. The spinner's spokes are translucent, its leading spoke about half opaque, so
-/// the shape is stacked on itself with three shadows that do not blur: each one doubles the cover, and the leading
-/// spoke reaches about 94 % of the label's color while the trailing spokes keep their fade.
+/// macOS draws its spinner in its own gray and ignores `tint`, so the color is laid over the spinner's shape with
+/// `sourceAtop`, inside a compositing group, the same way on every platform. The spinner's spokes are translucent,
+/// its leading spoke about half opaque, so its shape is first stacked on itself with three shadows that do not blur:
+/// each one doubles the cover, and the leading spoke reaches about 94 % of the color while the trailing spokes keep
+/// their fade. One spinner, no mask: a mask over an animating view costs an offscreen pass on every frame.
 private struct ButtonProgress: View {
     let color: Westron.Color
 
     var body: some View {
-        spinner
-            .opacity(0)
-            .overlay {
-                Color(color).mask {
-                    spinner
-                        .shadow(color: Color(color), radius: 0)
-                        .shadow(color: Color(color), radius: 0)
-                        .shadow(color: Color(color), radius: 0)
-                }
-            }
-            .accessibilityHidden(true)
-    }
-
-    private var spinner: some View {
         ProgressView()
             .progressViewStyle(.circular)
             .controlSize(.small)
+            .shadow(color: Color(color), radius: 0)
+            .shadow(color: Color(color), radius: 0)
+            .shadow(color: Color(color), radius: 0)
+            .overlay {
+                Color(color).blendMode(.sourceAtop)
+            }
+            .compositingGroup()
+            .accessibilityHidden(true)
     }
 }
 
