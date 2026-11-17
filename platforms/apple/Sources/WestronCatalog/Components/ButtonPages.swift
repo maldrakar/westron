@@ -11,9 +11,8 @@ import WestronUI
 // is split into pages, each of which fits one screenshot on an iPhone 17 in portrait: `button` (variants × sizes ×
 // label, icon and label, icon-only), `button-destructive` (the same in the destructive role), `button-states` and
 // `button-states-destructive` (every state and the combinations the contract excludes), `button-behavior` (live
-// buttons that count accepted presses, close neighbors and focus), and, until the owner chooses,
-// `button-loading-layouts`. The variants, sizes and states come from the generated enums, so the pages follow the
-// contract.
+// buttons that count accepted presses, close neighbors and focus). The variants, sizes and states come from the
+// generated enums, so the pages follow the contract.
 
 extension CatalogEntry {
     static let button = CatalogEntry(id: "button", title: "Button", section: .components) {
@@ -40,20 +39,6 @@ extension CatalogEntry {
         id: "button-behavior", title: "Button: presses, loading, neighbors", section: .components
     ) {
         ButtonBehaviorPage()
-    }
-
-    /// TEMPORARY, until the owner chooses how loading lays out a label without an icon (#23): the first two layouts.
-    static let buttonLoadingLayouts = CatalogEntry(
-        id: "button-loading-layouts", title: "Button: loading layouts 1 (temporary)", section: .components
-    ) {
-        ButtonLoadingLayoutsPage(layouts: [.sharedWidth, .grows])
-    }
-
-    /// TEMPORARY, the other two layouts (#23).
-    static let buttonLoadingLayouts2 = CatalogEntry(
-        id: "button-loading-layouts-2", title: "Button: loading layouts 2 (temporary)", section: .components
-    ) {
-        ButtonLoadingLayoutsPage(layouts: [.reservedSlot, .replacesLabel])
     }
 }
 
@@ -341,25 +326,32 @@ struct FlowLayout: Layout {
 private struct ButtonStatesPage: View {
     let destructive: Bool
 
-    /// A row of the matrix: the states it shows, forced or real, on buttons with an icon and a label or icon-only.
+    /// A row of the matrix: the states it shows, forced or real, on buttons with an icon and a label, a label alone or
+    /// icon-only.
     private struct Row: Hashable {
         let states: [ButtonCatalogState]
         var kind = SampleButton.Kind.iconAndLabel
         var name: String {
-            (states.isEmpty ? "rest" : states.map(\.name).joined(separator: " + "))
-                + (kind == .iconOnly ? ", icon-only" : "")
+            let kindName =
+                switch kind {
+                case .iconAndLabel: ""
+                case .label: ", no icon"
+                case .iconOnly: ", icon-only"
+                }
+            return (states.isEmpty ? "rest" : states.map(\.name).joined(separator: " + ")) + kindName
         }
     }
 
     /// Rest, each state alone, then each state that excludes hover and pressed combined with each of them; last,
-    /// loading on icon-only buttons, where the indicator replaces the icon.
+    /// loading on a label without an icon, where the indicator goes before the label and the button widens (P13), and
+    /// on icon-only buttons, where the indicator replaces the icon.
     private static var rows: [Row] {
         let entered = ButtonCatalogState.all.filter(\.isEntered)
         let excluding = entered.filter(\.excludesTint)
         let excluded = entered.filter(\.isTint)
         return [Row(states: [])] + entered.map { Row(states: [$0]) }
             + excluding.flatMap { state in excluded.map { Row(states: [state, $0]) } }
-            + [Row(states: entered.filter(\.isLoading), kind: .iconOnly)]
+            + [.label, .iconOnly].map { Row(states: entered.filter(\.isLoading), kind: $0) }
     }
 
     var body: some View {
@@ -412,8 +404,8 @@ private struct ButtonBehaviorPage: View {
                     Button("Save") { accepted += 1 }
                         .buttonStyle(.primary)
                         .accessibilityIdentifier(ButtonCatalogID.rest)
-                    // A label without an icon, in today's default loading layout (P13): the indicator and a
-                    // truncated label share the resting width.
+                    // A label without an icon: while loading, the indicator goes before the whole label and the
+                    // button widens (P13).
                     Button("Publish now") { accepted += 1 }
                         .buttonStyle(.secondary)
                         .loading(isPublishing)
@@ -520,43 +512,6 @@ private struct ButtonBehaviorPage: View {
                 .textRole(.subheadline.strong)
                 .foregroundStyle(.text.primary)
             content()
-        }
-    }
-}
-
-/// TEMPORARY, until the owner chooses (#23): ways a loading button can lay out a label without an icon. For each
-/// layout and size, a short and a long label, each at rest and then loading, so the widths can be compared. The four
-/// layouts fill two pages, each of which fits one screenshot on a phone. A label with an icon is the same in every
-/// layout (the `button-states` pages).
-private struct ButtonLoadingLayoutsPage: View {
-    let layouts: [ButtonLoadingLayout]
-
-    private static let labels = ["Save", "Save changes"]
-
-    var body: some View {
-        TokenPage(
-            title: "Button · loading layouts (temporary)",
-            summary:
-                "A label without an icon: at rest, then loading. sharedWidth is P13, today's default; grows widens "
-                + "while loading; reservedSlot keeps the indicator's place at rest; replacesLabel shows the indicator."
-        ) {
-            ForEach(layouts, id: \.self) { layout in
-                VStack(alignment: .leading, spacing: SampleMetrics.rowSpacing) {
-                    TokenName(layout.rawValue)
-                    ForEach(ButtonSize.allCases, id: \.self) { size in
-                        FlowLayout(spacing: .space100) {
-                            ForEach(Self.labels, id: \.self) { label in
-                                Button(label) {}
-                                    .buttonStyle(.secondary, size: size)
-                                Button(label) {}
-                                    .buttonStyle(.secondary, size: size)
-                                    .loading(true)
-                            }
-                        }
-                    }
-                }
-                .buttonLoadingLayout(layout)
-            }
         }
     }
 }

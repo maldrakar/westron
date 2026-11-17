@@ -94,8 +94,8 @@ final class ButtonBehaviorTests: XCTestCase {
         XCTAssertEqual(accepted, 1)
     }
 
-    /// Publish has an icon, which the indicator replaces; "Publish now" has a label and no icon, which today's loading
-    /// layout truncates while the button keeps its whole name.
+    /// Publish has an icon, which the indicator replaces; "Publish now" has a label and no icon, which stays whole after
+    /// the indicator while the button widens (P13).
     @MainActor
     func testLoadingButtonRefusesTouchAndPointerAndStaysEnabled() {
         // Not announced or treated as unavailable: enabled, with its whole label and "Loading" as its value.
@@ -112,6 +112,19 @@ final class ButtonBehaviorTests: XCTestCase {
         // The control: the same input reaches a button at rest.
         press(button(ID.rest))
         XCTAssertEqual(accepted, 1)
+    }
+
+    /// A label without an icon gets the indicator before it while loading, and the button widens by the indicator and
+    /// the gap (P13); a label with an icon keeps its width, the indicator in the icon's place.
+    @MainActor
+    func testLoadingWithoutAnIconWidensTheButton() {
+        let withoutIcon = button(ID.loadingWithoutIcon).frame.width
+        let withIcon = button(ID.loading).frame.width
+        stopLoading()
+        let restWithoutIcon = button(ID.loadingWithoutIcon).frame.width
+        // The indicator alone is wider than this, at any text size.
+        XCTAssertGreaterThan(withoutIcon - restWithoutIcon, 10, "Publish now did not widen while loading")
+        XCTAssertEqual(button(ID.loading).frame.width, withIcon, accuracy: 0.5, "Publish changed its width")
     }
 
     /// VoiceOver, Switch Control and Voice Control press a button through the accessibility API: AXPress on macOS,

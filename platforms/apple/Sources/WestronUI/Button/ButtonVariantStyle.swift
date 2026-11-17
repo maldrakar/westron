@@ -188,11 +188,9 @@ private struct ButtonSurface<Label: View>: View {
     }
 }
 
-/// The label slot and the icon slot, and the progress indicator in loading.
-///
-/// The resting content is laid out once, invisible and hidden from accessibility, and decides the size; what is drawn
-/// is an overlay at that size. So loading never changes the width when the label has an icon (P13): the indicator
-/// takes the icon's place. A label without an icon is laid out by `ButtonLoadingLayout`.
+/// The label slot and the icon slot, and the progress indicator in loading (contract, P13). With an icon, the indicator
+/// takes the icon's place (`ButtonLabelStyle`), so the width holds; without one, it goes before the label and the
+/// button widens by the indicator and the gap. The label is drawn as it is in every state, whole, with its own colors.
 private struct ButtonContent<Label: View>: View {
     let label: Label
     let tokens: ButtonTokens
@@ -201,93 +199,30 @@ private struct ButtonContent<Label: View>: View {
     let iconOnly: Bool
     let isLoading: Bool
 
-    @Environment(\.buttonLoadingLayout) private var loadingLayout
-    /// Whether the label has an icon slot, for the layouts that change the size by it; a frame late on appearing.
+    /// Whether the label is a `Label`, which has an icon slot: its label style reports it, read a frame late.
+    /// It starts true, so a `Label` never shows a second indicator; a loading label without an icon gets its indicator
+    /// on the next frame.
     @State private var hasIcon = true
 
     var body: some View {
-        sizing
-            .opacity(0)
-            .accessibilityHidden(true)
-            .overlayPreferenceValue(ButtonLabelHasIconKey.self) { hasIcon in
-                visible(hasIcon: hasIcon)
-            }
-            .onPreferenceChange(ButtonLabelHasIconKey.self) { value in
-                hasIcon = value
-            }
-    }
-
-    /// What decides the size: the resting content, with the indicator's slot for the layouts that keep one.
-    @ViewBuilder private var sizing: some View {
-        switch loadingLayout {
-        case .sharedWidth, .replacesLabel:
-            styled(isLoading: false)
-        case .grows, .reservedSlot:
-            let slot = !hasIcon && (loadingLayout == .reservedSlot || isLoading)
-            HStack(spacing: slot ? gap : 0) {
-                if slot { progress }
-                styled(isLoading: false)
-            }
-        }
-    }
-
-    @ViewBuilder private func visible(hasIcon: Bool) -> some View {
-        if hasIcon || !isLoading {
-            if !hasIcon && loadingLayout == .reservedSlot {
+        Group {
+            if isLoading && !hasIcon {
                 HStack(spacing: gap) {
-                    progress.hidden()
-                    styled(isLoading: false)
+                    ButtonProgress(color: tokens.progress)
+                    styled(isLoading: true)
                 }
             } else {
                 styled(isLoading: isLoading)
             }
-        } else {
-            // A label without an icon, loading: what is drawn may truncate the label or leave it out. The text is
-            // drawn as a mask, `label.color` through its shape over a hidden copy of the same size, so it has no
-            // accessibility element (a hidden one still reads as clipped text to the accessibility audit); a mask
-            // keeps only shapes, so a label's own inner colors (a styled run of text) are flattened to `label.color`
-            // while it loads. The indicator is drawn as it is, once, in `progress.color`. The button takes its name,
-            // whole, from `ButtonName`.
-            loadingWithoutIcon
-                .background { ButtonName(title: styled(isLoading: true)) }
         }
-    }
-
-    /// The layout of a loading label without an icon.
-    @ViewBuilder private var loadingWithoutIcon: some View {
-        switch loadingLayout {
-        case .sharedWidth:
-            // The indicator, the gap and the label share the resting width; the label truncates on one line, or
-            // gives its place up whole when less than two thirds of it would show.
-            ButtonSharedWidthLayout(gap: gap) {
-                progress
-                maskedText(styled(isLoading: true).lineLimit(1))
-            }
-        case .grows, .reservedSlot:
-            HStack(spacing: gap) {
-                progress
-                maskedText(styled(isLoading: true))
-            }
-        case .replacesLabel:
-            // The indicator takes the label's place, centered.
-            styled(isLoading: true)
-                .hidden()
-                .overlay { progress }
+        .backgroundPreferenceValue(ButtonLabelHasIconKey.self) { value in
+            // `onPreferenceChange` does not report the initial value, which is the default (false) for a label without
+            // an icon; `onChange(of:initial:)` does.
+            Color.clear
+                .onChange(of: value, initial: true) {
+                    hasIcon = value
+                }
         }
-    }
-
-    /// Text drawn as `label.color` through its own shape, over a hidden copy that keeps its size: neither is an
-    /// accessibility element.
-    private func maskedText(_ text: some View) -> some View {
-        text
-            .hidden()
-            .overlay {
-                Color(tokens.label).mask { text }
-            }
-    }
-
-    private var progress: some View {
-        ButtonProgress(color: tokens.progress)
     }
 
     private func styled(isLoading: Bool) -> some View {
@@ -298,41 +233,6 @@ private struct ButtonContent<Label: View>: View {
             .textRole(metrics.labelFont)
             .foregroundStyle(tokens.label)
             .multilineTextAlignment(.center)
-    }
-}
-
-/// Lays out the indicator and the label in the width the button has at rest: the indicator at its size, the gap, and
-/// the label in what is left. A label that cannot show even an ellipsis there is not drawn at all.
-private struct ButtonSharedWidthLayout: Layout {
-    let gap: CGFloat
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let width = proposal.width ?? subviews.reduce(0) { $0 + $1.sizeThatFits(.unspecified).width } + gap
-        let height = subviews.map { $0.sizeThatFits(.unspecified).height }.max() ?? 0
-        return CGSize(width: width, height: proposal.height ?? height)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        guard subviews.count == 2 else { return }
-        let indicator = subviews[0].sizeThatFits(.unspecified)
-        let left = max(0, bounds.width - indicator.width - gap)
-        let title = subviews[1]
-        // The title on one line in what is left, truncated with an ellipsis, or not at all when less than two thirds of
-        // it would show: narrower than its first glyph and an ellipsis, SwiftUI draws clipped glyphs ("Sa" for "Save")
-        // instead of truncating, and a lone ellipsis says nothing.
-        let ideal = title.sizeThatFits(.unspecified).width
-        let fitted = title.sizeThatFits(ProposedViewSize(width: left, height: bounds.height))
-        let showsTitle = left * 3 >= ideal * 2 && fitted.width > 0  // westron-lint: allow a ratio, not a length
-        let titleSize = showsTitle ? fitted : .zero
-        let total = indicator.width + (showsTitle ? gap + titleSize.width : 0)
-        var x = bounds.midX - total / 2
-        subviews[0].place(
-            at: CGPoint(x: x, y: bounds.midY), anchor: .leading, proposal: ProposedViewSize(indicator))
-        x += indicator.width + gap
-        // Proposed the width it was measured at, not its fitted width, which can lay a tracked text out differently.
-        title.place(
-            at: CGPoint(x: x, y: bounds.midY), anchor: .leading,
-            proposal: showsTitle ? ProposedViewSize(width: left, height: bounds.height) : .zero)
     }
 }
 
