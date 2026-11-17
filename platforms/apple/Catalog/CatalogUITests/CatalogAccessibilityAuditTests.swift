@@ -348,12 +348,14 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         var appearance: Configuration.Appearance? = nil
         /// The element's accessibility value it must have, if any.
         var value: String? = nil
+        /// Whether the element must be enabled, if that matters: `false` for a disabled control's.
+        var enabled: Bool? = nil
         /// Tells the issue by its element's label; `nil` when the audit names no element.
         let label: @Sendable (String?) -> Bool
 
         init(
             _ scope: Scope, type: XCUIAccessibilityAuditType, reason: String, description: String? = nil,
-            appearance: Configuration.Appearance? = nil, value: String? = nil,
+            appearance: Configuration.Appearance? = nil, value: String? = nil, enabled: Bool? = nil,
             label: @escaping @Sendable (String?) -> Bool
         ) {
             self.scope = scope
@@ -362,6 +364,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             self.description = description
             self.appearance = appearance
             self.value = value
+            self.enabled = enabled
             self.label = label
         }
 
@@ -375,6 +378,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             if let description, issue.compactDescription != description { return false }
             if let appearance, configuration.appearance != appearance { return false }
             if let value, issue.element?.value as? String != value { return false }
+            if let enabled, issue.element?.isEnabled != enabled { return false }
             return label(issue.element?.label)
         }
     }
@@ -411,7 +415,24 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                 ["Save", "Delete", "Cancel"].contains($0 ?? "")
             },
         ]
+        // Contrast on the disabled Button samples of the state pages, drawn whole at opacity.disabled by the
+        // contract: WCAG exempts an inactive control from the contrast minimum (design-language chapter 08). The
+        // system disables them (`.disabled(true)`), so only an element that is not enabled matches; the other rows,
+        // loading included, are audited as usual.
+        suppressions += ["button-states", "button-states-destructive"].map { entryID in
+            Suppression(.entry(entryID), type: .contrast, reason: "an inactive control", enabled: false) {
+                ["Save", "Delete"].contains($0 ?? "")
+            }
+        }
         #if os(iOS)
+            // "Text clipped" on a loading label without an icon on the TEMPORARY pages that compare the ways to lay
+            // it out (#23): the shared-width layout, P13 in the contract today, truncates it by design. Which layout
+            // stays is the owner's choice; the pages and this rule go with it.
+            suppressions += ["button-loading-layouts", "button-loading-layouts-2"].map { entryID in
+                Suppression(
+                    .entry(entryID), type: .textClipped, reason: "temporary comparison of loading layouts (#23)"
+                ) { ["Save", "Save changes"].contains($0 ?? "") }
+            }
             suppressions += [
                 // "Text clipped" with no element on the background colors. It appeared when the page got its
                 // layout for accessibility sizes, which puts a name on a line above its cells. The audit names no

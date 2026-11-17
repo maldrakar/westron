@@ -242,25 +242,43 @@ private struct ButtonContent<Label: View>: View {
                 styled(isLoading: isLoading)
             }
         } else {
-            switch loadingLayout {
-            case .sharedWidth:
-                // The indicator, the gap and the label share the resting width; the label truncates on one line, or
-                // gives its place up whole when not even an ellipsis fits, rather than draw a clipped glyph.
-                ButtonSharedWidthLayout(gap: gap) {
-                    progress
-                    styled(isLoading: true).lineLimit(1)
+            // A label without an icon, loading: what is drawn may truncate or hide the label, so it is hidden from
+            // accessibility, and the button takes its name, whole, from the system's icon-only label, which carries
+            // its title with no text of its own on screen.
+            loadingWithoutIcon
+                .accessibilityHidden(true)
+                .background {
+                    SwiftUI.Label {
+                        styled(isLoading: true)
+                    } icon: {
+                        EmptyView()
+                    }
+                    .labelStyle(.iconOnly)
+                    // At its own size: laid out in what is drawn, the title it carries would read as clipped.
+                    .fixedSize()
                 }
-            case .grows, .reservedSlot:
-                HStack(spacing: gap) {
-                    progress
-                    styled(isLoading: true)
-                }
-            case .replacesLabel:
-                // The label stays for accessibility, invisible; the indicator takes its place, centered.
-                styled(isLoading: true)
-                    .opacity(0)
-                    .overlay { progress }
+        }
+    }
+
+    @ViewBuilder private var loadingWithoutIcon: some View {
+        switch loadingLayout {
+        case .sharedWidth:
+            // The indicator, the gap and the label share the resting width; the label truncates on one line, or
+            // gives its place up whole when less than two thirds of it would show.
+            ButtonSharedWidthLayout(gap: gap) {
+                progress
+                styled(isLoading: true).lineLimit(1)
             }
+        case .grows, .reservedSlot:
+            HStack(spacing: gap) {
+                progress
+                styled(isLoading: true)
+            }
+        case .replacesLabel:
+            // The indicator takes the label's place, centered.
+            styled(isLoading: true)
+                .hidden()
+                .overlay { progress }
         }
     }
 
@@ -333,11 +351,16 @@ private struct ButtonLabelStyle: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
         Group {
             if iconOnly {
-                // The title is the accessible label; the glyph is hidden, or its own traits would leak into the
-                // button's (the checkmark symbol reads as "Selected").
-                icon(configuration)
-                    .accessibilityHidden(true)
-                    .accessibilityRepresentation { configuration.title }
+                // The system's icon-only style keeps the title as the button's label, with no text of its own to clip
+                // at large text sizes. The glyph's own traits would leak into the button's (the checkmark symbol
+                // reads as "Selected"), so they are taken away.
+                SwiftUI.Label {
+                    configuration.title
+                } icon: {
+                    icon(configuration)
+                }
+                .labelStyle(.iconOnly)
+                .accessibilityRemoveTraits([.isSelected, .isImage])
             } else {
                 HStack(spacing: gap) {
                     icon(configuration)

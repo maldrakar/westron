@@ -11,7 +11,7 @@ import WestronUI
 // is split into pages, each of which fits one screenshot on an iPhone 17 in portrait: `button` (variants × sizes ×
 // label, icon and label, icon-only), `button-destructive` (the same in the destructive role), `button-states` and
 // `button-states-destructive` (every state and the combinations the contract excludes), `button-behavior` (live
-// buttons that count accepted presses, close neighbors, focus and Dynamic Type), and, until the owner chooses,
+// buttons that count accepted presses, close neighbors and focus), and, until the owner chooses,
 // `button-loading-layouts`. The variants, sizes and states come from the generated enums, so the pages follow the
 // contract.
 
@@ -140,13 +140,17 @@ enum AccessibilityPress {
 }
 
 /// The two words and icons the pages use, by role.
+///
+/// The destructive samples do not use `trash`: with that glyph at accessibility5, on the `button-destructive` page,
+/// `performAccessibilityAudit` gives up ("Audit failed to complete in time") on every run while the catalog is idle,
+/// and with any other glyph the same page passes in about 35 s (iPhone 17 Pro, iOS 26.3, #23).
 private struct ButtonSample {
     let title: LocalizedStringKey
     let icon: Westron.Icon
 
     init(destructive: Bool) {
         title = destructive ? "Delete" : "Save"
-        icon = destructive ? .trash : .check
+        icon = destructive ? .xmarkCircleFill : .check
     }
 }
 
@@ -361,7 +365,8 @@ private struct ButtonStatesPage: View {
     }
 }
 
-/// Live buttons that count the presses they accept, close neighbors, focus and Dynamic Type.
+/// Live buttons that count the presses they accept, close neighbors and, on macOS, focus. Growth with the text size is
+/// on the `button` entry at accessibility sizes (a size pinned in the page would not follow the system's).
 private struct ButtonBehaviorPage: View {
     @State private var accepted = 0
     @State private var isPublishing = true
@@ -387,21 +392,31 @@ private struct ButtonBehaviorPage: View {
                     Button("Save") { accepted += 1 }
                         .buttonStyle(.primary)
                         .accessibilityIdentifier(ButtonCatalogID.rest)
-                    Button("Publish") { accepted += 1 }
-                        .buttonStyle(.primary)
-                        .loading(isPublishing)
-                        #if !os(watchOS)
-                            .keyboardShortcut(.defaultAction)
-                        #endif
-                        .accessibilityIdentifier(ButtonCatalogID.loading)
-                    Button("Export") { accepted += 1 }
-                        .buttonStyle(.secondary)
-                        .loading(isPublishing)
-                        #if !os(watchOS)
-                            // The spelling `.loading(_:)` documents: no shortcut while loading.
-                            .keyboardShortcut(isPublishing ? nil : KeyboardShortcut("e", modifiers: .command))
-                        #endif
-                        .accessibilityIdentifier(ButtonCatalogID.export)
+                    // With icons: how a loading label without one is laid out is still the owner's choice, shown on
+                    // the `button-loading-layouts` pages (#23); this page is about presses.
+                    Button {
+                        accepted += 1
+                    } label: {
+                        Label("Publish", icon: .check)
+                    }
+                    .buttonStyle(.primary)
+                    .loading(isPublishing)
+                    #if !os(watchOS)
+                        .keyboardShortcut(.defaultAction)
+                    #endif
+                    .accessibilityIdentifier(ButtonCatalogID.loading)
+                    Button {
+                        accepted += 1
+                    } label: {
+                        Label("Export", icon: .expand)
+                    }
+                    .buttonStyle(.secondary)
+                    .loading(isPublishing)
+                    #if !os(watchOS)
+                        // The spelling `.loading(_:)` documents: no shortcut while loading.
+                        .keyboardShortcut(isPublishing ? nil : KeyboardShortcut("e", modifiers: .command))
+                    #endif
+                    .accessibilityIdentifier(ButtonCatalogID.export)
                     Button {
                         accepted += 1
                     } label: {
@@ -421,11 +436,11 @@ private struct ButtonBehaviorPage: View {
                     Toggle("Publish and Export are loading", isOn: $isPublishing)
                         .fixedSize()
                         .accessibilityIdentifier(ButtonCatalogID.loadingToggle)
-                    // A test control in the system's own style: it presses Publish as assistive technology does.
+                    // A test control: it presses Publish as assistive technology does.
                     Button("Press Publish via accessibility") {
                         accessibilityPress = AccessibilityPress.press(identifier: ButtonCatalogID.loading)
                     }
-                    .buttonStyle(.borderless)
+                    .buttonStyle(.tertiary)
                     .accessibilityIdentifier(ButtonCatalogID.accessibilityPress)
                     .accessibilityValue(accessibilityPress)
                 }
@@ -471,18 +486,6 @@ private struct ButtonBehaviorPage: View {
                     .onAppear { isFocused = true }
                 }
             #endif
-            section("Text size accessibility3: the height, padding and gap grow") {
-                VStack(alignment: .leading, spacing: .space100) {
-                    ForEach(ButtonSize.allCases, id: \.self) { size in
-                        FlowLayout(spacing: .space100) {
-                            ForEach(SampleButton.Kind.allCases, id: \.self) { kind in
-                                SampleButton(kind: kind, variant: .secondary, size: size, destructive: false)
-                            }
-                        }
-                    }
-                }
-                .dynamicTypeSize(.accessibility3)
-            }
         }
     }
 
