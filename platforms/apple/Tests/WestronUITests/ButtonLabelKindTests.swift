@@ -53,6 +53,9 @@ struct ButtonLabelKindTests {
         }
     }
 
+    /// A control for the test above: a hosted button settles before it reports its size, so on macOS this passed with
+    /// the lagging state too, and it is not a regression test for the lag there. On the iOS simulator, an off-window
+    /// `UIHostingController` did not settle, and with the lagging state a loading `Text` label did not widen.
     @Test("a hosted button's width follows its label's kind while loading", arguments: [true, false])
     func hostedWidthFollowsTheLabel(startsWithIcon: Bool) {
         #if canImport(AppKit)
