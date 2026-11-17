@@ -11,8 +11,11 @@ description: >-
   place, and in icon-only in place of the icon, so the width does not change; when there is no icon, the indicator
   goes before the label and the button widens by the indicator and the gap, so the label is neither truncated nor
   hidden (the owner's decision of 2026-11-17, decisions/0001, P13). The label stays, presses are not accepted, and
-  the button does not dim. Floating glass buttons over content are not this component: products use the system's glass
-  styles (chapter 09).
+  the button does not dim. The button is not meant for a width smaller than its label's longest word: the label wraps
+  only between words, and the product provides the room, by stacking buttons, giving the button the full width, a
+  shorter label, or icon-only. In a narrower container the label breaks inside a word; that is unsupported, not a
+  behavior of this contract (decisions/0001). Floating glass buttons over content are not this component: products
+  use the system's glass styles (chapter 09).
 consumers: [todo-app/lists-screen, todo-app/list-screen]
 
 options:

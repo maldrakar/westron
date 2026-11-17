@@ -128,11 +128,14 @@ enum AccessibilityPress {
 
 /// The two words and icons the pages use, by role.
 ///
-/// The destructive samples do not use `trash`: with that glyph at accessibility5, on the third screenful of the
-/// `button-destructive` page, `performAccessibilityAudit` gives up ("Audit failed to complete in time") on every run
-/// on iPhone 17 Pro, iOS 26.3, while the catalog idles, whatever the icon-only button's accessibility is built from
-/// (the system's icon-only label, a separate name with or without its own size, a representation, a masked glyph),
-/// and also with the code of 3d5208a. With any other glyph the page passes (#23).
+/// The destructive samples use `xmarkCircleFill`: the owner's choice of 2026-11-17.
+///
+/// A known issue (#23, recorded in decisions/0001 of the Button contract): with `trash`, at accessibility5, on the
+/// screenful of size m and l samples of the `button-destructive` page, `performAccessibilityAudit` gives up ("Audit
+/// failed to complete in time") on every run on iPhone 17 Pro, iOS 26.3, while the catalog idles, whatever the
+/// icon-only button's accessibility is built from (the system's icon-only label, a separate name with or without its
+/// own size, a representation, a masked glyph), on the code before and after the icon-only changes (3d5208a). With any
+/// other glyph the page passes. The cause is not found; a product's icon-only trash button may hit the same.
 private struct ButtonSample {
     let title: LocalizedStringKey
     let icon: Westron.Icon

@@ -66,6 +66,20 @@ and the parity lint (#21) are proved on it before a second component starts. The
 - **Chosen: `s`, `m`, `l`, default `m`.** The heights are `size.control.s|m|l`: 24, 32 and 40 with a pointer, 32,
   44 and 52 on touch. The hit area is at least the platform's recommended target (chapter 08).
 - **Chosen: `radius.control` everywhere,** icon-only included.
+- **Narrower than the longest word** (decided 2026-11-17, after the Apple implementation, #23).
+  - Considered, side by side in the catalog at sizes m and l, at the default text size and at accessibility3: a
+    minimum width inside the style, the width of the label's longest word, so the label wraps only between words and
+    the button grows past its container; one line with an ellipsis; the word breaking inside, as the platforms do
+    when nothing stops them.
+  - **Chosen: a usage rule for products, not a mechanism in the style.** The button is not meant for a width smaller
+    than its label's longest word; the label wraps only between words; the product provides the room, by stacking
+    buttons, giving the button the full width, a shorter label, or icon-only.
+  - Why the rule sits with the product: the style cannot see the label's words (on Apple the label is an opaque view,
+    and its width alone does not show where a word breaks); an ellipsis contradicts "the button grows with its text"
+    (P11) and loses the label at large text sizes, down to a clipped first letter or the icon alone; and a button that
+    enforces its own minimum width runs off the screen at large text sizes.
+  - If a product breaks the rule, the label breaks inside a word ("Delet/e"). That is unsupported, not a behavior of
+    this contract, and not a bug to fix in the style.
 
 ### States
 
@@ -101,6 +115,12 @@ and the parity lint (#21) are proved on it before a second component starts. The
 - Hover exists only with a pointer: never on iPhone or watchOS.
 - The focus ring is the system's on Apple and GTK; on the web it is an outline in `color.border.focus`.
 - On macOS, Return and Escape trigger the default and cancel actions.
+- **Known issue on Apple (#23): the `trash` glyph and the accessibility audit.** With `trash` as the destructive
+  samples' icon, the Dynamic Type accessibility audit of the catalog's `button-destructive` page times out ("Audit
+  failed to complete in time") on the screenful of size m and l samples at accessibility5, on the code before and
+  after the icon-only changes; with any other glyph the page passes. The cause is not found. A product's icon-only
+  trash button may hit the same in its own audit. The catalog's destructive samples use `xmarkCircleFill`, which the
+  owner chose on 2026-11-17.
 
 ### Swift API conventions
 

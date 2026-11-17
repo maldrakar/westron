@@ -109,6 +109,7 @@ prefix.
   roles may need tabular digits (open questions).
 - **Text is never clipped.** Running text wraps. A one-line label, such as a list's title in a row, may truncate with
   an ellipsis, as long as its full text is reachable: the item opens, and a screen reader reads the whole string.
+  A button's label wraps only between words, and the product leaves it room for its longest word (Button contract).
 - **Contrast does not lean on size.** Every word meets the text target, whatever its size (chapter 02). The large-text
   kind exists, but no token uses it: a heading shares its color with smaller text, and a role that is large on one
   platform can be small on another.
