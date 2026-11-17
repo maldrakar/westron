@@ -35,12 +35,9 @@ private struct ButtonGate: View {
     let iconOnly: Bool
 
     @Environment(\.isLoading) private var isLoading
-    @Environment(\.controlSize) private var controlSize
 
     var body: some View {
         let isLoading = isLoading
-        let outset = ButtonMetrics(ButtonSize.resolved(explicit: explicitSize, controlSize: controlSize))
-            .hitOutset(iconOnly: iconOnly)
         Button(role: configuration.role) {
             // Loading accepts no presses that reach this button; the button stays enabled, so it is not announced or
             // drawn as disabled (the contract's `loading`).
@@ -49,9 +46,6 @@ private struct ButtonGate: View {
             configuration.label
         }
         .buttonStyle(ButtonLook(variant: variant, explicitSize: explicitSize, iconOnly: iconOnly))
-        // The look grows this system button by the hit outset (`ButtonSurface`); the button takes its drawn size in
-        // the layout again, and the outset reaches past it.
-        .padding(outset.negated)
         // Apple has no busy trait: loading is the button's accessibility value, read after its label, "Save, Loading,
         // button". The value is cleared at rest. A value the product gives the button wins over it (see `.loading(_:)`).
         .accessibilityValue(
@@ -178,25 +172,26 @@ private struct ButtonSurface<Label: View>: View {
             .animation(.fade, value: isHovered)
             .animation(.press, value: isPressed)
         }
-        // The hit area (chapter 08: at least the platform's recommended target), measured in
-        // CatalogUITests/ButtonBehaviorTests.swift (#23):
-        // - iOS: the system's touch tolerance, not grown by a content shape. It reaches about 16 pt past a 32 pt
-        //   button, beyond the 44 pt target, and gives a tap between two buttons to the closer one. A content shape
-        //   grown to the target gave every tap in the overlap to the later sibling, even one closer to the first.
+        // The hit area (chapter 08: at least the platform's recommended target) is the system's, not grown by a content
+        // shape, measured in CatalogUITests/ButtonBehaviorTests.swift (#23):
+        // - iOS: the system's touch tolerance reaches about 16 pt past a 32 pt button, beyond the 44 pt target, and
+        //   gives a tap between two buttons to the closer one. A content shape grown to the target gave every tap in
+        //   the overlap to the later sibling, even one closer to the first, so westron adds none.
         // - watchOS: the only size, m, is drawn at the target.
-        // - macOS: a click outside the system button's frame misses, whatever the content shape, so the frame itself
-        //   grows: a padding by the hit outset here, inside the system button, which `ButtonGate` takes back outside
-        //   it, so the drawn and the laid out size stay. Size s reaches the 28 pt target past its drawn 24.
+        // - macOS: a click outside the frame misses, whatever the content shape: size s keeps its drawn 24 pt, below
+        //   the recommended 28 (a contract gap, for the owner). Growing the frame does reach the target: padding the
+        //   look by 2 pt inside the system button and taking it back outside with a negative padding kept the drawn
+        //   and laid out size, and a click 1.5 pt below the drawn button reached it. But the grown frame overlaps a
+        //   neighbor closer than 4 pt, and the later sibling wins there, inside the neighbor's drawn area: with
+        //   `spacing: 0`, a click 1 pt inside the first button ran the second (measured in the review of #23 with
+        //   NSEvent clicks in a window, in an HStack of icon-only buttons and a VStack of buttons with labels). The
+        //   style cannot see its neighbors, so westron does not grow the frame.
         .contentShape(.accessibility, shape)
         #if os(macOS) || os(watchOS)
             // The system's focus ring follows the button's corners.
             .contentShape(.focusEffect, shape)
         #endif
         .opacity(tokens.opacity.map(Double.init) ?? 1)
-        #if os(macOS)
-            .padding(metrics.hitOutset(iconOnly: iconOnly))
-            .contentShape(.interaction, Rectangle())
-        #endif
     }
 }
 
@@ -436,12 +431,5 @@ private struct SquareLayout: Layout {
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         subviews.first?.place(
             at: CGPoint(x: bounds.midX, y: bounds.midY), anchor: .center, proposal: ProposedViewSize(bounds.size))
-    }
-}
-
-extension EdgeInsets {
-    /// The same insets, each side negated: a padding by them takes back a padding by these.
-    fileprivate var negated: EdgeInsets {
-        EdgeInsets(top: -top, leading: -leading, bottom: -bottom, trailing: -trailing)
     }
 }
