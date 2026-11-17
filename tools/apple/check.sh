@@ -70,6 +70,16 @@ stop_test_daemon() {
   xcrun simctl spawn "$udid" launchctl kill SIGKILL system/com.apple.testmanagerd > /dev/null 2>&1 || true
 }
 
+# An interrupted audit: stops its xcodebuild and the simulator's test daemon, then exits with <status>. The `|| true`:
+# under `set -e`, the wait for the killed xcodebuild (status 143) would end the script before the daemon is stopped.
+a11y_interrupted() {
+  local udid="$1" status="$2"
+  kill "$a11y_xcodebuild" 2> /dev/null || true
+  wait "$a11y_xcodebuild" 2> /dev/null || true
+  stop_test_daemon "$udid"
+  exit "$status"
+}
+
 a11y() {
   local platform=ios destination udid="" test name
   case "${1:-}" in ios | macos) platform="$1"; shift ;; esac
@@ -113,10 +123,10 @@ a11y() {
     -derivedDataPath .build/xcode/catalog -resultBundlePath "$results" -collect-test-diagnostics never \
     "${only[@]}" test > "$log" 2>&1 &
   a11y_xcodebuild=$!
-  # However the run ends, the simulator's test daemon is stopped (stop_test_daemon).
-  # The `|| true`: under `set -e`, the wait for the killed xcodebuild (status 143) would end the script before the stop.
-  trap 'kill "$a11y_xcodebuild" 2>/dev/null || true; wait "$a11y_xcodebuild" 2>/dev/null || true
-    stop_test_daemon "$udid"; exit 130' INT TERM
+  # However the run ends, the simulator's test daemon is stopped (stop_test_daemon); an interruption exits with the
+  # shell's status for its signal, 130 for INT and 143 for TERM.
+  trap 'a11y_interrupted "$udid" 130' INT
+  trap 'a11y_interrupted "$udid" 143' TERM
   wait "$a11y_xcodebuild" || status=$?
   trap - INT TERM
   stop_test_daemon "$udid"

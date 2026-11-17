@@ -217,7 +217,7 @@ private struct ButtonMatrixPage: View {
                     Text("size \(size.rawValue)")
                         .textRole(.subheadline.strong)
                         .foregroundStyle(.text.primary)
-                    SampleRows(items: ButtonVariant.allCases, name: \.rawValue) { variant in
+                    SampleRows(items: ButtonVariant.allCases, name: \.rawValue, wrapsCells: true) { variant in
                         ForEach(SampleButton.Kind.allCases, id: \.self) { kind in
                             SampleButton(kind: kind, variant: variant, size: size, destructive: destructive)
                         }
@@ -231,23 +231,28 @@ private struct ButtonMatrixPage: View {
 /// Rows of samples, each with its name: a grid with the names in the first column, or, at accessibility text sizes,
 /// each name above its samples, which wrap onto as many lines as they need (`FlowLayout`). A grid column would squeeze
 /// a button until its label breaks between letters (chapter 08: layout reflows, it never clips). The choice is eager,
-/// by the text size, so the accessibility audit follows one layout.
+/// by the text size, so the accessibility audit follows one layout. With `wrapsCells`, the grid's second column is
+/// the row's samples in a `FlowLayout` that takes the width left after the names, so a row wider than the page goes
+/// on to a second line instead of squeezing a button; without it, each sample is a column of its own, aligned.
 private struct SampleRows<Item: Hashable, Cells: View>: View {
     let items: [Item]
     let name: (Item) -> String
     /// Names in the face of token names (variants), or of details (states).
     let monospaced: Bool
+    /// Whether a row's samples wrap in one column rather than take a column each.
+    let wrapsCells: Bool
     @ViewBuilder let cells: (Item) -> Cells
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     init(
-        items: [Item], name: @escaping (Item) -> String, monospaced: Bool = true,
+        items: [Item], name: @escaping (Item) -> String, monospaced: Bool = true, wrapsCells: Bool = false,
         @ViewBuilder cells: @escaping (Item) -> Cells
     ) {
         self.items = items
         self.name = name
         self.monospaced = monospaced
+        self.wrapsCells = wrapsCells
         self.cells = cells
     }
 
@@ -268,7 +273,12 @@ private struct SampleRows<Item: Hashable, Cells: View>: View {
                 ForEach(items, id: \.self) { item in
                     GridRow {
                         label(item)
-                        cells(item)
+                        if wrapsCells {
+                            FlowLayout(spacing: .space100) { cells(item) }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        } else {
+                            cells(item)
+                        }
                     }
                 }
             }

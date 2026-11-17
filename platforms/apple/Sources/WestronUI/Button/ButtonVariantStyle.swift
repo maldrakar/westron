@@ -243,31 +243,39 @@ private struct ButtonContent<Label: View>: View {
             }
         } else {
             // A label without an icon, loading: what is drawn may truncate the label or leave it out. It is drawn as
-            // a mask, the label's color through the shape of the indicator and the text, so it has no accessibility
-            // element (a hidden one still reads as clipped text to the accessibility audit), and the button takes its
-            // name, whole, from `ButtonName`.
-            loadingWithoutIcon
+            // masks, so it has no accessibility element (a hidden one still reads as clipped text to the
+            // accessibility audit): `label.color` through the shape of the text, and `progress.color` through the
+            // shape of the indicator, each from a copy of the layout with the other part transparent. A mask keeps
+            // only shapes, so a label's own inner colors (a styled run of text) are flattened to `label.color` while
+            // it loads. The button takes its name, whole, from `ButtonName`.
+            loadingWithoutIcon(showsText: true, showsProgress: true)
                 .hidden()
                 .overlay {
-                    Color(tokens.label).mask { loadingWithoutIcon }
+                    ZStack {
+                        Color(tokens.label).mask { loadingWithoutIcon(showsText: true, showsProgress: false) }
+                        Color(tokens.progress).mask { loadingWithoutIcon(showsText: false, showsProgress: true) }
+                    }
                 }
                 .background { ButtonName(title: styled(isLoading: true)) }
         }
     }
 
-    @ViewBuilder private var loadingWithoutIcon: some View {
+    /// The layout of a loading label without an icon; `showsText` and `showsProgress` make a part transparent and
+    /// keep its place.
+    @ViewBuilder private func loadingWithoutIcon(showsText: Bool, showsProgress: Bool) -> some View {
+        let progress = progress.opacity(showsProgress ? 1 : 0)
         switch loadingLayout {
         case .sharedWidth:
             // The indicator, the gap and the label share the resting width; the label truncates on one line, or
             // gives its place up whole when less than two thirds of it would show.
             ButtonSharedWidthLayout(gap: gap) {
                 progress
-                styled(isLoading: true).lineLimit(1)
+                styled(isLoading: true).lineLimit(1).opacity(showsText ? 1 : 0)
             }
         case .grows, .reservedSlot:
             HStack(spacing: gap) {
                 progress
-                styled(isLoading: true)
+                styled(isLoading: true).opacity(showsText ? 1 : 0)
             }
         case .replacesLabel:
             // The indicator takes the label's place, centered.
