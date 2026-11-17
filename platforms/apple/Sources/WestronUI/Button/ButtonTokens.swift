@@ -126,6 +126,26 @@ struct ButtonMetrics: Equatable, Sendable {
         iconFont = labelFont
     }
 
+    /// How far the hit area reaches past the drawn button on each side, so that it covers the platform's recommended
+    /// target (contract, `size`; chapter 08) where the drawn button is smaller: on macOS, size s, drawn 24 pt tall
+    /// against a target of 28. The height grows, and the width of icon-only, a square; a label and its padding make a
+    /// button at least as wide as the target. On iOS and watchOS none: the system's touch tolerance reaches past the
+    /// target (ButtonVariantStyle.swift). From the size's least height: a button that grows taller with its text keeps
+    /// the same outset.
+    func hitOutset(iconOnly: Bool) -> EdgeInsets {
+        #if os(macOS)
+            let side = max(0, (Self.hitTarget - CGFloat(height)) / 2)
+            return EdgeInsets(top: side, leading: iconOnly ? side : 0, bottom: side, trailing: iconOnly ? side : 0)
+        #else
+            return EdgeInsets()
+        #endif
+    }
+
+    #if os(macOS)
+        /// The recommended hit target on macOS, 28 × 28 pt (chapter 08, "Hit targets"; HIG Accessibility).
+        static let hitTarget: CGFloat = 28  // westron-lint: allow the platform's hit target, which has no token yet
+    #endif
+
     /// `container.radius`.
     static let radius: Westron.Dimension = .radius.control
 }

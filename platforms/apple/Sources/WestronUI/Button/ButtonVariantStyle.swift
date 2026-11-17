@@ -35,9 +35,12 @@ private struct ButtonGate: View {
     let iconOnly: Bool
 
     @Environment(\.isLoading) private var isLoading
+    @Environment(\.controlSize) private var controlSize
 
     var body: some View {
         let isLoading = isLoading
+        let outset = ButtonMetrics(ButtonSize.resolved(explicit: explicitSize, controlSize: controlSize))
+            .hitOutset(iconOnly: iconOnly)
         Button(role: configuration.role) {
             // Loading accepts no presses that reach this button; the button stays enabled, so it is not announced or
             // drawn as disabled (the contract's `loading`).
@@ -46,6 +49,9 @@ private struct ButtonGate: View {
             configuration.label
         }
         .buttonStyle(ButtonLook(variant: variant, explicitSize: explicitSize, iconOnly: iconOnly))
+        // The look grows this system button by the hit outset (`ButtonSurface`); the button takes its drawn size in
+        // the layout again, and the outset reaches past it.
+        .padding(outset.negated)
         // Apple has no busy trait: loading is the button's accessibility value, read after its label, "Save, Loading,
         // button". The value is cleared at rest. A value the product gives the button wins over it (see `.loading(_:)`).
         .accessibilityValue(
@@ -172,20 +178,25 @@ private struct ButtonSurface<Label: View>: View {
             .animation(.fade, value: isHovered)
             .animation(.press, value: isPressed)
         }
-        // The hit area (chapter 08: at least the platform's recommended target) is the system's, not grown by a content
-        // shape, measured in CatalogUITests/ButtonBehaviorTests.swift (#23):
-        // - iOS: the system's touch tolerance reaches about 16 pt past a 32 pt button, beyond the 44 pt target, and
-        //   gives a tap between two buttons to the closer one. A content shape grown to the target gave every tap in
-        //   the overlap to the later sibling, even one closer to the first, so westron adds none.
+        // The hit area (chapter 08: at least the platform's recommended target), measured in
+        // CatalogUITests/ButtonBehaviorTests.swift (#23):
+        // - iOS: the system's touch tolerance, not grown by a content shape. It reaches about 16 pt past a 32 pt
+        //   button, beyond the 44 pt target, and gives a tap between two buttons to the closer one. A content shape
+        //   grown to the target gave every tap in the overlap to the later sibling, even one closer to the first.
         // - watchOS: the only size, m, is drawn at the target.
-        // - macOS: a click outside the frame misses, whatever the content shape: size s keeps its drawn 24 pt, below
-        //   the recommended 28 (a contract gap).
+        // - macOS: a click outside the system button's frame misses, whatever the content shape, so the frame itself
+        //   grows: a padding by the hit outset here, inside the system button, which `ButtonGate` takes back outside
+        //   it, so the drawn and the laid out size stay. Size s reaches the 28 pt target past its drawn 24.
         .contentShape(.accessibility, shape)
         #if os(macOS) || os(watchOS)
             // The system's focus ring follows the button's corners.
             .contentShape(.focusEffect, shape)
         #endif
         .opacity(tokens.opacity.map(Double.init) ?? 1)
+        #if os(macOS)
+            .padding(metrics.hitOutset(iconOnly: iconOnly))
+            .contentShape(.interaction, Rectangle())
+        #endif
     }
 }
 
@@ -393,5 +404,12 @@ private struct SquareLayout: Layout {
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         subviews.first?.place(
             at: CGPoint(x: bounds.midX, y: bounds.midY), anchor: .center, proposal: ProposedViewSize(bounds.size))
+    }
+}
+
+extension EdgeInsets {
+    /// The same insets, each side negated: a padding by them takes back a padding by these.
+    fileprivate var negated: EdgeInsets {
+        EdgeInsets(top: -top, leading: -leading, bottom: -bottom, trailing: -trailing)
     }
 }

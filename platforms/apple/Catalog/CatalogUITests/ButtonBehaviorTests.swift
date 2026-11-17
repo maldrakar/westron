@@ -187,34 +187,38 @@ final class ButtonBehaviorTests: XCTestCase {
     }
 
     /// A size s button is drawn smaller than the recommended target: 32 pt tall on iOS (target 44), 24 on macOS
-    /// (target 28). A press 5 pt below what is drawn, inside the target on iOS, must reach it. The hit area there is the
-    /// system's touch tolerance, which westron does not grow (ButtonVariantStyle.swift): measured on iOS 26.3 it reaches
-    /// 16 pt below such a button, and the test fails if the platform ever covers less than the target.
+    /// (target 28). A press below what is drawn, inside the target, must reach it.
     ///
-    /// macOS has no such tolerance and ignores a hit area larger than the frame, so a click 2 pt below the 24 pt button,
-    /// inside its 28 pt target, misses: a known contract gap (#23), recorded as an expected failure there.
+    /// iOS: 5 pt below. The hit area is the system's touch tolerance, which westron does not grow
+    /// (ButtonVariantStyle.swift): measured on iOS 26.3 it reaches 16 pt below such a button, and the test fails if the
+    /// platform ever covers less than the target.
+    ///
+    /// macOS: 1.5 pt below, inside the 2 pt that the target reaches past the drawn button on each side (2 pt exactly is
+    /// the target's edge). westron grows the hit area to the target and no further, so 3 pt below misses.
     @MainActor
     func testSmallButtonHitAreaReachesTheTarget() {
         let small = button(ID.small)
+        func pressBelow(_ below: CGFloat) {
+            press(
+                small.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 1)).withOffset(CGVector(dx: 0, dy: below)))
+        }
         #if os(macOS)
-            let below: CGFloat = 2
+            // The element's frame is the drawn button's, which the clicks are measured from, not its hit area's.
+            XCTAssertEqual(small.frame.height, 24, accuracy: 0.5)
+            pressBelow(1.5)
+            XCTAssertEqual(accepted, 1, "a click 1.5 pt below the drawn button, inside its target, did not reach it")
+            pressBelow(3)
+            XCTAssertEqual(accepted, 1, "a click 3 pt below the drawn button, past its target, reached it")
         #else
-            let below: CGFloat = 5
-        #endif
-        press(small.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 1)).withOffset(CGVector(dx: 0, dy: below)))
-        let reached = accepted
-        #if os(macOS)
-            XCTExpectFailure("contract gap #23: macOS does not extend a hit area beyond the frame") {
-                XCTAssertEqual(reached, 1, "a click \(below) pt below the drawn button did not reach it")
-            }
-        #else
-            XCTAssertEqual(reached, 1, "a tap \(below) pt below the drawn button did not reach it")
+            pressBelow(5)
+            XCTAssertEqual(accepted, 1, "a tap 5 pt below the drawn button did not reach it")
         #endif
     }
 
     /// Two size s icon-only buttons 8 pt apart: a press inside a button's drawn frame reaches it, and on iOS a tap in
     /// the gap reaches the closer one (the system's touch tolerance decides; westron adds no hit area that would hand
-    /// the gap to the later sibling). On macOS a click in the gap reaches neither.
+    /// the gap to the later sibling). On macOS each hit area reaches 2 pt into the gap, to the 28 pt target: a click
+    /// 1 pt past a drawn edge reaches that button, and one in the middle 4 pt reaches neither.
     @MainActor
     func testCloseNeighbors() {
         let first = button(ID.firstNeighbor)
@@ -232,7 +236,11 @@ final class ButtonBehaviorTests: XCTestCase {
         XCTAssertEqual(tap(first, edge: 1, offset: -1), "first 1, second 0")
         XCTAssertEqual(tap(second, edge: 0, offset: 1), "first 1, second 1")
         #if os(macOS)
-            XCTAssertEqual(tap(first, edge: 1, offset: 3), "first 1, second 1", "a click in the gap reached a button")
+            // In the gap: 1 pt past each drawn edge, inside its target; then 3 pt past each, outside both targets.
+            XCTAssertEqual(tap(first, edge: 1, offset: 1), "first 2, second 1", "1 pt past the first missed it")
+            XCTAssertEqual(tap(second, edge: 0, offset: -1), "first 2, second 2", "1 pt past the second missed it")
+            XCTAssertEqual(tap(first, edge: 1, offset: 3), "first 2, second 2", "3 pt past the first reached one")
+            XCTAssertEqual(tap(second, edge: 0, offset: -3), "first 2, second 2", "3 pt past the second reached one")
         #else
             // In the gap: 3 pt from the first (5 from the second), then 5 pt from the first (3 from the second).
             XCTAssertEqual(tap(first, edge: 1, offset: 3), "first 2, second 1", "a tap closer to the first missed it")
