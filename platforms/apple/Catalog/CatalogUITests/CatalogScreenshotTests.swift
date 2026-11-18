@@ -6,7 +6,12 @@ import XCTest
 /// - `WESTRON_ENTRY`: the entry id (required; without it the test is skipped);
 /// - `WESTRON_APPEARANCE`: `light` or `dark`;
 /// - `WESTRON_CONTRAST`: `standard` or `high`, as for `-WestronContrast`;
-/// - `WESTRON_DYNAMIC_TYPE`: the font size, as for `-WestronDynamicType`.
+/// - `WESTRON_DYNAMIC_TYPE`: the font size, as for `-WestronDynamicType`;
+/// - `WESTRON_LEGIBILITY_WEIGHT`: `regular` or `bold` (the system's Bold Text), as for `-WestronLegibilityWeight`;
+/// - `WESTRON_SCROLL_ANCHOR`: the point of the entry held in view, 0 top to 1 bottom, as for `-WestronScrollAnchor`.
+///
+/// The script names the first four with its options; the last two reach the test as `TEST_RUNNER_` variables set
+/// before the script (`platforms/apple/README.md`, "Catalog").
 ///
 /// The XCTest runner takes the screenshot, so macOS needs no screen recording permission.
 /// The runner writes no file: on macOS it is sandboxed without write access. The PNG goes as an attachment
@@ -37,6 +42,12 @@ final class CatalogScreenshotTests: XCTestCase {
         }
         if let size = environment["WESTRON_DYNAMIC_TYPE"] {
             app.launchArguments += ["-WestronDynamicType", size]
+        }
+        if let weight = environment["WESTRON_LEGIBILITY_WEIGHT"] {
+            app.launchArguments += ["-WestronLegibilityWeight", weight]
+        }
+        if let anchor = environment["WESTRON_SCROLL_ANCHOR"] {
+            app.launchArguments += ["-WestronScrollAnchor", anchor]
         }
         app.launch()
         defer { app.terminate() }

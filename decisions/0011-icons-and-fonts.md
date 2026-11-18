@@ -1,7 +1,8 @@
 # 0011. Icons and fonts
 
 Date: 2026-11-15. Status: accepted. Revised the same day: the owner chose Onest for headings, and system icons with
-westron's own for domain icons, on the direction specimens.
+westron's own for domain icons, on the direction specimens. Revised on 2026-11-18: six font instances instead of four,
+for Bold Text (the Text contract, below, "Revision of 2026-11-18").
 
 ## Context
 
@@ -24,19 +25,22 @@ SF Pro and SF Symbols are licensed for Apple platforms only. The research is in 
 | Code, logs, identifiers | Geist Mono | SIL OFL 1.1 |
 
 - **Brand face in headings only.** Body text and controls stay in the system font, so they read like the platform.
-- **Static instances.** westron ships the weights it uses: Onest SemiBold and Bold, Geist Mono Regular and
-  SemiBold. They are cut from the variable fonts on Google Fonts (Onest 2.001, Geist Mono 1.701) with fontTools
+- **Static instances.** westron ships the weights it uses and the ones they take under Bold Text: Onest SemiBold,
+  Bold and ExtraBold, Geist Mono Regular, SemiBold and Bold. They are cut from the variable fonts on Google Fonts (Onest 2.001, Geist Mono 1.701) with fontTools
   4.55.3 (`varLib.instancer`, names updated). Neither license reserves a font name, so the instances keep their names.
 - **Names.** A font's PostScript name is its family without spaces and the weight's name: `Onest-Bold`,
   `GeistMono-Regular`. The Apple generator derives it from the token's family and weight.
 - **Fallback.** A family token names the system family to fall back on (`["Onest", "system-ui"]`). Where the font is
   missing, the text is set in the system font, not in an arbitrary one.
 - **On Apple.**
-  - The fonts live in `WestronUI/Fonts`, each with its license, about 400 KB in all.
+  - The fonts live in `WestronUI/Fonts`, each family with its license, about 600 KB in all.
   - They are registered for the process the first time a text role needs one, so a product sets up nothing.
   - A role becomes `Font.custom(_:size:relativeTo:)` with its text style, so it follows Dynamic Type.
   - If registration fails, the role uses the system font.
-  - A test checks that every font a role names is registered and draws Cyrillic.
+  - Under Bold Text a role in Onest or Geist Mono takes the instance one weight up (spec/components/text): a rule
+    in the Apple adapter, not a token.
+  - watchOS draws every role in the system font and does not register the fonts.
+  - A test checks that every font a role names, and its Bold Text instance, is registered and draws Cyrillic.
 - **Other platforms.** The web, GNOME and Android get the same fonts with their phases: a subset WOFF2 on the web, the
   font in the Flatpak and one CSS rule on GNOME, `res/font` on Android.
 
@@ -74,7 +78,40 @@ SF Pro and SF Symbols are licensed for Apple platforms only. The research is in 
   `Font(.body.regular)`) and never calls `Font.custom` or `Font.system` with a size of its own. A shipped font takes
   the size the platform gives its text style, so headings keep their proportion to the system font on the Mac.
 - decisions/0007 lists the fonts under the SIL OFL.
-- Updating a font means cutting the instances again with the command above and checking the catalog's typography page.
+- Updating a font means cutting the instances again with the command below ("Revision of 2026-11-18") and checking
+  the catalog's `typography` and `typography-in-text` pages.
 - The platform phases map the icon names: phase 6 (web) to westron's own set, phase 7 (GNOME) to Adwaita icons, phase 8
   (Android) to Material Symbols. The web has no platform icon set, so there westron's own set covers standard actions
   too. The first of these phases draws the domain icons on westron's grid.
+
+## Revision of 2026-11-18
+
+- **Six instances instead of four.** The owner approved the Text contract (#27, spec/components/text): with the
+  system's Bold Text on, a role in Onest or Geist Mono moves one weight up, as the system font does by itself. Onest
+  SemiBold goes to Bold and Bold to ExtraBold; Geist Mono Regular goes to SemiBold and SemiBold to Bold, the owner's
+  choice for `code.strong`. Two of those weights were not shipped, so two instances are added: `Onest-ExtraBold.ttf`
+  (800, 98,236 bytes) and `GeistMono-Bold.ttf` (700, 101,784 bytes), about 200 KB more, 600,508 bytes in all.
+- **Why not tokens.** `font.weight` has no 800, and a Bold Text weight per role would be a second set of weights for
+  one platform setting; the owner chose a rule in the Apple adapter (`Weight.boldTextStep` in
+  `WestronUI/TokenAdapters.swift`).
+- **How they are cut.** From the variable fonts of google/fonts, with fontTools 4.55.3:
+  - `ofl/onest/Onest[wght].ttf`, Onest 2.001, last changed in commit 4c1db3a, SHA-256
+    `966c5c29b4755da84b6854d5c21dd4eaa2420225d0e9874de602de176d4a9f31`;
+  - `ofl/geistmono/GeistMono[wght].ttf`, Geist Mono 1.701, last changed in commit 9e25e2b, SHA-256
+    `d00e590b8eb3a59acc329b2d044fd143ae935090b7da33199ebee27cc7de8196`.
+
+  ```sh
+  SOURCE_DATE_EPOCH=<seconds> python3 -m fontTools.varLib.instancer --update-name-table \
+    -o Onest-ExtraBold.ttf "Onest[wght].ttf" wght=800
+  ```
+
+  and so for each instance at its weight (400, 600, 700, 800). `SOURCE_DATE_EPOCH` fixes `head.modified`, so a cut is
+  byte for byte reproducible: with the stamps of the shipped files (1794776136 for Onest, 1794776137 for Geist Mono,
+  2026-11-15) the command gives the four earlier instances identical to the committed ones, and with 1794960000
+  (2026-11-18) the two new ones: SHA-256 `bec07d05c49846e54edd2cec21906c3412cee22ae28114640aad79f983cb71fb` for
+  `Onest-ExtraBold.ttf`, `9a733e0d833fa746feba58c0a292b2da14164ac7ed23b62cfea1df3d3c975859` for `GeistMono-Bold.ttf`.
+  The licenses, `Onest-OFL.txt` and `GeistMono-OFL.txt`, are the families' `OFL.txt` from the same directories,
+  unchanged; they cover every instance of the family. Neither reserves a font name, so the
+  instances keep `Onest-ExtraBold` and `GeistMono-Bold`.
+- **watchOS** draws every role in the system font (spec/components/text), so it does not register the fonts. SwiftPM
+  copies a target's resources for every platform alike, so the files are still in the watch's bundle.

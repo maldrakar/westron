@@ -120,8 +120,9 @@ extension Westron {
     /// A text role: the platform's text style it follows, so that it scales with the person's text size, a design and
     /// a weight (decisions/0011, 0013).
     ///
-    /// `size`, `lineHeight` and `letterSpacing` are the cross-platform values at the default text size; on Apple the
-    /// text style sets the size, and no line spacing or tracking is applied yet.
+    /// `size`, `lineHeight` and `letterSpacing` are the cross-platform values at the default text size. On Apple the
+    /// text style sets the size and the font its line height; the tracking is `letterSpacing` over `size`, applied as
+    /// that share of the size the font is drawn at (spec/components/text).
     public struct TextRole: Hashable, Sendable {
         /// The Apple text styles (Dynamic Type).
         public enum TextStyle: String, CaseIterable, Sendable {
