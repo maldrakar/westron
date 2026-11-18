@@ -1,8 +1,9 @@
 # 0001. The TextField contract
 
-Date: 2026-11-18. Status: draft for approval (#30). The owner answered the interview on 2026-11-18. This record keeps
-three things apart: what the owner answered, what the documents had already decided, and what the agent proposes on
-top of both, which is still to confirm.
+Date: 2026-11-18. Status: accepted (#30), approved as written on 2026-11-18 under the owner's delegation of that day.
+The owner answered the interview on 2026-11-18. This record keeps three things apart: what the owner answered, what the
+documents had already decided, and what the agent proposed on top of both, which the approval confirms; the items
+decided by the agent under the delegation stay marked so, pending the owner's confirmation.
 
 ## Context
 
@@ -108,6 +109,10 @@ mode, set by the `density` modifier with #33 (spec/conventions.md, "Modes: theme
   `_body(configuration:)` can read the field's focus (the configuration is the field itself, and
   `@Environment(\.isFocused)` may describe an ancestor), and whether `focusEffectDisabled()` turns off the system's
   ring around a macOS text field. If either fails, the contract changes first.
+  The implementation's probe (#30, 2026-11-18) answered it: a `@FocusState` the style binds to the field reads its
+  focus, and `@Environment(\.isFocused)` does not; `focusEffectDisabled()` does not turn off the ring of the default,
+  bezeled macOS field, but the field drawn in the system's plain style inside westron's has no ring of its own. The
+  contract's `platforms.apple` records both.
 - **The ring's place** (outside the outline, over it, or replacing it while focused) is left to the implementation and
   the snapshot matrix; the contract binds only its color and width.
 
