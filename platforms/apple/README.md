@@ -91,14 +91,24 @@ same command that stops a macOS one. Only the accessibility audit, half an hour 
 Open in Xcode 27.1: `platforms/apple/Catalog/Catalog.xcodeproj`. Without arguments, the catalog shows navigation
 across all entries. With `-WestronEntry <id>`, it shows one entry full screen; this is how
 `tools/apple/catalog-screenshot.sh` captures it. `-WestronAppearance light|dark`, `-WestronContrast standard|high` and
-`-WestronDynamicType <size>` set the conditions; `-WestronScrollAnchor <0…1>` holds a point of the entry's scroll
-content in view (the accessibility audit uses it).
+`-WestronDynamicType <size>` set the conditions, and `-WestronLegibilityWeight regular|bold` the system's Bold Text;
+`-WestronScrollAnchor <0…1>` holds a point of the entry's scroll content in view (the accessibility audit uses it).
+`catalog-screenshot.sh` has no option for the last two: the screenshot test reads them from
+`TEST_RUNNER_WESTRON_LEGIBILITY_WEIGHT` and `TEST_RUNNER_WESTRON_SCROLL_ANCHOR`, set before the script, with `--out`,
+since the file name does not show them:
+
+```sh
+TEST_RUNNER_WESTRON_LEGIBILITY_WEIGHT=bold tools/apple/catalog-screenshot.sh ios --entry typography-in-text \
+  --out .build/screenshots/ios-typography-in-text-bold.png
+```
 
 The Foundations section holds the token samples, each fitting one screenshot on an iPhone 17 and in the macOS window:
 `color-backgrounds` and `color-foregrounds` draw every color in the four themes side by side, each cell under its own
 color scheme and contrast; `color-categories` draws the list colors and `color-status` the statuses and the chart
 series in the catalog's theme; `color-in-use` draws a task list, a table of deployments, notices and buttons with the
-semantic colors, the page the owner approves the palette on; `typography`,
+semantic colors, the page the owner approves the palette on; `typography` draws the text roles, and
+`typography-in-text` each role in Onest or Geist Mono through `.textRole(_:)` beside the same role as a part inside a
+`Text`, with the width each takes, so that accessibility5 and Bold Text show what a part of a `Text` does not follow;
 `space`, `shape` and `motion` show the rest, and `icons` draws every icon with its name at the size of body text. To
 review the colors in every mode:
 

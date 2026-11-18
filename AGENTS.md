@@ -69,7 +69,10 @@ A screenshot is how you see your work: open the PNG and look at it before you sa
 Parameters: `--entry <id>` (default `environment`), `--appearance light|dark`, `--contrast standard|high`,
 `--dynamic-type xSmall…accessibility5`, `--device "<simulator>"` (default `iPhone 17` or `$WESTRON_SIM_DEVICE`),
 `--out <file.png>`. Without `--out` the PNG goes to `.build/screenshots/<platform>-<id>[-<theme>][-hc][-<size>].png`,
-the log to `.build/logs/`. On macOS, screenshots need Automation Mode enabled once (`platforms/apple/README.md`).
+the log to `.build/logs/`. Bold Text and a scroll position have no option yet: set
+`TEST_RUNNER_WESTRON_LEGIBILITY_WEIGHT=bold` or `TEST_RUNNER_WESTRON_SCROLL_ANCHOR=<0…1>` before the command, with
+`--out`, since the file name does not show them. On macOS, screenshots need Automation Mode enabled once
+(`platforms/apple/README.md`).
 The snapshot matrix (#24) is the second approval gate's review surface: `tools/westron generate` writes each
 component's matrix from its contract into `WestronCatalog/Generated/`, and the capture goes to
 `.build/snapshot-matrix/<platform>/` (`--out <dir>` elsewhere). The text sizes, the parts of a sheet that does not fit

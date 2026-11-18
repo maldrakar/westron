@@ -17,6 +17,7 @@ public enum Catalog {
         .colorStatus,
         .colorInUse,
         .typography,
+        .typographyInText,
         .space,
         .shape,
         .controls,
