@@ -194,8 +194,9 @@ final class ButtonBehaviorTests: XCTestCase {
     /// such a button, and the test fails if the platform ever covers less than the target.
     ///
     /// macOS: the hit area is the drawn button, 24 pt, not the target (the contract's `platforms.apple.macos`, the
-    /// owner's decision of 2026-11-18, #75). A click on the button reaches it; a click 1.5 pt below it, inside what the
-    /// target would cover, and one 3 pt below, past the target, miss.
+    /// owner's decision of 2026-11-18, #75). A click 1.5 pt inside its bottom edge, off the label of this outlined
+    /// button, reaches it; a click 1.5 pt below it, inside what the target would cover, and one 3 pt below, past the
+    /// target, miss. Every variant, size and icon-only is clicked the same way in ButtonHitAreaTests.
     @MainActor
     func testSmallButtonHitArea() {
         let small = button(ID.small)
@@ -206,8 +207,8 @@ final class ButtonBehaviorTests: XCTestCase {
         #if os(macOS)
             // The element's frame is the drawn button's, which the clicks are measured from.
             XCTAssertEqual(small.frame.height, 24, accuracy: 0.5)
-            press(small)
-            XCTAssertEqual(accepted, 1, "a click on the drawn button did not reach it")
+            pressBelow(-1.5)
+            XCTAssertEqual(accepted, 1, "a click 1.5 pt inside the drawn button's bottom edge did not reach it")
             // Past the double-click interval, so the next click is not taken as the second of a pair.
             Thread.sleep(forTimeInterval: NSEvent.doubleClickInterval)
             pressBelow(1.5)

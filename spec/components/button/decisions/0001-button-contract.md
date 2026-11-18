@@ -74,7 +74,9 @@ and the parity lint (#21) are proved on it before a second component starts. The
     padding outside, so the drawn and laid out size stay; growing the layout frame to 28 pt; the drawn 24 pt as the
     hit area.
   - **Chosen: on macOS the hit area is the drawn button; size s takes clicks in its 24 pt.** It is a recorded platform
-    difference, in the contract's `platforms.apple.macos`, not a gap.
+    difference, in the contract's `platforms.apple.macos`, not a gap. The whole drawn button takes clicks, the empty
+    inside of `secondary` and `tertiary` included: until the style gave the button its drawn shape to hit-test,
+    macOS took clicks on those two only where they paint, the label and the border.
   - Why: the grown frame overlaps a neighbor closer than 4 pt, and the later sibling wins there, inside the
     neighbor's drawn area: with no spacing, a click 1 pt inside the first button ran the second (measured with real
     clicks in the review of #69); the style cannot see its neighbors. A layout frame of 28 pt breaks the alignment
