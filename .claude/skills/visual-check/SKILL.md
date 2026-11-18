@@ -29,7 +29,8 @@ tools/apple/catalog-screenshot.sh macos --entry <id> --appearance dark
 
 The script prints the path to the PNG. The captures are independent: run them one at a time and do not stop at the first error.
 
-For a component, also capture its snapshot matrix, every combination of its contract in the four themes:
+For a component, also capture its snapshot matrix, every combination of its contract in the four themes at `large` (on
+iOS also light at `xSmall` and `accessibility5`), with supplementary sheets marked "not a contract option":
 
 ```sh
 tools/apple/snapshot-matrix.sh ios   --component <id>   # prints the path to index.html
