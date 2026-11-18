@@ -151,7 +151,10 @@ enum ButtonState: String, CaseIterable, Sendable {
   says which action is the primary one, and a reader never has to know a default. The contract gives a variant no
   default, and the schema allows an enum option without one.
 - **No value may share a name with a system style of the same control.** With westron's overload in scope,
-  `.buttonStyle(.plain)` would be ambiguous (decisions/0003). The validator rejects such a value (#18).
+  `.buttonStyle(.plain)` would still compile, and silently resolve to westron's non-generic overload, which shadows
+  the system style: the system's `.plain` would be reachable only as `PlainButtonStyle()`, and existing product code
+  would change meaning without a diagnostic (decisions/0003, note of 2026-11-18). The validator rejects such a value
+  (#18).
 
 ### Sizes and `controlSize`
 

@@ -115,7 +115,7 @@ included, and for an option whose values are tokens the group's tokens in token 
 rest and each state alone, the combinations a constraint of severity `error` leaves out, what each Apple OS draws
 differently (`platforms.apple`), and the sheets. A sheet fixes every option but the variant (or, without one, the first
 option that is not a bool): its values are the columns, rest and the states the rows, at most 3 × 6, so it fits an
-iPhone 17 in portrait and the macOS window. Text, with no states, has six sheets of one row, three roles each.
+iPhone 17 in portrait and the macOS window. Text, with no states, has six sheets of one row: five of three roles each, and the last of two.
 The hand-written `<Component>MatrixCell` (Button's is in `Components/ButtonPages.swift`, Text's in
 `Components/TextPages.swift`) draws one cell with the real component: Button's with hover, focus and pressed forced
 as on the `button-states` pages, disabled and loading with the real modifiers; Text's with `.textRole(_:)`. The rows of a state the OS never enters are left
