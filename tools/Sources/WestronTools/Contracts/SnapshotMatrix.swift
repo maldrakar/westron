@@ -2,8 +2,9 @@
 /// of its states, less what a constraint forbids, split into sheets that each fit one screenshot.
 ///
 /// - The axes are the contract's options in its order: an enum option's values, `false` and `true` for a bool option,
-///   and an option that is the system's own API on Apple (`platforms.apple.systemOptions`, Button's `role`) like any
-///   other, since it changes the drawing.
+///   the tokens of its group for an option whose values are tokens (Text's `role`: the seventeen typography tokens, in
+///   token order, read from `tokens/`), and an option that is the system's own API on Apple
+///   (`platforms.apple.systemOptions`, Button's `role`) like any other, since it changes the drawing.
 /// - Each combination of the axes is drawn at rest and in each state of the contract alone: the matrix shows what each
 ///   state does, and the contract's cases resolve states held at once.
 /// - A combination that breaks a constraint of severity `error` is left out (spec/conventions.md, "Constraints between
@@ -26,11 +27,28 @@
 public struct SnapshotMatrix: Equatable, Sendable {
     public struct Axis: Equatable, Sendable {
         public let name: String
-        /// An enum option's values in the contract's order; `false`, `true` for a bool option.
+        /// An enum option's values in the contract's order; `false`, `true` for a bool option; a token option's
+        /// tokens by their path after the group, in token order.
         public let values: [String]
         public let isBool: Bool
         /// The system API that carries the option on Apple, such as `SwiftUI.ButtonRole`; nil for westron's own.
         public let systemType: String?
+        /// The token group a token option takes its values from, `typography`; nil for any other option.
+        public let tokenGroup: String?
+        /// The Swift accessor of the group's tokens on Apple, `Westron.TextRole` (`AppleComponents.tokenAccessors`).
+        public let accessor: String?
+
+        init(
+            name: String, values: [String], isBool: Bool = false, systemType: String? = nil, tokenGroup: String? = nil,
+            accessor: String? = nil
+        ) {
+            self.name = name
+            self.values = values
+            self.isBool = isBool
+            self.systemType = systemType
+            self.tokenGroup = tokenGroup
+            self.accessor = accessor
+        }
     }
 
     public struct Combination: Hashable, Sendable {
@@ -103,27 +121,43 @@ public struct SnapshotMatrix: Equatable, Sendable {
     public let platforms: [Platform]
     public let sheets: [Sheet]
 
+    /// `tokens` gives the values of an option whose values are tokens; a contract without one needs none.
     /// - Throws: `ContractProblem` when a value an Apple OS drops has no fallback, which `spec check` rejects first;
-    ///   when an option takes its values from a token group, which the matrix does not support yet.
-    public init(_ contract: ComponentContract, source: String) throws(ContractProblem) {
+    ///   when an option takes its values from a token group without the tokens, or from a group that has no accessor
+    ///   of its own on Apple (`AppleComponents.tokenAccessors`), for the cell to take its value as.
+    public init(_ contract: ComponentContract, source: String, tokens: ContractTokens? = nil) throws(ContractProblem) {
         component = contract.id
         let systemOptions = contract.apple?.systemOptions ?? [:]
         var axes: [Axis] = []
         for option in contract.options {
             switch option.kind {
             case .enumeration(let values, _):
-                axes.append(
-                    Axis(name: option.name, values: values, isBool: false, systemType: systemOptions[option.name]))
+                axes.append(Axis(name: option.name, values: values, systemType: systemOptions[option.name]))
             case .bool:
                 axes.append(
                     Axis(
                         name: option.name, values: ["false", "true"], isBool: true,
                         systemType: systemOptions[option.name]))
             case .tokenGroup(let group, _):
-                throw ContractProblem(
-                    source: source, path: .root.key("options").key(option.name),
-                    "\(option.name) takes its values from the tokens of \(group): the snapshot matrix does not "
-                        + "support such an option yet")
+                let path = DocumentPath.root.key("options").key(option.name)
+                guard let accessor = AppleComponents.tokenAccessors[group] else {
+                    throw ContractProblem(
+                        source: source, path: path.key("group"),
+                        "\(option.name) takes its values from the tokens of \(group), which have no accessor of their "
+                            + "own on Apple for a matrix cell to take them as (AppleComponents.tokenAccessors)")
+                }
+                guard let tokens else {
+                    throw ContractProblem(
+                        source: source, path: path,
+                        "\(option.name) takes its values from the tokens of \(group): the matrix needs the tokens")
+                }
+                let found = tokens.group(TokenPath(group))
+                guard found.problems.isEmpty, !found.values.isEmpty else {
+                    throw ContractProblem(
+                        source: source, path: path.key("group"), found.problems.joined(separator: "; "))
+                }
+                axes.append(
+                    Axis(name: option.name, values: found.values, tokenGroup: group, accessor: accessor))
             }
         }
         self.axes = axes
@@ -158,7 +192,8 @@ public struct SnapshotMatrix: Equatable, Sendable {
             let applePath = DocumentPath.root.key("platforms").key("apple")
             for os in ComponentContract.appleOSes {
                 var drawn: [(option: String, map: [(value: String, drawn: String)])] = []
-                for axis in axes where !axis.isBool && axis.systemType == nil {
+                // A token option has no platform restriction: spec check rejects one that names it.
+                for axis in axes where !axis.isBool && axis.systemType == nil && axis.tokenGroup == nil {
                     var map: [(value: String, drawn: String)] = []
                     for value in axis.values {
                         let target = try AppleComponents.API.drawn(

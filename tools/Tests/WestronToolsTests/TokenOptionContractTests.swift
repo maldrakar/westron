@@ -268,27 +268,91 @@ struct TokenOptionContractTests {
         #expect(contract.apple?.base == "SwiftUI.Text")
     }
 
-    @Test("generation: a draft extension generates nothing; an approved one is not supported yet")
+    @Test("generation: an extension gives API once approved, and the generator writes no file for it")
     func generation() throws {
         let draft = try ComponentContract(yaml: textFixture, source: textSource)
         #expect(!AppleComponents.generates(draft))
+        #expect(!AppleComponents.givesAPI(draft))
         #expect(try AppleComponents.files(for: [(draft, textSource)]) == [])
         let approved = try ComponentContract(
             yaml: replacing("status: draft", with: "status: approved"), source: textSource)
+        #expect(!AppleComponents.generates(approved), "no Swift file: the modifier is hand-written")
+        #expect(AppleComponents.givesAPI(approved))
+        #expect(try AppleComponents.files(for: [(approved, textSource)]) == [])
+        #expect(try AppleComponents.file(for: approved, source: textSource) == nil)
+    }
+
+    @Test("generation: the extension's API comes from the option's token accessor: .textRole(_: Westron.TextRole)")
+    func extensionAPI() throws {
+        let approved = replacing("status: draft", with: "status: approved")
+        let api = try AppleComponents.Extension(
+            ComponentContract(yaml: approved, source: textSource), source: textSource)
+        #expect(api.component == "Text")
+        #expect(api.base == "SwiftUI.Text")
+        #expect(api.control == "Text")
+        #expect(api.modifier == "textRole")
+        #expect(api.option == "role")
+        #expect(api.argumentType == "Westron.TextRole")
+        #expect(api.defaultValue == nil)
+        #expect(api.onBase, "Text's own modifiers return Text, so it gets the twin")
+        #expect(AppleComponents.tokenAccessors == ["typography": "Westron.TextRole"])
+        let withDefault = try AppleComponents.Extension(
+            ComponentContract(
+                yaml: replacing(
+                    "{ type: tokens, group: typography }",
+                    with: "{ type: tokens, group: typography, default: body.regular }",
+                    in: approved), source: textSource), source: textSource)
+        #expect(withDefault.defaultValue == ".body.regular")
+    }
+
+    @Test("generation: an extension of another shape fails, naming the place")
+    func extensionShapes() throws {
+        let approved = replacing("status: draft", with: "status: approved")
+        func problems(_ yaml: String) throws -> [String] {
+            do {
+                _ = try AppleComponents.files(for: [(ComponentContract(yaml: yaml, source: textSource), textSource)])
+                return []
+            } catch let error as AppleComponents.Problems {
+                return error.problems.map { "\($0.place): \($0.message)" }
+            }
+        }
+        let shape =
+            "an extension-on-system-control takes one option, whose values are tokens, as the argument of its "
+            + "modifier, and no states: the conventions give it no other API yet (spec/conventions.md, \"Extensions "
+            + "of a system view\")"
+        #expect(
+            try problems(
+                replacing(
+                    "  role: { type: tokens, group: typography }\n",
+                    with: "  role: { type: tokens, group: typography }\n  wraps: { type: bool, default: true }\n",
+                    in: approved)) == ["options: " + shape])
+        #expect(
+            try problems(replacing("slots: [label]\n", with: "states: [hover]\nslots: [label]\n", in: approved)) == [
+                "states: " + shape
+            ])
+        let other = try problems(replacing("group: typography", with: "group: color.text", in: approved))
+        #expect(other.count == 1)
+        #expect(
+            other.first?.hasPrefix(
+                "options.role.group: color.text has no token accessor of its own on Apple (typography: "
+                    + "Westron.TextRole)") == true)
+        // Two extensions that both add .textRole(_:) would not compile.
+        let twice = replacing("id: text", with: "id: label", in: approved)
         do {
-            _ = try AppleComponents.files(for: [(approved, textSource)])
-            Issue.record("an approved extension-on-system-control generated")
+            _ = try AppleComponents.files(for: [
+                (ComponentContract(yaml: approved, source: textSource), textSource),
+                (ComponentContract(yaml: twice, source: "spec/components/label/label.spec.yaml"), "label.yaml"),
+            ])
+            Issue.record("two .textRole(_:) modifiers generated")
         } catch let error as AppleComponents.Problems {
             #expect(
-                error.problems.map(\.description) == [
-                    "\(textSource): platforms.apple.strategy: the generator does not support "
-                        + "extension-on-system-control yet: a contract of it stays draft until the generator, the API "
-                        + "parity lint and the snapshot matrix give it API (spec/conventions.md)"
+                error.problems.map(\.message) == [
+                    "Label and Text (\(textSource)) both add .textRole(_:): two modifiers of one signature do not compile"
                 ])
         }
     }
 
-    @Test("generation: a style does not take a token-group option yet, nor does the snapshot matrix")
+    @Test("generation: a style does not take a token-group option yet; the matrix takes one only with an accessor")
     func styleWithTokenOption() throws {
         let yaml = """
             id: button
@@ -309,20 +373,108 @@ struct TokenOptionContractTests {
         let contract = try ComponentContract(yaml: yaml, source: source)
         #expect(throws: ContractProblem.self) { try AppleComponents.file(for: contract, source: source) }
         do {
-            _ = try SnapshotMatrix(contract, source: source)
-            Issue.record("the matrix took a token-group option")
+            _ = try SnapshotMatrix(contract, source: source, tokens: tokens)
+            Issue.record("the matrix took a token-group option without an accessor")
         } catch {
             #expect(
                 error.description
-                    == "\(source): options.ink: ink takes its values from the tokens of color.text: the snapshot "
-                    + "matrix does not support such an option yet")
+                    == "\(source): options.ink.group: ink takes its values from the tokens of color.text, which have "
+                    + "no accessor of their own on Apple for a matrix cell to take them as "
+                    + "(AppleComponents.tokenAccessors)")
         }
     }
 
-    @Test("API parity: the text-role adapters stay reviewed adapters; other Text API is reported with the reason")
+    @Test("matrix: a token option's axis is its group's tokens, in token order; without the tokens it fails")
+    func matrixOfTokens() throws {
+        let contract = try ComponentContract(
+            yaml: replacing("status: draft", with: "status: approved"), source: textSource)
+        let ordered = ContractTokens(
+            everywhere: tokens.everywhere, somewhere: tokens.somewhere, primitive: tokens.primitive,
+            types: tokens.types,
+            order: ["typography.heading.large", "typography.body.regular", "typography.body.strong"])
+        let matrix = try SnapshotMatrix(contract, source: textSource, tokens: ordered)
+        #expect(matrix.axes.map(\.name) == ["role"])
+        #expect(matrix.axes.first?.values == ["heading.large", "body.regular", "body.strong"])
+        #expect(matrix.axes.first?.tokenGroup == "typography")
+        #expect(matrix.axes.first?.accessor == "Westron.TextRole")
+        #expect(matrix.axes.first?.isBool == false && matrix.axes.first?.systemType == nil)
+        #expect(matrix.states == [])
+        #expect(matrix.columnAxis == "role")
+        #expect(matrix.combinations.map(\.values) == [["heading.large"], ["body.regular"], ["body.strong"]])
+        #expect(matrix.combinations.allSatisfy { $0.state == nil })
+        #expect(matrix.platforms == [], "a token option has no platform restriction")
+        #expect(matrix.sheets.map(\.id) == ["all"])
+        // Without an order, the values are sorted.
+        #expect(
+            try SnapshotMatrix(contract, source: textSource, tokens: tokens).axes[0].values == [
+                "body.regular", "body.strong", "heading.large",
+            ])
+        do {
+            _ = try SnapshotMatrix(contract, source: textSource)
+            Issue.record("the matrix took a token option without the tokens")
+        } catch {
+            #expect(
+                error.description
+                    == "\(textSource): options.role: role takes its values from the tokens of typography: the matrix "
+                    + "needs the tokens")
+        }
+    }
+
+    @Test("matrix: westron's Text contract, approved, is the seventeen roles in token order, on six sheets")
+    func textMatrix() throws {
+        let resolver = repositoryRoot.appendingPathComponent(TokenCheck.defaultResolver).path
+        let real = try ContractTokens(Resolution(resolverFile: resolver))
+        let text = try String(contentsOf: repositoryRoot.appendingPathComponent(textSource), encoding: .utf8)
+        let contract = try ComponentContract(yaml: text, source: textSource)
+        #expect(contract.status == "approved")
+        let matrix = try SnapshotMatrix(contract, source: textSource, tokens: real)
+        #expect(
+            matrix.axes.first?.values == [
+                "heading.large", "heading.medium", "heading.small", "heading.overline", "body.regular", "body.strong",
+                "callout.regular", "callout.strong", "subheadline.regular", "subheadline.medium", "subheadline.strong",
+                "footnote.regular", "footnote.medium", "footnote.strong", "caption.medium", "code.regular",
+                "code.strong",
+            ])
+        #expect(matrix.combinations.count == 17)
+        #expect(matrix.sheets.map(\.columns.count) == [3, 3, 3, 3, 3, 2])
+        #expect(matrix.sheets.first?.id == "all_columns-1")
+        #expect(matrix.sheets.allSatisfy { $0.rows == [nil] })
+
+        let files = try AppleSnapshotMatrix.files(for: [(contract, textSource)], tokens: real)
+        #expect(
+            files.map(\.path) == [
+                "platforms/apple/Sources/WestronCatalog/Generated/Text+Matrix.swift",
+                AppleSnapshotMatrix.registryFile,
+            ])
+        let swift = files[0].contents
+        #expect(swift.contains("    /// Text's matrix: 17 role at rest (the contract has no states) = 17 combinations"))
+        #expect(swift.contains("    ) { TextMatrixCell(TextMatrixValues($0)) }\n"))
+        #expect(swift.contains("    private let role: Westron.TextRole\n"))
+        #expect(swift.contains("    typealias Fields = (role: Westron.TextRole, state: String?)\n"))
+        #expect(swift.contains("        self.role = Self.roleTokens[combination.values[0]]!\n"))
+        #expect(swift.contains("    private static let roleTokens: [String: Westron.TextRole] = [\n"))
+        #expect(swift.contains("        \"heading.large\": .heading.large,\n"))
+        #expect(swift.contains("        \"code.strong\": .code.strong,\n"))
+        #expect(files[1].contents.contains("    public static let all: [ComponentMatrix] = [.text]\n"))
+        // westron's own file on disk is this generation: generate --check holds it too.
+        let onDisk = try String(contentsOf: repositoryRoot.appendingPathComponent(files[0].path), encoding: .utf8)
+        #expect(onDisk == swift)
+    }
+
+    @Test("ContractTokens keeps the resolver's token order for a group's values")
+    func tokenOrder() throws {
+        let resolver = repositoryRoot.appendingPathComponent(TokenCheck.defaultResolver).path
+        let real = try ContractTokens(Resolution(resolverFile: resolver))
+        let typography = real.order.filter { $0.names.first == "typography" }.map(\.description)
+        #expect(typography.first == "typography.heading.large")
+        #expect(typography.last == "typography.code.strong")
+        #expect(typography.count == 17)
+    }
+
+    @Test("API parity: an approved extension's modifier is expected from the contract; its twin when declared")
     func apiParity() throws {
         let root = "WestronUI"
-        let adapters = """
+        let modifier = """
             import SwiftUI
             import WestronTokens
 
@@ -331,24 +483,58 @@ struct TokenOptionContractTests {
             }
 
             """
-        func check(_ status: String, extra: String = "") throws -> [String] {
+        let twin = """
+            extension Text {
+                public func textRole(_ role: Westron.TextRole) -> Text { self }
+            }
+
+            """
+        func check(
+            _ status: String, adapters: String = modifier, extra: String = "", pending: Set<String> = ["SwiftUI.Text"]
+        ) throws -> [String] {
             let yaml = replacing("status: draft", with: "status: \(status)")
             let contract = APIParity.Contract(
                 contract: try ComponentContract(yaml: yaml, source: textSource), source: textSource, text: yaml)
             var files = [(path: "\(root)/TokenAdapters.swift", text: adapters)]
             if !extra.isEmpty { files.append((path: "\(root)/Text.swift", text: extra)) }
-            return APIParity.check(contracts: [contract], files: files, sourceRoot: root).problems.map(\.description)
+            return APIParity.check(contracts: [contract], files: files, sourceRoot: root, pendingTwins: pending)
+                .problems.map(\.description)
         }
-        #expect(try check("draft") == [])
+        // Approved: the modifier is expected; the twin is pending, so it passes with and without it.
         #expect(try check("approved") == [])
-        let draft = try check("draft", extra: "public enum TextRoleName { case body }\n")
+        #expect(try check("approved", adapters: modifier + twin) == [])
+        // Once the twin is no longer pending, a missing one is reported.
+        #expect(try check("approved", adapters: modifier + twin, pending: []) == [])
+        #expect(
+            try check("approved", pending: []) == [
+                "\(textSource):11: missing: Text's modifier on Text, `public func textRole(_: Westron.TextRole) -> "
+                    + "Text` in extension Text"
+            ])
+        // A missing or changed modifier is reported; so is a changed twin.
+        #expect(
+            try check("approved", adapters: "import SwiftUI\n") == [
+                "\(textSource):11: missing: Text's modifier, `public func textRole(_: Westron.TextRole) -> some View` "
+                    + "in extension View"
+            ])
+        let changed = try check(
+            "approved",
+            adapters: modifier.replacingOccurrences(of: "(_ role: Westron.TextRole)", with: "(_ role: Westron.Color)"))
+        #expect(changed.count == 1)
+        #expect(changed.first?.contains("Text's modifier differs from the contract") == true)
+        let changedTwin = try check(
+            "approved", adapters: modifier + twin.replacingOccurrences(of: "-> Text", with: "-> some View"))
+        #expect(changedTwin.count == 1)
+        #expect(changedTwin.first?.contains("Text's modifier on Text differs from the contract") == true)
+        // It is no longer an adapter: under a draft contract it is reported as component API without a contract.
+        let draft = try check("draft")
         #expect(draft.count == 1)
         #expect(draft.first?.contains("its contract (\(textSource)) is draft, and a draft has no API") == true)
+        // Other API named as Text's is reported, with the reason.
         let approved = try check("approved", extra: "public enum TextRoleName { case body }\n")
         #expect(approved.count == 1)
         #expect(
             approved.first?.contains(
-                "its contract (\(textSource)) is an extension-on-system-control, whose API the generator does not give "
-                    + "yet") == true)
+                "TextRoleName is named as Text's API, which Text's contract (\(textSource)) does not give through the "
+                    + "conventions") == true)
     }
 }

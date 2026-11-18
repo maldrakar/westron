@@ -40,7 +40,7 @@ decisions/0003 rejected.
 |---|---|---|---|---|
 | **Component id and naming** | System control: no westron type. The contract binds to the system control (`Button`), and westron adds an overload of its style modifier. Own component: a `View` named after the id in UpperCamelCase (`empty-state` → `EmptyState`), no prefix. Generated types are `<Component><Option>`: `ButtonVariant`, `ButtonSize`. A name that would collide with a SwiftUI type is recorded in the `platforms` block (decisions/0003, point 3) | System control: the native element (`<button>`) with westron's CSS. Own component: a custom element, whose name must contain a hyphen, so it differs from the contract's and the `platforms` block records it; the namespace is decided in #40 | System control: the stock widget (`gtk::Button`) with westron's style classes and an extension trait. Own component: a GObject subclass, `Badge` in westron's crate; its GType name carries the library's namespace, as every GTK library's does, and the `platforms` block records it | System control: the Material3 composable inside `WestronTheme`. Own component: a `@Composable` function named after the id in UpperCamelCase. Where Material3 has a composable of the same name (`Badge`), the strategy differs from Apple's and the `platforms` block records it |
 | **Enum option: the variant** | A generated `public enum ButtonVariant: String, CaseIterable, Sendable`; cases are the contract's values in lowerCamelCase. It is the first, unlabeled argument of the style overload and has no default, so it is always written: `.buttonStyle(.primary, size: .m)`, `.buttonStyle(.secondary)`; the contract gives the variant no default. A value must not match a system style's static name (`plain`, `bordered`, …); the validator checks it (#18). Another enum option is a labeled argument named after it. Own component: Q2 | A `variant` attribute and property on a custom element; on a native element a class or data attribute (#40) | A Rust `enum ButtonVariant { Primary, … }` that adds a CSS class: the stock class where one exists (`.suggested-action`, `.destructive-action`), westron's own otherwise. The value-to-class map is in the `platforms` block | A generated `enum class ButtonVariant { Primary, … }` passed as a parameter; the variant picks westron's colors and shape for the Material3 composable, through `ButtonDefaults`-style factories or the Compose Style API, decided in phase 8 |
-| **Option whose values are tokens** (`type: tokens`, `group: typography`) | The accessor of the token group, which the token generator already writes (decisions/0010): `Westron.TextRole` for `typography`, its values the group's tokens, `.heading.large`. No `<Component><Option>` enum is generated, since the values are the tokens', and its names follow them. What generation, the parity lint and the snapshot matrix do with such an option is Q6 | A class per value on the element, named from the token path; the prefix is decided in #40 | A style class per value, named from the token path | The theme's value for the token, through `WestronTheme` |
+| **Option whose values are tokens** (`type: tokens`, `group: typography`) | The accessor of the token group, which the token generator already writes (decisions/0010): `Westron.TextRole` for `typography`, its values the group's tokens, `.heading.large`. No `<Component><Option>` enum is generated, since the values are the tokens', and its names follow them. The parity lint expects the accessor as the argument's type, and the snapshot matrix enumerates the group's tokens in token order (below, "Extensions of a system view") | A class per value on the element, named from the token path; the prefix is decided in #40 | A style class per value, named from the token path | The theme's value for the token, through `WestronTheme` |
 | **Size option** | A generated `public enum ButtonSize` with the contract's values `s`, `m`, `l`, never `small/regular/large`. A labeled `size:` argument of the style overload. When the call leaves it out, the size comes from `@Environment(\.controlSize)`: `mini` and `small` → `s`, `regular` → `m`, `large` and `extraLarge` → `l`; an explicit `size:` wins. What `size:` does to `controlSize` inside the label is Q5 | A `size` attribute (`size="m"`) or a class, sizes in westron's CSS | A Rust `enum ButtonSize { S, M, L }` that adds westron's own size class: libadwaita has no size classes | `enum class ButtonSize { S, M, L }` as a parameter |
 | **Bool option** | A labeled `Bool` argument of the style overload, named as in the contract, with the contract's default: `.buttonStyle(.primary, size: .m, iconOnly: true)`. Not an environment modifier, which would make the option look like a state, and not a system modifier the style cannot read (`.labelStyle(.iconOnly)`, see "Slots"). A bool that is a state follows the state rows | A boolean attribute, present or absent; an absent attribute is `false` (Q1) | A boolean GObject property, or a style class | A `Boolean` parameter with the contract's default |
 | **States the system control has** (pressed, hover, focus, disabled) | The system owns them, and the style reads them: pressed is `configuration.isPressed`, disabled is `@Environment(\.isEnabled)` set by `.disabled(_:)`, focus is `@Environment(\.isFocused)`, hover is `onHover`. Touch iOS and watchOS never enter hover, and `onHover` does not exist on watchOS. The system draws the focus ring (chapter 08). Where states hold at once, the first matching case of a binding wins, as the contract orders them | CSS pseudo-classes: `:active`, `:hover`, `:focus-visible`, `:disabled`; a native element still matches `:hover` while disabled, and `:hover` and `:active` while `aria-busy`, so westron's CSS excludes what the contract excludes | CSS pseudo-classes `:active`, `:hover`, `:focus-visible`, `:disabled`; disabled is `set_sensitive(false)` | `interactionSource` (`collectIsPressedAsState`, `collectIsHoveredAsState`, `collectIsFocusedAsState`); disabled is the `enabled = false` parameter, Compose's positive name |
@@ -307,10 +307,23 @@ contract says so with `strategy: extension-on-system-control` and the view as it
 - **The base is checked.** `SystemStyles.withoutStyle` lists the bases with no style modifier, and on macOS a test
   checks that SwiftUI declares no `<control>Style` for them. `spec check` rejects an extension on a base that takes a
   style (`SwiftUI.Button`: westron gives it one) and a style on a base of `withoutStyle`.
-- **Not generated yet.** The text-role extension was written by hand with the tokens (decisions/0011, 0013), and the
-  parity lint reviews it in its list of adapters. Generation fails on an approved `extension-on-system-control`, as
-  not supported yet, until the generator, the lint and the snapshot matrix support the strategy (Q6), so such a
-  contract stays draft until then.
+- **The name and the type come from the token accessor.** The option's group names the accessor the token
+  generator writes for its tokens (`AppleComponents.tokenAccessors`: `typography` → `Westron.TextRole`), and the
+  modifier is that accessor's type name in lowerCamelCase: `Westron.TextRole` → `textRole`. So the contract names
+  neither, and neither can drift: a group with another accessor would give another modifier. The one shape the
+  conventions give an extension is one option, whose values are tokens, as the modifier's only, unlabeled argument,
+  with the contract's default as its default, and no states; generation fails on any other until a contract needs it.
+- **Hand-written, held to the contract** (the former question 6, settled with the Text contract, #27). The generator
+  writes no file for an extension: the modifier's body is the whole implementation (the font, the tracking from the
+  drawn size, the Bold Text weight), and the names a generated signature would carry are already generated, the
+  values by the token generator and the modifier and its type by the rule above. A generated `textRole` could only
+  forward to a hand-written one, two declarations for one. Instead the API parity lint expects, from the contract,
+  `public func textRole(_: Westron.TextRole) -> some View` in `extension View` and, on a base of
+  `SystemStyles.returningBase`, `public func textRole(_: Westron.TextRole) -> Text` in `extension Text`, and reports
+  either missing, changed or doubled (a twin still being written, in `APIParity.pendingTwins`, only when changed). `Font.init(_: Westron.TextRole)` stays a reviewed adapter: it turns a token
+  into a SwiftUI value, as `Color.init(_: Westron.Color)` does, and adds no modifier.
+- **The snapshot matrix** draws an extension as it draws a style: its axis is the group's tokens in token order (the
+  seventeen roles), its cell the hand-written `TextMatrixCell` with the real `.textRole(_:)`.
 
 ### Own components, when no system control exists
 
@@ -375,9 +388,9 @@ left open, and the last one what the size question left open.
 5. **`controlSize` beyond the mapping.** Does an explicit `size:` also set `controlSize` for the system controls
    inside the label, such as the loading `ProgressView`? Does the `compact` density also set `controlSize(.small)`
    on its subtree (chapter 06, question 2)?
-6. **The generated layer of an extension and of an option whose values are tokens** (Text, #27). (a) Generate the
-   signature of the extension from the contract, `public func textRole(_ role: Westron.TextRole) -> some View` and
-   its `Text` twin, and have the parity lint expect them instead of listing them as adapters; the matrix enumerates
-   the group's tokens. (b) Keep the extension hand-written, and have the lint expect its signature from the contract
-   and the matrix read the tokens. Either way, the name of the modifier (`textRole`, not `text`) and the accessor
-   type (`Westron.TextRole`) must come from somewhere the contract or the tokens name.
+
+The former question 6, the generated layer of an extension and of an option whose values are tokens, was settled in
+the Text work (#27) as its option (b), with the modifier's name and type derived from the token accessor ("Extensions
+of a system view"); the owner reviews it with that pull request. Option (a), generating the signature, was set
+aside: it would forward to a hand-written body, and the generated `Text` twin would be a second declaration of the
+hand-written one.

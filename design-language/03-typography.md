@@ -25,6 +25,10 @@ and `tokens/primitive/font.tokens.json`.
 - **westron ships its two fonts.** It ships static instances of the weights its roles use: Onest SemiBold and Bold,
   Geist Mono Regular and SemiBold, each with its license. On Apple they are registered the first time a role needs
   one, so a product sets up nothing (decisions/0011).
+- **The watch draws every role in the system font.** On its small screen the platform's face reads best
+  (`research_notes/type-and-icons.md`, 3.1), so on watchOS a role keeps its text style, its weight and its tracking
+  in the system font, and the code roles take the system's monospaced design. Onest and Geist Mono are not used there
+  (the Text contract, `platforms.apple.watchos`).
 - **A missing font falls back to the system's.** Each family token names its fallback: `system-ui` after Onest,
   `ui-monospace` after Geist Mono. If registration fails on Apple, every role uses the system font. A test checks that
   every font a role names is registered and draws Cyrillic.
@@ -70,6 +74,12 @@ prefix.
   and rows that add something. Everything else is regular.
 - **A new weight in Onest or Geist Mono costs a file.** westron ships only the instances its roles use, so such a
   weight means cutting a new one with the command in decisions/0011.
+- **Bold Text moves Onest and Geist Mono one weight up.** The HIG asks a custom font to honor the system's Bold Text
+  setting, and SwiftUI does that only for the system font. With the setting on, a role in Onest or Geist Mono draws
+  one weight heavier, as the system font does by itself: Onest SemiBold turns Bold and Bold turns ExtraBold, Geist
+  Mono Regular turns SemiBold and SemiBold turns Bold. So the code roles stay one weight apart. The step is a rule of
+  the platform's adapter, not a token: the four weights above stay the only weight tokens. It costs two instances,
+  Onest ExtraBold and Geist Mono Bold (the Text contract's decisions/0001).
 
 ## Size follows the platform
 
@@ -82,19 +92,24 @@ prefix.
 - **The Mac's text styles are smaller and fixed.** "macOS doesn't support Dynamic Type"
   ([HIG Typography](https://developer.apple.com/design/human-interface-guidelines/typography)). A text role takes the
   Mac's sizes from its text style by itself. A heading or code role asks the platform for its text style's size, so
-  it takes the Mac's sizes too and keeps its proportion to the text around it. The watch has no API for that size,
-  so there a heading takes the token's size, which is iOS's.
+  it takes the Mac's sizes too and keeps its proportion to the text around it. The watch draws every role in the
+  system font, so it takes the watch's sizes from the text style as well.
 - **Off Apple, the split holds.** A heading role sets Onest, and body text stays in the platform's font. How the roles
   map to libadwaita's title classes and to Material's type roles is decided in those platforms' phases (chapter 09).
 
 ## Tracking and line height
 
+- **Tracking is a percentage of the drawn size.** A role's tracking is its token's `letterSpacing` over its
+  `fontSize`, applied to the size the font is actually drawn at, on every platform and at every text size. Fixed
+  points would be relatively smaller at the largest Dynamic Type sizes and relatively larger at the Mac's smaller
+  ones, so the face would not look the same at every size. The tokens keep points at the base size, since DTCG has no
+  `em` for a dimension.
 - **Headings are tracked in by 1 % of their size.** Spacing that suits text looks loose at a heading's size, so
   headings are drawn a little tighter.
 - **The overline is tracked out by 6 %.** Capitals at text spacing crowd each other. Spaced apart, a short label in
   capitals reads at a glance.
 - **On Apple, `.textRole(_:)` applies the tracking.** A SwiftUI font cannot carry tracking, so a view sets a heading
-  with `.textRole(.heading.large)`, which applies the font and the token's `letterSpacing` together (decisions/0013).
+  with `.textRole(.heading.large)`, which applies the font and its tracking together (decisions/0013).
   `Font(.heading.large)` alone gives the face without the tracking.
 - **On Apple, line height comes from the font.** The system font takes its leading from the text style; Onest and
   Geist Mono take theirs from their own metrics. Both follow Dynamic Type. The tokens carry the line heights of Apple's
@@ -116,12 +131,9 @@ prefix.
 
 ## Open questions
 
-1. **Tracking under Dynamic Type.** The tracking is a fixed number of points from the token. Should it grow with
-   Dynamic Type, as the font does?
-2. **Bold Text.** The HIG asks a custom font to honor Bold Text, and SwiftUI does not do that for one. Should a
-   SemiBold heading turn Bold under the setting, and should westron ship a heavier Onest for the Bold headings?
+The Text contract (#27) answered questions 1, 2 and 4 on 2026-11-18: tracking under Dynamic Type ("Tracking and line
+height"), Bold Text ("Weight") and the watch ("Three faces"). Question 3 keeps its number.
+
 3. **Tabular digits.** Should counts, times and numbers in tables use tabular digits, as a role, as an option of a
    role, or as a property of every role that shows numbers? Onest has them, and SwiftUI's `monospacedDigit()` gives
    them for the system font.
-4. **The watch.** Onest headings on watchOS, or the system font for every role on the watch, as the research suggests
-   (`research_notes/type-and-icons.md`, 3.1)?
