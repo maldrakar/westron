@@ -181,12 +181,17 @@ private struct ForegroundSample: View {
     }
 }
 
-/// The list colors in the catalog's own theme: a row per color, a column per role, each drawn as it is used.
+/// The list colors in the catalog's own theme: a row per color, a column per role, each drawn as it is used. At the
+/// accessibility text sizes eight columns do not fit a phone, so each color's name goes on a line above its samples,
+/// which wrap, in the order a line above them names (chapter 08: layout reflows, it never clips). The glyphs on the
+/// fills keep their proportion to the fill, which has a fixed size, so they stop growing at the default text size.
 private struct CategoryColorsPage: View {
     /// The roles in the order of the columns.
     private static let roles = [
         "background", "border", "icon", "text", "fill", "on-fill", "control", "on-control",
     ]
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         TokenPage(
@@ -195,59 +200,92 @@ private struct CategoryColorsPage: View {
                 + "its glyph, an outline, a dot, text, a fill and a glyph on it, a checked control's fill and its "
                 + "check. control stands out from every ground at 3:1, 4.5:1 in high contrast."
         ) {
-            Grid(alignment: .center, horizontalSpacing: .space75, verticalSpacing: SampleMetrics.rowSpacing) {
-                GridRow {
-                    Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
-                    ForEach(Self.roles.indices, id: \.self) { index in
-                        header(index, line: 0)
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: .space150) {
+                    TokenDetail("Each line: " + Self.roles.joined(separator: ", ") + ".")
+                    ForEach(Westron.Category.allCases, id: \.self) { category in
+                        VStack(alignment: .leading, spacing: .space50) {
+                            TokenName(category.rawValue)
+                            FlowLayout(spacing: .space150) {
+                                ForEach(Self.roles.indices, id: \.self) { index in
+                                    sample(index, category)
+                                }
+                            }
+                        }
                     }
                 }
-                GridRow {
-                    Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
-                    ForEach(Self.roles.indices, id: \.self) { index in
-                        header(index, line: 1)
-                    }
-                }
-                ForEach(Westron.Category.allCases, id: \.self) { category in
+            } else {
+                Grid(alignment: .center, horizontalSpacing: .space75, verticalSpacing: SampleMetrics.rowSpacing) {
                     GridRow {
-                        TokenName(category.rawValue)
-                            .gridColumnAlignment(.leading)
-                        tile(category)
-                        Circle()
-                            .strokeBorder(category.border, lineWidth: .stroke.regular)
-                            .frame(width: SampleMetrics.mark, height: SampleMetrics.mark)
-                        Circle()
-                            .fill(category.icon)
-                            .frame(width: Size.dot, height: Size.dot)
-                        Text("Aa")
-                            .textRole(.body.strong)
-                            .foregroundStyle(category.text)
-                        Circle()
-                            .fill(category.fill)
-                            .frame(width: SampleMetrics.mark, height: SampleMetrics.mark)
-                        Circle()
-                            .fill(category.fill)
-                            .overlay {
-                                Image(Westron.Icon.check)
-                                    .font(Font(.caption.medium).weight(.bold))
-                                    .foregroundStyle(category.onFill)
+                        Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
+                        ForEach(Self.roles.indices, id: \.self) { index in
+                            header(index, line: 0)
+                        }
+                    }
+                    GridRow {
+                        Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
+                        ForEach(Self.roles.indices, id: \.self) { index in
+                            header(index, line: 1)
+                        }
+                    }
+                    ForEach(Westron.Category.allCases, id: \.self) { category in
+                        GridRow {
+                            TokenName(category.rawValue)
+                                .gridColumnAlignment(.leading)
+                            ForEach(Self.roles.indices, id: \.self) { index in
+                                sample(index, category)
                             }
-                            .frame(width: SampleMetrics.mark, height: SampleMetrics.mark)
-                        Circle()
-                            .fill(category.control)
-                            .frame(width: SampleMetrics.mark, height: SampleMetrics.mark)
-                        Circle()
-                            .fill(category.control)
-                            .overlay {
-                                Image(Westron.Icon.check)
-                                    .font(Font(.caption.medium).weight(.bold))
-                                    .foregroundStyle(category.onControl)
-                            }
-                            .frame(width: SampleMetrics.mark, height: SampleMetrics.mark)
+                        }
                     }
                 }
             }
         }
+    }
+
+    /// The sample of one role of a color, drawn as the role is used.
+    @ViewBuilder
+    private func sample(_ index: Int, _ category: Westron.Category) -> some View {
+        switch Self.roles[index] {
+        case "background":
+            tile(category)
+        case "border":
+            Circle()
+                .strokeBorder(category.border, lineWidth: .stroke.regular)
+                .frame(width: SampleMetrics.mark, height: SampleMetrics.mark)
+        case "icon":
+            Circle()
+                .fill(category.icon)
+                .frame(width: Size.dot, height: Size.dot)
+        case "text":
+            Text("Aa")
+                .textRole(.body.strong)
+                .foregroundStyle(category.text)
+        case "fill":
+            Circle()
+                .fill(category.fill)
+                .frame(width: SampleMetrics.mark, height: SampleMetrics.mark)
+        case "on-fill":
+            disc(category.fill, mark: category.onFill)
+        case "control":
+            Circle()
+                .fill(category.control)
+                .frame(width: SampleMetrics.mark, height: SampleMetrics.mark)
+        default:
+            disc(category.control, mark: category.onControl)
+        }
+    }
+
+    /// A fill with a check on it, the glyph kept to the fill's size.
+    private func disc(_ fill: Westron.Color, mark: Westron.Color) -> some View {
+        Circle()
+            .fill(fill)
+            .overlay {
+                Image(Westron.Icon.check)
+                    .font(Font(.caption.medium).weight(.bold))
+                    .foregroundStyle(mark)
+                    .dynamicTypeSize(...DynamicTypeSize.large)
+            }
+            .frame(width: SampleMetrics.mark, height: SampleMetrics.mark)
     }
 
     /// A role's name above its column, on one of two lines in turn, so that a long name can be wider than the column.
@@ -272,6 +310,7 @@ private struct CategoryColorsPage: View {
                 Image(Westron.Icon.tray)
                     .textRole(.footnote.medium)
                     .foregroundStyle(category.text)
+                    .dynamicTypeSize(...DynamicTypeSize.large)
             }
             .frame(width: SampleMetrics.tile, height: SampleMetrics.tile)
     }
