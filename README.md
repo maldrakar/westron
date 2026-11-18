@@ -2,7 +2,7 @@
 
 A design system for everyday and technical products with a cross-platform core and a native UI on each platform.
 
-**Status:** phase 1 "Design language and tokens". There are DTCG tokens in four themes with a palette generator and a contrast check, the Apple token output (`WestronTokens`, `WestronUI`), a catalog app for iOS and macOS with screenshots, CI and a Claude Code setup. There are no components yet. The pilot product is [todo-app](https://github.com/maldrakar/todo-app): its screens decide which components come first, and it is the first to adopt westron's look.
+**Status:** phases 1 "Design language and tokens" and 2 "Contract and Button on Apple" are done; phase 3 "Primitives and forms (Apple)" is next. There are DTCG tokens in four themes with a palette generator and a contrast check, the Apple token output (`WestronTokens`, `WestronUI`), the component contract schema with its checks, the generator of API names, the public API parity lint, Button in SwiftUI (iOS and macOS, compiled for watchOS), a catalog app for iOS and macOS with screenshots, the accessibility audit and the snapshot matrix, CI and a Claude Code setup. The pilot product is [todo-app](https://github.com/maldrakar/todo-app): its screens decide which components come first, and it is the first to adopt westron's look.
 
 ## The idea
 
