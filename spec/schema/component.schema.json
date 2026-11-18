@@ -357,6 +357,19 @@
       "then": { "required": ["base"] },
       "else": { "properties": { "base": false } }
     },
+    "appleForm": {
+      "description": "The shape of an own component's API on Apple (spec/conventions.md, \"Own components\"): modifier, a modifier on View named after the component, for one that draws around the content it is given and lays nothing out (`.surface(.raised)`); view, a View type named after the component, for one that is a view of its own (`Rule()`).",
+      "enum": ["modifier", "view"]
+    },
+    "formRequirement": {
+      "description": "An own component on Apple names the shape of its API in `form`, which the generator and the API parity lint derive the API from; a style or an extension has its shape from its base and names none.",
+      "if": {
+        "properties": { "strategy": { "const": "own-component" } },
+        "required": ["strategy"]
+      },
+      "then": { "required": ["form"] },
+      "else": { "properties": { "form": false } }
+    },
     "platform": {
       "description": "A platform: planned, or its strategy with its restrictions.",
       "if": { "type": "object", "required": ["status"] },
@@ -386,10 +399,11 @@
         "type": "object",
         "required": ["strategy"],
         "additionalProperties": false,
-        "allOf": [{ "$ref": "#/$defs/baseRequirement" }],
+        "allOf": [{ "$ref": "#/$defs/baseRequirement" }, { "$ref": "#/$defs/formRequirement" }],
         "properties": {
           "strategy": { "$ref": "#/$defs/strategy" },
           "base": { "$ref": "#/$defs/base" },
+          "form": { "$ref": "#/$defs/appleForm" },
           "systemOptions": { "$ref": "#/$defs/systemOptions" },
           "options": { "$ref": "#/$defs/restrictedOptions" },
           "fallback": { "$ref": "#/$defs/fallback" },

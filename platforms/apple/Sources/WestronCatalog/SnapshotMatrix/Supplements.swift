@@ -4,7 +4,7 @@ extension ComponentMatrix.Supplement {
     /// sheets from the generated matrix, and `tools/apple/snapshot-matrix.sh` captures them in the same run and the same
     /// captures as the generated sheets. They are not catalog entries, so the accessibility audit does not walk them.
     static let all: [Self] = [
-        .buttonLabelWithoutIcon, .textFieldCardNotes, .textFieldSecure, .textFieldOnSurface,
+        .buttonLabelWithoutIcon, .surfaceNesting, .textFieldCardNotes, .textFieldSecure, .textFieldOnSurface,
         .textFieldOnSunken,
     ]
 }
