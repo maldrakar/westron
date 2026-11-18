@@ -172,20 +172,22 @@ private struct ButtonSurface<Label: View>: View {
             .animation(.fade, value: isHovered)
             .animation(.press, value: isPressed)
         }
-        // The hit area (chapter 08: at least the platform's recommended target) is the system's, not grown by a content
-        // shape, measured in CatalogUITests/ButtonBehaviorTests.swift (#23):
+        // The hit area (chapter 08: at least the platform's recommended target, except where the contract's platform
+        // block says otherwise) is the system's, not grown by a content shape, measured in
+        // CatalogUITests/ButtonBehaviorTests.swift (#23):
         // - iOS: the system's touch tolerance reaches about 16 pt past a 32 pt button, beyond the 44 pt target, and
         //   gives a tap between two buttons to the closer one. A content shape grown to the target gave every tap in
         //   the overlap to the later sibling, even one closer to the first, so westron adds none.
         // - watchOS: the only size, m, is drawn at the target.
-        // - macOS: a click outside the frame misses, whatever the content shape: size s keeps its drawn 24 pt, below
-        //   the recommended 28 (a contract gap, for the owner). Growing the frame does reach the target: padding the
-        //   look by 2 pt inside the system button and taking it back outside with a negative padding kept the drawn
-        //   and laid out size, and a click 1.5 pt below the drawn button reached it. But the grown frame overlaps a
-        //   neighbor closer than 4 pt, and the later sibling wins there, inside the neighbor's drawn area: with
-        //   `spacing: 0`, a click 1 pt inside the first button ran the second (measured in the review of #23 with
-        //   NSEvent clicks in a window, in an HStack of icon-only buttons and a VStack of buttons with labels). The
-        //   style cannot see its neighbors, so westron does not grow the frame.
+        // - macOS: a click outside the frame misses, whatever the content shape: size s takes clicks in its drawn
+        //   24 pt, below the recommended 28, as the contract's `platforms.apple.macos` records (the owner's decision
+        //   of 2026-11-18, #75). Growing the frame does reach the target: padding the look by 2 pt inside the system
+        //   button and taking it back outside with a negative padding kept the drawn and laid out size, and a click
+        //   1.5 pt below the drawn button reached it. But the grown frame overlaps a neighbor closer than 4 pt, and the
+        //   later sibling wins there, inside the neighbor's drawn area: with `spacing: 0`, a click 1 pt inside the
+        //   first button ran the second (measured in the review of #23 with NSEvent clicks in a window, in an HStack
+        //   of icon-only buttons and a VStack of buttons with labels). The style cannot see its neighbors, so westron
+        //   does not grow the frame.
         .contentShape(.accessibility, shape)
         #if os(macOS) || os(watchOS)
             // The system's focus ring follows the button's corners.

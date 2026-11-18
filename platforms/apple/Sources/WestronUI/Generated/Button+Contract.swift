@@ -20,7 +20,7 @@ public enum ButtonVariant: String, CaseIterable, Sendable {
 ///
 /// The height is size.control.s, m or l: 24, 32 and 40 with a pointer (macOS), 32, 44 and 52 on touch. It is a minimum,
 /// so the button grows with its text. The hit area is at least the platform's recommended target (chapter 08), also
-/// where the drawn height is smaller.
+/// where the drawn height is smaller, except where the contract's platforms block says otherwise.
 ///
 /// A call without `size:` takes the size from `controlSize`: mini and small → s, regular → m, large and extraLarge → l.
 /// An explicit `size:` wins.

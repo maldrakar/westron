@@ -112,6 +112,8 @@ The value for each platform lives in its platform token file, not in component c
 (#56): `size.control.m` is 44 on iOS, iPadOS and watchOS, the recommended target, and 32 on macOS, above its
 recommended 28. `size.control.s` is below the recommended size on every platform, 32 on touch and 24 on macOS, so a
 control drawn at it keeps a hit area of the recommended size around what it draws.
+A component's contract may record an exception: on macOS, Button's size s takes clicks in its drawn 24 pt
+(spec/components/button, decisions/0001).
 
 ## Keyboard and focus
 
