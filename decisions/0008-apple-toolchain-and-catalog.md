@@ -79,6 +79,15 @@ Date: 2026-11-14. Status: accepted.
   35 minutes. A test with a finding is never retried, so a rare finding still fails the leg; every retry is logged,
   warned on the run, and its logs are uploaded. One finding was transient too, on an element the bottom of the screen cut; such an element is now judged on
   the next screenful, which shows it whole. The legs stay informational checks, never required.
+  2026-11-18 (#74): the retry's estimate refused it where it was needed. A stall in the first entry of a
+  `testDefaultSettings` shard, 9 minutes into the leg, was estimated at 26 more minutes, since the stalled entry's
+  minutes counted as the time per entry; the retry would have taken 9–11. The estimate now uses only the entries
+  the first run finished without a failure and without an audit retried on the spot, and when there are none, a
+  time per entry for each test measured on CI with a margin of 12–15 %: 60–81 s for `testDefaultSettings`, 50–114 s
+  for `testAccessibilityDynamicType`, 25–33 s for the others, from the 15 legs of 17 that passed on their first run
+  (one failed, one passed after a retry). The step spends 6.5–17.1 minutes, median 10.0 and mean 10.4, before its
+  first entry; so a stall in the first entry of the slowest leg is retried within the budget after a usual build
+  (10.4 + 3 + 15 = 28.4 minutes), and the budget of 30 and the leg's 35 minutes stay as they are.
 
 ## Consequences
 
