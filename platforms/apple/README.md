@@ -66,12 +66,18 @@ let ink = Westron.Color.text.primary.dark                 // Westron.RGB(hex: 0x
 ```swift
 let icon = Westron.Icon(rawValue: list.icon) ?? .fallback   // by the name the store keeps; bullets when unknown
 
-Image(icon)                                       // its SF Symbol, which takes the font of the text it goes with
-    .textRole(.body.regular)
+Icon(icon)                                        // its SF Symbol, which takes the font of the text it goes with;
+    .textRole(.body.regular)                      // decorative: hidden from assistive technology
     .foregroundStyle(list.color.icon)             // color.category.<name>.icon (design-language/07)
-Label("Rename", icon: .pen)                       // as Label(_:systemImage:)
+Icon(.sun, label: "Today")                        // a meaningful standalone icon: an image labeled Today
+Icon(.chevron).imageScale(.small)                 // the system's relative scale
+Label("Rename", icon: .pen)                       // as Label(_:systemImage:), its icon hidden beside its title
+Text("\(Image(.flag)) Yesterday")                 // an Image where only an Image fits; it keeps the system's name
 Button("Add", systemImage: Westron.Icon.plus.systemName) { add() }   // any call that takes systemImage:
 ```
+
+`Icon` is the component (spec/components/icon): an `Image` of an SF Symbol always carries the system's spoken name of
+the symbol, which SwiftUI cannot hide or replace on an `Image`, so a standalone icon is `Icon`, not `Image`.
 
 ## Package tests
 

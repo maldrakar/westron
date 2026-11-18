@@ -241,16 +241,12 @@ public enum APIParity {
         var containers: Set<String> { extends == "View" ? viewTypes : [extends, "SwiftUI." + extends] }
     }
 
-    /// An own component's view (`AppleComponents.Own`, form `view`): the type, its initializer and its body.
+    /// An own component's view (`AppleComponents.Own`, form `view`): the type, its initializers and its body.
     struct ExpectedView {
         let contract: Contract
         /// `Rule`.
         let type: String
-        let parameters: [SwiftDeclarations.Parameter]
-
-        var initializer: String {
-            "init(" + parameters.map(\.description).joined(separator: ", ") + ")"
-        }
+        let initializers: [AppleComponents.Own.Initializer]
     }
 
     struct Expected {

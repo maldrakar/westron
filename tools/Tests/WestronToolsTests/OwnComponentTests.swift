@@ -211,10 +211,10 @@ struct OwnComponentTests {
                 "options.size: a size option") == true)
         #expect(
             failure(ownYAML(options: "  role: { type: tokens, group: typography }"))?.contains(
-                "options.role: an option whose values are tokens or icons") == true)
+                "options.role: an option whose values are tokens: \(notYet)") == true)
         #expect(
             failure(ownYAML(options: "  glyph: { type: icons }"))?.contains(
-                "options.glyph: an option whose values are tokens or icons") == true)
+                "options.glyph: a modifier with an option whose values are icons: \(notYet)") == true)
         #expect(
             failure(ownYAML(slots: "[content, footer]"))?.contains(
                 "slots: a modifier's content is the view it modifies") == true)
@@ -228,6 +228,7 @@ struct OwnComponentTests {
                               options: { variant: [raised] }
                               fallback: { variant: raised }
                         """))?.contains("platforms.apple.watchos: an own-component that an OS restricts") == true)
+        // A system option is the system's own environment modifier: no parameter and no enum (Icon's scale).
         #expect(
             failure(
                 ownYAML(
@@ -235,7 +236,7 @@ struct OwnComponentTests {
                             strategy: own-component
                             form: modifier
                             systemOptions: { outlined: SwiftUI.Bool }
-                        """))?.contains("platforms.apple.systemOptions.outlined") == true)
+                        """)) == nil)
         let viewWithVariant = viewYAML(options: "  variant: { type: enum, values: [quiet, loud] }")
         #expect(failure(viewWithVariant, id: "rule")?.contains("options.variant: a view with a variant") == true)
         let viewWithSlots = viewYAML().replacingOccurrences(of: "slots: []", with: "slots: [label]")

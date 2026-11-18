@@ -467,26 +467,38 @@ extension Westron.Theme {
 }
 
 extension Image {
-    /// An icon as its SF Symbol (decisions/0011). Next to text it takes that text's font, so it sits on the line like a
-    /// letter and scales with Dynamic Type, and the color of that text (design-language/07-icons.md):
+    /// An icon's SF Symbol as an `Image` (decisions/0011), for where only an `Image` fits, such as inside `Text`
+    /// interpolation: `Text("\(Image(.flag)) Yesterday")`. It takes the font and the color of its context, as the
+    /// icon does.
     ///
-    ///     Image(Westron.Icon(rawValue: list.icon) ?? .fallback)
-    ///         .textRole(.body.regular)
-    ///         .foregroundStyle(Westron.Category.amber.icon)
+    /// It is not the Icon component: an `Image` of a symbol keeps the system's spoken name of the symbol ("Increase
+    /// Brightness" for `.sun`), which SwiftUI cannot hide or replace on an `Image`. A standalone icon is `Icon(.tray)`,
+    /// decorative, or `Icon(.sun, label: "Today")` (spec/components/icon).
     public init(_ icon: Westron.Icon) {
         self.init(systemName: icon.systemName)
     }
 }
 
-extension Label where Title == Text, Icon == Image {
-    /// A label with an icon, as `Label(_:systemImage:)` makes one: `Label("Rename", icon: .pen)`.
+// A westron `Label`'s icon is the symbol hidden from assistive technology, since the title beside it says what it
+// means (design-language/07, 08): its type is the hidden `Image`, not `Image`.
+extension Label where Title == Text, Icon == ModifiedContent<Image, AccessibilityAttachmentModifier> {
+    /// A label with an icon, as `Label(_:systemImage:)` makes one: `Label("Rename", icon: .pen)`. The icon is
+    /// decorative beside its title, so assistive technology reads the title alone.
     public init(_ titleKey: LocalizedStringKey, icon: Westron.Icon) {
-        self.init(titleKey, systemImage: icon.systemName)
+        self.init {
+            Text(titleKey)
+        } icon: {
+            Image(icon).accessibilityHidden(true)
+        }
     }
 
     /// A label with an icon and a title that is not localized: `Label(list.title, icon: .folder)`.
     @_disfavoredOverload
     public init<S: StringProtocol>(_ title: S, icon: Westron.Icon) {
-        self.init(title, systemImage: icon.systemName)
+        self.init {
+            Text(title)
+        } icon: {
+            Image(icon).accessibilityHidden(true)
+        }
     }
 }

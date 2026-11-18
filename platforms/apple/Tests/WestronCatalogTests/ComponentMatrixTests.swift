@@ -55,6 +55,53 @@ struct ComponentMatrixTests {
         #endif
     }
 
+    @Test("Icon's matrix: 36 glyphs down the rows × 3 scales across, each in exactly one cell of its 6 sheets")
+    func icon() throws {
+        let matrix = try #require(ComponentMatrix.all.first { $0.component == "icon" })
+        #expect(matrix.states.isEmpty && matrix.notes.isEmpty)
+        #expect(matrix.rowOption == "glyph" && matrix.columnName == "scale")
+        #expect(matrix.rowsName == "glyph")
+        #expect(matrix.drawnCombinations.count == 36 * 3)
+        #expect(Westron.Icon.allCases.map(\.rawValue) == matrix.options[0].values)
+        #expect(matrix.sheets.count == 6)
+        var seen: Set<ComponentMatrix.Combination> = []
+        for sheet in matrix.sheets {
+            #expect(sheet.fixed.isEmpty && sheet.columns == ["small", "medium", "large"] && sheet.rows.count == 6)
+            #expect(matrix.title(of: sheet) == "every combination")
+            for row in matrix.rows(of: sheet) {
+                for column in sheet.columns {
+                    guard case .drawn(let combination, _, _) = matrix.cell(sheet, row: row, column: column) else {
+                        Issue.record("\(row ?? "rest"), \(column) is not drawn")
+                        continue
+                    }
+                    #expect(combination.values == [row, column] && combination.state == nil)
+                    #expect(seen.insert(combination).inserted, "\(combination) on two cells")
+                }
+            }
+        }
+        #expect(seen == Set(matrix.drawnCombinations))
+        #expect(Catalog.entry(id: "icon")?.section == .components)
+    }
+
+    @Test("Icon's supplements: one sheet each, of six glyphs, on the generated scales")
+    func iconSupplements() throws {
+        let matrix = try #require(ComponentMatrix.all.first { $0.component == "icon" })
+        let supplements = matrix.supplements
+        #expect(supplements.map { $0.supplement?.id } == ["beside-text", "color-roles"])
+        for supplement in supplements {
+            #expect(supplement.sheets.count == 1)
+            let sheet = try #require(supplement.sheets.first)
+            #expect(sheet.rows == ComponentMatrix.Supplement.iconSampleGlyphs)
+            #expect(sheet.columns == ["small", "medium", "large"])
+            #expect(supplement.drawnCount(in: sheet) == 18 && supplement.drawnCombinations.count == 18)
+            #expect(sheet.id == "\(supplement.supplement?.id ?? "")_all")
+            #expect(
+                ComponentMatrix.sheet(key: supplement.key(of: sheet))?.matrix.supplement?.id
+                    == supplement.supplement?.id)
+        }
+        #expect(matrix.sheets.count == 6, "the generated matrix stays the contract's")
+    }
+
     @Test("a state no token binding names draws as rest, and the sheet and the review page say so")
     func unboundStates() throws {
         let matrix = try #require(ComponentMatrix.all.first { $0.component == "button" })

@@ -66,15 +66,16 @@ public struct ComponentMatrix: Sendable {
         }
     }
 
-    /// One screenshot: the combinations with the values `fixed` of every option but the column one.
+    /// One screenshot: the combinations with the values `fixed` of every option but the column one, and the row one
+    /// where the matrix has one.
     public struct Sheet: Sendable, Identifiable {
         /// `size-s_role-default_iconOnly-false`: unique in its matrix; a part adds `_part-<n>-of-<count>`.
         public let id: String
-        /// The values of every option but the column option, in the options' order.
+        /// The values of every option but the column option and the row option, in the options' order.
         let fixed: [String]
         /// The column option's values.
         let columns: [String]
-        /// The states of the rows; nil is rest.
+        /// The states of the rows, nil for rest; with a row option (`rowOption`), its values.
         let rows: [String?]
         /// For a part of a sheet that does not fit one picture at a text size (`pictures(of:at:)`), its number from 1
         /// and the number of parts; nil for a whole sheet.
@@ -105,19 +106,23 @@ public struct ComponentMatrix: Sendable {
         public let title: String
         /// What it shows and why no contract option sets it; the sheet and the review page show it.
         public let note: String
-        /// Contract options and the value each keeps; the column option is not one of them.
+        /// Contract options and the value each keeps; the column option and the row option are not among them.
         let keeps: [String: String]
+        /// For a matrix whose rows are an option (Icon's glyphs), the values of it the supplement keeps, so that it
+        /// draws one sheet of a few rows rather than every generated sheet again; nil keeps every row.
+        let rows: [String]?
         let cell: @MainActor @Sendable (Combination) -> AnyView
 
         init<Content: View>(
             component: String, id: String, title: String, note: String, keeps: [String: String],
-            @ViewBuilder cell: @escaping @MainActor @Sendable (Combination) -> Content
+            rows: [String]? = nil, @ViewBuilder cell: @escaping @MainActor @Sendable (Combination) -> Content
         ) {
             self.component = component
             self.id = id
             self.title = title
             self.note = note
             self.keeps = keeps
+            self.rows = rows
             self.cell = { AnyView(cell($0)) }
         }
     }
@@ -231,6 +236,8 @@ public struct ComponentMatrix: Sendable {
     /// as the system's focus ring, which a screenshot does not show, would tell them apart.
     public let unboundStates: [String]
     let columnOption: String?
+    /// The option down the rows in place of the states: Icon's glyphs, in a contract with no states; nil otherwise.
+    public let rowOption: String?
     let platforms: [Platform]
     let excluded: [Exclusion]
     let advisedAgainst: [Exclusion]
@@ -243,7 +250,7 @@ public struct ComponentMatrix: Sendable {
 
     init<Content: View>(
         component: String, options: [Option], states: [String], unbound: [String], columns: String?,
-        platforms: [Platform],
+        rows: String? = nil, platforms: [Platform],
         excluded: [Exclusion], advisedAgainst: [Exclusion], combinations: [Combination], sheets: [Sheet],
         @ViewBuilder cell: @escaping @MainActor @Sendable (Combination) -> Content
     ) {
@@ -252,6 +259,7 @@ public struct ComponentMatrix: Sendable {
         self.states = states
         self.unboundStates = unbound
         self.columnOption = columns
+        self.rowOption = rows
         self.platforms = platforms
         self.excluded = excluded
         self.advisedAgainst = advisedAgainst
@@ -271,7 +279,7 @@ public struct ComponentMatrix: Sendable {
 
     private func supplemented(by supplement: Supplement) -> ComponentMatrix {
         let kept = supplement.keeps.sorted { $0.key < $1.key }.map { name, value in
-            guard let index = options.firstIndex(where: { $0.name == name }), name != columnOption,
+            guard let index = options.firstIndex(where: { $0.name == name }), name != columnOption, name != rowOption,
                 options[index].values.contains(value)
             else {
                 preconditionFailure("\(component), supplement \(supplement.id): no option \(name) with value \(value)")
@@ -280,9 +288,32 @@ public struct ComponentMatrix: Sendable {
         }
         let keeps = { (values: [String]) in kept.allSatisfy { values[$0.index] == $0.value } }
         var matrix = self
-        matrix.combinations = combinations.filter { keeps($0.values) }
-        matrix.allSheets = allSheets.filter { sheet in keeps(values(sheet, column: sheet.columns[0])) }.map { sheet in
-            Sheet("\(supplement.id)_\(sheet.id)", fixed: sheet.fixed, columns: sheet.columns, rows: sheet.rows)
+        matrix.combinations = combinations.filter { combination in
+            guard keeps(combination.values) else { return false }
+            guard let rows = supplement.rows, let rowIndex else { return true }
+            return rows.contains(combination.values[rowIndex])
+        }
+        let keptSheets = allSheets.filter { sheet in keeps(values(sheet, column: sheet.columns[0], row: sheet.rows[0]))
+        }
+        if let rows = supplement.rows {
+            // A supplement that names rows of a row option draws those alone, on one sheet per value of the other
+            // axes, its columns the generated sheets' in their order.
+            var merged: [Sheet] = []
+            for sheet in keptSheets {
+                if let index = merged.firstIndex(where: { $0.fixed == sheet.fixed }) {
+                    let columns = merged[index].columns + sheet.columns.filter { !merged[index].columns.contains($0) }
+                    merged[index] = Sheet(merged[index].id, fixed: sheet.fixed, columns: columns, rows: rows)
+                } else {
+                    let fixed = fixedValues(of: sheet).map { "\($0.option)-\($0.value)" }
+                    let id = "\(supplement.id)_" + (fixed.isEmpty ? "all" : fixed.joined(separator: "_"))
+                    merged.append(Sheet(id, fixed: sheet.fixed, columns: sheet.columns, rows: rows))
+                }
+            }
+            matrix.allSheets = merged
+        } else {
+            matrix.allSheets = keptSheets.map { sheet in
+                Sheet("\(supplement.id)_\(sheet.id)", fixed: sheet.fixed, columns: sheet.columns, rows: sheet.rows)
+            }
         }
         matrix.makeCell = supplement.cell
         matrix.supplement = supplement
@@ -302,9 +333,10 @@ public struct ComponentMatrix: Sendable {
 
     private var platform: Platform? { platforms.first { $0.os == Self.currentOS } }
 
-    /// Whether the current OS ever enters a row's state; rest always.
+    /// Whether the current OS ever enters a row's state; rest, and a row of a row option, always.
     func isEntered(_ state: String?) -> Bool {
-        state.map { !(platform?.notEntered.contains($0) ?? false) } ?? true
+        guard rowOption == nil else { return true }
+        return state.map { !(platform?.notEntered.contains($0) ?? false) } ?? true
     }
 
     /// The rows of a sheet the current OS draws: the states it never enters are left out, as on the `button-states`
@@ -346,18 +378,23 @@ public struct ComponentMatrix: Sendable {
     }
 
     private var columnIndex: Int? { options.firstIndex { $0.name == columnOption } }
+    private var rowIndex: Int? { options.firstIndex { $0.name == rowOption } }
 
-    /// The option values of a cell: the sheet's fixed values with the column's value in its place.
-    private func values(_ sheet: Sheet, column: String) -> [String] {
+    /// The option values of a cell: the sheet's fixed values with the column's value, and the row's where the rows are
+    /// an option, in their places.
+    private func values(_ sheet: Sheet, column: String, row: String?) -> [String] {
+        var inserted: [(index: Int, value: String)] = []
+        if let columnIndex { inserted.append((columnIndex, column)) }
+        if let rowIndex, let row { inserted.append((rowIndex, row)) }
         var values = sheet.fixed
-        if let columnIndex { values.insert(column, at: columnIndex) }
+        for item in inserted.sorted(by: { $0.index < $1.index }) { values.insert(item.value, at: item.index) }
         return values
     }
 
     /// The cell of a sheet at a row and a column.
     public func cell(_ sheet: Sheet, row: String?, column: String) -> Cell {
-        let values = values(sheet, column: column)
-        let combination = Combination(values, state: row)
+        let values = values(sheet, column: column, row: row)
+        let combination = Combination(values, state: rowOption == nil ? row : nil)
         if let exclusion = excluded.first(where: { $0.values == values }) {
             return .excluded(constraint: exclusion.constraint)
         }
@@ -383,7 +420,7 @@ public struct ComponentMatrix: Sendable {
 
     /// The option and value a sheet fixes, in the options' order: `[("size", "s"), ("role", "default")]`.
     public func fixedValues(of sheet: Sheet) -> [(option: String, value: String)] {
-        let names = options.indices.filter { $0 != columnIndex }.map { options[$0].name }
+        let names = options.indices.filter { $0 != columnIndex && $0 != rowIndex }.map { options[$0].name }
         return Array(zip(names, sheet.fixed)).map { (option: $0.0, value: $0.1) }
     }
 
@@ -404,6 +441,9 @@ public struct ComponentMatrix: Sendable {
 
     /// The column option's name, or `""` for a contract without options.
     public var columnName: String { columnOption ?? "" }
+
+    /// What the rows are, for the sheet and the review page: `rest and each state alone`, or the row option's name.
+    public var rowsName: String { rowOption ?? "rest and each state alone" }
 
     /// The sheet's key across matrices, `button.size-s_role-default_iconOnly-false`: the value of
     /// `-WestronMatrixSheet`, and the start of its file names.

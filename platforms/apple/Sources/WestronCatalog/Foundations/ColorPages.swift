@@ -162,7 +162,7 @@ private struct ForegroundSample: View {
                 .textRole(.body.regular)
                 .foregroundStyle(Color(color))
         } else if color.name.hasPrefix("color.icon.") {
-            Image(Westron.Icon.grip)
+            Icon(.grip)
                 .textRole(.body.regular)
                 .foregroundStyle(Color(color))
         } else {
@@ -228,7 +228,7 @@ private struct CategoryColorsPage: View {
                         Circle()
                             .fill(category.fill)
                             .overlay {
-                                Image(Westron.Icon.check)
+                                Icon(.check)
                                     .font(Font(.caption.medium).weight(.bold))
                                     .foregroundStyle(category.onFill)
                             }
@@ -239,7 +239,7 @@ private struct CategoryColorsPage: View {
                         Circle()
                             .fill(category.control)
                             .overlay {
-                                Image(Westron.Icon.check)
+                                Icon(.check)
                                     .font(Font(.caption.medium).weight(.bold))
                                     .foregroundStyle(category.onControl)
                             }
@@ -269,7 +269,7 @@ private struct CategoryColorsPage: View {
         RoundedRectangle(cornerRadius: .radius100)
             .fill(category.background)
             .overlay {
-                Image(Westron.Icon.tray)
+                Icon(.tray)
                     .textRole(.footnote.medium)
                     .foregroundStyle(category.text)
             }

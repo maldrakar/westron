@@ -39,6 +39,8 @@ struct Capture: Codable {
 struct Component: Codable {
     var component: String
     var columns: String
+    /// The option down the rows in place of the states (Icon's glyphs); nil for rest and each state.
+    var rows: String?
     var notes: [String]
     /// The matrix generated from the contract, then the supplements, hand-written for what is not a contract option.
     var groups: [Group]
@@ -215,7 +217,8 @@ func index(_ directory: URL) -> Int32 {
             }
             let summary =
                 "\(group.combinations) combinations on \(group.sheets.count) sheets; on each sheet the columns are "
-                + "<code>\(html(component.columns))</code> and the rows rest and each state."
+                + "<code>\(html(component.columns))</code> and the rows "
+                + (component.rows.map { "<code>\(html($0))</code>." } ?? "rest and each state.")
             if group.supplement {
                 body +=
                     "<div class=\"supplement\"><h3><span class=\"mark\">Not a contract option</span>"

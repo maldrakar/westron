@@ -60,7 +60,7 @@ struct AppleIconsTests {
             /// know, such as one a newer version wrote, reads as nil, and the product draws `fallback` instead:
             /// `Westron.Icon(rawValue: name) ?? .fallback`. A released name is never renamed or removed.
             ///
-            /// On Apple, WestronUI draws an icon as its SF Symbol: `Image(icon)`, `Label("Rename", icon: .pen)`.
+            /// On Apple, WestronUI draws an icon as its SF Symbol: `Icon(icon)`, `Label("Rename", icon: .pen)`.
             public enum Icon: String, CaseIterable, Sendable {
                 /// An open tray.
                 case tray
