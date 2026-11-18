@@ -10,8 +10,9 @@ palette.json                        the palette's anchors: hues, chroma, the gro
 primitive/color.<theme>.tokens.json the color ramps of a theme, generated from palette.json; a -hc file holds only
                                     what high contrast changes
 primitive/*.tokens.json             easing curves, font families and weights
-semantic/*.tokens.json              roles that do not depend on a mode: colors, text roles, spacing, radii, strokes,
-                                    opacities, shadows, motion
+semantic/*.tokens.json              roles that do not depend on a mode: colors, text roles, the space ladder and the
+                                    rhythm's roles (space.card, space.page.narrow, …), radii, strokes, opacities,
+                                    shadows, motion
 density/<density>.tokens.json       none yet: compact gets values with the dense components (#33)
 platform/<platform>.tokens.json     only what differs by platform: the control heights, size.control.*; every
                                     platform's file names the same tokens with the same descriptions
