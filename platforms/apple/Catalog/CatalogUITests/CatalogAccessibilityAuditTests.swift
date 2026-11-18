@@ -569,12 +569,13 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                 .entry("checkbox"), type: .contrast, reason: "a hidden label: the ring, a non-text graphic at 3:1",
                 description: "Contrast nearly passed"
             ) { $0 == "Call the plumber" },
-            Suppression(.entry("checkbox"), type: .textClipped, reason: "a hidden label, not drawn") {
-                $0 == "Call the plumber"
-            },
         ]
         #if os(iOS)
             suppressions += [
+                // The same row's hidden label, which the text clipped audit (iOS only) measures as drawn text.
+                Suppression(.entry("checkbox"), type: .textClipped, reason: "a hidden label, not drawn") {
+                    $0 == "Call the plumber"
+                },
                 // "Text clipped" with no element on the background colors. It appeared when the page got its
                 // layout for accessibility sizes, which puts a name on a line above its cells. The audit names no
                 // element, so there is nothing to fix by; the same page at accessibility5 passes the text clipped
@@ -582,7 +583,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                 // accessibility3 shows every label whole.
                 Suppression(.entry("color-backgrounds"), type: .textClipped, reason: "an issue with no element") {
                     $0 == nil
-                }
+                },
             ]
         #endif
         return suppressions
