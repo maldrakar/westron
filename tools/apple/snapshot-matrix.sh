@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
-# The snapshot matrix (#24): every combination each component's contract declares, in the four themes, for review.
+# The snapshot matrix (#24): every combination each component's contract declares, in the four themes and, on iOS,
+# at the smallest and the largest text size, with the catalog's supplementary sheets (#72), for review.
 #
 #   tools/apple/snapshot-matrix.sh <ios|macos> [--component ID] [--device "iPhone 17"] [--out DIR]
 #   tools/apple/snapshot-matrix.sh compare DIR_A DIR_B [--out DIR]
 #
 # Capture: builds the catalog (incrementally), then runs the SnapshotMatrixTests UI test in one `xcodebuild test`
 # invocation, which walks every sheet of every matrix (generated from the contracts into WestronCatalog/Generated/)
-# in light, dark, light-hc and dark-hc. The PNGs, named <component>.<sheet>.<theme>.png, the manifest matrix.json and
-# the review page index.html go to DIR, by default .build/snapshot-matrix/<platform>/; the script prints the path of
-# index.html and fails when an expected image is missing or a sheet failed its checks. Log: .build/logs/.
+# and of its supplements in light, dark, light-hc and dark-hc at the default text size, and on iOS in light at xSmall
+# and accessibility5 (macOS has no Dynamic Type). The PNGs, named <component>.<sheet>.<theme>.png and
+# <component>.<sheet>[_part-<n>-of-<count>].light.<text size>.png, the manifest matrix.json and the review page
+# index.html go to DIR, by default .build/snapshot-matrix/<platform>/; the script prints the path of index.html and
+# fails when an expected image is missing or a sheet failed its checks. Log: .build/logs/.
 # Compare: compares two capture directories image by image and writes a report page, by default to
 # .build/snapshot-matrix/compare/; prints its path; exits 0 when every image is the same and 1 when one differs.
 # Only captures from the same environment compare (decisions/0008). macOS needs Automation Mode
@@ -20,7 +23,7 @@ cd "$root"
 # shellcheck source=tools/apple/xcode-env.sh
 source tools/apple/xcode-env.sh
 
-usage() { sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
 absolute() { case "$1" in /*) echo "$1" ;; *) echo "$root/$1" ;; esac; }
 
@@ -72,16 +75,17 @@ name="snapshot-matrix-$platform${component:+-$component}"
 log=".build/logs/$name.log"
 mkdir -p "$out" .build/logs .build/xcode/results
 # Only a capture's own files are removed, so --out can name a directory that holds other files: the images the previous
-# manifest names, any <component>.<sheet>.<theme>.png of a component in spec/components (a capture that failed before
-# its manifest), the manifest and the page.
+# manifest names (in this format, or the earlier one with a file name per theme), any <component>.*.png of a component
+# in spec/components (a capture that failed before its manifest), the manifest and the page.
 if [ -f "$out/matrix.json" ]; then
-  jq -r '.components[].sheets[].images[]?' "$out/matrix.json" 2> /dev/null | while read -r file; do
+  { jq -r '(.. | objects | select(has("file")) | .file), (.components[]?.sheets[]?.images[]? | strings)' \
+    "$out/matrix.json" 2> /dev/null || true; } | while read -r file; do
     case "$file" in */* | "") ;; *) rm -f -- "$out/$file" ;; esac
   done
 fi
 for contract in spec/components/*/; do
   id="$(basename "$contract")"
-  for theme in light dark light-hc dark-hc; do rm -f -- "$out/$id."*".$theme.png"; done
+  rm -f -- "$out/$id."*.png
 done
 rm -f -- "$out/matrix.json" "$out/index.html"
 

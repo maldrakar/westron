@@ -102,9 +102,27 @@ modifiers. The rows of a state the OS never enters are left out, as on those pag
 drawn with its fallback and marked, and a combination a `warning` constraint advises against is drawn with a caption.
 A state no token binding names in a case looks as rest, and the sheet and the review page say so: Button's focus,
 whose ring the system draws. The sheets are not catalog entries, so the accessibility audit does not walk them;
-`-WestronMatrixSheet <component>.<sheet>` shows one. The matrix shows only what a contract option sets, and a label
-without an icon is not one: Button's cells have an icon and a label, or are icon-only. So loading without an icon, the
-indicator before the label and the button wider, is on the `button-states` catalog pages and in `ButtonLabelKindTests`.
+`-WestronMatrixSheet <component>.<sheet>` shows one.
+
+Two additions are the catalog's, hand-written, and the generator knows nothing of them (#72), so the contract alone
+still drives every generated sheet and combination:
+
+- **Text sizes.** Every sheet is captured in the four themes at the default text size, `large`, and in the light theme
+  at the smallest, `xSmall`, and the largest accessibility size, `accessibility5` (the audit's;
+  `ComponentMatrix.TextSize`). Only the cells follow the text size; the sheet's title, notes and the names of columns
+  and rows stay at `large`, and the sheet says so. At `accessibility5` a 3 × 6 sheet does not fit an iPhone: a button of
+  size l with an icon and a label takes about 320 of its 402 points. So there a sheet is captured in parts, one column
+  each (`pictures(of:at:)`, `_part-<n>-of-<count>` in the file name), with a short header that says what the part holds.
+  macOS has no Dynamic Type: SwiftUI draws a cell the same at every `dynamicTypeSize` there, `-WestronDynamicType`
+  included (`ComponentMatrixTests` checks it), so a Mac is captured at `large` alone and its page says why.
+- **Supplementary sheets** show what no contract option sets. A component's catalog code adds a
+  `ComponentMatrix.Supplement` to `Supplement.all`: the option values it keeps and a cell of its own. Its sheets are
+  the generated sheets that keep those values, with their axes, states and rows, so nothing the contract lists is
+  listed again by hand. Each sheet and its section of the review page are marked "Not a contract option". Button has
+  one, `label-without-icon`: its generated cells have an icon and a label or are icon-only, so a label without an
+  icon, which while loading has the indicator before the label and widens the button (P13), is shown on the sheets
+  with iconOnly false: every variant, size and role, at rest and in each state, 108 combinations on 6 sheets. Like the
+  matrix, supplements are not catalog entries, so the accessibility audit does not walk them.
 
 ```sh
 tools/apple/snapshot-matrix.sh ios                       # or macos; --component button for one component
@@ -112,15 +130,22 @@ tools/apple/snapshot-matrix.sh compare <before> <after>  # exit 0 when every ima
 ```
 
 The capture runs the UI test `SnapshotMatrixTests` once (one `xcodebuild test`), which launches the catalog for every
-sheet in light, dark, light-hc and dark-hc, waits until the sheet stands still, checks that the number of cells on
-screen matches the matrix and that each lies inside the picture, and attaches the screenshot: the screen on iOS, the
-sheet without the title bar on macOS. It pins the text size, the language and the locale, the window's size on macOS,
-and freezes Core Animation in the sheet's window so a loading indicator draws the same frame every time. The script exports the PNGs, `<component>.<sheet>.<theme>.png`, with the manifest `matrix.json` to
-`.build/snapshot-matrix/<platform>/`, writes the review page `index.html` there (sheets down, themes across, with the
-OS version, device and scale, and each picture's size) and prints its path; it fails when an image is missing or a sheet failed a check. The
+picture (a sheet, or a part of one) in every capture: light, dark, light-hc and dark-hc at `large`, and on iOS light at
+`xSmall` and `accessibility5`. It waits until the sheet stands still, checks that the number of cells on screen
+matches the matrix and that each lies inside the picture, and attaches the screenshot: the screen on iOS, the sheet
+without the title bar on macOS. It pins the text size, the language and the locale, the window's size on macOS, and
+freezes Core Animation in the sheet's window so a loading indicator draws the same frame every time. With Button's 12
+generated and 6 supplementary sheets that is 144 images on iOS (18 × 4 themes, 18 at `xSmall`, 18 × 3 parts at
+`accessibility5`) and 72 on macOS (18 × 4). The script exports the PNGs, `<component>.<sheet>.<theme>.png` at `large`
+and `<component>.<sheet>[_part-<n>-of-<count>].light.<text size>.png` at the others, with the manifest `matrix.json`
+to `.build/snapshot-matrix/<platform>/`, writes the review page `index.html` there (sheets down; across, each text size
+with its themes, the parts of a sheet side by side; the supplements in sections of their own; with the OS version,
+device and scale, and each picture's size) and prints its path; it fails when an image is missing or a sheet failed a
+check. The
 comparison writes `before/`, `after/`, `diff/` and its `index.html` to `.build/snapshot-matrix/compare/` (`--out` to
 change it). Compare only captures from the same environment: two local runs, or two CI artifacts (decisions/0008).
-CI's `snapshot-matrix` job uploads both platforms' pages as the `snapshot-matrix` artifact.
+CI's `snapshot-matrix` job runs one job per platform, side by side, and uploads each platform's page as its own
+artifact, `snapshot-matrix-ios` and `snapshot-matrix-macos`.
 
 ### Accessibility audit
 

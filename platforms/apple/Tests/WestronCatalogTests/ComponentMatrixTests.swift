@@ -81,14 +81,104 @@ struct ComponentMatrixTests {
         #expect(matrix.notes.contains { $0.contains("advised against") })
     }
 
-    @Test("a sheet is found by its key; names follow component, sheet and theme")
+    @Test("a sheet is found by its key; names follow component, sheet and capture")
     func keys() throws {
         let found = try #require(ComponentMatrix.sheet(key: "button.size-l_role-destructive_iconOnly-true"))
         #expect(found.matrix.title(of: found.sheet) == "size l · role destructive · iconOnly true")
         #expect(
-            found.matrix.fileName(of: found.sheet, theme: .darkHighContrast)
-                == "button.size-l_role-destructive_iconOnly-true.dark-hc.png")
+            found.matrix.fileName(of: found.sheet, capture: .init(theme: .darkHighContrast, textSize: .large))
+                == "button.size-l_role-destructive_iconOnly-true.dark-hc.png", "as before text sizes")
+        #expect(
+            found.matrix.fileName(of: found.sheet, capture: .init(theme: .light, textSize: .xSmall))
+                == "button.size-l_role-destructive_iconOnly-true.light.xSmall.png")
         #expect(ComponentMatrix.sheet(key: "button.nothing") == nil)
         #expect(ComponentMatrix.Theme.allCases.map(\.rawValue) == ["light", "dark", "light-hc", "dark-hc"])
     }
+
+    @Test("the captures: four themes at the default text size; on iOS the light theme at xSmall and accessibility5")
+    func captures() {
+        let names = ComponentMatrix.Capture.all.map(\.name)
+        #if os(macOS)
+            #expect(names == ["light", "dark", "light-hc", "dark-hc"])
+            #expect(ComponentMatrix.TextSize.notCapturedNote != nil)
+        #else
+            #expect(names == ["light", "dark", "light-hc", "dark-hc", "light.xSmall", "light.accessibility5"])
+            #expect(ComponentMatrix.TextSize.notCapturedNote == nil)
+        #endif
+        let sizes = CatalogLaunchOptions.dynamicTypeSizes.map(\.name)
+        #expect(ComponentMatrix.TextSize.allCases.allSatisfy { sizes.contains($0.rawValue) }, "-WestronDynamicType")
+    }
+
+    @Test("a sheet that does not fit at a text size is split into parts holding each of its cells once")
+    func parts() throws {
+        let matrix = try #require(ComponentMatrix.all.first { $0.component == "button" })
+        for size in ComponentMatrix.TextSize.allCases {
+            var cells = 0
+            for sheet in matrix.sheets {
+                let pictures = matrix.pictures(of: sheet, at: size)
+                cells += pictures.map(matrix.drawnCount(in:)).reduce(0, +)
+                if let limit = size.limit {
+                    #expect(pictures.allSatisfy { $0.columns.count <= limit.columns && $0.rows.count <= limit.rows })
+                    #expect(pictures.count > 1)
+                    #expect(pictures.allSatisfy { ComponentMatrix.sheet(key: matrix.key(of: $0))?.sheet.id == $0.id })
+                } else {
+                    #expect(pictures.map(\.id) == [sheet.id], "the generated sheet itself")
+                }
+            }
+            #expect(cells == matrix.drawnCombinations.count, "\(size): every combination once")
+        }
+        #if os(macOS)
+            #expect(ComponentMatrix.TextSize.allCases.allSatisfy { $0.limit == nil }, "a Mac captures large alone")
+        #else
+            let sheet = try #require(matrix.sheets.first)
+            let parts = matrix.pictures(of: sheet, at: .accessibility5)
+            #expect(parts.first?.id == "size-s_role-default_iconOnly-false_part-1-of-\(parts.count)")
+            #expect(parts.first.flatMap(matrix.partTitle(of:))?.hasPrefix("part 1 of \(parts.count): primary;") == true)
+        #endif
+    }
+
+    @Test("Button's supplement: a label without an icon on the generated axes, kept apart from the contract's matrix")
+    func supplement() throws {
+        let matrix = try #require(ComponentMatrix.all.first { $0.component == "button" })
+        #expect(matrix.supplement == nil)
+        let supplements = matrix.supplements
+        #expect(supplements.map { $0.supplement?.id } == ["label-without-icon"])
+        let labels = try #require(supplements.first)
+        #expect(labels.supplements.isEmpty)
+        // Variant × size × role × (rest + 5 states), iconOnly kept false: half of the generated matrix.
+        #expect(labels.drawnCombinations.count == 3 * 3 * 2 * 6)
+        #expect(labels.drawnCombinations.allSatisfy { $0.values[3] == "false" })
+        #expect(labels.sheets.count == 6)
+        #expect(labels.sheets.map(labels.drawnCount(in:)).reduce(0, +) == 108)
+        #expect(labels.sheets[0].id == "label-without-icon_size-s_role-default_iconOnly-false")
+        #expect(labels.title(of: labels.sheets[0]) == "label without an icon · size s · role default · iconOnly false")
+        let found = try #require(
+            ComponentMatrix.sheet(key: "button.label-without-icon_size-m_role-destructive_iconOnly-false"))
+        #expect(found.matrix.supplement?.id == "label-without-icon")
+        // The generated matrix is the contract's alone.
+        #expect(matrix.drawnCombinations.count == 216 && matrix.sheets.count == 12)
+        #expect(!Catalog.entries.contains { $0.id.contains("label-without-icon") }, "not an audited catalog entry")
+    }
+
+    #if os(macOS)
+        /// The reason a Mac captures the default text size alone: macOS has no Dynamic Type, and a cell measures the
+        /// same at every `dynamicTypeSize`. If a macOS starts to scale, this fails, and the Mac's text sizes are due.
+        @Test("on macOS a matrix cell is the same size at every text size")
+        @MainActor
+        func macOSHasNoDynamicType() throws {
+            let matrix = try #require(ComponentMatrix.all.first { $0.component == "button" })
+            let combination = try #require(
+                matrix.drawnCombinations.first { $0.values == ["primary", "l", "destructive", "false"] })
+            let sizes = ComponentMatrix.TextSize.allCases.map { size in
+                let host = NSHostingView(
+                    rootView: matrix.content(combination)
+                        .dynamicTypeSize(
+                            CatalogLaunchOptions.dynamicTypeSizes.first { $0.name == size.rawValue }!.size))
+                host.layoutSubtreeIfNeeded()
+                return host.fittingSize
+            }
+            #expect(sizes.allSatisfy { $0 == sizes[0] }, "\(sizes)")
+            #expect(sizes[0].width > 0)
+        }
+    #endif
 }

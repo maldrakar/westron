@@ -47,7 +47,8 @@ tools/apple/check.sh all          # everything at once, except a11y
 tools/apple/catalog-screenshot.sh ios   --entry environment --appearance dark   # prints the path to the PNG
 tools/apple/catalog-screenshot.sh macos --entry environment                     # the same on macOS
 
-tools/apple/snapshot-matrix.sh ios [--component button]   # every combination of every contract in four themes,
+tools/apple/snapshot-matrix.sh ios [--component button]   # every combination of every contract in four themes, and
+                                                          # light at xSmall and accessibility5, with the supplements;
                                                           # one xcodebuild test run; prints the path to index.html
 tools/apple/snapshot-matrix.sh macos                      # the same on macOS
 tools/apple/snapshot-matrix.sh compare <dirA> <dirB>      # pixel diff of two captures; exit 1 when one differs
@@ -70,8 +71,10 @@ Parameters: `--entry <id>` (default `environment`), `--appearance light|dark`, `
 the log to `.build/logs/`. On macOS, screenshots need Automation Mode enabled once (`platforms/apple/README.md`).
 The snapshot matrix (#24) is the second approval gate's review surface: `tools/westron generate` writes each
 component's matrix from its contract into `WestronCatalog/Generated/`, and the capture goes to
-`.build/snapshot-matrix/<platform>/` (`--out <dir>` elsewhere). Compare only captures from the same environment
-(decisions/0008).
+`.build/snapshot-matrix/<platform>/` (`--out <dir>` elsewhere). The text sizes, the parts of a sheet that does not fit
+at one, and the supplementary sheets for what no contract option sets ("not a contract option") are hand-written in
+the catalog, not generated (`platforms/apple/README.md`, "Snapshot matrix"). Compare only captures from the same
+environment (decisions/0008).
 
 ## Rules
 
