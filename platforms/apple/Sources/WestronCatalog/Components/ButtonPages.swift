@@ -240,7 +240,8 @@ private struct ButtonMatrixPage: View {
             summary: (destructive
                 ? "Button(role: .destructive) recolors every variant in the danger colors. "
                 : "Every variant at every size, at rest. ")
-                + "The height is size.control.* and a minimum; the hit area is at least the platform's target."
+                + "The height is size.control.* and a minimum; the hit area is at least the platform's target, "
+                + "except size s on macOS, which takes clicks in what it draws."
         ) {
             ForEach(ButtonSize.allCases, id: \.self) { size in
                 VStack(alignment: .leading, spacing: SampleMetrics.rowSpacing) {

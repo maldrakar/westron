@@ -187,20 +187,18 @@ final class ButtonBehaviorTests: XCTestCase {
     }
 
     /// A size s button is drawn smaller than the recommended target: 32 pt tall on iOS (target 44), 24 on macOS
-    /// (target 28). A press below what is drawn, inside the target, must reach it.
+    /// (target 28). The hit area the contract gives it differs by platform.
     ///
-    /// iOS: 5 pt below. The hit area is the system's touch tolerance, which westron does not grow
-    /// (ButtonVariantStyle.swift): measured on iOS 26.3 it reaches 16 pt below such a button, and the test fails if the
-    /// platform ever covers less than the target.
+    /// iOS: a tap 5 pt below what is drawn, inside the target, must reach it. The hit area is the system's touch
+    /// tolerance, which westron does not grow (ButtonVariantStyle.swift): measured on iOS 26.3 it reaches 16 pt below
+    /// such a button, and the test fails if the platform ever covers less than the target.
     ///
-    /// macOS: 1.5 pt below, inside the 2 pt that the target reaches past the drawn button on each side (2 pt exactly is
-    /// the target's edge). macOS has no touch tolerance, and a click outside the system button's frame misses, so it
-    /// misses: a known contract gap (#23), recorded as an expected failure. Growing the frame by 2 pt inside the button
-    /// and taking it back outside reaches the target, but then a button closer than 4 pt to a neighbor takes clicks
-    /// inside the neighbor's drawn area, so westron does not (ButtonVariantStyle.swift). 3 pt below, past the target,
-    /// must miss in any case.
+    /// macOS: the hit area is the drawn button, 24 pt, not the target (the contract's `platforms.apple.macos`, the
+    /// owner's decision of 2026-11-18, #75). A click 1.5 pt inside its bottom edge, off the label of this outlined
+    /// button, reaches it; a click 1.5 pt below it, inside what the target would cover, and one 3 pt below, past the
+    /// target, miss. Every variant, size and icon-only is clicked the same way in ButtonHitAreaTests.
     @MainActor
-    func testSmallButtonHitAreaReachesTheTarget() {
+    func testSmallButtonHitArea() {
         let small = button(ID.small)
         func pressBelow(_ below: CGFloat) {
             press(
@@ -209,13 +207,15 @@ final class ButtonBehaviorTests: XCTestCase {
         #if os(macOS)
             // The element's frame is the drawn button's, which the clicks are measured from.
             XCTAssertEqual(small.frame.height, 24, accuracy: 0.5)
+            pressBelow(-1.5)
+            XCTAssertEqual(accepted, 1, "a click 1.5 pt inside the drawn button's bottom edge did not reach it")
+            // Past the double-click interval, so the next click is not taken as the second of a pair.
+            Thread.sleep(forTimeInterval: NSEvent.doubleClickInterval)
             pressBelow(1.5)
-            let reached = accepted
-            XCTExpectFailure("contract gap #23: on macOS a click outside the drawn button misses, in the target too") {
-                XCTAssertEqual(reached, 1, "a click 1.5 pt below the drawn button, in its target, did not reach it")
-            }
+            XCTAssertEqual(accepted, 1, "a click 1.5 pt below the drawn button reached it")
+            Thread.sleep(forTimeInterval: NSEvent.doubleClickInterval)
             pressBelow(3)
-            XCTAssertEqual(accepted, reached, "a click 3 pt below the drawn button, past its target, reached it")
+            XCTAssertEqual(accepted, 1, "a click 3 pt below the drawn button reached it")
         #else
             pressBelow(5)
             XCTAssertEqual(accepted, 1, "a tap 5 pt below the drawn button did not reach it")
