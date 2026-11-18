@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Checks for the Swift part of westron. CI and the agent's Stop hook run the same checks.
+# Checks for the Swift part of westron. CI runs the checks of `all`, and a11y in jobs of its own; the agent's Stop
+# hook runs format, package, platforms and catalog, each only when the changes touch what it checks.
 #
 #   tools/apple/check.sh package     swift build + swift test (macOS)
 #   tools/apple/check.sh package-ios the package's unit tests on the iOS simulator (iPhone 17 or $WESTRON_SIM_DEVICE)
@@ -254,13 +255,15 @@ a11y() {
     echo "check.sh: a11y: the catalog or its UI tests failed to build ($platform), log: $build_log" >&2
     return 1
   fi
-  if a11y_run test-without-building "$log" "$results" "$destination" "$udid" "${only[@]}"; then return 0; fi
+  local first_status=0
+  a11y_run test-without-building "$log" "$results" "$destination" "$udid" "${only[@]}" || first_status=$?
+  [ "$first_status" -ne 0 ] || return 0
 
   # The run failed. On the CI runner the simulator now and then stalls, and XCTest fails what the test asks of it then
   # (#74): an entry the stall hit is audited once more, in a run of its own, and so are the entries a stopped test
   # method did not reach. An entry with a finding is never audited again, and nor is any entry of a test with one, so
   # a finding fails the run however rarely it shows.
-  local failed=0 plan entries what retry_name retry_log retry_results elapsed estimate
+  local failed=0 retried=0 plan entries what retry_name retry_log retry_results elapsed estimate
   local first_entry="${TEST_RUNNER_WESTRON_ENTRY:-}" first_shard="${TEST_RUNNER_WESTRON_ENTRY_SHARD:-}"
   unset TEST_RUNNER_WESTRON_A11Y_FAIL_ONCE
   [ $# -gt 0 ] || set -- "${a11y_tests[@]}"
@@ -314,6 +317,7 @@ a11y() {
       if [ -n "$first_entry" ]; then export TEST_RUNNER_WESTRON_ENTRY="$first_entry"; fi
       if [ -n "$first_shard" ]; then export TEST_RUNNER_WESTRON_ENTRY_SHARD="$first_shard"; fi
     fi
+    retried=1
     if ! a11y_run test-without-building "$retry_log" "$retry_results" "$destination" "$udid" \
       "-only-testing:CatalogUITests/CatalogAccessibilityAuditTests/$test"; then
       echo "check.sh: a11y: $test failed again on its retry, log: $retry_log, result: $retry_results" >&2
@@ -323,6 +327,12 @@ a11y() {
   if [ "$failed" -ne 0 ]; then
     grep -E "TEST FAILED|\*\* TEST" "$log" | tail -5 >&2 || true
     echo "check.sh: accessibility audit failed ($platform), log: $log, result: $results" >&2
+    return 1
+  fi
+  # Every test passed, yet xcodebuild failed: the runner died or the result bundle was not written after the last test.
+  if [ "$retried" -eq 0 ]; then
+    echo "check.sh: a11y: xcodebuild exited with status $first_status although every test passed ($platform)," \
+      "log: $log, result: $results" >&2
     return 1
   fi
   echo "a11y: passed after a retry; the first run's log: $log"
@@ -345,5 +355,5 @@ case "${1:-}" in
   format) format ;;
   fix-format) fix_format ;;
   all) format; package; package_ios; platforms; catalog ;;
-  *) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+  *) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac
