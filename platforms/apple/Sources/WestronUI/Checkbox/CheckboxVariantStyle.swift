@@ -4,8 +4,9 @@
 //
 // `ToggleStyleConfiguration` has no `isPressed`, so the style follows the press itself: its body is a system `Button`
 // that toggles the value, drawn by a `ButtonStyle`, since only a `ButtonStyle` sees `isPressed`. The button also brings
-// the system's activation and keyboard focus: Space toggles a focused check on macOS, and the system draws the focus
-// ring (the contract's `focus`). For assistive technology the button is replaced by the system's own Toggle on the
+// the system's activation and keyboard focus, and the system draws the focus ring (the contract's `focus`). On macOS a
+// system button takes focus only with the Mac's keyboard navigation on, and Tab and Space there are not measured yet
+// (the contract's decisions/0001, "Open points"). For assistive technology the button is replaced by the system's own Toggle on the
 // same value (`accessibilityRepresentation`), so VoiceOver meets the toggle's role and its on or off value, never a
 // button: a switch on iOS and watchOS, a checkbox on macOS, as the contract's `platforms.apple` records.
 

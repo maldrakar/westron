@@ -11,6 +11,7 @@ final class CheckboxBehaviorTests: XCTestCase {
         static let task = "checkbox.live.task"
         static let subtask = "checkbox.live.subtask"
         static let listColor = "checkbox.live.list-color"
+        static let row = "checkbox.live.row"
         static let summary = "checkbox.live.summary"
     }
 
@@ -80,6 +81,8 @@ final class CheckboxBehaviorTests: XCTestCase {
         for (id, label, on) in [
             (ID.task, "Write the report", false), (ID.subtask, "Outline the sections", true),
             (ID.listColor, "Water the plants", false),
+            // Its label hidden, beside a separate title: the label is still its name.
+            (ID.row, "Call the plumber", false),
         ] {
             let toggle = check(id)
             XCTAssertEqual(toggle.label, label)

@@ -20,6 +20,8 @@ enum CheckboxCatalogID {
     static let subtask = "checkbox.live.subtask"
     /// A task's check in the list color green, unchecked at launch.
     static let listColor = "checkbox.live.list-color"
+    /// A task's check with its label hidden, beside a separate title, as in a row; unchecked at launch.
+    static let row = "checkbox.live.row"
     /// The text that says which live checks are on: "on: subtask".
     static let summary = "checkbox.live.summary"
 }
@@ -34,6 +36,7 @@ private struct CheckboxPage: View {
     @State private var task = false
     @State private var subtask = true
     @State private var listColor = false
+    @State private var row = false
 
     var body: some View {
         TokenPage(
@@ -43,15 +46,14 @@ private struct CheckboxPage: View {
                 + "and its hit area is at least size.control.m."
         ) {
             section("States") {
+                // Each state alone, and each other state with the toggle on: a pressed or disabled done task.
                 ForEach(CheckboxCatalogState.all.filter(\.isEntered), id: \.self) { state in
-                    Toggle(isOn: .constant(state.isChecked)) {
-                        Text(state.name)
+                    FlowLayout(spacing: .space200) {
+                        stateSample(state, checked: state.isChecked)
+                        if !state.isChecked {
+                            stateSample(state, checked: true)
+                        }
                     }
-                    .toggleStyle(.check)
-                    .textRole(CheckboxSampleRole.task)
-                    .foregroundStyle(.text.primary)
-                    .forcingCheckboxStates(state.isForced ? [state] : [])
-                    .disabled(state.isDisabled)
                 }
             }
             section("Live") {
@@ -68,6 +70,17 @@ private struct CheckboxPage: View {
                     .textRole(CheckboxSampleRole.task)
                     .category(.green)
                     .accessibilityIdentifier(CheckboxCatalogID.listColor)
+                // A row whose title is a separate text: the toggle hides its label, which stays its name, and the
+                // title is not read a second time.
+                HStack(spacing: 0) {
+                    Toggle("Call the plumber", isOn: $row)
+                        .toggleStyle(.check)
+                        .labelsHidden()
+                        .accessibilityIdentifier(CheckboxCatalogID.row)
+                    Text("Call the plumber")
+                        .accessibilityHidden(true)
+                }
+                .textRole(CheckboxSampleRole.task)
                 Text(verbatim: summary)
                     .textRole(.footnote.regular)
                     .foregroundStyle(.text.secondary)
@@ -80,9 +93,21 @@ private struct CheckboxPage: View {
         }
     }
 
+    /// A check in a state of the contract, labelled with it, and "checked" after it when the toggle is on.
+    private func stateSample(_ state: CheckboxCatalogState, checked: Bool) -> some View {
+        Toggle(isOn: .constant(checked)) {
+            Text(verbatim: checked && !state.isChecked ? "\(state.name), checked" : state.name)
+        }
+        .toggleStyle(.check)
+        .textRole(CheckboxSampleRole.task)
+        .foregroundStyle(.text.primary)
+        .forcingCheckboxStates(state.isForced ? [state] : [])
+        .disabled(state.isDisabled)
+    }
+
     /// Which live checks are on, for the UI tests.
     private var summary: String {
-        let on = [("task", task), ("subtask", subtask), ("list color", listColor)].filter(\.1).map(\.0)
+        let on = [("task", task), ("subtask", subtask), ("list color", listColor), ("row", row)].filter(\.1).map(\.0)
         return "on: " + (on.isEmpty ? "none" : on.joined(separator: ", "))
     }
 

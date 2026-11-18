@@ -121,6 +121,19 @@ Each of these is decided by the agent under the owner's delegation of 2026-11-18
   Settings, Keyboard, "Keyboard navigation") and keep the contract as it is; or record on macOS that the check takes
   focus only as the system's own controls do, and leave the measurement to the phase that adds keyboard checks.
 
+- **Details the implementation chose where the contract is silent**, for the owner to confirm or move into the
+  contract (the reviews of the Apple implementation, 2026-11-19):
+  - The press's 98 % and disabled's `opacity.disabled` apply to the check and its label together, the label being part
+    of the control as it is of a Button (`container` in the bindings).
+  - The mark is the check glyph at the bold weight, as the pilot draws its glyphs.
+  - On macOS the system's focus ring goes around the whole toggle, the label included; westron sets no focus shape.
+  - On iOS 17, macOS 14 and watchOS 10 a custom style cannot see `.labelsHidden()`, so a row with a separate title
+    shows the title twice there; from iOS 18, macOS 15 and watchOS 11 the label is hidden and stays the name. A row
+    could pass an empty label and its title as `.accessibilityLabel(_:)` on the older systems; not measured.
+  - The accessibility audit measures a check whose label is hidden as if its name were drawn in the circle's square,
+    and reports its ring as text that "nearly passed" and its name as clipped; the catalog suppresses both, with the
+    reason, on its live row. A product's own audit of such a row will report the same.
+
 ## The control tokens
 
 The control tokens of the parallel work are in `tokens/`: `color.category.<name>.control` for the disc and

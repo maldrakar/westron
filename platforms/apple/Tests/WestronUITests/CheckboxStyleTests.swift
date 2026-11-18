@@ -132,7 +132,7 @@ struct CheckboxStyleTests {
         #expect(CheckboxTokens(category: nil, states: []).ringColor == .border.strong)
     }
 
-    @Test("the environment carries the list color: nil by default, the closest .category(_:) winning")
+    @Test("the environment carries the list color, nil (the accent) by default")
     func categoryEnvironment() {
         #expect(EnvironmentValues().category == nil)
         var values = EnvironmentValues()
