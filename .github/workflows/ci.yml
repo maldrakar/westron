@@ -133,9 +133,21 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Audit (iOS)
+        # check.sh audits once more, in a second xcodebuild run, the entries a stalled simulator failed or kept from
+        # being audited, and never a run with a finding (#74); each retry shows as a warning on the run. Only the
+        # entries left are retried, and only within a time budget of 30 of the job's 35 minutes; the whole shard only
+        # when the test runner failed to start.
         env:
           WESTRON_ENTRY_SHARD: ${{ matrix.shard && format('{0}/{1}', matrix.shard, matrix.shards) || '' }}
         run: tools/apple/check.sh a11y ios ${{ matrix.test }}
+      # A leg that retried keeps its logs, the first run's and the retry's, even when the retry passed: the flakiness
+      # stays visible. Logs only, a few MB; the result bundles go up with a failure below.
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && hashFiles('.build/logs/a11y-*-retry-*.log') != '' }}
+        with:
+          name: a11y-retried-${{ matrix.test }}${{ matrix.shard && format('-shard{0}of{1}', matrix.shard, matrix.shards) || '' }}
+          path: .build/logs/a11y-*.log
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

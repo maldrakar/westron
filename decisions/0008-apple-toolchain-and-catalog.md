@@ -60,6 +60,19 @@ Date: 2026-11-14. Status: accepted.
   passed 40 minutes (`testAccessibilityDynamicType` alone took 13.5). CI now runs the five tests as a matrix job,
   `accessibility-audit`, one job each in parallel, 35 minutes each: about 40 runner-minutes per pull request. Whether
   it runs on every pull request or on `main` only is the owner's call: one commented `if:` line in the job.
+  2026-11-18 (#74): the audit's legs failed on CI for the machinery, not for a page: 10 failed legs in 5 runs of
+  2026-11-17/18, none for a real issue. The simulator stalls for a minute or more now and then, and whatever the
+  test asks of it then fails (terminating or launching the catalog, a UI query, the audit's -56, the entry not
+  rendering); a stopped `testmanagerd` in a local simulator gives the same "Failed to terminate" message, and a
+  stopped catalog does not. XCTest stops the test method at a failed terminate, launch, query or drag, so the rest
+  of the shard went unaudited. The test could withhold such a failure from XCTest and go on, but on an app in an
+  unknown state; so it records every failure as it comes and prints it with its kind (`infrastructure` for those
+  messages, `finding` for everything else), and which entries it finished. `tools/apple/check.sh a11y` then audits
+  once more, in a run of its own, the entries a run did not finish or that failed for infrastructure alone, only
+  after a run whose test started (the build is a step of its own) and only within a time budget of 30 of the leg's
+  35 minutes. A test with a finding is never retried, so a rare finding still fails the leg; every retry is logged,
+  warned on the run, and its logs are uploaded. One finding was transient too, on an element the bottom of the screen cut; such an element is now judged on
+  the next screenful, which shows it whole. The legs stay informational checks, never required.
 
 ## Consequences
 
