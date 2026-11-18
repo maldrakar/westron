@@ -61,11 +61,11 @@ Date: 2026-11-14. Status: accepted.
   passed 40 minutes (`testAccessibilityDynamicType` alone took 13.5). CI now runs the five tests as a matrix job,
   `accessibility-audit`, one job each in parallel, 35 minutes each: about 40 runner-minutes per pull request. Whether
   it runs on every pull request or on `main` only is the owner's call: one commented `if:` line in the job.
-  2026-11-18 (#66, #70): eight legs, "Accessibility audit — <test>", one for each contrast test and the two slow
-  tests split by entries (`testAccessibilityDynamicType` into three shards, `testDefaultSettings` into two); they run
-  on every push to `main`, and on a pull request only when the `audit-scope` job finds a changed path the audit
-  depends on (or itself fails). They are not required checks: a pull request that skips them would wait for them
-  forever.
+  2026-11-18 (#66, #70): eight legs, "Accessibility audit — <test>" and "… — <test> (<i>/<n>)" for a shard, one for
+  each contrast test and the two slow tests split by entries (`testAccessibilityDynamicType` into three shards,
+  `testDefaultSettings` into two); they run on every push to `main`, and on a pull request only when the
+  `audit-scope` job finds a changed path the audit depends on (or itself fails). They are not required checks: a pull
+  request that skips them would wait for them forever.
   2026-11-18 (#74): the audit's legs failed on CI for the machinery, not for a page: 10 failed legs in 5 runs of
   2026-11-17/18, none for a real issue. The simulator stalls for a minute or more now and then, and whatever the
   test asks of it then fails (terminating or launching the catalog, a UI query, the audit's -56, the entry not
