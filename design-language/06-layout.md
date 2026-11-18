@@ -27,14 +27,26 @@ follows the platform and the person's text size. This chapter says why. The valu
 
 ## Direction B's rhythm
 
-B spends space generously, on the 8 px base (decisions/0013):
+B spends space generously, on the 8 px base. Each place has a role, and the role aliases a step of the ladder
+(decisions/0013, revision of 2026-11-18):
 
-| Where | Token |
-|---|---|
-| A card's padding | `space.200` |
-| The gap inside a group | `space.150` |
-| The gap between groups | `space.300` |
-| The page margin on a narrow window and on a wide one | `space.250`, `space.400` |
+| Where | Role | Step |
+|---|---|---|
+| A card's padding | `space.card` | `space.200` |
+| The gap inside a group | `space.within-group` | `space.150` |
+| The gap between groups | `space.between-groups` | `space.300` |
+| The page margin on a narrow window and on a wide one | `space.page.narrow`, `space.page.wide` | `space.250`, `space.400` |
+
+- **Use the role, not its step.** A contract or a screen that pads a card takes `space.card`, not `space.200`. The
+  role says why the space is there, and the compact density can point it at another step without touching the code
+  that uses it. A step stays the right choice for space that is not one of these places.
+- **Narrow and wide follow the width class.** On Apple the horizontal size class decides: compact takes
+  `space.page.narrow`, regular takes `space.page.wide`, and a Mac is always wide. On the web, GNOME and Android a
+  breakpoint decides, set in each platform's phase. westron has no helper for it yet; a product reads the size class
+  itself.
+- **The margins are for layout the product builds.** A `ScrollView`, a stack or a grid that the product lays out
+  takes westron's page margin. The system's `List`, `Form`, toolbars and navigation bars keep their own insets, as a
+  system control keeps its own look (decisions/0003), so a westron screen next to a system one does not jump.
 
 - **Groups show through space.** The gap between groups is twice the gap inside one, so a person sees the grouping
   before any line. Separators stay quiet (chapter 02), and a screen needs few of them (chapter 00, principle 4).
@@ -54,7 +66,7 @@ B spends space generously, on the 8 px base (decisions/0013):
 - **`density` is a modifier with `regular` and `compact`.** `regular` is direction B's comfortable density, the default
   for every product. The mode is resolved at runtime through the environment, like the theme (decisions/0010).
 - **Compact changes components.** Controls and rows get one 8 px step smaller, cell insets halve, and gaps inside a
-  group move one step down (decisions/0013).
+  group move one step down (decisions/0013). The gap moves by pointing `space.within-group` at another step.
 - **Compact keeps the frame.** The ladder, text sizes, page margins and the gaps between sections stay the same in both
   densities. No surveyed system rescales its ladder, and a dense view should keep its margins. A dense table picks a
   smaller text role itself (chapter 03).
@@ -98,7 +110,3 @@ B spends space generously, on the 8 px base (decisions/0013):
    both.
 2. **System controls in compact.** On Apple, should compact also set `controlSize(.small)` on its subtree, so that
    system controls get denser together with westron's own?
-3. **Narrow and wide.** The page margin is `space.250` on a narrow window and `space.400` on a wide one. What switches
-   between them: the horizontal size class on Apple, and which width on the web and GNOME?
-4. **Margins inside system containers.** A system `List` or `Form` brings its own insets. Does westron's page margin
-   apply only to what westron lays out, leaving the system's insets as they are?
