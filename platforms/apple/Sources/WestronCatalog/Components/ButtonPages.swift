@@ -191,12 +191,14 @@ private struct SampleButton: View {
 /// One cell of Button's snapshot matrix (#24; `ComponentMatrix.button`, generated from the contract): the real button
 /// with the combination's variant, size, role and iconOnly, an icon and a label, in the combination's state. Hover,
 /// focus and pressed are forced, as on the `button-states` pages; disabled and loading are set with the real
-/// `.disabled(_:)` and `.loading(_:)`.
+/// `.disabled(_:)` and `.loading(_:)`. With `withoutIcon`, for the supplementary sheets, the label has no icon.
 struct ButtonMatrixCell: View {
     let values: ButtonMatrixValues
+    let withoutIcon: Bool
 
-    init(_ values: ButtonMatrixValues) {
+    init(_ values: ButtonMatrixValues, withoutIcon: Bool = false) {
         self.values = values
+        self.withoutIcon = withoutIcon
     }
 
     var body: some View {
@@ -204,7 +206,7 @@ struct ButtonMatrixCell: View {
         let (variant, size, role, iconOnly, stateName) = values.fields
         let state = stateName.flatMap(ButtonCatalogState.init(named:))
         SampleButton(
-            kind: iconOnly ? .iconOnly : .iconAndLabel, variant: variant, size: size,
+            kind: iconOnly ? .iconOnly : withoutIcon ? .label : .iconAndLabel, variant: variant, size: size,
             // The style draws any role other than destructive as default (the contract's platforms.apple).
             destructive: role == "destructive"
         )
@@ -212,6 +214,20 @@ struct ButtonMatrixCell: View {
         .disabled(state?.isDisabled ?? false)
         .loading(state?.isLoading ?? false)
     }
+}
+
+extension ComponentMatrix.Supplement {
+    /// Button's label without an icon, on the matrix's sheets that are not icon-only: every variant, size and role, at
+    /// rest and in each state (#72). The contract has no option for it, so the generated matrix, whose cells have an
+    /// icon and a label, does not show what the contract's description says of it: while loading, the indicator goes
+    /// before the label and the button widens (P13).
+    static let buttonLabelWithoutIcon = ComponentMatrix.Supplement(
+        component: "button", id: "label-without-icon", title: "label without an icon",
+        note: "A label without an icon is not a contract option, so the generated sheets, whose buttons have an icon "
+            + "and a label, do not show it. While loading, the indicator goes before the label and the button widens "
+            + "(the contract's description, P13).",
+        keeps: ["iconOnly": "false"]
+    ) { ButtonMatrixCell(ButtonMatrixValues($0), withoutIcon: true) }
 }
 
 /// Variants × sizes × the three kinds of label, in one role.
