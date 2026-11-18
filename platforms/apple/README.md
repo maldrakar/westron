@@ -269,8 +269,15 @@ gets another shard.
     fails the leg.
   - A retry must fit a time budget, 30 minutes from the start of `check.sh a11y`, its build included
     (`WESTRON_A11Y_RETRY_BUDGET`): a CI leg times out at 35, and a leg the timeout kills uploads no logs. A retry
-    is estimated at 90 s plus the first run's time per entry for each entry to retry; a whole test is retried only
-    in the first half of the budget. Past it, the leg fails with a line that says so.
+    is estimated at 90 s plus, for each entry to retry, the mean time of the entries the first run finished
+    without a failure and without an audit the test retried on the spot (-56), from XCTest's `t = <s>s` activity
+    times in the log; a stalled entry's time is never used. When there are none, as with a stall in the first
+    entry, each entry counts at a time measured on CI with a margin: 90 s for `testDefaultSettings`, 130 s for
+    `testAccessibilityDynamicType`, 38 s for the other three. A whole test is retried only in the first half of
+    the budget. Past it, the leg fails with a line that says so. On CI the step spends 6.5–17.1 minutes, median
+    10.0 and mean 10.4, before its first entry, so a stall in the first entry of the slowest leg is retried after a
+    build of usual length (about 28.4 minutes in all), and not after a slow one (`tools/apple/check.sh` has the
+    numbers).
   - What the retry can hide: a catalog page that hangs the app only sometimes, since a hung app also times out UI
     queries.
   - `WESTRON_A11Y_FAIL_ONCE=<id>` is a test hook that fails that entry for infrastructure in the first run only, to
