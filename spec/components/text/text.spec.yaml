@@ -9,10 +9,11 @@ description: >-
   a role follows its text style, so it scales with Dynamic Type and takes the Mac's sizes on macOS. Tracking is a
   percentage of the size the font is drawn at, on every platform and at every text size: headings are tracked in by
   1 %, the overline out by 6 %, each the token's letterSpacing over its fontSize. With the system's Bold Text setting
-  on, a role in Onest or Geist Mono moves up one weight, as the system font does by itself: Onest SemiBold to Bold
-  and Bold to ExtraBold, Geist Mono Regular to SemiBold and SemiBold to Bold. Line height comes from the font. The
-  component has no states. Running text wraps; a one-line label may truncate with an ellipsis when its full text is
-  reachable, and the line limit is the platform's own (design-language/03, "Capitals, numbers and fitting").
+  on, a role in Onest or Geist Mono draws heavier, as the system font does by itself: Onest SemiBold to Bold and
+  Bold to ExtraBold, Geist Mono Regular to SemiBold; what code.strong, in Geist Mono SemiBold, draws then is open
+  (decisions/0001, "Open points for the owner"). Line height comes from the font. The component has no states.
+  Running text wraps; a one-line label may truncate with an ellipsis when its full text is reachable, and the line
+  limit is the platform's own (design-language/03, "Capitals, numbers and fitting").
 consumers: [todo-app/lists-screen, todo-app/list-screen]
 
 options:
@@ -46,8 +47,8 @@ platforms:
       tracking, where only a font fits.
       A role in Onest or Geist Mono is Font.custom(_:size:relativeTo:) at its text style's size on that OS, the
       system font's roles Font.system(_:design:weight:); the tracking is recomputed from the size Dynamic Type draws.
-      Under Bold Text (legibilityWeight .bold) a role in Onest or Geist Mono takes the next weight; the system font
-      does so by itself. Line height is the font's own (design-language/03, "Tracking and line height"). The line
+      Under Bold Text (legibilityWeight .bold) a role in Onest or Geist Mono takes the heavier weight the
+      description names; the system font does so by itself. Line height is the font's own (design-language/03, "Tracking and line height"). The line
       limit and truncation are SwiftUI's .lineLimit and .truncationMode.
     watchos:
       description: >-

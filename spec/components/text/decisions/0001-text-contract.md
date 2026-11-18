@@ -65,20 +65,20 @@ so that the roles are not listed twice (below, "The schema").
   | `heading.large`, `heading.medium` | Onest Bold | Onest ExtraBold | **new**: `Onest-ExtraBold.ttf` |
   | `heading.small`, `heading.overline` | Onest SemiBold | Onest Bold | shipped |
   | `code.regular` | Geist Mono Regular | Geist Mono SemiBold | shipped |
-  | `code.strong` | Geist Mono SemiBold | Geist Mono Bold | **new**: `GeistMono-Bold.ttf` |
+  | `code.strong` | Geist Mono SemiBold | **open** (below, "Open points for the owner") | none, or `GeistMono-Bold.ttf` |
   | the system font's eleven roles | their weight | the system's own heavier weight | none: the system font does it |
 
-- **`code.strong` under Bold Text is Geist Mono Bold**, one step above its SemiBold, as Onest SemiBold goes to Bold.
-  `code.regular` then draws in SemiBold, the weight `code.strong` has without the setting, so the two roles stay one
-  weight apart under either setting. Geist Mono Regular moves to SemiBold, not Medium, as the owner said: that skips
-  Medium, and it needs no file for it.
+- The owner named these steps: Onest SemiBold → Bold, Bold → ExtraBold, and Geist Mono Regular → SemiBold, which
+  skips Medium and needs no file. The owner named one new font, Onest ExtraBold. What `code.strong` draws under Bold
+  Text was not asked, so it is an open point.
 - **Today the package ships four instances:** Onest SemiBold and Bold, Geist Mono Regular and SemiBold
-  (`platforms/apple/Sources/WestronUI/Fonts`, about 100 KB each). The implementation adds two, Onest ExtraBold (800)
-  and Geist Mono Bold (700), cut as the others are, from the variable fonts with fontTools (decisions/0011). Both
-  weights exist: Google Fonts serves both families at every weight from 100 to 900 (checked on 2026-11-18). The SIL OFL 1.1 of each allows the instance, and neither license reserves a font
-  name (decisions/0011), so the new instances keep their names, `Onest-ExtraBold` and `GeistMono-Bold`.
-- This implies a revision of decisions/0011 when the fonts are added: six instances instead of four, about 200 KB
-  more. It is not made now.
+  (`platforms/apple/Sources/WestronUI/Fonts`, about 100 KB each). The implementation adds Onest ExtraBold (800), cut
+  as the others are, from the variable font with fontTools (decisions/0011), and Geist Mono Bold (700) only if the
+  owner chooses it for `code.strong`. Both weights exist: Google Fonts serves both families at every weight from 100
+  to 900 (checked on 2026-11-18). The SIL OFL 1.1 of each allows the instance, and neither license reserves a font
+  name (decisions/0011), so a new instance keeps its name, `Onest-ExtraBold` or `GeistMono-Bold`.
+- This implies a revision of decisions/0011 when the fonts are added: five instances instead of four, about 100 KB
+  more, or six, about 200 KB more, with Geist Mono Bold. It is not made now.
 - Only the shipped weights was rejected: the Bold headings would not move, and the HIG asks a custom font to honor
   Bold Text. Ignoring the setting was rejected for the same reason.
 
@@ -131,6 +131,13 @@ The owner has not been asked these yet. The contract holds them as proposed.
 
 ## Open points for the owner
 
+- **`code.strong` under Bold Text.** The owner's steps leave it out (above, "Bold Text").
+  - (a) **Geist Mono Bold.** One step up, as Onest SemiBold goes to Bold. It is a second new font file,
+    `GeistMono-Bold.ttf`, about 100 KB. The two code roles stay one weight apart under Bold Text: `code.regular` in
+    SemiBold, `code.strong` in Bold.
+  - (b) **Geist Mono SemiBold, as without the setting.** There is no second file. Under Bold Text the two code roles
+    draw the same weight, since `code.regular` moves up to SemiBold, so emphasis inside code shows only by its color,
+    if the product gives it one.
 - **P2 and the environment.** A function that returns `Text` cannot read the environment, so `Text.textRole(_:)`
   cannot see the Dynamic Type size or the Bold Text setting by itself: `Font.custom(_:size:relativeTo:)` still scales
   the font, but the tracking in points and the heavier instance are chosen when the `Text` is built. The
@@ -192,7 +199,7 @@ share `subheadline.regular`. The pilot uses neither code role.
 ## Consequences
 
 - At approval, design-language/03 takes the answers to its open questions 1, 2 and 4, and keeps 3 open.
-- At implementation, decisions/0011 is revised for the two new font instances, and `.textRole(_:)` computes the
+- At implementation, decisions/0011 is revised for the new font instances (one or two, by the answer on `code.strong`), and `.textRole(_:)` computes the
   tracking from the drawn size and picks the heavier instance under Bold Text.
 - The parity lint keeps `textRole` and `Font.init` in its reviewed adapters until the generated layer of the
   strategy is decided (spec/conventions.md, question 6).

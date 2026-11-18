@@ -98,7 +98,8 @@ no option is `inout`, `var` or `let` (an option becomes an argument label). Othe
   does not list them, so it cannot drift from `tokens/`; on Apple the values are the token accessor's names
   (`.textRole(.heading.large)`). `default`, when given, is one of them; without it, every use names one. Constraints,
   cases, bindings by value and platform restrictions do not name such an option yet: its values have dots, which a
-  name cannot (Text, the first such contract, needs none of them).
+  name cannot (Text, the first such contract, needs none of them). Nor is it a system option: its values are
+  westron's tokens, not a system type's.
 - **Extensions of a system view.** `strategy: extension-on-system-control` is for a system control or view, named in
   `base`, that takes no style: SwiftUI has no `textStyle`, so westron adds a modifier to `SwiftUI.Text` instead of a
   style (decisions/0003, point 1). On Apple its base is one of `SystemStyles.withoutStyle`, and a base that has a
@@ -116,9 +117,10 @@ options (`ButtonVariant`, `ButtonSize`), the overload of the base control's styl
 (`.buttonStyle(.primary, size: .m)`), which applies the hand-written `<Component>VariantStyle`, and the tables that
 style reads (the `controlSize` mapping, each OS's fallbacks, the states). Its exact form is in
 [`spec/conventions.md`](../conventions.md). A draft contract and an own component generate nothing yet. Nor does an
-`extension-on-system-control`, or an option whose values are tokens: generation fails on an approved contract with
-either, as not supported yet, until the generator, the API parity lint and the snapshot matrix give them API, so a
-contract of that kind stays draft until then.
+`extension-on-system-control`, or an option whose values are tokens. Generation fails, as not supported yet, on an
+approved `extension-on-system-control`, and on an approved `style-on-system-control` with an option whose values are
+tokens, until the generator, the API parity lint and the snapshot matrix support them, so such a contract stays draft
+until then. An approved own component with such an option generates nothing, as every own component does.
 
 Generation fails, with every problem, when a contract does not pass the check below; when a generated name is a
 public SwiftUI type; when two contracts generate one type name (`button`'s option `groupSize` and `button-group`'s
@@ -150,7 +152,7 @@ Besides the schema, the check enforces what a schema cannot:
   `withoutStyle`; a base in neither list is an error until it is added there;
 - an option whose values are tokens names a group of `tokens/`, not a token and not a path with nothing under it; the
   group's tokens are semantic, exist in every mode and are of one type; its default is one of them, by its path after
-  the group; no constraint, case or platform restriction names it;
+  the group; no constraint, case, binding by value, platform restriction or `systemOptions` names it;
 - constraints and cases name options, values and states that exist, a bool option with `true` or `false`;
 - a binding by value uses the values of one enum option, every one of them; every case is reachable, and so is a
   binding's `token`, which the cases leave no room for when they match every combination. The check enumerates the

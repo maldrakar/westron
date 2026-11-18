@@ -179,6 +179,39 @@ struct TokenOptionContractTests {
                     "platforms.apple.watchos.options.role: role takes its values from the tokens of typography, and "
                         + "platform restrictions do not name such an option yet"
                 ])
+        // A binding by value keyed by the option's tokens: the schema rejects the dotted keys as names, and the rule
+        // says why the option cannot be named there.
+        let byValue = textProblems(
+            replacing(
+                "slots: [label]\n",
+                with: "slots: [label]\ntokens:\n  label.font: { heading.large: typography.heading.large, "
+                    + "body.regular: typography.body.regular, body.strong: typography.body.strong }\n"))
+        #expect(
+            byValue.contains(
+                "tokens.label.font: role takes its values from the tokens of typography, and bindings by value do not "
+                    + "name such an option yet"))
+        #expect(!byValue.contains { $0.contains("is not a value of any enum option") })
+    }
+
+    @Test("rule: a token-group option is never a system option: its values are westron's tokens")
+    func notSystemOption() {
+        #expect(
+            textProblems(
+                replacing(
+                    "    base: SwiftUI.Text\n",
+                    with: "    base: SwiftUI.Text\n    systemOptions: { role: SwiftUI.Font }\n"))
+                == [
+                    "platforms.apple.systemOptions.role: role takes its values from the tokens of typography, which "
+                        + "are westron's, not the system's: a system option's values are its system type's; remove it "
+                        + "here"
+                ])
+        #expect(
+            textProblems(
+                replacing(
+                    "{ strategy: style-on-system-control, base: GtkLabel }",
+                    with: "{ strategy: style-on-system-control, base: GtkLabel, systemOptions: { role: GtkLabel } }")
+            )
+            .count == 1)
     }
 
     @Test("rule: the Apple strategy fits its base")

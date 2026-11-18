@@ -363,6 +363,11 @@ struct ContractRules {
                                 + "\(owner) a token (\(enums[owner]!.joined(separator: ", "))); a binding that leaves "
                                 + "values without one is written as cases, with token: null")
                     }
+                } else if let (option, group) = tokenOptions.sorted(by: { $0.key < $1.key }).first(where: { _, group in
+                    let values = tokens.group(TokenPath(group)).values
+                    return keys.allSatisfy(values.contains)
+                }) {
+                    report(path, tokenOptionNamed(option, group, in: "bindings by value"))
                 } else {
                     let known = byValue.filter { key in enums.values.contains { $0.contains(key.key) } }
                     if known.count == byValue.count {
@@ -685,13 +690,21 @@ struct ContractRules {
         }
     }
 
-    /// A platform's `systemOptions` name options of the contract.
+    /// A platform's `systemOptions` name options of the contract, none of whose values are westron's tokens.
     mutating func checkSystemOptions() {
         let names = (document["options"]?.members ?? []).map(\.key)
+        let tokenOptions = tokenOptions
         for platform in ["apple", "web", "linux", "android"] {
             let path = DocumentPath.root.key("platforms").key(platform).key("systemOptions")
-            for member in value(at: path)?.members ?? [] where !names.contains(member.key) {
-                report(path.key(member.key), unknownOption(member.key))
+            for member in value(at: path)?.members ?? [] {
+                if let group = tokenOptions[member.key] {
+                    report(
+                        path.key(member.key),
+                        "\(member.key) takes its values from the tokens of \(group), which are westron's, not the "
+                            + "system's: a system option's values are its system type's; remove it here")
+                } else if !names.contains(member.key) {
+                    report(path.key(member.key), unknownOption(member.key))
+                }
             }
         }
     }
