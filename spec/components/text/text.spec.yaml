@@ -1,7 +1,7 @@
-# westron's Text contract (#27): a draft for the owner's approval. The owner answered the interview on 2026-11-18;
-# decisions/0001-text-contract.md records the answers, the options considered and what is proposed on top of them.
+# westron's Text contract (#27), approved by the owner on 2026-11-18: decisions/0001-text-contract.md records the
+# owner's answers, the options considered and the proposals the owner confirmed on top of them.
 id: text
-status: draft
+status: approved
 description: >-
   A text role on the platform's own text view: westron adds no text type of its own, only the role. A role sets the
   font and the tracking and nothing else; the product sets the color with a color role, and the heading semantics
@@ -10,10 +10,9 @@ description: >-
   percentage of the size the font is drawn at, on every platform and at every text size: headings are tracked in by
   1 %, the overline out by 6 %, each the token's letterSpacing over its fontSize. With the system's Bold Text setting
   on, a role in Onest or Geist Mono draws heavier, as the system font does by itself: Onest SemiBold to Bold and
-  Bold to ExtraBold, Geist Mono Regular to SemiBold; what code.strong, in Geist Mono SemiBold, draws then is open
-  (decisions/0001, "Open points for the owner"). Line height comes from the font. The component has no states.
-  Running text wraps; a one-line label may truncate with an ellipsis when its full text is reachable, and the line
-  limit is the platform's own (design-language/03, "Capitals, numbers and fitting").
+  Bold to ExtraBold, Geist Mono Regular to SemiBold and SemiBold to Bold. Line height comes from the font. The
+  component has no states. Running text wraps; a one-line label may truncate with an ellipsis when its full text is
+  reachable, and the line limit is the platform's own (design-language/03, "Capitals, numbers and fitting").
 consumers: [todo-app/lists-screen, todo-app/list-screen]
 
 options:

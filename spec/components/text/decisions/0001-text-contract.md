@@ -1,7 +1,9 @@
 # 0001. The Text contract
 
-Date: 2026-11-18. Status: draft for the owner's approval (#27). The owner answered the interview on 2026-11-18;
-the points under "Proposed, to confirm at approval" are the agent's and wait for the owner.
+Date: 2026-11-18. Status: accepted. The owner answered the interview and, on 2026-11-18, approved the contract (#27):
+P1–P6 as proposed, Geist Mono Bold for `code.strong` under Bold Text, and the Bold Text weights as a rule of the Apple
+adapter rather than tokens. Whether the `Text` twin follows Dynamic Type and Bold Text is left to the implementation
+to show (below, "Open points").
 
 ## Context
 
@@ -65,20 +67,31 @@ so that the roles are not listed twice (below, "The schema").
   | `heading.large`, `heading.medium` | Onest Bold | Onest ExtraBold | **new**: `Onest-ExtraBold.ttf` |
   | `heading.small`, `heading.overline` | Onest SemiBold | Onest Bold | shipped |
   | `code.regular` | Geist Mono Regular | Geist Mono SemiBold | shipped |
-  | `code.strong` | Geist Mono SemiBold | **open** (below, "Open points for the owner") | none, or `GeistMono-Bold.ttf` |
+  | `code.strong` | Geist Mono SemiBold | Geist Mono Bold | **new**: `GeistMono-Bold.ttf` |
   | the system font's eleven roles | their weight | the system's own heavier weight | none: the system font does it |
 
 - The owner named these steps: Onest SemiBold → Bold, Bold → ExtraBold, and Geist Mono Regular → SemiBold, which
-  skips Medium and needs no file. The owner named one new font, Onest ExtraBold. What `code.strong` draws under Bold
-  Text was not asked, so it is an open point.
+  skips Medium and needs no file. The owner named one new font, Onest ExtraBold.
+- **`code.strong` under Bold Text draws Geist Mono Bold,** the owner's answer at approval.
+  - Considered: (a) Geist Mono Bold, one step up, as Onest SemiBold goes to Bold, at the cost of a second new font
+    file, `GeistMono-Bold.ttf`, about 100 KB; (b) Geist Mono SemiBold, as without the setting, with no second file.
+  - **Chosen: (a).** The two code roles stay one weight apart under Bold Text, `code.regular` in SemiBold and
+    `code.strong` in Bold. With (b) they would draw the same weight, since `code.regular` moves up to SemiBold, and
+    emphasis inside code would show only by its color, if the product gave it one.
+- **The steps are a rule of the Apple adapter, not tokens,** the owner's answer at approval: a role in Onest or Geist
+  Mono moves one weight up under Bold Text, as the table lists, as the system font does by itself.
+  - Considered: the rule in the adapter; a primitive `font.weight.extrabold` and a Bold Text weight token per role.
+  - **Chosen: the rule.** `font.weight` keeps its four weights (regular, medium, semibold, bold), so Onest ExtraBold
+    has no token, and no role gets a second weight. Bold Text is an Apple setting; the web has no counterpart
+    (`platforms.web`).
 - **Today the package ships four instances:** Onest SemiBold and Bold, Geist Mono Regular and SemiBold
-  (`platforms/apple/Sources/WestronUI/Fonts`, about 100 KB each). The implementation adds Onest ExtraBold (800), cut
-  as the others are, from the variable font with fontTools (decisions/0011), and Geist Mono Bold (700) only if the
-  owner chooses it for `code.strong`. Both weights exist: Google Fonts serves both families at every weight from 100
-  to 900 (checked on 2026-11-18). The SIL OFL 1.1 of each allows the instance, and neither license reserves a font
-  name (decisions/0011), so a new instance keeps its name, `Onest-ExtraBold` or `GeistMono-Bold`.
-- This implies a revision of decisions/0011 when the fonts are added: five instances instead of four, about 100 KB
-  more, or six, about 200 KB more, with Geist Mono Bold. It is not made now.
+  (`platforms/apple/Sources/WestronUI/Fonts`, about 100 KB each). The implementation adds Onest ExtraBold (800) and
+  Geist Mono Bold (700), cut as the others are, from the variable font with fontTools (decisions/0011). Both weights
+  exist: Google Fonts serves both families at every weight from 100 to 900 (checked on 2026-11-18). The SIL OFL 1.1
+  of each allows the instance, and neither license reserves a font name (decisions/0011), so a new instance keeps its
+  name, `Onest-ExtraBold` or `GeistMono-Bold`.
+- This implies a revision of decisions/0011 when the fonts are added: six instances instead of four, about 200 KB
+  more. It is made with the fonts, not now.
 - Only the shipped weights was rejected: the Bold headings would not move, and the HIG asks a custom font to honor
   Bold Text. Ignoring the setting was rejected for the same reason.
 
@@ -116,9 +129,10 @@ so that the roles are not listed twice (below, "The schema").
 - Only the fifteen was rejected: the two code roles would be tokens without a contract, and westron serves technical
   products too (decisions/0011).
 
-## Proposed, to confirm at approval
+## Proposed and confirmed
 
-The owner has not been asked these yet. The contract holds them as proposed.
+The answers above left these points open. The agent proposed each one, with its reason and its source, and the owner
+confirmed P1–P6 as proposed on 2026-11-18, when approving the contract.
 
 | # | Proposal | Reason | Source |
 |---|---|---|---|
@@ -129,24 +143,13 @@ The owner has not been asked these yet. The contract holds them as proposed.
 | P5 | On watchOS a role keeps its weight in the system font, the code roles take the system's monospaced design, and the tracking still applies as a percentage of the watch's size | The owner chose the system font; weight and tracking are what is left of a role's look, and code needs a monospaced face | the owner's watchOS answer |
 | P6 | The text is its only slot, `label`, and the contract requires no accessible label beyond it | A text reads itself | chapter 08 |
 
-## Open points for the owner
+## Open points
 
-- **`code.strong` under Bold Text.** The owner's steps leave it out (above, "Bold Text").
-  - (a) **Geist Mono Bold.** One step up, as Onest SemiBold goes to Bold. It is a second new font file,
-    `GeistMono-Bold.ttf`, about 100 KB. The two code roles stay one weight apart under Bold Text: `code.regular` in
-    SemiBold, `code.strong` in Bold.
-  - (b) **Geist Mono SemiBold, as without the setting.** There is no second file. Under Bold Text the two code roles
-    draw the same weight, since `code.regular` moves up to SemiBold, so emphasis inside code shows only by its color,
-    if the product gives it one.
 - **P2 and the environment.** A function that returns `Text` cannot read the environment, so `Text.textRole(_:)`
   cannot see the Dynamic Type size or the Bold Text setting by itself: `Font.custom(_:size:relativeTo:)` still scales
   the font, but the tracking in points and the heavier instance are chosen when the `Text` is built. The
   implementation must show, in the catalog at accessibility5 and with Bold Text on, whether the `Text` twin follows
   both. If it does not, the contract records the difference in `platforms.apple` before approval, or P2 is dropped.
-- **Where the Bold Text weights live.** `font.weight` has no 800 (regular, medium, semibold, bold), so Onest
-  ExtraBold has no token. The step up can be a rule in the Apple adapter (one weight up, as the system does), or a
-  token: a primitive `font.weight.extrabold` and a Bold Text weight per role. That is a token decision for the owner
-  at implementation (decisions/0010, 0013).
 - **Tabular digits** stay open (chapter 03, question 3).
 - **Headings on GNOME** stay open for phase 7 (design-language/09, question 4): whether a heading role keeps or
   replaces libadwaita's title classes.
@@ -192,14 +195,19 @@ share `subheadline.regular`. The pilot uses neither code role.
   - Considered: an enum listing the seventeen names, which could drift from the tokens and cannot spell
     `heading.large`, since a name has no dot; an enum with camelCase names and a binding by value to the tokens, which
     is the flat enum the owner rejected.
-- **Not generated yet.** A draft generates nothing, as every draft. The generator, the API parity lint and the
-  snapshot matrix do not support the strategy or the option yet, and generation fails on an approved contract with
-  either, so the follow-up adds that support with the approval (spec/conventions.md, question 6).
+- **Generated at approval** (spec/conventions.md, "Extensions of a system view"). The modifier stays hand-written:
+  its name and its argument come from the option's token accessor, `Westron.TextRole` → `.textRole(_:)`, so the
+  contract names neither. The API parity lint expects it from the contract, on `View` and as the `Text` twin, and the
+  snapshot matrix enumerates the seventeen roles from `tokens/` (`WestronCatalog/Generated/Text+Matrix.swift`).
+  - Considered: generating the signature into `WestronUI/Generated/`, which would forward to a hand-written body and
+    declare the `Text` twin a second time; naming the modifier and the accessor in the contract, which repeats what
+    the token accessor already says.
 
 ## Consequences
 
 - At approval, design-language/03 takes the answers to its open questions 1, 2 and 4, and keeps 3 open.
-- At implementation, decisions/0011 is revised for the new font instances (one or two, by the answer on `code.strong`), and `.textRole(_:)` computes the
-  tracking from the drawn size and picks the heavier instance under Bold Text.
-- The parity lint keeps `textRole` and `Font.init` in its reviewed adapters until the generated layer of the
-  strategy is decided (spec/conventions.md, question 6).
+- At implementation, decisions/0011 is revised for the two new font instances, Onest ExtraBold and Geist Mono Bold,
+  and `.textRole(_:)` computes the tracking from the drawn size and picks the heavier instance under Bold Text.
+- The parity lint expects `.textRole(_:)` from the contract, no longer as a reviewed adapter; `Font.init(_:)` stays
+  one, since it turns a token into a font and adds no modifier. The `Text` twin is checked once it is declared, and
+  required once it is in WestronUI (`APIParity.pendingTwins`).

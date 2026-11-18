@@ -4,6 +4,12 @@ import Foundation
 /// value per platform for each length and number, and one value for everything else, with the checks that what is
 /// written is what every Apple input resolves to.
 struct AppleTokenModel: Equatable {
+    /// The accessor of the typography tokens, and the group its names drop: `typography.heading.large` is
+    /// `Westron.TextRole.heading.large`. A contract option whose values are the group's tokens takes it as its argument
+    /// (`AppleComponents.tokenAccessors`).
+    static let textRoleType = "Westron.TextRole"
+    static let textRoleGroup = "typography"
+
     /// A color as Apple stores it: 8-bit sRGB when it is inside sRGB, so that a hex stays the same byte for byte, and
     /// Display P3 otherwise.
     enum ColorValue: Equatable {
@@ -508,7 +514,7 @@ extension AppleTokenModel {
                 family.replacingOccurrences(of: " ", with: "") + "-" + postScriptWeights[Int(value.fontWeight.value)]!
         }
         return TextRole(
-            path: token.path, members: try SwiftName.members(token.path, dropping: "typography"), doc: Doc(token),
+            path: token.path, members: try SwiftName.members(token.path, dropping: textRoleGroup), doc: Doc(token),
             textStyle: textStyle.rawValue, design: design, weight: weight, font: font,
             size: try points(value.fontSize, token.path), lineHeight: value.lineHeight,
             letterSpacing: try points(value.letterSpacing, token.path))
@@ -601,7 +607,7 @@ extension AppleTokenModel {
                 reservedLeaf: Reserved.color.union(Reserved.shapeStyle),
                 reservedGroup: Reserved.color)
             + textRoleTree.collisions(
-                type: "Westron.TextRole", paths: textRoles.map(\.path), reservedLeaf: Reserved.textRole,
+                type: Self.textRoleType, paths: textRoles.map(\.path), reservedLeaf: Reserved.textRole,
                 reservedGroup: Reserved.textRole)
             + transitionTree.collisions(
                 type: "Animation", paths: transitions.map(\.path), reservedLeaf: Reserved.animation,
