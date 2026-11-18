@@ -29,7 +29,8 @@ values, the ramps and the rules that solve them are in decisions/0012; the token
 ## One accent: cobalt
 
 - **One saturated blue marks the primary action and the selection.** `background.accent` fills the one primary action
-  on a screen, a checked box, a switch that is on. Its usage note asks agents to avoid large areas and more than one
+  on a screen, a checked box, a switch that is on, and it meets the non-text contrast on every ground in every theme.
+  Its usage note asks agents to avoid large areas and more than one
   filled control on a screen (chapter 00, principle 3; [HIG Branding](https://developer.apple.com/design/human-interface-guidelines/branding)).
   `background.selected` and `accent-subtle` lay the accent lightly under a selected row or an empty state's tile.
 - **A filled control darkens as it is pressed.** `accent-hover` and `accent-pressed` are the accent fill under the
@@ -73,6 +74,13 @@ values, the ramps and the rules that solve them are in decisions/0012; the token
   product stores the name, and each platform owns the shades.
 - **Six roles, the same as a status's.** `background` is a tag's ground, `icon` a list's dot, `text` its title in
   color, `border` an outlined tag, `fill` a lit tag, and `on-fill` the words on that fill.
+- **Two more for a checked control.** `control` fills a checked control in the list's color, such as the round task
+  check, and `on-control` draws its mark. A checked disc is told from the ground only by its fill, so `control` meets
+  the non-text contrast on the canvas, the raised surface and the sunken one: 3:1, 4.5:1 in high contrast. Where
+  `fill` already does, `control` is `fill`. The bright fills move: olive and amber darken in light, to an ochre and a
+  darker olive under the same dark mark, and in light high contrast to a brown and a deep olive with a white mark,
+  since no fill holds 4.5:1 to a light ground and 7:1 to a dark mark. Red and indigo lighten a little in dark. Tags,
+  tiles and statuses keep `fill`, which stays as bright as before (decisions/0012, revision of 2026-11-18).
 - **They come from the ramps.** Each list color is a ramp, so a new name needs only a hue and a chroma in the
   palette.
 - **Identity is not state.** A list color never means danger, success or "today", even when a product would like to

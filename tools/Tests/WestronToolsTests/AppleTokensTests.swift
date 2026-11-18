@@ -77,7 +77,7 @@ struct AppleTokensTests {
         let files = try AppleTokens.files(for: Resolution(resolverFile: resolver))
         let colorsets = files.map(\.path).filter { $0.hasSuffix(".colorset/Contents.json") }
         #expect(colorsets.contains("\(AppleTokens.assetCatalog)/color.text.secondary.colorset/Contents.json"))
-        #expect(colorsets.filter { $0.contains("/color.category.") }.count == 12 * 6)
+        #expect(colorsets.filter { $0.contains("/color.category.") }.count == 12 * 8)
         let tokens = try #require(AppleFixture.file(files, AppleTokens.tokensFile))
         #expect(tokens.contains("public enum Category: String, CaseIterable, Sendable {"))
         #expect(!tokens.contains("color.neutral."), "primitives stay out, also the ramps the theme contexts merge in")

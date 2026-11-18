@@ -13,6 +13,8 @@ import Foundation
 /// | 9 | solid fill | moved from the source's lightness until its label reaches 4.5; high contrast 7 |
 /// | 10 | solid fill under the pointer | step 9, 0.04 further from its label |
 /// | `fill-pressed` | solid fill while pressed | step 10, another 0.04 further from its label |
+/// | `control` | a checked control's fill | step 9 where it reaches 3 on every ground, high contrast 4.5; else moved |
+/// | `control-contrast` | the label on `control` | step 9's label where it still reads at 4.5 (7), else the other one |
 /// | 11 | colored or secondary text | 4.5 on every ground and on every step 5; high contrast 7 |
 /// | 12 | primary text | from the source's lightness, 13 on the canvas and 7 on every step 5; high contrast 16 |
 ///
@@ -26,6 +28,13 @@ import Foundation
 ///
 /// `contrast` is the label of a ramp's solid fill. In dark high contrast a white label at 7:1 would sink the fill
 /// into the canvas, so the fill turns light and the label takes the canvas's color.
+///
+/// `control` is the solid fill as a checked control draws it: a disc seen against the ground it sits on, so it also
+/// meets the non-text target on every ground. Where step 9 already does, `control` is step 9 and `control-contrast`
+/// is `contrast`. Otherwise `control` moves away from the canvas the least lightness that meets it. If step 9's label
+/// no longer reads there, no lightness further away helps that label, so the other label takes over (white for a dark
+/// ink, the ink for white) and `control` moves on until both targets hold. A dark ink at 7:1 on a fill at 4.5:1 to a
+/// light canvas would need more than 21:1 between the canvas and the ink.
 public enum PaletteSolver {
     public static let themes = ["light", "dark", "light-hc", "dark-hc"]
 
@@ -209,6 +218,9 @@ public enum PaletteSolver {
                 throw Unreachable(theme: theme, path: [ramp.name, state.name], target: "\(text):1 under its label")
             }
             steps.append(fillStates[0].color)
+            let control = try solveControl(
+                theme, ramp.name, from: solid, label: label, chroma: ramp.chroma[8], hue: ramp.hue,
+                grounds: grounds, direction: away, nonText: nonText, text: text)
 
             let secondary = try solveStep(11, from: canvasLightness, direction: away, "\(text):1 on every step 5") {
                 minimum($0, on: onEverything) >= text
@@ -224,6 +236,8 @@ public enum PaletteSolver {
             entries += steps.enumerated().map { Entry(path: [ramp.name, "\($0.offset + 1)"], color: $0.element) }
             entries.append(Entry(path: [ramp.name, "contrast"], color: label))
             entries.append(Entry(path: [ramp.name, "fill-pressed"], color: fillStates[1].color))
+            entries.append(Entry(path: [ramp.name, "control"], color: control.fill))
+            entries.append(Entry(path: [ramp.name, "control-contrast"], color: control.label))
         }
 
         let series = source.series[dark: dark]
@@ -238,6 +252,29 @@ public enum PaletteSolver {
                     ) { minimum($0, on: grounds) >= Target.series }.color))
         }
         return entries
+    }
+
+    /// A ramp's `control` and its label, `control-contrast`: the solid fill, moved away from the canvas until it
+    /// reaches `nonText` on every ground, under the label that still reads on it at `text`.
+    static func solveControl(
+        _ theme: String, _ ramp: String, from solid: (color: RGB, lightness: Double), label: RGB, chroma: Double,
+        hue: Double, grounds: [RGB], direction: Double, nonText: Double, text: Double
+    ) throws -> (fill: RGB, label: RGB) {
+        if minimum(solid.color, on: grounds) >= nonText { return (solid.color, label) }
+        let path = [ramp, "control"]
+        let onGrounds = try solve(
+            theme, path, from: solid.lightness, chroma, hue, direction: direction, "\(nonText):1 on every ground"
+        ) { minimum($0, on: grounds) >= nonText }
+        if ratio(onGrounds.color, label) >= text { return (onGrounds.color, label) }
+        // Further from the canvas only lowers this label's contrast, so the other label takes over.
+        let other =
+            WCAG.relativeLuminance(label) < 0.18
+            ? RGB(.sRGB, red: 1, green: 1, blue: 1) : color(Target.ink.lightness, Target.ink.chroma, hue)
+        let both = try solve(
+            theme, path, from: solid.lightness, chroma, hue, direction: direction,
+            "\(nonText):1 on every ground under a label at \(text):1"
+        ) { minimum($0, on: grounds) >= nonText && ratio($0, other) >= text }
+        return (both.color, other)
     }
 
     /// The 8-bit sRGB color of an OKLCH color. Outside sRGB the chroma is reduced at constant lightness and hue until
