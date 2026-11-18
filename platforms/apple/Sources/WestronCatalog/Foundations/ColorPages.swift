@@ -184,13 +184,16 @@ private struct ForegroundSample: View {
 /// The list colors in the catalog's own theme: a row per color, a column per role, each drawn as it is used.
 private struct CategoryColorsPage: View {
     /// The roles in the order of the columns.
-    private static let roles = ["background", "border", "icon", "text", "fill", "on-fill"]
+    private static let roles = [
+        "background", "border", "icon", "text", "fill", "on-fill", "control", "on-control",
+    ]
 
     var body: some View {
         TokenPage(
             title: "List colors",
             summary: "color.category.<name>.<role> in this screenshot's theme, each drawn as it is used: a tile with "
-                + "its glyph, an outline, a dot, text, a fill, a lit check."
+                + "its glyph, an outline, a dot, text, a fill and a glyph on it, a checked control's fill and its "
+                + "check. control stands out from every ground at 3:1, 4.5:1 in high contrast."
         ) {
             Grid(alignment: .center, horizontalSpacing: .space75, verticalSpacing: SampleMetrics.rowSpacing) {
                 GridRow {
@@ -230,6 +233,17 @@ private struct CategoryColorsPage: View {
                                     .foregroundStyle(category.onFill)
                             }
                             .frame(width: SampleMetrics.mark, height: SampleMetrics.mark)
+                        Circle()
+                            .fill(category.control)
+                            .frame(width: SampleMetrics.mark, height: SampleMetrics.mark)
+                        Circle()
+                            .fill(category.control)
+                            .overlay {
+                                Image(Westron.Icon.check)
+                                    .font(Font(.caption.medium).weight(.bold))
+                                    .foregroundStyle(category.onControl)
+                            }
+                            .frame(width: SampleMetrics.mark, height: SampleMetrics.mark)
                     }
                 }
             }
@@ -263,7 +277,8 @@ private struct CategoryColorsPage: View {
     }
 
     private enum Size {
-        static let cell: CGFloat = 44
+        /// The narrowest a column gets; a role's name may be wider, on its own header line.
+        static let cell: CGFloat = 30
         static let header: CGFloat = 14
         static let dot: CGFloat = 10
     }

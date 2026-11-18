@@ -154,7 +154,7 @@ struct TokenAccessorTests {
         for theme in Westron.Theme.allCases {
             let environment = Self.environment(theme)
             for category in Westron.Category.allCases {
-                #expect(category.colors.count == 6)
+                #expect(category.colors.count == 8)
                 for token in category.colors {
                     #expect(
                         Self.close(Color(token).resolve(in: environment), Self.resolved(token[theme])),

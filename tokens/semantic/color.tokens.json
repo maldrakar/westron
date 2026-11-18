@@ -66,7 +66,10 @@
           "dev.westron.usage": {
             "use": ["primary button", "checked box", "switch on"],
             "avoid": "Large areas, and more than one filled control on a screen. Status: use status.info.fill, even though info is the accent's blue today."
-          }
+          },
+          "dev.westron.contrast": [
+            {"kind": "non-text", "on": ["color.background.canvas", "color.background.surface", "color.background.sunken"]}
+          ]
         }
       },
       "accent-hover": {"$value": "{color.blue.10}", "$description": "The accent fill under the pointer."},
@@ -666,6 +669,30 @@
           "$extensions": {
             "dev.westron.contrast": [{"kind": "text", "on": ["color.category.blue.fill"]}]
           }
+        },
+        "control": {
+          "$value": "{color.blue.control}",
+          "$description": "The fill of a checked control in the list color blue, such as the task check: the solid fill, darkened or lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of 2026-11-18).",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["checked task check", "checked control in a list color"],
+              "avoid": "Tags, tiles and statuses: they keep fill, which is not held to the non-text contrast on the ground."
+            },
+            "dev.westron.contrast": [
+              {"kind": "non-text", "on": ["color.background.canvas", "color.background.surface", "color.background.sunken"]}
+            ]
+          }
+        },
+        "on-control": {
+          "$value": "{color.blue.control-contrast}",
+          "$description": "The mark and any glyph on the control fill of the list color blue.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["check mark on a checked task check"],
+              "avoid": "Text on a lit tag: use on-fill."
+            },
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.blue.control"]}]
+          }
         }
       },
       "sky": {
@@ -713,6 +740,30 @@
           "$extensions": {
             "dev.westron.contrast": [{"kind": "text", "on": ["color.category.sky.fill"]}]
           }
+        },
+        "control": {
+          "$value": "{color.sky.control}",
+          "$description": "The fill of a checked control in the list color sky, such as the task check: the solid fill, darkened or lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of 2026-11-18).",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["checked task check", "checked control in a list color"],
+              "avoid": "Tags, tiles and statuses: they keep fill, which is not held to the non-text contrast on the ground."
+            },
+            "dev.westron.contrast": [
+              {"kind": "non-text", "on": ["color.background.canvas", "color.background.surface", "color.background.sunken"]}
+            ]
+          }
+        },
+        "on-control": {
+          "$value": "{color.sky.control-contrast}",
+          "$description": "The mark and any glyph on the control fill of the list color sky.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["check mark on a checked task check"],
+              "avoid": "Text on a lit tag: use on-fill."
+            },
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.sky.control"]}]
+          }
         }
       },
       "teal": {
@@ -759,6 +810,30 @@
           "$description": "Text and glyphs on the fill of the list color teal.",
           "$extensions": {
             "dev.westron.contrast": [{"kind": "text", "on": ["color.category.teal.fill"]}]
+          }
+        },
+        "control": {
+          "$value": "{color.teal.control}",
+          "$description": "The fill of a checked control in the list color teal, such as the task check: the solid fill, darkened or lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of 2026-11-18).",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["checked task check", "checked control in a list color"],
+              "avoid": "Tags, tiles and statuses: they keep fill, which is not held to the non-text contrast on the ground."
+            },
+            "dev.westron.contrast": [
+              {"kind": "non-text", "on": ["color.background.canvas", "color.background.surface", "color.background.sunken"]}
+            ]
+          }
+        },
+        "on-control": {
+          "$value": "{color.teal.control-contrast}",
+          "$description": "The mark and any glyph on the control fill of the list color teal.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["check mark on a checked task check"],
+              "avoid": "Text on a lit tag: use on-fill."
+            },
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.teal.control"]}]
           }
         }
       },
@@ -810,6 +885,30 @@
           "$extensions": {
             "dev.westron.contrast": [{"kind": "text", "on": ["color.category.emerald.fill"]}]
           }
+        },
+        "control": {
+          "$value": "{color.emerald.control}",
+          "$description": "The fill of a checked control in the list color emerald, such as the task check: the solid fill, darkened or lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of 2026-11-18).",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["checked task check", "checked control in a list color"],
+              "avoid": "Tags, tiles and statuses: they keep fill, which is not held to the non-text contrast on the ground."
+            },
+            "dev.westron.contrast": [
+              {"kind": "non-text", "on": ["color.background.canvas", "color.background.surface", "color.background.sunken"]}
+            ]
+          }
+        },
+        "on-control": {
+          "$value": "{color.emerald.control-contrast}",
+          "$description": "The mark and any glyph on the control fill of the list color emerald.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["check mark on a checked task check"],
+              "avoid": "Text on a lit tag: use on-fill."
+            },
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.emerald.control"]}]
+          }
         }
       },
       "green": {
@@ -856,6 +955,30 @@
           "$description": "Text and glyphs on the fill of the list color green.",
           "$extensions": {
             "dev.westron.contrast": [{"kind": "text", "on": ["color.category.green.fill"]}]
+          }
+        },
+        "control": {
+          "$value": "{color.green.control}",
+          "$description": "The fill of a checked control in the list color green, such as the task check: the solid fill, darkened or lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of 2026-11-18).",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["checked task check", "checked control in a list color"],
+              "avoid": "Tags, tiles and statuses: they keep fill, which is not held to the non-text contrast on the ground."
+            },
+            "dev.westron.contrast": [
+              {"kind": "non-text", "on": ["color.background.canvas", "color.background.surface", "color.background.sunken"]}
+            ]
+          }
+        },
+        "on-control": {
+          "$value": "{color.green.control-contrast}",
+          "$description": "The mark and any glyph on the control fill of the list color green.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["check mark on a checked task check"],
+              "avoid": "Text on a lit tag: use on-fill."
+            },
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.green.control"]}]
           }
         }
       },
@@ -904,6 +1027,30 @@
           "$extensions": {
             "dev.westron.contrast": [{"kind": "text", "on": ["color.category.olive.fill"]}]
           }
+        },
+        "control": {
+          "$value": "{color.olive.control}",
+          "$description": "The fill of a checked control in the list color olive, such as the task check: the solid fill, darkened or lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of 2026-11-18).",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["checked task check", "checked control in a list color"],
+              "avoid": "Tags, tiles and statuses: they keep fill, which is not held to the non-text contrast on the ground."
+            },
+            "dev.westron.contrast": [
+              {"kind": "non-text", "on": ["color.background.canvas", "color.background.surface", "color.background.sunken"]}
+            ]
+          }
+        },
+        "on-control": {
+          "$value": "{color.olive.control-contrast}",
+          "$description": "The mark and any glyph on the control fill of the list color olive.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["check mark on a checked task check"],
+              "avoid": "Text on a lit tag: use on-fill."
+            },
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.olive.control"]}]
+          }
         }
       },
       "amber": {
@@ -950,6 +1097,30 @@
           "$description": "Text and glyphs on the fill of the list color amber.",
           "$extensions": {
             "dev.westron.contrast": [{"kind": "text", "on": ["color.category.amber.fill"]}]
+          }
+        },
+        "control": {
+          "$value": "{color.amber.control}",
+          "$description": "The fill of a checked control in the list color amber, such as the task check: the solid fill, darkened or lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of 2026-11-18).",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["checked task check", "checked control in a list color"],
+              "avoid": "Tags, tiles and statuses: they keep fill, which is not held to the non-text contrast on the ground."
+            },
+            "dev.westron.contrast": [
+              {"kind": "non-text", "on": ["color.background.canvas", "color.background.surface", "color.background.sunken"]}
+            ]
+          }
+        },
+        "on-control": {
+          "$value": "{color.amber.control-contrast}",
+          "$description": "The mark and any glyph on the control fill of the list color amber.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["check mark on a checked task check"],
+              "avoid": "Text on a lit tag: use on-fill."
+            },
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.amber.control"]}]
           }
         }
       },
@@ -998,6 +1169,30 @@
           "$extensions": {
             "dev.westron.contrast": [{"kind": "text", "on": ["color.category.orange.fill"]}]
           }
+        },
+        "control": {
+          "$value": "{color.orange.control}",
+          "$description": "The fill of a checked control in the list color orange, such as the task check: the solid fill, darkened or lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of 2026-11-18).",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["checked task check", "checked control in a list color"],
+              "avoid": "Tags, tiles and statuses: they keep fill, which is not held to the non-text contrast on the ground."
+            },
+            "dev.westron.contrast": [
+              {"kind": "non-text", "on": ["color.background.canvas", "color.background.surface", "color.background.sunken"]}
+            ]
+          }
+        },
+        "on-control": {
+          "$value": "{color.orange.control-contrast}",
+          "$description": "The mark and any glyph on the control fill of the list color orange.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["check mark on a checked task check"],
+              "avoid": "Text on a lit tag: use on-fill."
+            },
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.orange.control"]}]
+          }
         }
       },
       "red": {
@@ -1044,6 +1239,30 @@
           "$description": "Text and glyphs on the fill of the list color red.",
           "$extensions": {
             "dev.westron.contrast": [{"kind": "text", "on": ["color.category.red.fill"]}]
+          }
+        },
+        "control": {
+          "$value": "{color.red.control}",
+          "$description": "The fill of a checked control in the list color red, such as the task check: the solid fill, darkened or lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of 2026-11-18).",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["checked task check", "checked control in a list color"],
+              "avoid": "Tags, tiles and statuses: they keep fill, which is not held to the non-text contrast on the ground."
+            },
+            "dev.westron.contrast": [
+              {"kind": "non-text", "on": ["color.background.canvas", "color.background.surface", "color.background.sunken"]}
+            ]
+          }
+        },
+        "on-control": {
+          "$value": "{color.red.control-contrast}",
+          "$description": "The mark and any glyph on the control fill of the list color red.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["check mark on a checked task check"],
+              "avoid": "Text on a lit tag: use on-fill."
+            },
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.red.control"]}]
           }
         }
       },
@@ -1092,6 +1311,30 @@
           "$extensions": {
             "dev.westron.contrast": [{"kind": "text", "on": ["color.category.pink.fill"]}]
           }
+        },
+        "control": {
+          "$value": "{color.pink.control}",
+          "$description": "The fill of a checked control in the list color pink, such as the task check: the solid fill, darkened or lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of 2026-11-18).",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["checked task check", "checked control in a list color"],
+              "avoid": "Tags, tiles and statuses: they keep fill, which is not held to the non-text contrast on the ground."
+            },
+            "dev.westron.contrast": [
+              {"kind": "non-text", "on": ["color.background.canvas", "color.background.surface", "color.background.sunken"]}
+            ]
+          }
+        },
+        "on-control": {
+          "$value": "{color.pink.control-contrast}",
+          "$description": "The mark and any glyph on the control fill of the list color pink.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["check mark on a checked task check"],
+              "avoid": "Text on a lit tag: use on-fill."
+            },
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.pink.control"]}]
+          }
         }
       },
       "violet": {
@@ -1139,6 +1382,30 @@
           "$extensions": {
             "dev.westron.contrast": [{"kind": "text", "on": ["color.category.violet.fill"]}]
           }
+        },
+        "control": {
+          "$value": "{color.violet.control}",
+          "$description": "The fill of a checked control in the list color violet, such as the task check: the solid fill, darkened or lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of 2026-11-18).",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["checked task check", "checked control in a list color"],
+              "avoid": "Tags, tiles and statuses: they keep fill, which is not held to the non-text contrast on the ground."
+            },
+            "dev.westron.contrast": [
+              {"kind": "non-text", "on": ["color.background.canvas", "color.background.surface", "color.background.sunken"]}
+            ]
+          }
+        },
+        "on-control": {
+          "$value": "{color.violet.control-contrast}",
+          "$description": "The mark and any glyph on the control fill of the list color violet.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["check mark on a checked task check"],
+              "avoid": "Text on a lit tag: use on-fill."
+            },
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.violet.control"]}]
+          }
         }
       },
       "indigo": {
@@ -1185,6 +1452,30 @@
           "$description": "Text and glyphs on the fill of the list color indigo.",
           "$extensions": {
             "dev.westron.contrast": [{"kind": "text", "on": ["color.category.indigo.fill"]}]
+          }
+        },
+        "control": {
+          "$value": "{color.indigo.control}",
+          "$description": "The fill of a checked control in the list color indigo, such as the task check: the solid fill, darkened or lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of 2026-11-18).",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["checked task check", "checked control in a list color"],
+              "avoid": "Tags, tiles and statuses: they keep fill, which is not held to the non-text contrast on the ground."
+            },
+            "dev.westron.contrast": [
+              {"kind": "non-text", "on": ["color.background.canvas", "color.background.surface", "color.background.sunken"]}
+            ]
+          }
+        },
+        "on-control": {
+          "$value": "{color.indigo.control-contrast}",
+          "$description": "The mark and any glyph on the control fill of the list color indigo.",
+          "$extensions": {
+            "dev.westron.usage": {
+              "use": ["check mark on a checked task check"],
+              "avoid": "Text on a lit tag: use on-fill."
+            },
+            "dev.westron.contrast": [{"kind": "text", "on": ["color.category.indigo.control"]}]
           }
         }
       }

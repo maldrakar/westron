@@ -34,8 +34,9 @@ modifiers set the same token, so their order never changes a result; the check f
 - Two tiers: primitive tokens are raw values that components never use; semantic tokens say what a value is for and
   alias primitives. Every semantic token has a `$description` (decisions/0010).
 - Colors come from `palette.json`: `tools/westron generate` solves it into twelve-step ramps for each theme, each step
-  with its job and its contrast target, plus each ramp's label (`contrast`) and pressed fill (`fill-pressed`)
-  (decisions/0012). Change a color there, never in a generated ramp file.
+  with its job and its contrast target, plus each ramp's label (`contrast`), pressed fill (`fill-pressed`), and the
+  fill of a checked control with its label (`control`, `control-contrast`) (decisions/0012). Change a color there,
+  never in a generated ramp file.
 - What DTCG lacks lives in `$extensions` under `dev.westron.usage`, `dev.westron.contrast`, `dev.westron.apple` and
   `dev.westron.spring`; any other `dev.westron.*` key is an error. Contrast backgrounds are whole token paths:
   `color.background.canvas` (decisions/0012).

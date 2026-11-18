@@ -70,6 +70,17 @@ struct PaletteTests {
                 #expect(
                     hover > label && pressed > hover, "\(theme) \(ramp): 9 \(label), 10 \(hover), pressed \(pressed)")
                 #expect(ratio(step("12"), grounds[0]) >= (highContrast ? 16 : 13), "\(theme) \(ramp).12")
+                // A checked control's fill stands out from every ground, under a label that reads on it; where the
+                // solid fill already stands out, it is the solid fill under the solid fill's label.
+                let nonText = highContrast ? 4.5 : 3
+                let control = grounds.map { ratio(step("control"), $0) }.min()!
+                #expect(control >= nonText, "\(theme) \(ramp).control: \(control)")
+                let controlLabel = ratio(step("control-contrast"), step("control"))
+                #expect(controlLabel >= (highContrast ? 7 : 4.5), "\(theme) \(ramp).control-contrast: \(controlLabel)")
+                if grounds.allSatisfy({ ratio(step("9"), $0) >= nonText }) {
+                    #expect(step("control") == step("9"), "\(theme) \(ramp).control moved though 9 stands out")
+                    #expect(step("control-contrast") == step("contrast"), "\(theme) \(ramp).control-contrast")
+                }
             }
             for index in 1...palette.series.light.count {
                 let series = colors["series.\(index)"]!
@@ -109,6 +120,47 @@ struct PaletteTests {
         #expect(full(solved, "light-hc")["blue.contrast"] == white)
     }
 
+    @Test("a control fill is the solid fill where it stands out; a bright fill darkens under its own dark label")
+    func controlFill() throws {
+        let solved = try PaletteSolver.solve(load(fixture))
+        let light = full(solved, "light")
+        let grounds = ["neutral.1", "neutral.raised", "neutral.sunken"].map { light[$0]! }
+        #expect(light["blue.control"] == light["blue.9"] && light["blue.control-contrast"] == light["blue.contrast"])
+        // Amber's bright fill is below 3:1 on the light grounds: it moves darker, as little as it must, and its
+        // dark label still reads on it.
+        #expect(grounds.contains { ratio(light["amber.9"]!, $0) < 3 })
+        let amber = try #require(light["amber.control"])
+        #expect(grounds.allSatisfy { ratio(amber, $0) >= 3 })
+        #expect(WCAG.relativeLuminance(amber) < WCAG.relativeLuminance(light["amber.9"]!))
+        #expect(light["amber.control-contrast"] == light["amber.contrast"])
+        #expect(ratio(light["amber.control-contrast"]!, amber) >= 4.5)
+    }
+
+    @Test("a dark label at 7:1 on a fill at 4.5:1 to a light canvas is impossible, so the control takes white")
+    func controlLabelFlips() throws {
+        let solved = try PaletteSolver.solve(load(fixture))
+        let base = full(solved, "light")
+        let highContrast = full(solved, "light-hc")
+        let white = RGB(.sRGB, red: 1, green: 1, blue: 1)
+        let ink = try #require(base["amber.contrast"])
+        #expect(highContrast["amber.contrast"] == ink, "the solid fill keeps its dark label")
+        #expect(highContrast["amber.control-contrast"] == white)
+        let control = try #require(highContrast["amber.control"])
+        let grounds = ["neutral.1", "neutral.raised", "neutral.sunken"].map { highContrast[$0]! }
+        #expect(grounds.allSatisfy { ratio(control, $0) >= 4.5 })
+        #expect(ratio(white, control) >= 7)
+
+        // The same case, solved directly: a fill under a dark label, held to 4.5 on a light canvas and 7 under it.
+        // Under the ink no fill meets both, since 4.5 × 7 exceeds the 21:1 that WCAG's ratio can reach.
+        let canvas = base["neutral.1"]!
+        let start = PaletteSolver.color(0.8, 0.16, 80)
+        let solvedControl = try PaletteSolver.solveControl(
+            "light-hc", "amber", from: (start, 0.8), label: ink, chroma: 0.16, hue: 80, grounds: [canvas],
+            direction: -1, nonText: 4.5, text: 7)
+        #expect(solvedControl.label == white)
+        #expect(ratio(solvedControl.fill, canvas) >= 4.5 && ratio(white, solvedControl.fill) >= 7)
+    }
+
     @Test("light themes walk darker from the canvas, dark themes lighter; neither is an inversion of the other")
     func directions() throws {
         let solved = try PaletteSolver.solve(load(fixture))
@@ -138,6 +190,7 @@ struct PaletteTests {
         let tree = try TokenTree.load(Data(light.utf8), source: "color.light.tokens.json")
         #expect(tree.node(at: "color.neutral.raised") != nil && tree.node(at: "color.blue.contrast") != nil)
         #expect(tree.node(at: "color.blue.fill-pressed") != nil && tree.node(at: "color.amber.fill-pressed") != nil)
+        #expect(tree.node(at: "color.amber.control") != nil && tree.node(at: "color.amber.control-contrast") != nil)
         #expect(try PaletteTokens.files(for: load(fixture), source: "tokens/palette.json") == files, "deterministic")
     }
 
