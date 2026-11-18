@@ -121,16 +121,18 @@ tools/apple/catalog-screenshot.sh ios --entry color-in-use --appearance dark --c
 The owner approves a component's look from its snapshot matrix (decisions/0005, the second gate; #24). `tools/westron
 generate` writes it from each approved contract into `Sources/WestronCatalog/Generated/<Component>+Matrix.swift`:
 every option's values (a bool as `false` and `true`, an option that is the system's own API such as Button's `role`
-included), rest and each state alone, the combinations a constraint of severity `error` leaves out, what each Apple OS
-draws differently (`platforms.apple`), and the sheets. A sheet fixes every option but the variant: the variants are
-its columns, rest and the states its rows, at most 3 × 6, so it fits an iPhone 17 in portrait and the macOS window.
-The hand-written `<Component>MatrixCell` (Button's is in `Components/ButtonPages.swift`) draws one cell with the real
-component: hover, focus and pressed forced as on the `button-states` pages, disabled and loading with the real
-modifiers. The rows of a state the OS never enters are left out, as on those pages; a value the OS does not offer is
-drawn with its fallback and marked, and a combination a `warning` constraint advises against is drawn with a caption.
-A state no token binding names in a case looks as rest, and the sheet and the review page say so: Button's focus,
-whose ring the system draws. The sheets are not catalog entries, so the accessibility audit does not walk them;
-`-WestronMatrixSheet <component>.<sheet>` shows one.
+included, and for an option whose values are tokens the group's tokens in token order, Text's seventeen roles),
+rest and each state alone, the combinations a constraint of severity `error` leaves out, what each Apple OS draws
+differently (`platforms.apple`), and the sheets. A sheet fixes every option but the variant (or, without one, the first
+option that is not a bool): its values are the columns, rest and the states the rows, at most 3 × 6, so it fits an
+iPhone 17 in portrait and the macOS window. Text, with no states, has six sheets of one row, three roles each.
+The hand-written `<Component>MatrixCell` (Button's is in `Components/ButtonPages.swift`, Text's in
+`Components/TextPages.swift`) draws one cell with the real component: Button's with hover, focus and pressed forced
+as on the `button-states` pages, disabled and loading with the real modifiers; Text's with `.textRole(_:)`. The rows of a state the OS never enters are left
+out, as on those pages; a value the OS does not offer is drawn with its fallback and marked, and a combination a
+`warning` constraint advises against is drawn with a caption. A state no token binding names in a case looks as rest,
+and the sheet and the review page say so: Button's focus, whose ring the system draws. The sheets are not catalog
+entries, so the accessibility audit does not walk them; `-WestronMatrixSheet <component>.<sheet>` shows one.
 
 Two additions are the catalog's, hand-written, and the generator knows nothing of them (#72), so the contract alone
 still drives every generated sheet and combination:
@@ -277,8 +279,15 @@ gets another shard.
     fails the leg.
   - A retry must fit a time budget, 30 minutes from the start of `check.sh a11y`, its build included
     (`WESTRON_A11Y_RETRY_BUDGET`): a CI leg times out at 35, and a leg the timeout kills uploads no logs. A retry
-    is estimated at 90 s plus the first run's time per entry for each entry to retry; a whole test is retried only
-    in the first half of the budget. Past it, the leg fails with a line that says so.
+    is estimated at 90 s plus, for each entry to retry, the mean time of the entries the first run finished
+    without a failure and without an audit the test retried on the spot (-56), from XCTest's `t = <s>s` activity
+    times in the log; a stalled entry's time is never used. When there are none, as with a stall in the first
+    entry, each entry counts at a time measured on CI with a margin: 90 s for `testDefaultSettings`, 130 s for
+    `testAccessibilityDynamicType`, 38 s for the other three. A whole test is retried only in the first half of
+    the budget. Past it, the leg fails with a line that says so. On CI the step spends 6.5–17.1 minutes, median
+    10.0 and mean 10.4, before its first entry, so a stall in the first entry of the slowest leg is retried after a
+    build of usual length (about 28.4 minutes in all), and not after a slow one (`tools/apple/check.sh` has the
+    numbers).
   - What the retry can hide: a catalog page that hangs the app only sometimes, since a hung app also times out UI
     queries.
   - `WESTRON_A11Y_FAIL_ONCE=<id>` is a test hook that fails that entry for infrastructure in the first run only, to

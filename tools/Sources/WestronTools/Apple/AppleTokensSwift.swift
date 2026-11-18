@@ -47,7 +47,8 @@ enum AppleTokensSwift {
 
         if !model.textRoles.isEmpty {
             out += tokenType(
-                "Westron.TextRole", model.textRoleTree, noun: "text roles", summary: "Every text role in token order.",
+                AppleTokenModel.textRoleType, model.textRoleTree, noun: "text roles",
+                summary: "Every text role in token order.",
                 doc: { model.textRoles[$0].doc },
                 value: { item in [Variant { textRoleValue(model.textRoles[item], indent: $0) }] })
         }

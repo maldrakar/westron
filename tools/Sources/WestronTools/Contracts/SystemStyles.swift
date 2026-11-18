@@ -22,6 +22,11 @@ public enum SystemStyles {
     /// `SwiftUI.Text`, no `textStyle`.
     public static let withoutStyle: Set<String> = ["SwiftUI.Text"]
 
+    /// The bases of `withoutStyle` whose own modifiers return the base, as `Text.font(_:)` returns a `Text`: an
+    /// extension of one adds its modifier on the base too, returning the base, so that a part of a text keeps its own
+    /// role inside Text interpolation (spec/conventions.md, "Extensions of a system view").
+    public static let returningBase: Set<String> = ["SwiftUI.Text"]
+
     public struct Base: Equatable, Sendable {
         /// The style modifier, `buttonStyle` for `SwiftUI.Button`: the generated overload has its name.
         public let modifier: String

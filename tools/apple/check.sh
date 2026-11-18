@@ -184,25 +184,50 @@ a11y_plan() {
 }
 
 # The retry's time budget, in minutes from the start of `check.sh a11y`, its build included (#74). A CI leg times out
-# at 35 minutes, and a leg killed by the timeout uploads no logs; before the step come about 1 minute of checkout and
-# setup, after it the upload, 16 s for 145 MB on 2026-11-18, so 30 minutes leave about 3 of margin. The
-# `testDefaultSettings` shards already take about 27 minutes, so they get a retry only when it is short.
+# at 35 minutes, and a leg killed by the timeout uploads no logs; before the step come about 10 s of setup and
+# checkout, after it 15–65 s of output and upload, so 30 minutes leave about 3–4 of margin. On CI (runs 44315755921
+# and 44339047592, 2026-11-18, 17 legs) the step spends 6.5–17.1 minutes, median 10.0 and mean 10.4, before the
+# first entry (finding the simulator, the build, starting the test runner; the end of the first test run less the
+# test's own time), and a stall fails its entry 2–3 minutes in. The worst usual case, a stall in the first entry of
+# the slowest leg (`testDefaultSettings` 1/2, 9 entries) after the mean 10.4 minutes, fits: 10.4 + 3 + 90 s +
+# 9 × 90 s = 28.4 minutes (a11y_retry_estimate below). When the step needed more than 12 minutes before the first
+# entry it does not, and the leg fails rather than run into the timeout.
 a11y_retry_budget=$((${WESTRON_A11Y_RETRY_BUDGET:-30} * 60))
 
 # How long, in seconds, a retry of <count> entries of <test> would take, judged from the first run in <log>: 90 s to
-# start xcodebuild, the simulator and the test runner, then the first run's time per entry it started (150 s, about
-# CI's, when the log has no time), at least 30 s.
+# start xcodebuild and the test runner on the booted simulator (a retry on CI took 38 s, 2026-11-18), then for each
+# entry the mean time of the entries of <test> the first run finished cleanly, at least 30 s. An entry's time runs
+# from the first of XCTest's activity times (`t = <s>s`, from the start of the test method) after its `started` line
+# to the first after its `finished` line. An entry with a failure, or whose audit the test retried on the spot (-56),
+# is left out: a stall's minutes say nothing about how long a page takes. When no entry finished cleanly, or the log
+# has no activity times, the time per entry is the slowest leg's mean on CI for the test (the test's time in its
+# `Test Case … passed` line over the leg's entries; of the same 17 legs, the 15 that passed on their first run:
+# 4 of testDefaultSettings, 5 of testAccessibilityDynamicType, 6 of the other three) with a margin of about 12–15 %:
+# testDefaultSettings 60–81 s → 90, testAccessibilityDynamicType 50–114 s → 130, the other three 25–33 s → 38.
 a11y_retry_estimate() {
-  local log="$1" test="$2" count="$3"
-  awk -v test="$test" -v count="$count" -v q="'" '
-    BEGIN {
-      p = "a11y: " test ": started "
-      c = "Test Case " q "-[CatalogUITests.CatalogAccessibilityAuditTests " test "]" q " failed ("
+  local log="$1" test="$2" count="$3" fallback
+  case "$test" in
+    testDefaultSettings) fallback=90 ;;
+    testAccessibilityDynamicType) fallback=130 ;;
+    *) fallback=38 ;;
+  esac
+  awk -v test="$test" -v count="$count" -v fallback="$fallback" '
+    function after(prefix) { return substr($0, length(prefix) + 1) }
+    BEGIN { p = "a11y: " test ": " }
+    match($0, /^ +t = +[0-9.]+s /) {
+      t = substr($0, RSTART, RLENGTH)
+      sub(/^ +t = +/, "", t)
+      t += 0
+      if (opening != "") { start[opening] = t; opening = "" }
+      if (closing != "") { if (closing in start) took[closing] = t - start[closing]; closing = "" }
     }
-    index($0, p) == 1 { started++ }
-    index($0, c) { seconds = substr($0, index($0, c) + length(c)) + 0 }
+    index($0, p "started ") == 1 { current = opening = after(p "started ") }
+    index($0, p "finished ") == 1 { closing = after(p "finished "); current = "" }
+    index($0, p "failure in ") == 1 { rest = after(p "failure in "); slow[substr(rest, 1, index(rest, " (") - 1)] = 1 }
+    index($0, "a11y: retrying the audit of ") == 1 && current != "" { slow[current] = 1 }
     END {
-      per = (started > 0 && seconds > 0) ? seconds / started : 150
+      for (entry in took) if (!(entry in slow)) { finished++; seconds += took[entry] }
+      per = finished > 0 ? seconds / finished : fallback
       if (per < 30) per = 30
       printf "%d\n", 90 + count * per
     }' "$log"

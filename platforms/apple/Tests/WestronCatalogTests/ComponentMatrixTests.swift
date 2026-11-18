@@ -1,5 +1,6 @@
 import SwiftUI
 import Testing
+import WestronUI
 
 @testable import WestronCatalog
 
@@ -35,6 +36,23 @@ struct ComponentMatrixTests {
             }
         }
         #expect(seen == Set(matrix.drawnCombinations))
+    }
+
+    @Test("Text's matrix: the 17 roles at rest, each in exactly one cell of its 6 sheets; one role a picture at AX5")
+    func text() throws {
+        let matrix = try #require(ComponentMatrix.all.first { $0.component == "text" })
+        #expect(matrix.states.isEmpty && matrix.notes.isEmpty)
+        #expect(matrix.drawnCombinations.count == 17)
+        #expect(matrix.drawnCombinations.first?.values == ["heading.large"])
+        #expect(matrix.drawnCombinations.last?.values == ["code.strong"])
+        #expect(matrix.sheets.count == 6)
+        #expect(matrix.sheets.map(matrix.drawnCount(in:)).reduce(0, +) == 17)
+        #expect(Westron.TextRole.all.map(\.name) == matrix.drawnCombinations.map { "typography." + $0.values[0] })
+        #expect(Catalog.entry(id: "text")?.section == .components)
+        #if !os(macOS)
+            let pictures = matrix.sheets.flatMap { matrix.pictures(of: $0, at: .accessibility5) }
+            #expect(pictures.count == 17 && pictures.allSatisfy { $0.columns.count == 1 })
+        #endif
     }
 
     @Test("a state no token binding names draws as rest, and the sheet and the review page say so")

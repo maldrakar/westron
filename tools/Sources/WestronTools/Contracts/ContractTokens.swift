@@ -9,15 +9,19 @@ public struct ContractTokens: Sendable {
     public let primitive: Set<TokenPath>
     /// The type of each path; a path without one is not checked for it.
     public let types: [TokenPath: TokenType]
+    /// The paths in token order, as the resolver's first input lists them: the order of a group's values
+    /// (`group(_:)`). A path not in it comes after the ones that are, sorted.
+    public let order: [TokenPath]
 
     public init(
         everywhere: Set<TokenPath>, somewhere: [TokenPath: [String]] = [:], primitive: Set<TokenPath> = [],
-        types: [TokenPath: TokenType] = [:]
+        types: [TokenPath: TokenType] = [:], order: [TokenPath] = []
     ) {
         self.everywhere = everywhere
         self.somewhere = somewhere
         self.primitive = primitive
         self.types = types
+        self.order = order
     }
 
     /// The tokens of every input of a resolution.
@@ -43,7 +47,9 @@ public struct ContractTokens: Sendable {
                 somewhere[path] = all.filter { $0[path] == nil }.map { resolution.describe($0.input) }
             }
         }
-        self.init(everywhere: everywhere, somewhere: somewhere, primitive: primitive, types: types)
+        self.init(
+            everywhere: everywhere, somewhere: somewhere, primitive: primitive, types: types,
+            order: all.first?.tokens.map(\.path) ?? [])
     }
 
     /// Why a contract cannot bind a path, or nil if it can.
@@ -60,13 +66,14 @@ public struct ContractTokens: Sendable {
         return nil
     }
 
-    /// The tokens under a group, such as `typography`, by their path after it (`heading.large`), sorted; and why an
-    /// option cannot take its values from the group: it is a token itself, holds no token, holds a primitive, a token
-    /// missing from some mode, or tokens of more than one type.
+    /// The tokens under a group, such as `typography`, by their path after it (`heading.large`), in token order
+    /// (`order`); and why an option cannot take its values from the group: it is a token itself, holds no token, holds
+    /// a primitive, a token missing from some mode, or tokens of more than one type.
     func group(_ group: TokenPath) -> (values: [String], problems: [String]) {
+        let rank = Dictionary(order.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
         let paths = (everywhere.union(somewhere.keys)).filter {
             $0.names.count > group.names.count && Array($0.names.prefix(group.names.count)) == group.names
-        }.sorted()
+        }.sorted { (rank[$0] ?? Int.max, $0) < (rank[$1] ?? Int.max, $1) }
         if everywhere.contains(group) || somewhere[group] != nil {
             return (
                 [], ["\(group) is a token, not a group: name the group whose tokens are the option's values"]
@@ -75,7 +82,7 @@ public struct ContractTokens: Sendable {
         guard !paths.isEmpty else { return ([], ["no token group \(group) in tokens/"]) }
         var problems: [String] = []
         func listed(_ items: [TokenPath]) -> String {
-            items.prefix(3).map(\.description).joined(separator: ", ")
+            items.sorted().prefix(3).map(\.description).joined(separator: ", ")
                 + (items.count > 3 ? " and \(items.count - 3) more" : "")
         }
         let primitives = paths.filter(primitive.contains)

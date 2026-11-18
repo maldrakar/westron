@@ -5,5 +5,5 @@
 
 extension ComponentMatrix {
     /// Every component's snapshot matrix, in the order of the contracts' ids.
-    public static let all: [ComponentMatrix] = [.button]
+    public static let all: [ComponentMatrix] = [.button, .text]
 }

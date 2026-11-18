@@ -10,8 +10,8 @@ Each component is a folder `spec/components/<id>/`:
 
 A new contract starts with the `/new-component` skill. The first contract is Button,
 [`button/button.spec.yaml`](button/button.spec.yaml), approved by the owner on 2026-11-16 (#22). Text,
-[`text/text.spec.yaml`](text/text.spec.yaml), is a draft (#27): the first contract with an option whose values are
-tokens and with an extension of a system view.
+[`text/text.spec.yaml`](text/text.spec.yaml), approved by the owner on 2026-11-18 (#27), is the first contract with an
+option whose values are tokens and with an extension of a system view.
 
 ## Format
 
@@ -116,17 +116,25 @@ no option is `inout`, `var` or `let` (an option becomes an argument label). Othe
 options (`ButtonVariant`, `ButtonSize`), the overload of the base control's style modifier
 (`.buttonStyle(.primary, size: .m)`), which applies the hand-written `<Component>VariantStyle`, and the tables that
 style reads (the `controlSize` mapping, each OS's fallbacks, the states). Its exact form is in
-[`spec/conventions.md`](../conventions.md). A draft contract and an own component generate nothing yet. Nor does an
-`extension-on-system-control`, or an option whose values are tokens. Generation fails, as not supported yet, on an
-approved `extension-on-system-control`, and on an approved `style-on-system-control` with an option whose values are
-tokens, until the generator, the API parity lint and the snapshot matrix support them, so such a contract stays draft
-until then. An approved own component with such an option generates nothing, as every own component does.
+[`spec/conventions.md`](../conventions.md). A draft contract and an own component generate nothing yet.
+
+An approved `extension-on-system-control` gets no file in `WestronUI/Generated/`: its modifier is hand-written, its
+argument is the token accessor the token generator already writes, and the API parity lint expects its signature from
+the contract (Text: `.textRole(_: Westron.TextRole)` on `View`, and its twin on `Text`, which returns a `Text`). The
+generator checks its shape: one option, whose values are the tokens of a group with an accessor on Apple
+(`AppleComponents.tokenAccessors`: `typography` → `Westron.TextRole`), and no states; it fails on any other. An
+approved `style-on-system-control` with an option whose values are tokens still fails, as not supported yet; an
+approved own component with such an option generates nothing, as every own component does.
+
+Every approved contract with API on Apple, either strategy, gets its snapshot matrix too,
+`platforms/apple/Sources/WestronCatalog/Generated/<Component>+Matrix.swift` (#24): an option whose values are tokens is
+an axis of the group's tokens, in token order, read from `tokens/`.
 
 Generation fails, with every problem, when a contract does not pass the check below; when a generated name is a
 public SwiftUI type; when two contracts generate one type name (`button`'s option `groupSize` and `button-group`'s
 `size` are both `ButtonGroupSize`); and when two contracts on one base control could make a call ambiguous or pick
 the wrong overload: their variants share no value, and at most one of them can be called without a variant (its
-variant has a default, or it has none).
+variant has a default, or it has none); and when two extensions would add one modifier.
 
 ## Check
 
