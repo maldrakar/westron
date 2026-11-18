@@ -6,9 +6,8 @@ argument-hint: "<component id> <apple|web|linux>"
 
 # Implementing a component on a platform
 
-> **Draft until phase 2.** The API generator from the contract (#20), the parity lint (#21), the snapshot matrix (#24)
-> and the accessibility audit in tests (#25) arrive in phase 2. Steps that rely on them are marked "phase 2".
-> Only the `apple` platform is implemented now.
+> Phase 2 tools are in place: the API generator from the contract (#20), the parity lint (#21), the accessibility
+> audit in tests (#25) and the snapshot matrix (#24). Only the `apple` platform is implemented now.
 
 Arguments: `$ARGUMENTS`, the component id and the platform.
 
@@ -22,11 +21,14 @@ Arguments: `$ARGUMENTS`, the component id and the platform.
 
 ## 2. Implementation (apple)
 
-1. `tools/westron generate`: enums and signatures from the contract (phase 2). Do not edit generated code.
+1. `tools/westron generate`: enums and signatures from the contract, and the snapshot matrix in
+   `WestronCatalog/Generated/<Component>+Matrix.swift`. Do not edit generated code.
 2. The style or component in `platforms/apple/Sources/WestronUI/<Component>/`: tokens only, a system control
    underneath, `if #available` for APIs newer than the minimum.
 3. A catalog entry in `Catalog.entries`: the matrix of variants × sizes × states from the contract.
-4. Tests: behavior and states with Swift Testing; snapshots of the matrix (phase 2).
+4. Tests: behavior and states with Swift Testing. Write `<Component>MatrixCell` in the catalog, which draws one cell
+   of the generated matrix with the real component (Button's is in `Components/ButtonPages.swift`): the catalog does
+   not build until it exists.
 5. If the contract is silent somewhere, do not decide yourself: stop, propose a contract change and wait for approval.
 
 ## 3. Check
@@ -36,7 +38,15 @@ tools/apple/check.sh all
 tools/check.sh             # tools tests, the raw-values lint, generate --check
 ```
 
-Then run `/visual-check <id>` and open every screenshot.
+Then run `/visual-check <id>` and open every screenshot, and capture the snapshot matrix on both platforms:
+
+```sh
+tools/apple/snapshot-matrix.sh ios   --component <id>   # prints the path to index.html
+tools/apple/snapshot-matrix.sh macos --component <id>
+```
+
+For a change to an existing component, capture before and after on the same machine and compare:
+`tools/apple/snapshot-matrix.sh compare <before> <after>`.
 
 ## 4. Review
 
@@ -45,5 +55,6 @@ they found, or explain why it is not a bug. Fix contract gaps by changing the co
 
 ## 5. Show the human
 
-The screenshot matrix (paths to the PNGs), the output of the checks, the review results and the list of deviations recorded in the `platforms` block.
-The human looks at the matrix and the snapshot diff: this is the second approval gate. Commit and pull request only when the human asks.
+The snapshot matrix (the paths to both platforms' `index.html`), the output of the checks, the review results and the
+list of deviations recorded in the `platforms` block. The human looks at the matrix and, for a change, the snapshot
+diff (the compare report): this is the second approval gate. Commit and pull request only when the human asks.

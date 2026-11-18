@@ -49,6 +49,15 @@ public struct AppleComponents: Generator {
     /// Generates from every contract, after `spec check`'s schema and rules pass on each: the generator never writes
     /// code from a contract the check rejects (#62).
     public func run() throws -> [GeneratedFile] {
+        try Self.files(
+            for: Self.checkedContracts(directory: directory, schemaFile: schemaFile, resolverFile: resolverFile))
+    }
+
+    /// Every contract in `directory`, read, once `spec check`'s schema and rules pass on each.
+    /// - Throws: `Problems`, with every problem of every contract that fails the check.
+    static func checkedContracts(directory: String, schemaFile: String, resolverFile: String) throws
+        -> [(contract: ComponentContract, source: String)]
+    {
         let schema = try ContractSchema(file: schemaFile)
         let tokens = try ContractTokens(Resolution(resolverFile: resolverFile))
         var contracts: [(contract: ComponentContract, source: String)] = []
@@ -63,7 +72,7 @@ public struct AppleComponents: Generator {
             contracts.append((try ComponentContract(yaml: text, source: file), file))
         }
         guard invalid.isEmpty else { throw Problems(problems: invalid) }
-        return try Self.files(for: contracts)
+        return contracts
     }
 
     /// The generated files for contracts that pass `spec check`, in their order, after the checks that span
@@ -86,6 +95,11 @@ public struct AppleComponents: Generator {
         return apis.map {
             GeneratedFile(path: "\(outputDirectory)/\($0.component)+Contract.swift", contents: $0.swift())
         }
+    }
+
+    /// A component's id as a Swift type name, in UpperCamelCase: `Button` for `button`, `ListRow` for `list-row`.
+    static func typeName(_ id: String) -> String {
+        id.split(separator: "-").map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined()
     }
 
     /// Whether the generator writes an API for a contract: approved or later, styled on an Apple system control.
@@ -220,7 +234,7 @@ public struct AppleComponents: Generator {
             }
             self.contract = contract
             self.source = source
-            component = contract.id.split(separator: "-").map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined()
+            component = AppleComponents.typeName(contract.id)
             control = String(base.split(separator: ".").last ?? Substring(base))
             let applePath = DocumentPath.root.key("platforms").key("apple")
             // A control without a style modifier, such as SwiftUI.Slider, cannot take a style (SystemStyles).

@@ -162,3 +162,36 @@ jobs:
             .build/screenshots/
             .build/logs/
           if-no-files-found: warn
+
+  snapshot-matrix:
+    name: Snapshot matrix
+    # The owner's review surface for the second approval gate (#24): every combination of every contract in the four
+    # themes, one `xcodebuild test` per platform, uploaded as the `snapshot-matrix` artifact (open index.html in each
+    # platform's folder). Informational: it must never be a required check. It runs when the accessibility audit does
+    # (audit-scope), in parallel with the other jobs. Its pages compare only with another CI artifact from the same
+    # runner image (decisions/0008): download two and run `tools/apple/snapshot-matrix.sh compare`.
+    needs: audit-scope
+    if: >-
+      !cancelled() && (github.event_name == 'push' || needs.audit-scope.result != 'success'
+      || needs.audit-scope.outputs.audit != 'false')
+    runs-on: xcode-27
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    # Locally about 4.5 min for iOS and 3.5 for macOS plus the builds; the runner is 2.2–3 times slower (decisions/0008).
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v7
+      - name: iOS
+        run: tools/apple/snapshot-matrix.sh ios
+      - name: macOS
+        # Also after a failed iOS capture: each platform's page shows what went wrong.
+        if: ${{ !cancelled() }}
+        run: tools/apple/snapshot-matrix.sh macos
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: snapshot-matrix
+          path: |
+            .build/snapshot-matrix/
+            .build/logs/snapshot-matrix-*.log
+          if-no-files-found: warn

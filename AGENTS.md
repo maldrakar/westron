@@ -22,7 +22,7 @@ the mechanism that catches it (`reports/`, section "Work plan").
 | `spec/icons/icons.yaml` | Icon registry: westron's icon names, what each glyph draws, its SF Symbol, the default (decisions/0011) |
 | `platforms/apple/Sources/WestronTokens/` | Token values as plain Swift with no imports, generated (decisions/0010) |
 | `platforms/apple/Sources/WestronUI/` | SwiftUI styles, components and token accessors: what products import |
-| `platforms/apple/Sources/WestronCatalog/` | Registry of catalog entries and its host; snapshot tests reuse them too |
+| `platforms/apple/Sources/WestronCatalog/` | Registry of catalog entries and its host, and the snapshot matrices generated from the contracts |
 | `platforms/apple/Catalog/` | Catalog app (iOS + macOS) and the screenshot UI test; the project is `project.xcproj` in Xcode 27 format, not `project.pbxproj` |
 | `tools/` | Generators and checks: a separate SwiftPM package with the `westron` executable, and scripts for Apple |
 | `Package.swift` | SwiftPM manifest; it sits at the root because SwiftPM requires it |
@@ -46,6 +46,11 @@ tools/apple/check.sh all          # everything at once, except a11y
 tools/apple/catalog-screenshot.sh ios   --entry environment --appearance dark   # prints the path to the PNG
 tools/apple/catalog-screenshot.sh macos --entry environment                     # the same on macOS
 
+tools/apple/snapshot-matrix.sh ios [--component button]   # every combination of every contract in four themes,
+                                                          # one xcodebuild test run; prints the path to index.html
+tools/apple/snapshot-matrix.sh macos                      # the same on macOS
+tools/apple/snapshot-matrix.sh compare <dirA> <dirB>      # pixel diff of two captures; exit 1 when one differs
+
 tools/check.sh                    # build and test tools/, then the checks below (CI runs it on Linux)
 tools/westron lint raw-values     # no raw values in WestronUI
 tools/westron lint api-parity     # WestronUI's public API is exactly the component API the contracts give
@@ -62,6 +67,10 @@ Parameters: `--entry <id>` (default `environment`), `--appearance light|dark`, `
 `--dynamic-type xSmall…accessibility5`, `--device "<simulator>"` (default `iPhone 17` or `$WESTRON_SIM_DEVICE`),
 `--out <file.png>`. Without `--out` the PNG goes to `.build/screenshots/<platform>-<id>[-<theme>][-hc][-<size>].png`,
 the log to `.build/logs/`. On macOS, screenshots need Automation Mode enabled once (`platforms/apple/README.md`).
+The snapshot matrix (#24) is the second approval gate's review surface: `tools/westron generate` writes each
+component's matrix from its contract into `WestronCatalog/Generated/`, and the capture goes to
+`.build/snapshot-matrix/<platform>/` (`--out <dir>` elsewhere). Compare only captures from the same environment
+(decisions/0008).
 
 ## Rules
 
