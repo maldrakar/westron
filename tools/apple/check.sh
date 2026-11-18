@@ -186,11 +186,12 @@ a11y_plan() {
 # The retry's time budget, in minutes from the start of `check.sh a11y`, its build included (#74). A CI leg times out
 # at 35 minutes, and a leg killed by the timeout uploads no logs; before the step come about 10 s of setup and
 # checkout, after it 15–65 s of output and upload, so 30 minutes leave about 3–4 of margin. On CI (runs 44315755921
-# and 44339047592, 2026-11-18, 17 legs) the step spends 6.5–17 minutes, 10 as the median, before the first entry
-# (finding the simulator, the build, starting the test runner), and a stall fails its entry 2–3 minutes in. The
-# worst usual case, a stall in the first entry of the slowest leg (`testDefaultSettings` 1/2, 9 entries) after the
-# median 10 minutes, fits: 10 + 3 + 90 s + 9 × 90 s = 28 minutes (a11y_retry_estimate below). When the step needed
-# more than 12 minutes before the first entry it does not, and the leg fails rather than run into the timeout.
+# and 44339047592, 2026-11-18, 17 legs) the step spends 6.5–17.1 minutes, median 10.0 and mean 10.4, before the
+# first entry (finding the simulator, the build, starting the test runner; the end of the first test run less the
+# test's own time), and a stall fails its entry 2–3 minutes in. The worst usual case, a stall in the first entry of
+# the slowest leg (`testDefaultSettings` 1/2, 9 entries) after the mean 10.4 minutes, fits: 10.4 + 3 + 90 s +
+# 9 × 90 s = 28.4 minutes (a11y_retry_estimate below). When the step needed more than 12 minutes before the first
+# entry it does not, and the leg fails rather than run into the timeout.
 a11y_retry_budget=$((${WESTRON_A11Y_RETRY_BUDGET:-30} * 60))
 
 # How long, in seconds, a retry of <count> entries of <test> would take, judged from the first run in <log>: 90 s to
@@ -200,7 +201,8 @@ a11y_retry_budget=$((${WESTRON_A11Y_RETRY_BUDGET:-30} * 60))
 # to the first after its `finished` line. An entry with a failure, or whose audit the test retried on the spot (-56),
 # is left out: a stall's minutes say nothing about how long a page takes. When no entry finished cleanly, or the log
 # has no activity times, the time per entry is the slowest leg's mean on CI for the test (the test's time in its
-# `Test Case … passed` line over the leg's entries, the same 17 legs) with a margin of about 12–15 %:
+# `Test Case … passed` line over the leg's entries; of the same 17 legs, the 15 that passed on their first run:
+# 4 of testDefaultSettings, 5 of testAccessibilityDynamicType, 6 of the other three) with a margin of about 12–15 %:
 # testDefaultSettings 60–81 s → 90, testAccessibilityDynamicType 50–114 s → 130, the other three 25–33 s → 38.
 a11y_retry_estimate() {
   local log="$1" test="$2" count="$3" fallback
