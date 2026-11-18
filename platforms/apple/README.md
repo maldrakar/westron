@@ -260,8 +260,11 @@ gets another shard.
     uploads the logs of a leg that retried as the `a11y-retried-…` artifact, even when the retry passed.
   - Not retried, so the leg fails: a test with a finding (no entry is audited twice after a finding, so a finding
     that shows once in two runs still fails), a failure outside an entry, a test that did not start (but for the
-    test runner failing to install or launch, the one case where the whole test is run again), and a run where
-    XCTest reports more failures than the test classified. A retry that fails again fails the leg.
+    test runner failing to install or launch, the one case where the whole test is run again), a run where
+    XCTest reports more failures than the test classified, and a run where `xcodebuild` exits non-zero although
+    every test passed (the runner died, or the result bundle was not written, after the last test), with
+    `a11y: xcodebuild exited with status <n> although every test passed` in its output. A retry that fails again
+    fails the leg.
   - A retry must fit a time budget, 30 minutes from the start of `check.sh a11y`, its build included
     (`WESTRON_A11Y_RETRY_BUDGET`): a CI leg times out at 35, and a leg the timeout kills uploads no logs. A retry
     is estimated at 90 s plus the first run's time per entry for each entry to retry; a whole test is retried only
