@@ -32,8 +32,9 @@ extension APIParity {
     }
 
     /// Checks each own component's view: a public top-level struct that conforms to `View` alone, its public
-    /// initializer with the contract's parameters, and its public `body: some View`. What it finds is accounted for;
-    /// any other public member of the type is component API no contract gives, reported by `check`.
+    /// initializer with the contract's parameters, and its public `body: some View`, each reported when missing or
+    /// different. What it finds is accounted for; any other public member of the type is component API no contract
+    /// gives, reported by `check`.
     static func checkViews(
         _ views: [ExpectedView], declarations: [SwiftDeclarations.Declaration], accounted: inout Set<Int>,
         expectedCount: inout Int
@@ -122,6 +123,9 @@ extension APIParity {
                         "\(view.type).body is \(b.resultType ?? "untyped"); \(contract) gives `some View`, so the "
                             + "type of the drawing stays out of the API")
                 }
+            } else {
+                // The compiler reports a View without a body too; the lint says what the contract gives.
+                problem(d, "missing: `public var body: some View` in \(view.type), which \(contract) gives as a view")
             }
         }
         return problems

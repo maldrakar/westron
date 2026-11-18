@@ -382,6 +382,8 @@ struct OwnComponentTests {
             ["Surface/Surface.swift": Self.surfaceSwift.replacingOccurrences(of: "= false", with: "= true")])
         #expect(changed.count == 1)
         #expect(changed[0].contains("Surface's modifier differs from the contract"))
+        // The modifier is hand-written: generating again changes nothing, so the lint does not advise it.
+        #expect(!changed[0].contains("tools/westron generate"))
         let extra = try Self.parity(
             [(ownYAML(), "surface")],
             [
@@ -438,6 +440,15 @@ struct OwnComponentTests {
             ])
         #expect(typedBody.count == 1)
         #expect(typedBody[0].contains("Rule.body is Rectangle"))
+
+        let withoutBody = try Self.parity(
+            rule,
+            [
+                "Rule/Rule.swift": Self.ruleSwift.replacingOccurrences(
+                    of: "public var body: some View {\n        Rectangle()\n    }", with: "")
+            ])
+        #expect(withoutBody.count == 1)
+        #expect(withoutBody[0].contains("missing: `public var body: some View` in Rule"))
 
         let missingEnum = APIParity.check(
             contracts: [
