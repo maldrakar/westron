@@ -112,6 +112,8 @@ The value for each platform lives in its platform token file, not in component c
 (#56): `size.control.m` is 44 on iOS, iPadOS and watchOS, the recommended target, and 32 on macOS, above its
 recommended 28. `size.control.s` is below the recommended size on every platform, 32 on touch and 24 on macOS, so a
 control drawn at it keeps a hit area of the recommended size around what it draws.
+A component's contract may record an exception: on macOS, Button's size s takes clicks in its drawn 24 pt
+(spec/components/button, decisions/0001).
 
 ## Keyboard and focus
 
@@ -141,7 +143,7 @@ A state shown in color also shows a shape, a glyph or a word ([1.4.1](https://ww
 | Contrast check (#15) | Every declared pair in `dev.westron.contrast`, by kind (`text`, `large-text`, `non-text`, `separator`, `chart`), in all four themes | `tools/westron tokens contrast` in CI, on every token change |
 | Raw-values lint | Colors, sizes and motion that bypass the tokens, and so the themes | Hook and CI |
 | Accessibility audit (#25) | `performAccessibilityAudit` on catalog entries: contrast, labels, hit regions, clipped text, Dynamic Type, traits | UI tests, from phase 2 |
-| Snapshot matrix (#24) | Every option value at rest and in each state, in the four themes side by side at the `large` text size, for the owner's review. Other text sizes: the accessibility audit's Dynamic Type test (`testAccessibilityDynamicType`) and `tools/apple/catalog-screenshot.sh --dynamic-type` | Second approval gate |
+| Snapshot matrix (#24, #72) | Every option value at rest and in each state, in the four themes side by side at the `large` text size, and in the light theme at `xSmall` and `accessibility5`, so the owner sees how a component grows with the person's text size (on iOS; macOS has no Dynamic Type). Hand-written supplementary sheets, marked "not a contract option", add what no option sets, such as Button's label without an icon while loading. Other text sizes: `tools/apple/catalog-screenshot.sh --dynamic-type`; the accessibility audit's Dynamic Type test (`testAccessibilityDynamicType`) checks the catalog entries at `accessibility5` | Second approval gate |
 | `a11y-auditor` subagent | Roles, labels, Dynamic Type, Reduce Motion, Reduce Transparency, keyboard, by reading code and screenshots | After each implementation, before the owner sees it |
 
 The subagent is defined in [`.claude/agents/a11y-auditor.md`](../.claude/agents/a11y-auditor.md). GNOME has no ready

@@ -16,7 +16,10 @@ import Foundation
 ///   fails the cell's build where it destructures `fields`, until the cell draws the new option. A new value of an
 ///   existing option still builds; it reaches the cell through the generated enum.
 ///
-/// The catalog is not public API of WestronUI, so the parity lint does not see these files.
+/// The catalog is not public API of WestronUI, so the parity lint does not see these files. The text sizes, the parts
+/// of a sheet at a text size where it does not fit, and the supplementary sheets for what no contract option sets are
+/// the catalog's, hand-written outside `Generated/` (#72; `SnapshotMatrix`): these files hold the contract's matrix
+/// alone.
 public struct AppleSnapshotMatrix: Generator {
     public let name = "matrix-apple"
     public let directory: String
