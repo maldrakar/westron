@@ -79,6 +79,14 @@ public enum APIParity {
         "Westron.Theme": ["init"],
     ]
 
+    /// The reviewed adapters outside `adaptersFile`, by file relative to `defaultSources`, then as `adapters` lists
+    /// them, held to the same rule: each takes a `Westron.*` value. `Category.swift` (#31) declares
+    /// `View.category(_: Westron.Category?)`, the list color of a subtree, which a westron style reads where its
+    /// contract takes the list's color from the context, as the checked Checkbox does. It is to westron's controls what
+    /// `View.tint(_: Westron.Color)` is to the system's, and no contract option can give it: the color is the
+    /// context's, not one control's (spec/conventions.md, "Context a style reads").
+    public static let otherAdapters: [String: [String: Set<String>]] = ["Category.swift": ["View": ["category"]]]
+
     /// The bases of an `extension-on-system-control` whose twin on the base (`AppleComponents.Extension.onBase`) is not
     /// written yet: it is checked when it is declared, with the signature the contract gives, and not reported while it
     /// is missing. `Text.textRole(_:) -> Text` (the Text contract's P2) is written in a change of its own; once it is
@@ -551,10 +559,11 @@ public enum APIParity {
 
         let root = sourceRoot.hasSuffix("/") ? sourceRoot : sourceRoot + "/"
         func relative(_ file: String) -> String { file.hasPrefix(root) ? String(file.dropFirst(root.count)) : file }
-        /// One of the reviewed adapters in `adaptersFile`.
+        /// One of the reviewed adapters in `adaptersFile` or `otherAdapters`.
         func isAdapter(_ d: SwiftDeclarations.Declaration) -> Bool {
-            guard relative(d.file) == adaptersFile, d.inExtension, !d.isStatic,
-                d.kind == .func || d.kind == .initializer, adapters[d.container]?.contains(d.name) == true
+            let file = relative(d.file)
+            guard let listed = file == adaptersFile ? adapters : otherAdapters[file], d.inExtension, !d.isStatic,
+                d.kind == .func || d.kind == .initializer, listed[d.container]?.contains(d.name) == true
             else { return false }
             return d.container.hasPrefix("Westron.") || d.parameters.contains { $0.type.hasPrefix("Westron.") }
         }

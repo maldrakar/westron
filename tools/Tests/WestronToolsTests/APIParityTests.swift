@@ -527,6 +527,37 @@ struct APIParityTests {
         #expect(generated[0].contains("public enum Spacing: a new public top-level type in a generated token file"))
     }
 
+    @Test("a reviewed adapter outside the adapters file is accepted in its own file only, with its own names")
+    func otherAdapters() throws {
+        let category = """
+            extension View {
+                public func category(_ category: Westron.Category?) -> some View { self }
+            }
+
+            """
+        #expect(try problems(files(extra: ["Category.swift": category])) == [])
+
+        // Anywhere else it is a modifier no contract gives.
+        let elsewhere = try problems(files(extra: ["Context.swift": category]))
+        #expect(elsewhere.count == 1)
+        #expect(elsewhere[0].contains("public func View.category: a public modifier on View that no contract gives"))
+
+        // The file holds only the names listed for it, each taking a westron value.
+        let unlisted = try problems(
+            files(extra: [
+                "Category.swift": category
+                    + "extension View {\n    public func listTint(_ c: Westron.Category?) -> some View { self }\n}\n"
+            ]))
+        #expect(unlisted.count == 1)
+        #expect(unlisted[0].contains("public func View.listTint: a public modifier on View that no contract gives"))
+        let notWestron = try problems(
+            files(extra: [
+                "Category.swift": "extension View {\n    public func category(_ c: String?) -> some View { self }\n}\n"
+            ]))
+        #expect(notWestron.count == 1)
+        #expect(notWestron[0].contains("public func View.category: a public modifier on View that no contract gives"))
+    }
+
     @Test("the token files let no component API through: style protocols, View modifiers, style overloads, new types")
     func tokenFilesBoundary() throws {
         let inputs: [(String, String)] = [

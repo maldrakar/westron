@@ -256,6 +256,18 @@ struct SnapshotMatrixTests {
         #expect(onDisk == swift)
     }
 
+    @Test("a lone sheet ends without a trailing comma, as swift format writes it; several keep theirs")
+    func loneSheet() throws {
+        // westron's Checkbox: one variant, so one sheet.
+        let checkboxSource = "spec/components/checkbox/checkbox.spec.yaml"
+        let text = try String(contentsOf: repositoryRoot.appendingPathComponent(checkboxSource), encoding: .utf8)
+        let checkbox = try ComponentContract(yaml: text, source: checkboxSource)
+        let lone = try AppleSnapshotMatrix.files(for: [(checkbox, checkboxSource)])
+        #expect(lone[0].contents.contains("\"disabled\"]\n            )\n        ]\n"))
+        let several = try AppleSnapshotMatrix.files(for: [(try buttonContract(), buttonSource)])
+        #expect(several[0].contents.contains("\n            ),\n        ]\n"))
+    }
+
     @Test("a draft contract has no matrix; the registry is then empty, and the generator owns its directory")
     func draft() throws {
         let files = try AppleSnapshotMatrix.files(

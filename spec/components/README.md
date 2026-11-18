@@ -14,8 +14,9 @@ A new contract starts with the `/new-component` skill. The first contract is But
 option whose values are tokens and with an extension of a system view. The drafts of phase 3 are Icon
 ([`icon/`](icon/icon.spec.yaml), #28), the first with an option whose values are the icon registry's names; Surface
 and Rule ([`surface/`](surface/surface.spec.yaml), [`rule/`](rule/rule.spec.yaml), #29), the first own components and
-the first with no role of their own; TextField ([`text-field/`](text-field/text-field.spec.yaml), #30); and Checkbox
-([`checkbox/`](checkbox/checkbox.spec.yaml), #31), the first whose control has a value that is on or off.
+the first with no role of their own; and TextField ([`text-field/`](text-field/text-field.spec.yaml), #30). Checkbox
+([`checkbox/`](checkbox/checkbox.spec.yaml), #31), the first whose control has a value that is on or off and the first
+that takes a value from its context (the list's color), was approved on 2026-11-18 under the owner's delegation.
 
 ## Format
 

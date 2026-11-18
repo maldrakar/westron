@@ -82,7 +82,9 @@ type is an error. The hand-written `TokenAdapters.swift` may declare only the re
 public initializers and instance methods on the types and with the names the list gives (`Color.init`,
 `View.foregroundStyle`, `Label.init`, …), each taking a `Westron.*` value or extending a `Westron.*` type. The list is
 what the file declared when the lint was written; a new adapter is added to it in the same pull request, where review
-sees it. The adapters are checked before the component rules, so a contract named `label` or `text` does not claim
+sees it. A reviewed adapter that is not a token's goes in a file of its own, listed in `APIParity.otherAdapters` with
+its names under the same rule: `Category.swift` declares `View.category(_: Westron.Category?)`, the list color a
+westron style reads from the context (Checkbox, #31). The adapters are checked before the component rules, so a contract named `label` or `text` does not claim
 `Label.init(_:icon:)` or `.textRole(_:)`, while a new `LabelTint` type or a `labelStyle` overload is still its API.
 Any other public declaration in `WestronUI` is an error, so new public API cannot appear unnoticed. `package` and
 internal declarations are not public API, so catalog hooks with `package` access pass.

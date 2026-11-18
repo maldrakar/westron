@@ -205,7 +205,8 @@ public struct AppleSnapshotMatrix: Generator {
                 "                fixed: \(list(sheet.fixed.map(literal))),",
                 "                columns: \(list(sheet.columns.map(literal))),",
                 "                rows: \(list(sheet.rows.map(literal)))",
-                "            ),",
+                // swift format takes the comma off a lone sheet, as off a lone option.
+                "            )" + (matrix.sheets.count == 1 ? "" : ","),
             ]
         }
         out += ["        ]"]

@@ -1,0 +1,215 @@
+import SwiftUI
+import WestronUI
+
+// Checkbox's catalog entry, from spec/components/checkbox/checkbox.spec.yaml: `checkbox`, every state of the contract
+// on a task's title, live checks that toggle (a task, a subtask in a smaller text role, a task in a list's color),
+// and the twelve list colors checked. The states come from the generated `CheckboxState` through
+// `CheckboxCatalogState`, so the page follows the contract.
+
+extension CatalogEntry {
+    static let checkbox = CatalogEntry(id: "checkbox", title: "Checkbox", section: .components) {
+        CheckboxPage()
+    }
+}
+
+/// Accessibility identifiers of the live checks, which the catalog's UI tests (CheckboxBehaviorTests) toggle.
+enum CheckboxCatalogID {
+    /// A task's check in the accent, its label in body text, unchecked at launch.
+    static let task = "checkbox.live.task"
+    /// A subtask's check, its label in subheadline text, checked at launch.
+    static let subtask = "checkbox.live.subtask"
+    /// A task's check in the list color green, unchecked at launch.
+    static let listColor = "checkbox.live.list-color"
+    /// The text that says which live checks are on: "on: subtask".
+    static let summary = "checkbox.live.summary"
+}
+
+/// The text roles of the two kinds of row the pilot has: a task's title and a subtask's (P10).
+enum CheckboxSampleRole {
+    static let task: Westron.TextRole = .body.regular
+    static let subtask: Westron.TextRole = .subheadline.regular
+}
+
+private struct CheckboxPage: View {
+    @State private var task = false
+    @State private var subtask = true
+    @State private var listColor = false
+
+    var body: some View {
+        TokenPage(
+            title: "Checkbox",
+            summary: "Toggle with .toggleStyle(.check): a ring in border.strong, checked a disc in the list's color, "
+                + "the accent without one, with a check mark. The circle follows the text role set on the toggle, "
+                + "and its hit area is at least size.control.m."
+        ) {
+            section("States") {
+                ForEach(CheckboxCatalogState.all.filter(\.isEntered), id: \.self) { state in
+                    Toggle(isOn: .constant(state.isChecked)) {
+                        Text(state.name)
+                    }
+                    .toggleStyle(.check)
+                    .textRole(CheckboxSampleRole.task)
+                    .foregroundStyle(.text.primary)
+                    .forcingCheckboxStates(state.isForced ? [state] : [])
+                    .disabled(state.isDisabled)
+                }
+            }
+            section("Live") {
+                Toggle("Write the report", isOn: $task)
+                    .toggleStyle(.check)
+                    .textRole(CheckboxSampleRole.task)
+                    .accessibilityIdentifier(CheckboxCatalogID.task)
+                Toggle("Outline the sections", isOn: $subtask)
+                    .toggleStyle(.check)
+                    .textRole(CheckboxSampleRole.subtask)
+                    .accessibilityIdentifier(CheckboxCatalogID.subtask)
+                Toggle("Water the plants", isOn: $listColor)
+                    .toggleStyle(.check)
+                    .textRole(CheckboxSampleRole.task)
+                    .category(.green)
+                    .accessibilityIdentifier(CheckboxCatalogID.listColor)
+                Text(verbatim: summary)
+                    .textRole(.footnote.regular)
+                    .foregroundStyle(.text.secondary)
+                    .accessibilityIdentifier(CheckboxCatalogID.summary)
+            }
+            .foregroundStyle(.text.primary)
+            section("List colors, checked") {
+                CheckboxColors(isChecked: true, labelsShown: true)
+            }
+        }
+    }
+
+    /// Which live checks are on, for the UI tests.
+    private var summary: String {
+        let on = [("task", task), ("subtask", subtask), ("list color", listColor)].filter(\.1).map(\.0)
+        return "on: " + (on.isEmpty ? "none" : on.joined(separator: ", "))
+    }
+
+    private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title)
+                .textRole(.subheadline.strong)
+                .foregroundStyle(.text.primary)
+            content()
+        }
+    }
+}
+
+/// The twelve list colors, each a check in that color through `.category(_:)`, in two text roles: the first six with
+/// a task's, the last six with a subtask's. With `labelsShown`, each check's label is its color's name; without, the
+/// name is its accessibility label alone.
+struct CheckboxColors: View {
+    let isChecked: Bool
+    let labelsShown: Bool
+
+    var body: some View {
+        let all = Westron.Category.allCases
+        VStack(alignment: .leading, spacing: 0) {
+            line(all.prefix(6), role: CheckboxSampleRole.task)
+            line(all.suffix(6), role: CheckboxSampleRole.subtask)
+        }
+        .foregroundStyle(.text.primary)
+    }
+
+    private func line(_ categories: ArraySlice<Westron.Category>, role: Westron.TextRole) -> some View {
+        FlowLayout(spacing: labelsShown ? .space100 : 0) {
+            ForEach(categories, id: \.self) { category in
+                Toggle(category.rawValue, isOn: .constant(isChecked))
+                    .toggleStyle(.check)
+                    .category(category)
+                    .modifier(LabelsHidden(isHidden: !labelsShown))
+            }
+        }
+        .textRole(role)
+    }
+}
+
+/// Hides a toggle's label, which stays its accessible name.
+private struct LabelsHidden: ViewModifier {
+    let isHidden: Bool
+
+    func body(content: Content) -> some View {
+        if isHidden { content.labelsHidden() } else { content }
+    }
+}
+
+/// One cell of Checkbox's snapshot matrix (#24; `ComponentMatrix.checkbox`, generated from the contract): the real
+/// check with a task's title, in the combination's state. checked is the toggle's own value; pressed and focus are
+/// forced, as on the `checkbox` page; disabled is the real `.disabled(_:)`.
+struct CheckboxMatrixCell: View {
+    let values: CheckboxMatrixValues
+
+    init(_ values: CheckboxMatrixValues) {
+        self.values = values
+    }
+
+    var body: some View {
+        // Every option at once: an option added to the contract changes `fields` and fails the build here.
+        let (variant, stateName) = values.fields
+        let state = stateName.flatMap(CheckboxCatalogState.init(named:))
+        Toggle("Buy milk", isOn: .constant(state?.isChecked ?? false))
+            .toggleStyle(variant)
+            .textRole(CheckboxSampleRole.task)
+            .foregroundStyle(.text.primary)
+            .forcingCheckboxStates(state.map { $0.isForced ? [$0] : [] } ?? [])
+            .disabled(state?.isDisabled ?? false)
+    }
+}
+
+extension ComponentMatrix.Supplement {
+    /// The twelve list colors, in each state of the matrix (#72): the list's color comes from the context through
+    /// `.category(_:)`, not from a contract option, so the generated sheets, drawn in the accent, do not show it.
+    static let checkboxListColors = ComponentMatrix.Supplement(
+        component: "checkbox", id: "list-colors", title: "the twelve list colors",
+        note: "The list's color comes from the context, .category(_:), not from a contract option, so the generated "
+            + "sheets show the accent alone. Checked, the disc is color.category.<name>.control and the mark "
+            + ".on-control; unchecked, the ring is border.strong for every list. The first line has a task's text "
+            + "role, body.regular, the second a subtask's, subheadline.regular: the circle follows the role. The "
+            + "labels are hidden and the cells stop growing at the text size accessibility1, so that twelve checks in "
+            + "five states fit one picture; the generated sheets show the check at every text size.",
+        keeps: [:]
+    ) { combination in
+        CheckboxSupplementCell(combination: combination) { isChecked in
+            CheckboxColors(isChecked: isChecked, labelsShown: false)
+        }
+    }
+
+    /// A task's check and a subtask's beside labels of their text roles, in each state of the matrix (#72): the circle
+    /// is sized by the text role of its label, which is not a contract option.
+    static let checkboxTextRoles = ComponentMatrix.Supplement(
+        component: "checkbox", id: "text-roles", title: "two text roles",
+        note: "The circle has no size option: it follows the text role of its label (P10), here a task's, "
+            + "body.regular, and a subtask's, subheadline.regular. The cells stop growing at the text size "
+            + "accessibility1, so that both rows of five states fit one picture; the generated sheets show the check "
+            + "at every text size.",
+        keeps: [:]
+    ) { combination in
+        CheckboxSupplementCell(combination: combination) { isChecked in
+            VStack(alignment: .leading, spacing: 0) {
+                Toggle("Task", isOn: .constant(isChecked))
+                    .toggleStyle(.check)
+                    .textRole(CheckboxSampleRole.task)
+                Toggle("Subtask", isOn: .constant(isChecked))
+                    .toggleStyle(.check)
+                    .textRole(CheckboxSampleRole.subtask)
+            }
+            .foregroundStyle(.text.primary)
+        }
+    }
+}
+
+/// A supplement's cell in the combination's state: checked from the content's own value, pressed and focus forced,
+/// disabled real; its text size stops at accessibility1.
+private struct CheckboxSupplementCell<Content: View>: View {
+    let combination: ComponentMatrix.Combination
+    @ViewBuilder let content: (Bool) -> Content
+
+    var body: some View {
+        let state = combination.state.flatMap(CheckboxCatalogState.init(named:))
+        content(state?.isChecked ?? false)
+            .forcingCheckboxStates(state.map { $0.isForced ? [$0] : [] } ?? [])
+            .disabled(state?.isDisabled ?? false)
+            .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+    }
+}
