@@ -185,6 +185,16 @@ struct CheckboxStyleTests {
         #expect(small.width >= CheckboxMetrics.minimumHitSide && small.height >= CheckboxMetrics.minimumHitSide)
     }
 
+    @Test("labelsHidden hides the label beside the circle, where the OS tells a style (iOS 18, macOS 15)")
+    func labelsHidden() throws {
+        guard #available(iOS 18, macOS 15, watchOS 11, *) else { return }
+        let toggle = { Toggle("Write the report", isOn: .constant(false)).toggleStyle(.check) }
+        let hidden = fittingSize(toggle().labelsHidden().textRole(.body.regular))
+        let shown = fittingSize(toggle().textRole(.body.regular))
+        #expect(abs(hidden.width - CheckboxMetrics.minimumHitSide) < 0.5, "\(hidden)")
+        #expect(shown.width > hidden.width + 40)
+    }
+
     @Test(
         "the circle's diameter follows the line of its label's text role",
         arguments: [Westron.TextRole.caption.medium, .body.regular, .subheadline.regular, .heading.large])

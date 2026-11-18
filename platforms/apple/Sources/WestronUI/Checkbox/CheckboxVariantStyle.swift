@@ -97,13 +97,41 @@ private struct CheckboxLookBody<Label: View>: View {
         // The circle sits on the label's first line: its cell carries the baseline of a line of the same text.
         return HStack(alignment: .firstTextBaseline, spacing: gap) {
             CheckboxCircle(tokens: tokens, isChecked: states.contains(.checked), motion: motion)
-            label
+            CheckboxLabel(label: label)
         }
         // Every point of the check and its label takes the press, the empty corners of the hit area too.
         .contentShape(Rectangle())
         .scaleEffect(motion.scale(pressed: scalesDown))
         .animation(.press, value: scalesDown)
         .opacity(tokens.opacity.map(Double.init) ?? 1)
+    }
+}
+
+/// The label beside the circle, unless `.labelsHidden()` hides it, as in a row whose title is a separate text; it
+/// stays the toggle's accessible name either way. A custom style sees `.labelsHidden()` only through
+/// `labelsVisibility`, from iOS 18, macOS 15 and watchOS 11; before them the label is drawn (the contract's
+/// `platforms.apple`).
+private struct CheckboxLabel<Label: View>: View {
+    let label: Label
+
+    var body: some View {
+        if #available(iOS 18, macOS 15, watchOS 11, *) {
+            CheckboxVisibleLabel(label: label)
+        } else {
+            label
+        }
+    }
+}
+
+@available(iOS 18, macOS 15, watchOS 11, *)
+private struct CheckboxVisibleLabel<Label: View>: View {
+    let label: Label
+    @Environment(\.labelsVisibility) private var visibility
+
+    var body: some View {
+        if visibility != .hidden {
+            label
+        }
     }
 }
 

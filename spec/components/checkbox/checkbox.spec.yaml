@@ -89,7 +89,10 @@ platforms:
       on the same value and label (accessibilityRepresentation), so VoiceOver meets the toggle's role and value and no
       button. The circle's diameter is 1.2 times the line height of the text role that reaches the style, and its hit
       area is a square of at least size.control.m around it, the label beside it included (decisions/0001, P10, P16,
-      P17). The focus ring is the system's, so the focusRing bindings do not apply, as for Button. The mark is the
+      P17). A row whose title is a separate text hides the label with .labelsHidden(), and the label stays the
+      toggle's accessible name; a custom style sees .labelsHidden() only from iOS 18, macOS 15 and watchOS 11
+      (labelsVisibility), so on iOS 17, macOS 14 and watchOS 10 the label is still drawn beside the circle. The
+      focus ring is the system's, so the focusRing bindings do not apply, as for Button. The mark is the
       registry's check glyph.
     ios:
       description: >-

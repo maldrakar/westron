@@ -162,12 +162,8 @@ extension ComponentMatrix.Supplement {
     /// `.category(_:)`, not from a contract option, so the generated sheets, drawn in the accent, do not show it.
     static let checkboxListColors = ComponentMatrix.Supplement(
         component: "checkbox", id: "list-colors", title: "the twelve list colors",
-        note: "The list's color comes from the context, .category(_:), not from a contract option, so the generated "
-            + "sheets show the accent alone. Checked, the disc is color.category.<name>.control and the mark "
-            + ".on-control; unchecked, the ring is border.strong for every list. The first line has a task's text "
-            + "role, body.regular, the second a subtask's, subheadline.regular: the circle follows the role. The "
-            + "labels are hidden and the cells stop growing at the text size accessibility1, so that twelve checks in "
-            + "five states fit one picture; the generated sheets show the check at every text size.",
+        note: "The color comes from .category(_:). Blue to olive in body.regular, amber to indigo in "
+            + "subheadline.regular; no labels; growth stops at accessibility1.",
         keeps: [:]
     ) { combination in
         CheckboxSupplementCell(combination: combination) { isChecked in
@@ -179,14 +175,12 @@ extension ComponentMatrix.Supplement {
     /// is sized by the text role of its label, which is not a contract option.
     static let checkboxTextRoles = ComponentMatrix.Supplement(
         component: "checkbox", id: "text-roles", title: "two text roles",
-        note: "The circle has no size option: it follows the text role of its label (P10), here a task's, "
-            + "body.regular, and a subtask's, subheadline.regular. The cells stop growing at the text size "
-            + "accessibility1, so that both rows of five states fit one picture; the generated sheets show the check "
-            + "at every text size.",
+        note: "The circle follows the text role of its label (P10): a task's, body.regular, and a subtask's, "
+            + "subheadline.regular. The cells stop growing at accessibility1.",
         keeps: [:]
     ) { combination in
         CheckboxSupplementCell(combination: combination) { isChecked in
-            VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: .space200) {
                 Toggle("Task", isOn: .constant(isChecked))
                     .toggleStyle(.check)
                     .textRole(CheckboxSampleRole.task)
@@ -211,5 +205,7 @@ private struct CheckboxSupplementCell<Content: View>: View {
             .forcingCheckboxStates(state.map { $0.isForced ? [$0] : [] } ?? [])
             .disabled(state?.isDisabled ?? false)
             .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+            // One cell for the sheet's test, which counts the cells by their identifier.
+            .accessibilityElement(children: .contain)
     }
 }
