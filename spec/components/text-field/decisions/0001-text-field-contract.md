@@ -36,12 +36,14 @@ mode, set by the `density` modifier with #33 (spec/conventions.md, "Modes: theme
 
 - Considered: (a) westron's ring, `color.border.focus` at `stroke.thick`, on every Apple OS, macOS included, where the
   system's own ring is turned off; (b) westron's ring on iOS, the system's on macOS.
-- **Chosen: (a).** On macOS the field's focus is then drawn in westron's focus color, not in the accent color the
+- **Chosen: (a).** watchOS enters no focus (P8), so the ring is drawn on iOS and macOS, and the contract says so. On
+  macOS the field's focus is then drawn in westron's focus color, not in the accent color the
   person chose. This differs from what design-language/08 and 09 say today, so it is recorded as the owner's decision
   for this component, here and in the contract's `platforms.apple.macos`, and the chapters are revised at approval:
   - design-language/08:123, "Focus is always visible, and the platform draws it. A custom component shows focus the
     way the platform does.";
-  - design-language/09:54, the macOS row, "Stays with the system: … the focus ring".
+  - design-language/09:54, the macOS row, "Stays with the system: … the focus ring";
+  - spec/conventions.md:47, the row "States the system control has", "The system draws the focus ring (chapter 08)".
   - To read at the same time, since they leave focus to the system in general: design-language/09:52 (Apple, all:
     "… text input, scrolling, focus"), design-language/00-principles:39 and decisions/0001:23 ("Left to the system:
     … text input, focus"). Focus itself, its order and the keyboard, stays the system's; only its drawing on this
@@ -63,6 +65,9 @@ mode, set by the `density` modifier with #33 (spec/conventions.md, "Modes: theme
 - Considered: (a) `inline` takes its font from its context (the product sets `.textRole`), `framed` fixes its role by
   size as Button does; (b) always `body.regular`.
 - **Chosen: (a).** An inline field is part of a text, the card's title or its notes, so it is set in that text's role.
+- **What "as Button does" can mean.** Button binds `footnote.strong` at `s` and `subheadline.strong` at `m` and `l`,
+  never `body`; so the owner's model is the shape (a role fixed by the variant, not by the context), not Button's
+  roles. Which role `framed` takes at each size is P3 below.
 
 ## Already decided by the documents
 
@@ -85,19 +90,24 @@ mode, set by the `density` modifier with #33 (spec/conventions.md, "Modes: theme
 |---|---|---|
 | P1 | Strategy `style-on-system-control`, `base: SwiftUI.TextField`; the same style serves `SecureField` | The system field keeps editing, input methods and the keyboard (decisions/0003) |
 | P2 | On Apple the style is a `TextFieldStyle`, whose only requirement is the underscored `_body(configuration:)`; the implementation probes it on iOS, macOS and watchOS and records what holds | `TextFieldStyle` has no public requirement in the Xcode 27.1 interface; if the probe fails on an OS, the contract records the difference first |
-| P3 | `framed` by size: the height `size.control.s/m/l`; the padding `space.100/150/200`; the role `footnote.regular` at `s` and `body.regular` at `m` and `l` | Button's bindings are the model the owner named, in the regular weight of a field's text; `body.regular` at `m` is chapter 03's. **The pilot's row field, about `s`, draws body text (17 pt on the phone)**, so `footnote.regular` at `s` would shrink it; the alternative is `body.regular` at every size. The owner chooses |
+| P3 | `framed` by size: the height `size.control.s/m/l` and the padding `space.100/150/200`; the text `typography.body.regular` at every size. The size changes the frame, not the text | Chapter 03:49 makes a field's text `body.regular`, and the pilot's row field, about `s`, draws body text: 17 pt in a 34 pt field on the phone, 13 pt in a 24 pt field on the Mac (inventory:385, :439). `footnote.regular` at `s`, Button's smaller role in the regular weight, would shrink it to 13 pt on iOS and 10 pt on the Mac. The trade-off: at `s` the field is tight, 17 pt text in a 32 pt field on iOS and 13 pt text in 24 pt on the Mac, and it grows past `s`'s height at the larger text sizes, as the height is a minimum. Text role at every size: decided by the agent under the owner's delegation of 2026-11-18, pending the owner's confirmation |
 | P4 | `framed`'s outline is `stroke.thin` | Chapter 04 names the outline's color, not its width; `stroke.thin` is the width of Button's `secondary` outline |
-| P5 | The focus ring is drawn on both variants | Focus must always be visible (08:123); an inline field would otherwise show focus only by its caret. The owner may prefer the caret alone for `inline` |
+| P5 | The focus ring is drawn on both variants, on iOS and macOS | Focus must always be visible (08:123); an inline field would otherwise show focus only by its caret. The owner may prefer the caret alone for `inline` |
 | P6 | States `focus` and `disabled`; no `hover` | A field shows nothing on hover in the documents or the pilot; the pointer's I-beam is the system's |
-| P7 | `inline` has no height, radius, outline, padding or fill, and takes its text role from the context; the size changes nothing on it | The owner's inline answer: it is part of the text around it |
+| P7 | `inline` has no height, radius, outline, padding or fill, and takes its text role and its text color from the context (the product sets `.textRole` and `.foregroundStyle`); the size changes nothing on it | The owner's inline answer: it is part of the text around it. The color follows for the same reason: the card's notes, an inline field, are in the pilot's secondary ink, its title in the primary (inventory:148–156) |
 | P8 | watchOS draws the system field as it is: a tap opens the system's text input, there is no focus to draw, and `roundedBorder` is not available there. `size` offers `m` with a fallback to `m`, and the states are `disabled` | The watch has no field to frame; the restriction keeps one generated enum for every OS (spec/conventions.md) |
 | P9 | Slots `label` and `placeholder`, the system field's title and prompt; a multiline field is the system's `axis: .vertical` | The system field already has both; the card's notes are multiline |
 | P10 | Accessibility: role `textField`, intents and keyboard intents `edit`, a required label, `disabled` announced as unavailable | A placeholder disappears as the person types, so it cannot be the field's name |
 | P11 | Web, provisional: a native `<input>`, a `<textarea>` for multiline, with westron's CSS and the ring on `:focus-visible`; GTK, provisional: the stock `GtkEntry` with style classes, its focus ring decided in phase 7 | The native elements keep input; as Button's web and GTK entries |
+| P12 | On macOS a `framed` field at `s` keeps a hit area of at least 28 pt around its drawn 24 pt, as chapter 08 asks; no exception like Button's. Against it (the reviewer's counter-argument, as for Button's `s`): a frame grown past the drawn field takes clicks meant for a close neighbor, which is why the owner gave Button's `s` its drawn 24 pt (spec/components/button, decisions/0001) | Decided by the agent under the owner's delegation of 2026-11-18, pending the owner's confirmation; the owner may take Button's exception instead |
+| P13 | `framed`'s text is `color.text.primary` | A field that stands on its own holds a name the person types, primary text on any ground (02:22–24); nobody decided it, so it is listed |
 
 ## Open points
 
-- **P3's role at `s`** is the one point where the owner's model (Button) and the pilot disagree.
+- **What the implementation must show before the second gate:** whether a `TextFieldStyle` built on
+  `_body(configuration:)` can read the field's focus (the configuration is the field itself, and
+  `@Environment(\.isFocused)` may describe an ancestor), and whether `focusEffectDisabled()` turns off the system's
+  ring around a macOS text field. If either fails, the contract changes first.
 - **The ring's place** (outside the outline, over it, or replacing it while focused) is left to the implementation and
   the snapshot matrix; the contract binds only its color and width.
 

@@ -76,6 +76,10 @@ The answers and the documents left these points open. Each is the agent's propos
 
 ## Open points
 
+- **What the implementation must show before the second gate:** whether an SF Symbol takes the weight of a custom
+  font's role, `heading.*` in Onest through `Font.custom(_:size:relativeTo:)`, as it takes the system font's weight.
+  If it does not, an icon beside a heading needs its weight set from the role, and the contract records how.
+
 - **chapter 07's open question 1** (which names are domain icons) stays open; P6 keeps Apple's glyphs as they are.
 - **The API shape.** The tools do not derive an initializer-shaped API from a contract yet (below), so the parity lint
   keeps checking `Image(_:)` and `Label(_:icon:)` as reviewed adapters until they do.

@@ -28,8 +28,9 @@ westron's own component (decisions/0003, point 2).
 ### The line on a fill
 
 - Considered: (a) a bool `outlined`, default `false`; (b) a line on every surface.
-- **Chosen: (a).** `outlined` draws a line in `color.border.default` at `stroke.thin` for a card that sits on a fill.
-  In high contrast the line is drawn whether or not `outlined` is set.
+- **Chosen: (a).** `outlined` draws a line for a card that sits on a fill. In high contrast a line is drawn whether
+  or not `outlined` is set. The owner chose the flag; its color and width are the documents' (below), not part of
+  the answer.
 
 ### Nesting (design-language/04, open question 1)
 
@@ -47,16 +48,14 @@ westron's own component (decisions/0003, point 2).
 | `radius.card`, 12, is a card's or a panel's radius | design-language/04:17–25, decisions/0013:71–80 |
 | Shadows: `shadow.raised` for a raised card, none in dark; `shadow.dragged` for what a drag carries, three times as opaque in dark; everything else is flat | 04:62–80, decisions/0013:89–98 |
 | In high contrast every raised surface is outlined in `color.border.default` at `stroke.thin`; this already answers chapter 04's open question 3 | decisions/0013:100–101, 04:84–87 |
-| A card needs no outline in the standard themes; a hairline edges a card on a fill | 04:56–57 |
+| A card needs no outline in the standard themes; a hairline, `stroke.hairline`, edges a card on a fill, in `color.border.default`, which draws separators | 04:51, 04:56–57, 04:58; `stroke.hairline`'s `$description`, "The edge of glass and of a card on a fill" |
 | Corners are continuous on Apple, circular elsewhere | 04:41–44, decisions/0013:86 |
-| Never shadow what the system draws; glass is the system's, and a card never takes it | 04:88–89, decisions/0013:104, design-language/09:36–46 |
+| westron never shadows what the system draws (a sheet, a popover, a menu, glass); a card never takes glass | 04:88–89, decisions/0013:104, design-language/09:39–42 |
 | The nesting rule itself, `max(outer − inset, 4)` within the corner, the role's radius further in | 04:34–40, decisions/0013:82–85 |
 
-**One passage to reconcile at approval.** Chapter 04:51 and 04:56–57 give `stroke.hairline` to "a card on a fill",
-while the owner's answer gives `outlined` `stroke.thin`, the width decisions/0013:100–101 gives the high-contrast
-outline. The contract follows the owner. At approval, either 04:51 and 04:56–57 are revised to `stroke.thin` for a
-card on a fill (one width for both lines of a surface), or the owner chooses `stroke.hairline` for `outlined` and the
-contract follows.
+**The high-contrast line is in the description only.** A case's `when` names options and states, and has no key for
+the theme or the contrast, so no binding can say "in high contrast". The contract's description states it, and the
+bindings carry only `outlined`'s hairline.
 
 ## Proposed, to confirm
 
@@ -66,13 +65,14 @@ contract follows.
 | P2 | On Apple a view modifier on the content, `.surface(.raised)`, `.surface(.sunken, outlined: true)`, not a container type | It lays nothing out, so the product keeps its own stack and padding (the owner's padding answer). SwiftUI's `GroupBox` and `groupBoxStyle` are not available on watchOS, so a style on `GroupBox` could not hold on every Apple OS, and `GroupBox` brings a padding and a label of its own. The conventions' own-component row assumes a view type and leaves its options open (Q2), so this needs the conventions to record a modifier shape for an own component |
 | P3 | The kind is the option `variant`, with no default | The conventions call the unlabeled first argument the variant; every use names its kind, as every Button names its variant |
 | P4 | `raised` and `dragged` take `color.background.surface`, `sunken` takes `color.background.sunken` | `surface` and `sunken` are the documents' (above); that the lifted card keeps the surface ground of the card it lifts is the agent's reading |
-| P5 | `dragged` takes `radius.card` too, and so does `sunken` | The lifted card keeps its card's corner; a well is "a panel" in radius.card's sense. The pilot's column has a larger corner than its cards (18 against 13 on the phone, inventory 4.2), which westron does not follow: one corner for the panels of a board |
+| P5 | `dragged` takes `radius.card` too, and so does `sunken`: all three kinds draw `radius.card` | The lifted card keeps its card's corner; a well is "a panel" in radius.card's sense. The pilot's column has a larger corner than its cards (18 against 13 on the phone, inventory 4.2), which westron does not follow: one corner for the panels of a board. Kept by the agent under the owner's delegation of 2026-11-18, pending the owner's confirmation |
 | P6 | `sunken` casts no shadow and gets no high-contrast line | Chapter 04 gives shadows only to what stands off its ground, and the high-contrast rule to "every raised surface"; a well is neither. A sunken surface on a fill still takes `outlined` |
-| P7 | `outlined` binds `color.border.default` at `stroke.thin`, for every kind | The owner's answer; see the passage to reconcile above |
+| P7 | `outlined` binds `color.border.default` at `stroke.hairline`, for every kind | The documents give a card on a fill a hairline in the separators' color (above); P7 only applies it to each kind |
 | P8 | Accessibility: role `none`, a schema value added with this contract | A surface adds no role, trait or label; assistive technology reads its content as if it were not there (below, "The schema") |
 | P9 | One slot, `content` | What the product lays out on the surface |
 | P10 | watchOS draws a surface as the other OSes do, always in the dark themes, where `raised` has no shadow | Nothing in the documents differs there; watchOS always shows the dark themes (design-language/02:107) |
 | P11 | Web, provisional: a class with background, radius, shadow and, under `prefers-contrast: more`, a border; GTK: chapter 04's open question 4 (libadwaita's `.card` or westron's tokens), decided in phase 7 | As for Button's web entry; the GNOME question is open in the design language |
+| P12 | In high contrast an outlined raised or dragged surface draws the high-contrast line, `stroke.thin`, instead of its hairline: the high-contrast rule wins | Both rules apply to such a surface, and one line is drawn, not two; the high-contrast rule is the stronger edge, which is what high contrast asks for. Decided by the agent under the owner's delegation of 2026-11-18, pending the owner's confirmation |
 
 ## The schema
 

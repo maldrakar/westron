@@ -13,11 +13,14 @@ description: >-
   corners share a center; the product applies that rule where it nests such a shape, and the contract computes no
   pair (design-language/04, "Nested corners share a center"). In the standard themes a raised or dragged surface is
   set off from the canvas by its tone and, in light, by its shadow; dark draws no raised shadow, since the surface is
-  lighter than the canvas, and keeps the dragged one. outlined adds a line in color.border.default at stroke.thin for
-  a surface on a fill, where tone does not set it off. In the high-contrast themes a raised or dragged surface draws
-  that line whether or not outlined is set, because a shadow alone does not mark an edge (decisions/0013). A
-  surface never goes on what the system draws, a sheet, a popover, a menu or glass, and never takes glass itself
-  (design-language/09). It has no states.
+  lighter than the canvas, and keeps the dragged one. outlined adds a hairline, color.border.default at
+  stroke.hairline, for a surface on a fill, where tone does not set it off (design-language/04, "Lines"). In the
+  high-contrast themes every raised or dragged surface draws a line in color.border.default at stroke.thin, whether
+  or not outlined is set, because a shadow alone does not mark an edge (decisions/0013); an outlined surface then
+  draws that line instead of its hairline. The bindings below cannot say this, since a case has no contrast key, so
+  this description is the contract for it. westron's shadow never goes on what the system draws itself, a sheet, a
+  popover, a menu or glass, and a surface never takes glass (design-language/04, "Shadows"; 09, "Liquid Glass"). It
+  has no states.
 consumers: [todo-app/lists-screen, todo-app/list-screen]
 
 options:
@@ -31,8 +34,8 @@ options:
     type: bool
     default: false
     description: >-
-      The line for a surface that sits on a fill rather than on the canvas. In the high-contrast themes a raised or
-      dragged surface draws it in any case.
+      The hairline for a surface that sits on a fill rather than on the canvas. In the high-contrast themes a raised
+      or dragged surface draws the thicker high-contrast line in any case, an outlined one included.
 
 slots: [content]
 
@@ -51,7 +54,7 @@ tokens:
       - { when: { outlined: true }, token: color.border.default }
   container.borderWidth:
     cases:
-      - { when: { outlined: true }, token: stroke.thin }
+      - { when: { outlined: true }, token: stroke.hairline }
 
 accessibility:
   role: none

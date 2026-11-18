@@ -46,7 +46,7 @@ rectangles, not strokes. Some are horizontal, some vertical.
 | # | Proposal | Reason |
 |---|---|---|
 | P1 | Strategy `own-component`; on Apple a view, `Rule()` | The owner chose westron's own line over the system's; a line is a view, not a modifier of one |
-| P2 | An option `axis`, `horizontal` or `vertical`, default `horizontal`; on Apple `Rule(axis: .vertical)` | The pilot needs both (above). An explicit axis holds on every platform: SwiftUI's `Divider` takes its axis from its stack, `GtkSeparator` and an `<hr>` do not. `horizontal` as the default because most rules are; the owner may prefer no default, as for a variant |
+| P2 | An option `axis`, `horizontal` or `vertical`, default `horizontal`; on Apple `Rule(axis: .vertical)` | The pilot needs both (above). An explicit axis holds on every platform: SwiftUI's `Divider` takes its axis from its stack, `GtkSeparator` and an `<hr>` do not. `horizontal` as the default because most rules are. Kept, default included: decided by the agent under the owner's delegation of 2026-11-18, pending the owner's confirmation |
 | P3 | The rule fills the length it is offered along its axis; the product sets that length and the space around it with its stack and spacing tokens | The pilot's 22 and 16 come from the bar, not from the rule; a rule with a length of its own would be an off-ladder value (design-language/06:23–25) |
 | P4 | Accessibility: role `none`, hidden from assistive technology | A rule only repeats the grouping its neighbors already announce. The schema's role `none`, added with Surface, is the truthful value; `separator` was considered, but it would ask the platforms to announce the rule |
 | P5 | No states and no slots | A rule does not react to input and holds no content |

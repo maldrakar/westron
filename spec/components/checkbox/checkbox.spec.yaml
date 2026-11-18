@@ -9,9 +9,10 @@ description: >-
   in color.border.strong at stroke.regular, the same for every list. Checked, it is a disc filled with the list's
   color with a check mark on it, so it shows a shape and not only a color (design-language/08): the list's color
   comes from the context, the accent when the context sets none. With the accent the disc is
-  color.background.accent and the mark color.text.on-accent; with a list's color it is that color's control fill,
-  color.category.<name>.control, and its mark the label color that goes with it, tokens that each meet 3:1 as a
-  non-text pair on canvas, surface and sunken. Checking pops the disc and its mark in with motion.check, the one
+  color.background.accent and the mark color.text.on-accent; with a list's color the disc is
+  color.category.<name>.control and the mark color.category.<name>.on-control, for each of the twelve list colors,
+  the disc meeting 3:1 as a non-text color on canvas, surface and sunken (tokens expected from the tokens work, not
+  in tokens/ yet, so not bound below). Checking pops the disc and its mark in with motion.check, the one
   overshoot in westron: they scale up from 80 % to full size, and the spring's bounce carries them past it and back;
   Reduce Motion drops the scale and keeps the fill appearing (design-language/05). Unchecking fades the disc and the
   mark out in motion.fade, with no pop. A press scales the check down to 98 % in motion.press, as every control's

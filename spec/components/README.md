@@ -141,8 +141,9 @@ argument is the token accessor the token generator already writes, and the API p
 the contract (Text: `.textRole(_: Westron.TextRole)` on `View`, and its twin on `Text`, which returns a `Text`). The
 generator checks its shape: one option, whose values are the tokens of a group with an accessor on Apple
 (`AppleComponents.tokenAccessors`: `typography` → `Westron.TextRole`), and no states; it fails on any other. An
-approved contract with an option whose values are icons fails generation, the snapshot matrix and the API parity lint
-as not supported yet, whatever its strategy: the conventions do not derive the API that takes a `Westron.Icon` yet. An
+approved style or extension with an option whose values are icons fails generation, the snapshot matrix and the API
+parity lint as not supported yet: the conventions do not derive the API that takes a `Westron.Icon` yet. An approved
+own component with such an option generates nothing and passes, as every own component does. An
 approved `style-on-system-control` with an option whose values are tokens still fails, as not supported yet; an
 approved own component with such an option generates nothing, as every own component does.
 

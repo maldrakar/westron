@@ -45,8 +45,8 @@ draws it as a button (`CheckButton.swift`) whose label names the action. Issue #
 
 - Considered: (a) a disc filled with the list's color, which must meet 3:1 non-text contrast on canvas, surface and
   sunken; (b) a neutral ring around the disc; (c) leaving contrast to the mark alone.
-- **Chosen: (a).** A parallel piece of work adds the tokens for it: `color.category.<name>.control`, the disc, with
-  the label color of its mark, for each of the twelve list colors, and non-text declarations for
+- **Chosen: (a).** A parallel piece of work adds the tokens for it: `color.category.<name>.control`, the disc, and
+  `color.category.<name>.on-control`, its mark, for each of the twelve list colors, and non-text declarations for
   `color.background.accent`. Until they are in `tokens/`, the contract binds the default case, the accent:
   `color.background.accent` for the disc and `color.text.on-accent` for the mark, and describes the list's case in
   its text.
@@ -84,22 +84,29 @@ draws it as a button (`CheckButton.swift`) whose label names the action. Issue #
 | P6 | The unchecked ring is `stroke.regular`; checked draws no ring | Chapter 04's small check's ring; the disc is the shape when checked |
 | P7 | Unchecking fades the disc and the mark out in `motion.fade`, with no pop | Only checking overshoots (05:52–53); a fade is a color change, which Reduce Motion keeps |
 | P8 | The mark is the registry's `check` glyph, sized by the circle | The glyph exists (`spec/icons/icons.yaml`), and an icon inside a shape keeps its proportion (07:113–114) |
-| P9 | On Apple the focus ring is the system's, as for Button; web and GTK as Button's entries | The owner decided westron's own ring for TextField only; the check is a small control on a row, where Button's rule fits. The owner may extend the TextField decision to it |
+| P9 | On Apple the focus ring is the system's, as for Button; web and GTK as Button's entries | The owner decided westron's own ring for TextField only; the check is a small control on a row, where Button's rule fits, and chapters 08 and 09 say so as written. The visible consequence on macOS: a row with a check beside a TextField shows two focus colors, the system's ring in the person's accent on the check and westron's `color.border.focus` on the field, whenever the person's accent is not westron's. Kept: decided by the agent under the owner's delegation of 2026-11-18, pending the owner's confirmation; the owner may extend the TextField decision to the check |
 | P10 | The circle's diameter scales with the text role of its label, through that role's text style; its ratio to the text is set at implementation from the pilot's (24 pt beside 17 pt body text on the phone, 18 pt beside a subtask's 15 pt), and reviewed in the snapshot matrix | The owner chose the text role, not a number; the ratio is a drawing detail the matrix shows |
 | P11 | Accessibility: role `checkbox`, intents and keyboard intents `toggle`, a required label (the task's title), also where the title is a separate text beside the circle | The system toggle's role carries the value; a row's check needs the task's name to be announced |
 | P12 | Consumers: `todo-app/list-screen` only | The lists screen has no check that marks something done; its picker's check is a glyph |
 | P13 | Web, provisional: a native `<input type="checkbox">` drawn round (`appearance: none`), `:checked`; GTK, provisional: a stock `GtkCheckButton` drawn round with a style class | The native checkbox keeps its role and its keyboard |
 | P14 | The pop's shape: the disc and its mark scale up from 80 % to full size on `motion.check`, whose bounce carries them past full size and back; Reduce Motion drops the scale and keeps the fill appearing | A component's contract owns what moves and how far (05:84–86); the pilot pops from 0.8 through 1.14 to 1 with keyframes, and a westron spring gives the overshoot instead of a hand-made curve (05:72–73) |
 
+## Open points
+
+- **What the implementation must show before the second gate:** whether a custom `ToggleStyle` is keyboard-focusable
+  on macOS at all, since the contract claims the system's focus ring and `keyboardIntents: [toggle]`. If it is not,
+  the contract changes first: a focusable element inside the style, or a recorded difference on macOS.
+
 ## What the control tokens complete
 
 The one thing to complete when the tokens of the parallel work land:
 
-- The contract text names the expected tokens, `color.category.<name>.control` for the disc and its label color for
-  the mark (expected `color.category.<name>.on-control`; the final names may differ slightly). No binding can name
+- The contract text names the expected tokens, added by the tokens piece: `color.category.<name>.control` for the
+  disc and `color.category.<name>.on-control` for the mark, for the twelve list colors. They are not on this branch,
+  so nothing binds them. No binding can name
   them per list today, since the list's color is the context's, not an option of the contract; so the bindings stay
   the accent's, and the contract's description says which token the disc and the mark take for a list. When the
-  tokens land, the description takes their exact names, and the decision whether a binding can express "the
+  tokens land, the check that they exist is `spec check`'s once a binding names them, and the decision whether a binding can express "the
   context's list color" (for instance a token-valued option over `color.category` read from the environment) is made
   with the implementation.
 - `color.background.accent` gains a non-text declaration on canvas, surface and sunken, so that the contrast check

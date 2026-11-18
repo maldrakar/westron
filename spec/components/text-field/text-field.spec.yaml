@@ -7,10 +7,10 @@ description: >-
   selection, input methods, the keyboard and the system's text input. framed is a field that stands on its
   own, such as the name field in a list's row: an outline in color.border.strong, which meets 3:1 against the
   ground, and no fill of its own, so the ground under it shows. inline is a field set into a text it belongs to, such
-  as the title and the notes inside an open task card: no outline and no padding, in the text role of its context.
-  Focus is westron's ring, color.border.focus at stroke.thick, around the field in both variants, on every Apple OS
-  and on the web; the system's own focus ring is turned off where it has one. Disabled draws the whole field at opacity.disabled,
-  with no colors of its own (design-language/08). The placeholder is in color.text.placeholder. There is no error
+  as the title and the notes inside an open task card: no outline and no padding, in the text role and the text color
+  of its context. Focus is westron's ring, color.border.focus at stroke.thick, around the field in both variants, on
+  iOS, on macOS and on the web; the system's own focus ring is turned off where it has one. watchOS enters no
+  focus. Disabled draws the whole field at opacity.disabled, with no colors of its own (design-language/08). The placeholder is in color.text.placeholder. There is no error
   state, hint or message in this version: no pilot screen shows one, and a field marked only by a danger border
   would tell an error by color alone (design-language/08, "Color is never the only signal"). The text, and with it a
   framed field's height, follows the person's text size (design-language/08, "Settings the person chooses").
@@ -29,9 +29,10 @@ options:
     default: m
     description: >-
       framed: the height is size.control.s, m or l, 24, 32 and 40 with a pointer (macOS), 32, 44 and 52 on touch, as
-      a minimum, so the field grows with its text; its text role and padding follow the size, as Button's do. A
-      field drawn at s keeps a hit area of the platform's recommended size (design-language/08). inline takes its
-      height and its text role from its context, so the size changes nothing on it.
+      a minimum, so the field grows with its text; its padding follows the size, and its text is body.regular at
+      every size. A field drawn at s keeps a hit area of the platform's recommended size, 28 pt on macOS and 44 pt on
+      iOS (design-language/08). inline takes its height and its text role from its context, so the size changes
+      nothing on it.
 
 slots: [label, placeholder]
 states: [focus, disabled]
@@ -61,9 +62,10 @@ tokens:
       - { when: { state: disabled }, token: opacity.disabled }
   text.font:
     cases:
-      - { when: { variant: framed, size: s }, token: typography.footnote.regular }
-      - { when: { variant: framed, size: [m, l] }, token: typography.body.regular }
-  text.color: color.text.primary
+      - { when: { variant: framed }, token: typography.body.regular }
+  text.color:
+    cases:
+      - { when: { variant: framed }, token: color.text.primary }
   placeholder.color: color.text.placeholder
   focusRing.color:
     cases:
@@ -102,9 +104,10 @@ platforms:
       description: >-
         westron's focus ring replaces the system's, which is turned off with focusEffectDisabled(), so focus is
         drawn in color.border.focus rather than in the accent color the person chose in System Settings. This is
-        the owner's decision for this component (its decisions/0001); design-language/08 ("Keyboard and focus") and 09
-        ("What stays with the system", macOS) still say the system draws the focus ring on macOS, and are revised
-        when the contract is approved.
+        the owner's decision for this component (its decisions/0001); design-language/08 ("Keyboard and focus"), 09
+        ("What stays with the system", macOS) and spec/conventions.md ("States the system control has") still say
+        the system draws the focus ring, and are revised when the contract is approved. At s the field takes clicks
+        in at least 28 pt around its drawn 24 pt, as chapter 08 asks, with no exception like Button's.
     watchos:
       options: { size: [m] }
       fallback: { size: m }
