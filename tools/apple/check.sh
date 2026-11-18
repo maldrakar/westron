@@ -2,6 +2,7 @@
 # Checks for the Swift part of westron. CI and the agent's Stop hook run the same checks.
 #
 #   tools/apple/check.sh package     swift build + swift test (macOS)
+#   tools/apple/check.sh package-ios the package's unit tests on the iOS simulator (iPhone 17 or $WESTRON_SIM_DEVICE)
 #   tools/apple/check.sh platforms   compile the package for iOS and watchOS
 #   tools/apple/check.sh catalog     build the catalog and UI tests for the iOS simulator and macOS
 #   tools/apple/check.sh a11y [ios|macos] [test …]
@@ -12,7 +13,7 @@
 #                                    then to every n-th of them from the i-th
 #   tools/apple/check.sh format      swift format lint without changes, tools/ included
 #   tools/apple/check.sh fix-format  swift format that rewrites the files, tools/ included
-#   tools/apple/check.sh all         everything except fix-format and a11y
+#   tools/apple/check.sh all         everything except fix-format and a11y (package-ios included)
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -27,6 +28,30 @@ min_watchos="$(sed -n 's/.*\.watchOS(\.v\([0-9]*\)).*/\1/p' Package.swift).0"
 package() {
   swift build
   swift test
+}
+
+# The same unit tests as `package`, through xcodebuild on the iOS simulator: there they take the iOS branches of the
+# code (the loading indicator, the label kind's layout), which `swift test` on macOS never reaches. It prints the
+# failures and each test target's totals ("Test run with <n> tests in <m> suites"); the full log is in .build/logs/.
+package_ios() {
+  local udid log=.build/logs/package-ios.log status=0
+  # shellcheck source=tools/apple/simulator.sh
+  source tools/apple/simulator.sh
+  udid="$(westron_simulator_udid "${WESTRON_SIM_DEVICE:-iPhone 17}")" || return 1
+  mkdir -p .build/logs
+  echo "== package-ios: id=$udid"
+  # Without -collect-test-diagnostics never, a failed run waits minutes for a sysdiagnose of the simulator.
+  xcodebuild -scheme Westron-Package -destination "id=$udid" -derivedDataPath .build/xcode/package \
+    -collect-test-diagnostics never test > "$log" 2>&1 || status=$?
+  stop_test_daemon "$udid"
+  # The failures, each issue with the first line under it (its message), and the totals of each test target.
+  awk '/\[MT\]/ { next }
+    /✘ .*recorded an issue/ { print; if ((getline line) > 0 && line ~ /^↳ /) print line; next }
+    /✘ |: error: |Test run with|\*\* TEST/ { print }' "$log"
+  if [ "$status" -ne 0 ]; then
+    echo "check.sh: package tests on the iOS simulator failed, log: $log" >&2
+    return 1
+  fi
 }
 
 platforms() {
@@ -66,7 +91,7 @@ stop_test_daemon() {
     echo "check.sh: another xcodebuild uses the simulator $udid; its testmanagerd is left running" >&2
     return 0
   fi
-  echo "== a11y: stopping the test daemon of the simulator $udid"
+  echo "== stopping the test daemon of the simulator $udid"
   xcrun simctl spawn "$udid" launchctl kill SIGKILL system/com.apple.testmanagerd > /dev/null 2>&1 || true
 }
 
@@ -149,11 +174,12 @@ fix_format() {
 
 case "${1:-}" in
   package) package ;;
+  package-ios) package_ios ;;
   platforms) platforms ;;
   catalog) catalog ;;
   a11y) shift; a11y "$@" ;;
   format) format ;;
   fix-format) fix_format ;;
-  all) format; package; platforms; catalog ;;
-  *) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+  all) format; package; package_ios; platforms; catalog ;;
+  *) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac

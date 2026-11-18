@@ -68,6 +68,24 @@ Label("Rename", icon: .pen)                       // as Label(_:systemImage:)
 Button("Add", systemImage: Westron.Icon.plus.systemName) { add() }   // any call that takes systemImage:
 ```
 
+## Package tests
+
+The unit tests in `Tests/` (Swift Testing) run on two platforms, both in CI's `apple` job and in
+`tools/apple/check.sh all`:
+
+```sh
+tools/apple/check.sh package       # swift build + swift test, on macOS
+tools/apple/check.sh package-ios   # the same tests through xcodebuild on the iOS simulator
+```
+
+On the simulator they take the iOS branches of the code, which macOS never reaches: the loading indicator's
+(`ButtonProgressTests`) and a hosted button's layout (`ButtonLabelKindTests`). `package-ios` boots `iPhone 17` (or
+`$WESTRON_SIM_DEVICE`) if it is not running, builds into `.build/xcode/package`, writes the log to
+`.build/logs/package-ios.log` and prints each failure with its message and the totals of each test target ("Test run
+with <n> tests in <m> suites passed"); `ButtonShortcutTests` is macOS-only, so iOS runs fewer. `all` includes it
+although it needs a simulator: an incremental run takes about 12 s locally, and an iOS-only failure should stop the
+same command that stops a macOS one. Only the accessibility audit, half an hour long, stays out of `all`.
+
 ## Catalog
 
 Open in Xcode 27.1: `platforms/apple/Catalog/Catalog.xcodeproj`. Without arguments, the catalog shows navigation
