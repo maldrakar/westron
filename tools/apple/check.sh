@@ -133,39 +133,82 @@ a11y_run() {
   return "$status"
 }
 
-# What a failed run of the audit test <test> leaves to do, from the lines CatalogAccessibilityAuditTests prints into
-# <log>: `pass` (the test passed), `retry <ids>` (the entries to audit once more: the ones the run did not finish, or
-# that failed for infrastructure alone; `*` for all of them, when the test audited nothing) or `fail` (a finding, a
-# failure outside an entry, or a failure the lines do not explain). An entry with a finding is never retried.
+# What a failed run of the audit test <test> leaves to do, from <log>. Prints one line:
+#   pass            the test passed;
+#   retry <ids>     the entries to audit once more: the ones the run did not finish, or that failed for infrastructure
+#                   alone. Only after a run whose test started (it printed its `entries` line) and whose every failure
+#                   the test classified: XCTest's own `error: -[… <test>]` lines are counted against the test's
+#                   `failure …` lines, so a lost line cannot turn a finding into an unfinished entry;
+#   retry *         all of the test's entries: the test runner failed to install or launch, so nothing was audited
+#                   (seen once on CI, "Mach error -308 - (ipc/mig) server died");
+#   fail <reason>   anything else: a finding, a failure outside an entry, an unclassified failure, a test that did
+#                   not start (a build failure among them), a failure nothing explains.
+# An entry with a finding is never retried, and nor is any entry of a test with one.
 a11y_plan() {
   local log="$1" test="$2"
   awk -v test="$test" -v q="'" '
     function after(prefix) { return substr($0, length(prefix) + 1) }
-    BEGIN { p = "a11y: " test ": " }
-    index($0, "Test Case " q "-[CatalogUITests.CatalogAccessibilityAuditTests " test "]" q " passed") { passed = 1 }
+    BEGIN { p = "a11y: " test ": "; c = "-[CatalogUITests.CatalogAccessibilityAuditTests " test "]" }
+    index($0, "Test Case " q c q " passed") { passed = 1 }
+    index($0, ": error: " c " : ") { errors++ }
+    index($0, "Failed to install or launch the test runner") { install = 1 }
     index($0, p "entries ") == 1 { count = split(after(p "entries "), entries, ",") }
     index($0, p "finished ") == 1 { finished[after(p "finished ")] = 1 }
     index($0, p "failure in ") == 1 {
+      classified++
       rest = after(p "failure in ")
       entry = substr(rest, 1, index(rest, " (") - 1)
       if (index(rest, " (infrastructure): ") == length(entry) + 1) infrastructure[entry] = 1
       else finding[entry] = 1
     }
-    index($0, p "failure outside an entry ") == 1 { outside = 1 }
+    index($0, p "failure outside an entry ") == 1 { classified++; outside = 1 }
     END {
       if (passed) { print "pass"; exit }
-      if (outside) { print "fail"; exit }
-      if (count == 0) { print "retry *"; exit }
-      for (i = 1; i <= count; i++) if (entries[i] in finding) { print "fail"; exit }
+      if (outside) { print "fail a failure outside an entry"; exit }
+      if (count == 0) {
+        if (install && classified == 0 && errors == 0) print "retry *"
+        else print "fail the test did not start"
+        exit
+      }
+      if (errors > classified) {
+        printf "fail XCTest reported %d failures, the test classified %d\n", errors, classified
+        exit
+      }
+      for (i = 1; i <= count; i++) if (entries[i] in finding) { print "fail a finding in " entries[i]; exit }
       list = ""
       for (i = 1; i <= count; i++)
         if (!(entries[i] in finished) || (entries[i] in infrastructure)) list = list (list == "" ? "" : ",") entries[i]
-      print (list == "" ? "fail" : "retry " list)
+      print (list == "" ? "fail no failure of the test explains it" : "retry " list)
+    }' "$log"
+}
+
+# The retry's time budget, in minutes from the start of `check.sh a11y`, its build included (#74). A CI leg times out
+# at 35 minutes, and a leg killed by the timeout uploads no logs; before the step come about 1 minute of checkout and
+# setup, after it the upload, 16 s for 145 MB on 2026-11-18, so 30 minutes leave about 3 of margin. The
+# `testDefaultSettings` shards already take about 27 minutes, so they get a retry only when it is short.
+a11y_retry_budget=$((${WESTRON_A11Y_RETRY_BUDGET:-30} * 60))
+
+# How long, in seconds, a retry of <count> entries of <test> would take, judged from the first run in <log>: 90 s to
+# start xcodebuild, the simulator and the test runner, then the first run's time per entry it started (150 s, about
+# CI's, when the log has no time), at least 30 s.
+a11y_retry_estimate() {
+  local log="$1" test="$2" count="$3"
+  awk -v test="$test" -v count="$count" -v q="'" '
+    BEGIN {
+      p = "a11y: " test ": started "
+      c = "Test Case " q "-[CatalogUITests.CatalogAccessibilityAuditTests " test "]" q " failed ("
+    }
+    index($0, p) == 1 { started++ }
+    index($0, c) { seconds = substr($0, index($0, c) + length(c)) + 0 }
+    END {
+      per = (started > 0 && seconds > 0) ? seconds / started : 150
+      if (per < 30) per = 30
+      printf "%d\n", 90 + count * per
     }' "$log"
 }
 
 a11y() {
-  local platform=ios destination udid="" test name
+  local platform=ios destination udid="" test name a11y_started=$SECONDS
   case "${1:-}" in ios | macos) platform="$1"; shift ;; esac
   local only=() selection=""
   for test in "$@"; do
@@ -202,17 +245,22 @@ a11y() {
   if [ -n "${WESTRON_A11Y_FAIL_ONCE:-}" ]; then export TEST_RUNNER_WESTRON_A11Y_FAIL_ONCE="$WESTRON_A11Y_FAIL_ONCE"; fi
   mkdir -p .build/logs .build/xcode/results
   echo "== a11y: $destination${selection:+ (${selection#-})}"
-  if a11y_run test "$log" "$results" "$destination" "$udid" "${only[@]}"; then return 0; fi
-  if grep -q "BUILD FAILED" "$log"; then
-    echo "check.sh: accessibility audit failed to build ($platform), log: $log" >&2
+  # The build is a step of its own, so that a build failure fails the audit as one, and the test runs, the first and
+  # a retry alike, only on what this build produced.
+  local build_log=".build/logs/$name-build.log"
+  if ! xcodebuild -project platforms/apple/Catalog/Catalog.xcodeproj -scheme Catalog -destination "$destination" \
+    -derivedDataPath .build/xcode/catalog build-for-testing > "$build_log" 2>&1; then
+    grep -E "error:|FAILED" "$build_log" | grep -v "\[MT\]" | tail -40 >&2 || true
+    echo "check.sh: a11y: the catalog or its UI tests failed to build ($platform), log: $build_log" >&2
     return 1
   fi
+  if a11y_run test-without-building "$log" "$results" "$destination" "$udid" "${only[@]}"; then return 0; fi
 
   # The run failed. On the CI runner the simulator now and then stalls, and XCTest fails what the test asks of it then
   # (#74): an entry the stall hit is audited once more, in a run of its own, and so are the entries a stopped test
   # method did not reach. An entry with a finding is never audited again, and nor is any entry of a test with one, so
   # a finding fails the run however rarely it shows.
-  local failed=0 plan entries what retry_name retry_log retry_results
+  local failed=0 plan entries what retry_name retry_log retry_results elapsed estimate
   local first_entry="${TEST_RUNNER_WESTRON_ENTRY:-}" first_shard="${TEST_RUNNER_WESTRON_ENTRY_SHARD:-}"
   unset TEST_RUNNER_WESTRON_A11Y_FAIL_ONCE
   [ $# -gt 0 ] || set -- "${a11y_tests[@]}"
@@ -220,17 +268,34 @@ a11y() {
     plan="$(a11y_plan "$log" "$test")"
     case "$plan" in
       pass) continue ;;
-      fail)
-        echo "check.sh: a11y: $test failed with a finding, or with a failure that is not the infrastructure's" >&2
+      fail*)
+        echo "check.sh: a11y: $test failed, not retried: ${plan#fail }" >&2
         failed=1
         continue
         ;;
     esac
     entries="${plan#retry }"
     what="$test for ${entries/#\*/all its entries}"
-    echo "a11y: retrying $what: the first run failed for infrastructure (log: $log)"
+    # Only if the retry fits the time budget: a leg the timeout kills loses its logs.
+    elapsed=$((SECONDS - a11y_started))
+    if [ "$entries" = "*" ]; then
+      # Nothing was audited, so nothing tells how long the test takes: a whole test is retried only in the first half
+      # of the budget. On CI the runner failed at install 7 minutes into the leg; a whole shard takes 13–19 minutes.
+      estimate=$((a11y_retry_budget / 2))
+    else
+      estimate="$(a11y_retry_estimate "$log" "$test" "$(tr ',' '\n' <<< "$entries" | wc -l | tr -d ' ')")"
+    fi
+    if [ $((elapsed + estimate)) -gt "$a11y_retry_budget" ]; then
+      echo "check.sh: a11y: $what failed for infrastructure, not retried: $((elapsed / 60)) min have gone and the" \
+        "retry would take about $((estimate / 60)) min more, past the budget of $((a11y_retry_budget / 60)) min" \
+        "(WESTRON_A11Y_RETRY_BUDGET)" >&2
+      failed=1
+      continue
+    fi
+    echo "a11y: retrying $what: the first run failed for infrastructure; its failures are above (log: $log)"
     if [ -n "${GITHUB_ACTIONS:-}" ]; then
-      echo "::warning title=Accessibility audit retried::$what: the first run failed for infrastructure; see $log"
+      echo "::warning title=Accessibility audit retried::$what: the first run failed for infrastructure. Its" \
+        "failures are in this step's output; its log is uploaded as the a11y-retried-… artifact."
     fi
     retry_name="$name-retry-$test"
     retry_log=".build/logs/$retry_name.log" retry_results=".build/xcode/results/$retry_name.xcresult"

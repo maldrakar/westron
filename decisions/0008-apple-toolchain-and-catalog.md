@@ -68,9 +68,10 @@ Date: 2026-11-14. Status: accepted.
   of the shard went unaudited. The test could withhold such a failure from XCTest and go on, but on an app in an
   unknown state; so it records every failure as it comes and prints it with its kind (`infrastructure` for those
   messages, `finding` for everything else), and which entries it finished. `tools/apple/check.sh a11y` then audits
-  once more, in a run of its own, the entries a run did not finish or that failed for infrastructure alone. A test
-  with a finding is never retried, so a rare finding still fails the leg; every retry is logged and warned on the
-  run. One finding was transient too, on an element the bottom of the screen cut; such an element is now judged on
+  once more, in a run of its own, the entries a run did not finish or that failed for infrastructure alone, only
+  after a run whose test started (the build is a step of its own) and only within a time budget of 30 of the leg's
+  35 minutes. A test with a finding is never retried, so a rare finding still fails the leg; every retry is logged,
+  warned on the run, and its logs are uploaded. One finding was transient too, on an element the bottom of the screen cut; such an element is now judged on
   the next screenful, which shows it whole. The legs stay informational checks, never required.
 
 ## Consequences

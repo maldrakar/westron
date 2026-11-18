@@ -213,24 +213,36 @@ gets another shard.
 - When a run ends, passed, failed or interrupted, the script stops the simulator's `testmanagerd` (launchd starts it
   again for the next test): after audits it has been seen to keep running at 400–1400 % CPU for hours with no test
   left (2026-11-17). A daemon that another `xcodebuild` on the same simulator still uses is left alone.
+- The script builds the catalog and its UI tests first, in a step of its own (`<name>-build.log`): a build failure
+  fails the audit at once, with no test run and no retry, and every test run uses what that build produced.
 - A failed run is retried once, narrowly, when the machinery failed rather than a page (#74). On the CI runner the
   simulator now and then stalls for a minute or more, and whatever the test asks of it then fails: terminating the
   catalog ("Failed to terminate dev.westron.catalog:<pid>: Failed to terminate dev.westron.catalog:0", the same
   message a simulator whose `testmanagerd` is stopped gives), launching it ("does not have a process ID"), a UI
-  query ("Timed out while evaluating UI query"; in the same local experiment also a drag and a screenshot, "Timed
-  out while synthesizing event", "… requesting screenshot"), the audit ("Audit failed to complete in time", -56, which the test already retries once on the spot)
-  or the entry not rendering within 30 s. XCTest stops the test method at a failed terminate, launch, query or drag,
-  so the rest of the shard went unaudited and the leg failed. The test prints which entries it audits,
-  when each starts and finishes, and each failure with its kind, `infrastructure` (those messages, listed in
-  `CatalogAccessibilityAuditTests.infrastructureMarkers`) or `finding` (everything else). When the run fails, the
-  script reads those lines and runs the test once more (`test-without-building`, after stopping `testmanagerd`) for
-  the entries the run did not finish or that failed for infrastructure alone, with `a11y: retrying <test> for
-  <entries>` in its output and, on GitHub Actions, a warning on the run; its log is `<name>-retry-<test>.log`. A
-  test with a finding, or a failure outside an entry, is not retried: no entry is audited twice after a finding, so
-  a finding that shows once in two runs still fails the leg. A retry that fails again fails the leg. What the retry
-  can hide: a catalog page that hangs the app only sometimes, since a hung app also times out UI queries.
-  `WESTRON_A11Y_FAIL_ONCE=<id>` is a test hook that fails that entry for infrastructure in the first run only, to
-  see the retry at work.
+  query ("Failed to get matching snapshot: Timed out while evaluating UI query"; in the same local experiment also
+  a drag and a screenshot, "Timed out while synthesizing event", "… requesting screenshot"), the audit ("Audit
+  failed to complete in time", -56, which the test retries once on the spot) or the entry not rendering within
+  30 s. XCTest stops the test method at a failed terminate, launch, query or drag, so the rest of the shard went
+  unaudited and the leg failed.
+  - The test prints which entries it audits, when each starts and finishes, and each failure with its kind:
+    `infrastructure` when its message starts as one of those (`CatalogAccessibilityAuditTests.isInfrastructure`;
+    never by text further in, where a page's labels can appear), `finding` otherwise.
+  - When the run fails, the script reads those lines and runs the test once more, after stopping `testmanagerd`,
+    for the entries the run did not finish or that failed for infrastructure alone, with `a11y: retrying <test> for
+    <entries>` in its output and, on GitHub Actions, a warning on the run. Its log is `<name>-retry-<test>.log`; CI
+    uploads the logs of a leg that retried as the `a11y-retried-…` artifact, even when the retry passed.
+  - Not retried, so the leg fails: a test with a finding (no entry is audited twice after a finding, so a finding
+    that shows once in two runs still fails), a failure outside an entry, a test that did not start (but for the
+    test runner failing to install or launch, the one case where the whole test is run again), and a run where
+    XCTest reports more failures than the test classified. A retry that fails again fails the leg.
+  - A retry must fit a time budget, 30 minutes from the start of `check.sh a11y`, its build included
+    (`WESTRON_A11Y_RETRY_BUDGET`): a CI leg times out at 35, and a leg the timeout kills uploads no logs. A retry
+    is estimated at 90 s plus the first run's time per entry for each entry to retry; a whole test is retried only
+    in the first half of the budget. Past it, the leg fails with a line that says so.
+  - What the retry can hide: a catalog page that hangs the app only sometimes, since a hung app also times out UI
+    queries.
+  - `WESTRON_A11Y_FAIL_ONCE=<id>` is a test hook that fails that entry for infrastructure in the first run only, to
+    see the retry at work.
 - `WESTRON_ENTRY_SHARD=<i>/<n>` then audits every n-th of those entries, in registry order, from the i-th (1-based):
   the n shards hold each entry exactly once (`CatalogShard`, tested in `CatalogShardTests`). The log and the result
   bundle get `-shard<i>of<n>` in their names, and the run logs the entries of its shard (`a11y: shard 2/3: …`). A

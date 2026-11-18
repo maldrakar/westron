@@ -20,8 +20,7 @@ import XCTest
 /// unaudited. Withholding such a failure from XCTest (not passing it on in `record(_:)`) keeps the method going, but on
 /// an app in an unknown state; so the test records every failure as it comes and only reports, one line per event (see
 /// `record(_:)`): which entries it audits, when each starts and finishes, and each failure with its kind,
-/// `infrastructure` (the messages in `infrastructureMarkers`) or `finding` (everything else, the audit's issues
-/// first). `tools/apple/check.sh a11y` reads those lines and runs the test once more for the entries the first run did
+/// `infrastructure` (`isInfrastructure(_:)`) or `finding` (everything else, the audit's issues first). `tools/apple/check.sh a11y` reads those lines and runs the test once more for the entries the first run did
 /// not finish or that failed for infrastructure alone, with "a11y: retrying …" in its output; an entry with a finding
 /// is never audited again, so a finding that shows once still fails the run.
 final class CatalogAccessibilityAuditTests: XCTestCase {
@@ -41,23 +40,21 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         super.record(issue)
     }
 
-    /// The failures of the machinery, told by their messages: XCTest's own for a terminate and a launch seen on the CI
-    /// runner (#74), and its timeouts of a request to the simulator, "Timed out while …": a UI query on the CI runner,
-    /// and a UI query, a drag ("synthesizing event") and a screenshot when the local simulator's `testmanagerd` was
-    /// stopped for minutes; and this test's own for an entry that did not render and an audit that did not complete
-    /// twice (`infrastructurePrefix`). Every other failure is a finding. A new message joins only with evidence that it
-    /// is the machinery's.
-    static let infrastructureMarkers = [
-        infrastructurePrefix,
-        "Failed to terminate dev.westron.catalog",
-        "Application 'dev.westron.catalog' does not have a process ID",
-        "Timed out while ",
-    ]
-    /// Starts the messages of this test's own infrastructure failures.
+    /// Starts the messages of this test's own infrastructure failures: an entry that did not render, an audit that did
+    /// not complete twice, the `WESTRON_A11Y_FAIL_ONCE` hook. XCTest puts "failed - " before an `XCTFail` message.
     static let infrastructurePrefix = "infrastructure: "
 
+    /// Whether a failure is the machinery's, told by how its message starts, never by text further in, where a page's
+    /// own labels can appear: XCTest's messages for a terminate and a launch seen on the CI runner (#74), its timeouts
+    /// of a request to the simulator, "Failed to <request>: Timed out while …" (a UI query on the CI runner; a UI
+    /// query, a drag and a screenshot when the local simulator's `testmanagerd` was stopped for minutes), and this
+    /// test's own (`infrastructurePrefix`). Every other failure is a finding. A message joins only with evidence that
+    /// it is the machinery's.
     static func isInfrastructure(_ description: String) -> Bool {
-        infrastructureMarkers.contains { description.contains($0) }
+        description.hasPrefix(infrastructurePrefix) || description.hasPrefix("failed - " + infrastructurePrefix)
+            || description.hasPrefix("Failed to terminate dev.westron.catalog:")
+            || description.hasPrefix("Application 'dev.westron.catalog' does not have a process ID")
+            || description.prefixMatch(of: #/Failed to [a-z ]+: Timed out while /#) != nil
     }
 
     /// The test method and the entry being audited, for `record(_:)`.
