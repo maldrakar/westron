@@ -394,9 +394,9 @@ private struct ButtonBehaviorPage: View {
     var body: some View {
         TokenPage(
             title: "Button · behavior",
-            summary: "A loading button refuses a touch, a click and assistive technology, and is neither dimmed nor "
-                + "announced as unavailable. A keyboard shortcut on macOS still reaches it unless the product drops it "
-                + "while loading, as Export does (#23)."
+            summary: "A loading button refuses a touch, a click, assistive technology and a keyboard shortcut set "
+                + "outside .loading(_:), and is neither dimmed nor announced as unavailable. Export drops its own "
+                + "shortcut while loading, as a product may (#23)."
         ) {
             section("Presses") {
                 Text("Accepted presses: \(accepted)")
@@ -432,7 +432,7 @@ private struct ButtonBehaviorPage: View {
                     .buttonStyle(.secondary)
                     .loading(isPublishing)
                     #if !os(watchOS)
-                        // The spelling `.loading(_:)` documents: no shortcut while loading.
+                        // A product that drops the shortcut itself while loading.
                         .keyboardShortcut(isPublishing ? nil : KeyboardShortcut("e", modifiers: .command))
                     #endif
                     .accessibilityIdentifier(ButtonCatalogID.export)

@@ -8,9 +8,10 @@
 // only a `ButtonStyle` sees `isPressed`.
 //
 // The gate refuses a touch and a click. SwiftUI runs the product's action for two other inputs itself, on the product's
-// `Button`, around its style: an accessibility activation (VoiceOver, Switch Control, Voice Control), which
-// `.loading(_:)` refuses from outside the button (States.swift), and a keyboard shortcut on macOS, which nothing in
-// westron can refuse (a contract gap, #23). The catalog's UI tests measure each (CatalogUITests/ButtonBehaviorTests).
+// `Button`, around its style: an accessibility activation (VoiceOver, Switch Control, Voice Control) and a keyboard
+// shortcut. `.loading(_:)` refuses both from outside the button (States.swift): the shortcut only when it is set
+// outside `.loading(_:)`. The catalog's UI tests measure each (CatalogUITests/ButtonBehaviorTests), and
+// ButtonShortcutTests the shortcut's two orders.
 
 import SwiftUI
 
@@ -178,7 +179,13 @@ private struct ButtonSurface<Label: View>: View {
         //   the overlap to the later sibling, even one closer to the first, so westron adds none.
         // - watchOS: the only size, m, is drawn at the target.
         // - macOS: a click outside the frame misses, whatever the content shape: size s keeps its drawn 24 pt, below
-        //   the recommended 28 (a contract gap).
+        //   the recommended 28 (a contract gap, for the owner). Growing the frame does reach the target: padding the
+        //   look by 2 pt inside the system button and taking it back outside with a negative padding kept the drawn
+        //   and laid out size, and a click 1.5 pt below the drawn button reached it. But the grown frame overlaps a
+        //   neighbor closer than 4 pt, and the later sibling wins there, inside the neighbor's drawn area: with
+        //   `spacing: 0`, a click 1 pt inside the first button ran the second (measured in the review of #23 with
+        //   NSEvent clicks in a window, in an HStack of icon-only buttons and a VStack of buttons with labels). The
+        //   style cannot see its neighbors, so westron does not grow the frame.
         .contentShape(.accessibility, shape)
         #if os(macOS) || os(watchOS)
             // The system's focus ring follows the button's corners.
@@ -190,7 +197,10 @@ private struct ButtonSurface<Label: View>: View {
 
 /// The label slot and the icon slot, and the progress indicator in loading (contract, P13). With an icon, the indicator
 /// takes the icon's place (`ButtonLabelStyle`), so the width holds; without one, it goes before the label and the
-/// button widens by the indicator and the gap. The label is drawn as it is in every state, whole, with its own colors.
+/// button widens by the indicator and the gap (`IndicatorBeforeLabelLayout`). Which of the two follows the label in the
+/// same update, with no state copied from it: a label that changes between `Text` and `Label` while loading, and a
+/// renderer that draws a single update (`ImageRenderer`), never show two indicators or none (ButtonLabelKindTests).
+/// The label is drawn as it is in every state, whole, with its own colors.
 private struct ButtonContent<Label: View>: View {
     let label: Label
     let tokens: ButtonTokens
@@ -199,32 +209,14 @@ private struct ButtonContent<Label: View>: View {
     let iconOnly: Bool
     let isLoading: Bool
 
-    /// Whether the label is a `Label`, which has an icon slot: its label style reports it through a preference, copied
-    /// here one update later. It starts true, so a `Label` never shows a second indicator. A button that appears
-    /// already loading with a label without an icon draws its first update without the indicator; in a recording of
-    /// the catalog's launch, stepped frame by frame, no drawn frame showed that update (#23). Not measured: a label that
-    /// changes between `Text` and `Label` while loading shows two indicators, or none, for one update. A layout value
-    /// set by `ButtonLabelStyle` would avoid the lag, but it does not reach a layout outside the label.
-    @State private var hasIcon = true
-
     var body: some View {
-        Group {
-            if isLoading && !hasIcon {
-                HStack(spacing: gap) {
-                    indicatorWithoutIcon
-                    styled(isLoading: true)
-                }
-            } else {
-                styled(isLoading: isLoading)
+        IndicatorBeforeLabelLayout(gap: gap) {
+            if isLoading {
+                indicatorWithoutIcon
+                    .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+                    .clipped()
             }
-        }
-        .backgroundPreferenceValue(ButtonLabelHasIconKey.self) { value in
-            // `onPreferenceChange` does not report the initial value, which is the default (false) for a label without
-            // an icon; `onChange(of:initial:)` does.
-            Color.clear
-                .onChange(of: value, initial: true) {
-                    hasIcon = value
-                }
+            styled(isLoading: isLoading)
         }
     }
 
@@ -254,10 +246,57 @@ private struct ButtonContent<Label: View>: View {
     }
 }
 
-/// Whether the button's label is a `Label`, which has an icon slot: its label style sets it.
-private struct ButtonLabelHasIconKey: PreferenceKey {
-    static let defaultValue = false
-    static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
+/// Marks a label that `ButtonLabelStyle` lays out, a `Label`, which has an icon slot: the style gives this guide an
+/// explicit value, which no other view does. An explicit alignment reaches the layouts around the view that sets it in
+/// the same update, through the label's own stacks, so `IndicatorBeforeLabelLayout` knows in the same update whether
+/// the label it lays out has an icon, also when the label changes between `Text` and `Label` (#23).
+private enum ButtonLabelHasIcon: AlignmentID {
+    static func defaultValue(in context: ViewDimensions) -> CGFloat { context[VerticalAlignment.center] }
+}
+
+extension VerticalAlignment {
+    fileprivate static let buttonLabelHasIcon = VerticalAlignment(ButtonLabelHasIcon.self)
+}
+
+/// Lays out the label, and in loading the indicator before it when the label has no icon (the label has no explicit
+/// `buttonLabelHasIcon`): the indicator at its own size, then the gap, then the label, centered vertically, as an
+/// `HStack` would. Its subviews are the label, or, in loading, the indicator and the label. With an icon, the
+/// indicator is in the icon's place already, and the one before the label is proposed no room: its frame is empty and
+/// clips it.
+private struct IndicatorBeforeLabelLayout: Layout {
+    let gap: CGFloat
+
+    /// The size of the indicator before the label, nil when it takes no room.
+    private func indicatorSize(_ proposal: ProposedViewSize, _ subviews: Subviews) -> CGSize? {
+        guard subviews.count == 2, subviews[1].dimensions(in: proposal)[explicit: .buttonLabelHasIcon] == nil else {
+            return nil
+        }
+        return subviews[0].sizeThatFits(.unspecified)
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard let label = subviews.last else { return .zero }
+        guard let indicator = indicatorSize(proposal, subviews) else { return label.sizeThatFits(proposal) }
+        let labelSize = label.sizeThatFits(
+            ProposedViewSize(
+                width: proposal.width.map { max(0, $0 - indicator.width - gap) }, height: proposal.height))
+        return CGSize(width: indicator.width + gap + labelSize.width, height: max(indicator.height, labelSize.height))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        guard let label = subviews.last else { return }
+        let center = CGPoint(x: bounds.midX, y: bounds.midY)
+        guard let indicator = indicatorSize(proposal, subviews) else {
+            if subviews.count == 2 { subviews[0].place(at: center, anchor: .center, proposal: .zero) }
+            label.place(at: center, anchor: .center, proposal: ProposedViewSize(bounds.size))
+            return
+        }
+        subviews[0].place(
+            at: CGPoint(x: bounds.minX, y: bounds.midY), anchor: .leading, proposal: ProposedViewSize(indicator))
+        label.place(
+            at: CGPoint(x: bounds.maxX, y: bounds.midY), anchor: .trailing,
+            proposal: ProposedViewSize(width: max(0, bounds.width - indicator.width - gap), height: bounds.height))
+    }
 }
 
 /// The button's accessible name where its title is not drawn as text: the system's icon-only label style carries the
@@ -305,7 +344,7 @@ private struct ButtonLabelStyle: LabelStyle {
                 }
             }
         }
-        .preference(key: ButtonLabelHasIconKey.self, value: true)
+        .alignmentGuide(.buttonLabelHasIcon) { $0[VerticalAlignment.center] }
     }
 
     /// The icon in its text role and color, or, in loading, the indicator over its place.
