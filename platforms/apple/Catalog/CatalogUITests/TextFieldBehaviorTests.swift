@@ -59,11 +59,11 @@ final class TextFieldBehaviorTests: XCTestCase {
         return field
     }
 
-    /// The styled fields keep the system field's role and its prompt. The contract asks for an accessible label that
-    /// names what a field holds, its title ("List name"): the system field drawn as the contract writes it,
-    /// `TextField("List name", text:, prompt:)`, exposes none on iOS 26.3 and macOS 26.7, with westron's style or
-    /// without it (measured against an unstyled field in #30), so that check is an expected failure until the owner
-    /// decides how a field gets its label (#30).
+    /// The styled fields keep the system field's role and its prompt, and take the label the product gives them. With
+    /// a prompt, the system field exposes no accessibility label from its title on iOS 26.3 and macOS 26.7, with
+    /// westron's style or without it (measured against an unstyled field in #30), so the product names the field with
+    /// `.accessibilityLabel(_:)`, as every catalog field does (the contract's `platforms.apple`; decisions/0001, I2).
+    /// Here that label reaches the styled field.
     @MainActor
     func testFieldsKeepTheirRoleAndLabel() {
         let small = app.textFields[ID.small]
@@ -76,11 +76,9 @@ final class TextFieldBehaviorTests: XCTestCase {
         // A multiline field is a text view on macOS and a text field on iOS.
         XCTAssertTrue([.textField, .textView].contains(notes.elementType), "notes: \(notes.elementType.rawValue)")
 
-        XCTExpectFailure("The system field exposes no label from its title when it has a prompt (#30)") {
-            XCTAssertEqual(small.label, "List name")
-            XCTAssertEqual(secure.label, "Password")
-            XCTAssertEqual(notes.label, "Notes")
-        }
+        XCTAssertEqual(small.label, "List name")
+        XCTAssertEqual(secure.label, "Password")
+        XCTAssertEqual(notes.label, "Notes")
     }
 
     /// Taps or clicks a point in the app's coordinates, after taking the focus from every field.

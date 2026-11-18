@@ -15,8 +15,9 @@
 //   field keeps working beside the style's: both follow the field, and the product's still moves focus to it.
 // - The prompt is drawn by the system in its own placeholder color: neither `foregroundStyle` (any level) nor `tint`
 //   from the style reaches it. On iOS a color the product sets on its prompt `Text` reaches it; on macOS 26 not even
-//   that. The contract binds `color.text.placeholder` and does not record this yet: an open question for the owner
-//   (#30), not a decision.
+//   that. The contract's `platforms.apple` records it as a platform difference (decisions/0001, I1).
+// - The system field with a prompt exposes no accessibility label from its title, styled or not, so the product
+//   names the field with `.accessibilityLabel(_:)` (the contract's `platforms.apple`; decisions/0001, I2).
 
 import SwiftUI
 

@@ -92,12 +92,14 @@ struct TextFieldStyleTests {
             "container.borderWidth", "container.opacity", "text.font", "text.color", "focusRing.color",
             "focusRing.width",
         ]
-        // A TextFieldStyle cannot color the system field's prompt (TextFieldTokens): the contract binds it, and who
-        // applies it on Apple is an open question (#30). A binding added to the contract fails here until the style
-        // draws it.
+        // A TextFieldStyle cannot color the system field's prompt (TextFieldTokens): the contract binds it for the
+        // platforms that can, and its `platforms.apple` records the difference (decisions/0001, I1). A binding added
+        // to the contract fails here until the style draws it.
         let notDrawn: Set = ["placeholder.color"]
         #expect(try Self.bindingNames() == drawn.union(notDrawn))
-        withKnownIssue("placeholder.color is not applied on Apple; an open question for the owner (#30)") {
+        withKnownIssue(
+            "placeholder.color is not drawn on Apple: the system's placeholder color, a recorded platform difference"
+        ) {
             #expect(drawn.isSuperset(of: notDrawn))
         }
     }

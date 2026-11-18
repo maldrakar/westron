@@ -114,7 +114,34 @@ mode, set by the `density` modifier with #33 (spec/conventions.md, "Modes: theme
   bezeled macOS field, but the field drawn in the system's plain style inside westron's has no ring of its own. The
   contract's `platforms.apple` records both.
 - **The ring's place** (outside the outline, over it, or replacing it while focused) is left to the implementation and
-  the snapshot matrix; the contract binds only its color and width.
+  the snapshot matrix; the contract binds only its color and width. The implementation's proposal is under "Decided at
+  implementation", I4.
+- **Left open by the implementation (2026-11-19), with no decision:**
+  - an `inline` field has no hit-area rule: on macOS a one-line inline field takes clicks only in its own height,
+    about 17 to 22 pt, below chapter 08's 28 pt (on iOS the system's touch tolerance reaches past it);
+  - `framed` binds no vertical padding, so a multiline field and one-line text at the accessibility text sizes, which
+    grow the field past its minimum height, touch the outline at the top and the bottom (Button has the same);
+  - whether disabled removes the focus ring: the contract binds the ring on `focus` alone, so a focused field that is
+    disabled keeps it, at `opacity.disabled`;
+  - no token carries macOS's recommended target, 28 pt, so the style holds it as a literal with the lint's marker
+    (`TextFieldTokens.swift`); a platform token for the target would remove the exception;
+  - nobody checked whether iPadOS keyboard navigation draws a system highlight beside westron's ring; the probe ran on
+    the iPhone simulator and macOS only;
+  - iOS 17, macOS 14 and watchOS 10 are compile-only on the implementing machine, which has no iOS 17 or watch runtime
+    and runs macOS 26.7; what holds was run on iOS 26.3 and macOS 26.7.
+
+## Decided at implementation (2026-11-19)
+
+The implementation (#30) found three points where Apple cannot do what the contract says. The coordinator decided each
+under the owner's delegation of 2026-11-18, pending the owner's confirmation, with no API change; the contract's
+`platforms.apple` records each as a platform difference. A fourth item is the implementation's own proposal.
+
+| # | Point | Options considered | Decided | Measured |
+|---|---|---|---|---|
+| I1 | The placeholder's color, bound to `color.text.placeholder` | (a) on Apple the prompt is the system's placeholder color, recorded as a difference; (b) the product colors its prompt, `prompt: Text("Untitled").foregroundStyle(.text.placeholder)`; (c) westron draws its own prompt, which needs the field's text and so is not a `TextFieldStyle`: an API change; (d) reflection or introspection of the private field, fragile | (a), with (b) documented for iOS. (c) stays open for the owner. This misses chapter 08's contrast target for the placeholder on Apple. The binding stays for the platforms that can apply it (web, GTK) | A `TextFieldStyle` cannot set the prompt's color: neither `foregroundStyle` at any level nor `tint` reaches it, and `ShapeStyle.placeholder` only reads the system's color. A color the product sets on its prompt reaches it on iOS and is ignored on macOS 26. The system's placeholder against `background.canvas`: 1.72:1 on iOS in light, 2.42:1 in dark, about 3.9:1 on macOS in light; `color.text.placeholder` gives 5.27:1 and 6.22:1 |
+| I2 | The accessible label, `label: required` | (a) the product names the field with `.accessibilityLabel(…)`; (b) accept the system's behavior | (a): the contract's example shows it, and the catalog labels every sample field so | On iOS 26.3 and macOS 26.7 `TextField("List name", text:, prompt:)` exposes no accessibility label from its title, with westron's style or without it (an unstyled field measured beside the styled one); the prompt is only its placeholder value |
+| I3 | Disabled on macOS: the whole field at `opacity.disabled`, "with no colors of its own" | (a) record that the system field applies its own disabled text color under westron's opacity; (b) on macOS apply the opacity only to what westron draws | (a), no code change | Disabled text (57, 60, 66) against `background.canvas` (17, 19, 24) in dark, where `text.primary` at `opacity.disabled` alone gives (96, 101, 108); the outline is at `opacity.disabled` alone. On iOS disabled text is exactly `text.primary` at `opacity.disabled`, (162, 166, 171) in light |
+| I4 | The ring's place (a proposal, for the owner) | (a) the ring over the outline, replacing it; (b) the ring outside the kept outline | (b) on `framed`: `stroke.thick` in `border.focus`, `space.25` outside the outline, its corners the outline's grown by that distance. On `inline`, which has no outline: around the field, `space.100` out across and `space.50` up and down, with `radius.control`. Every distance is a token | `border.focus` and `border.strong` are about equally light, 1.01:1 in light (3.53:1 and 3.50:1 against the canvas), so a ring replacing the outline would show focus mostly by its hue, which chapter 08 ("Color is never the only signal") forbids; outside the outline, focus changes the shape from one line to two. The accessibility review of #30 found it |
 
 ## What the tools need before an approved TextField is generated
 

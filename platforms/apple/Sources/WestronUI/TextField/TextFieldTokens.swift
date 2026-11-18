@@ -9,9 +9,8 @@ import SwiftUI
 /// nothing, or, for the text, leaves the font or the color to the context.
 ///
 /// `placeholder.color` is not here: a `TextFieldStyle` cannot color the system field's prompt (the probe of #30), so
-/// the field draws its prompt in the system's placeholder color. This is NOT what the contract says yet; who applies
-/// `color.text.placeholder` on Apple is an open question for the owner (#30), and until it is decided this is a
-/// difference the contract does not record.
+/// the field draws its prompt in the system's placeholder color: a platform difference the contract's `platforms.apple`
+/// records (decisions/0001, I1). On iOS a product reaches `color.text.placeholder` by coloring its prompt itself.
 struct TextFieldTokens: Equatable, Sendable {
     /// `container.borderColor`; nil: no outline.
     var borderColor: Westron.Color?

@@ -66,6 +66,9 @@ struct TextFieldSample: View {
     var body: some View {
         TextField("List name", text: $text, prompt: Text("Untitled"))
             .textFieldStyle(variant, size: size)
+            // The product names the field: with a prompt, the system field takes no accessibility label from its
+            // title (decisions/0001, I2). Every field in the catalog is named so.
+            .accessibilityLabel("List name")
             // The context of an inline field: body text in the primary color. A framed field sets its own.
             .textRole(.body.regular)
             .foregroundStyle(.text.primary)
@@ -167,10 +170,12 @@ private struct TextFieldCardSample: View {
         VStack(alignment: .leading, spacing: .space100) {
             TextField("Title", text: $title, prompt: Text("Untitled"))
                 .textFieldStyle(variant, size: size)
+                .accessibilityLabel("Title")
                 .textRole(.heading.small)
                 .foregroundStyle(.text.primary)
             TextField("Notes", text: $notes, prompt: Text("Notes"), axis: .vertical)
                 .textFieldStyle(variant, size: size)
+                .accessibilityLabel("Notes")
                 .lineLimit(1...4)
                 .textRole(.subheadline.regular)
                 .foregroundStyle(.text.secondary)
@@ -193,8 +198,10 @@ private struct TextFieldSecureSample: View {
         VStack(alignment: .leading, spacing: .space100) {
             SecureField("Password", text: $empty, prompt: Text("Required"))
                 .textFieldStyle(variant, size: size)
+                .accessibilityLabel("Password")
             SecureField("Password", text: $password, prompt: Text("Required"))
                 .textFieldStyle(variant, size: size)
+                .accessibilityLabel("Password")
         }
         .textRole(.body.regular)
         .foregroundStyle(.text.primary)
@@ -344,17 +351,20 @@ private struct TextFieldLivePage: View {
             VStack(alignment: .leading, spacing: .space200) {
                 TextField("List name", text: $name, prompt: Text("Untitled"))
                     .textFieldStyle(.framed, size: .s)
+                    .accessibilityLabel("List name")
                     .focused($focused, equals: .small)
                     .accessibilityIdentifier(TextFieldCatalogID.small)
                 VStack(alignment: .leading, spacing: .space100) {
                     TextField("Title", text: $title, prompt: Text("Untitled"))
                         .textFieldStyle(.inline)
+                        .accessibilityLabel("Title")
                         .textRole(.heading.small)
                         .foregroundStyle(.text.primary)
                         .focused($focused, equals: .title)
                         .accessibilityIdentifier(TextFieldCatalogID.title)
                     TextField("Notes", text: $notes, prompt: Text("Add notes"), axis: .vertical)
                         .textFieldStyle(.inline)
+                        .accessibilityLabel("Notes")
                         .textRole(.subheadline.regular)
                         .foregroundStyle(.text.secondary)
                         .focused($focused, equals: .notes)
@@ -364,6 +374,7 @@ private struct TextFieldLivePage: View {
                 .background(.background.surface, in: RoundedRectangle(cornerRadius: .radius.card, style: .continuous))
                 SecureField("Password", text: $password, prompt: Text("Required"))
                     .textFieldStyle(.framed)
+                    .accessibilityLabel("Password")
                     .focused($focused, equals: .secure)
                     .accessibilityIdentifier(TextFieldCatalogID.secure)
                 HStack(spacing: .space200) {
