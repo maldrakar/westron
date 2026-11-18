@@ -42,8 +42,12 @@ platforms:
       The role is the token accessor Westron.TextRole, whose names already follow the tokens, so the call is
       .textRole(.heading.large) on any view. Text.textRole(_:) returns a Text, so that a part of a text keeps its own
       role and tracking: inside Text interpolation, Text("\(name) \(Text(count).textRole(.footnote.medium))"), and
-      in Text + Text, which OS 26 deprecates for interpolation. Font(.body.regular) gives the face without the
-      tracking, where only a font fits.
+      in Text + Text, which OS 26 deprecates for interpolation. The twin cannot read the environment: its size follows
+      Dynamic Type, but its tracking is the default text size's share and, under Bold Text, a role in Onest or Geist
+      Mono keeps its own weight; .textRole(_:) on a view follows all three. Inside interpolation, a role in a variable
+      or written in full takes the View modifier and prints a debug description, with a compiler warning, unless the
+      part is typed as Text first (decisions/0001, "P2 at implementation"). Font(.body.regular) gives the face
+      without the tracking, where only a font fits.
       A role in Onest or Geist Mono is Font.custom(_:size:relativeTo:) at its text style's size on that OS, the
       system font's roles Font.system(_:design:weight:); the tracking is recomputed from the size Dynamic Type draws.
       Under Bold Text (legibilityWeight .bold) a role in Onest or Geist Mono takes the heavier weight the

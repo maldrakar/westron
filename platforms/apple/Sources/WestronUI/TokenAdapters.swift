@@ -108,12 +108,16 @@ extension Color.RGBColorSpace {
 // at, the token's letterSpacing over its fontSize, so it is recomputed for each Dynamic Type size and on each OS. Under
 // Bold Text a role in a font westron ships takes the instance one weight up; the system font does so by itself. On
 // watchOS every role is the system font. `.textRole(_:)` on a view reads the environment for all of it; `Font(_:)`
-// cannot, so it draws the role's own weight.
+// and `Text.textRole(_:)` cannot (spec/components/text, P2).
 //
-// There is no `Text.textRole(_:) -> Text` yet (spec/components/text, P2): on a `Text` it would win over the View
-// modifier, and a `Text` cannot read the environment; marked `@_disfavoredOverload`, it would lose inside
-// interpolation too, where SwiftUI's deprecated catch-all prints the modifier's debug description. The owner decides
-// its shape; the catalog's `typography-in-text` entry shows what a part of a `Text` can follow.
+// `Text.textRole(_:) -> Text` is `@_disfavoredOverload`, so that `Text("Inbox").textRole(.heading.medium)` as a view
+// takes the View modifier. The twin is what the call resolves to where only a `Text` fits: inside interpolation with
+// a role written as `.heading.large`, and in `Text + Text`. It follows Dynamic Type's size, but its tracking is the
+// share of the default text size, and under Bold Text a role in Onest or Geist Mono keeps its own weight; the system
+// font's roles still draw heavier by themselves. One trap: inside interpolation, a role in a variable or written in
+// full (`Westron.TextRole.heading.large`) resolves to the View modifier through SwiftUI's deprecated catch-all, which
+// prints a debug description; the compiler warns "'appendInterpolation' is deprecated". Type the part first:
+// `let part: Text = Text(count).textRole(role)`, or `Text(count).textRole(role) as Text`, then interpolate it.
 
 extension Font {
     /// A text role's font in its text style, so that it follows Dynamic Type (decisions/0011): a font westron ships as
@@ -125,6 +129,20 @@ extension Font {
     /// the tracking and the heavier instance of a font westron ships.
     public init(_ role: Westron.TextRole) {
         self = role.font(boldText: false)
+    }
+}
+
+extension Text {
+    /// Sets a text role on a part of a text, keeping it a `Text`: inside interpolation,
+    /// `Text("\(title) \(Text(count).textRole(.footnote.medium))")`, or joined with `+`.
+    ///
+    /// A `Text` cannot read the environment: the part takes the role's font, which follows Dynamic Type, and the
+    /// tracking of the default text size, which does not; under Bold Text a role in Onest or Geist Mono keeps its own
+    /// weight. A role in a variable inside interpolation takes the View modifier and prints a debug description (the
+    /// compiler warns): write `let part: Text = Text(count).textRole(role)` and interpolate `part`.
+    @_disfavoredOverload
+    public func textRole(_ role: Westron.TextRole) -> Text {
+        font(role.font(boldText: false)).tracking(role.tracking(atSize: role.platformSize))
     }
 }
 

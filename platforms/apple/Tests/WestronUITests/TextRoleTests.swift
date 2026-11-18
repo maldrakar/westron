@@ -164,14 +164,54 @@ struct TextRoleTests {
         #expect(named == Set(Self.shippedInstances), "every instance is a role's or its Bold Text instance")
     }
 
-    @Test("a Text takes the View modifier, which reads the environment; a part of a Text takes Font(role)")
-    func textPart() {
-        // westron has no `Text.textRole(_:) -> Text` (TokenAdapters.swift, "Text roles"): on a Text the call is the
-        // View modifier, so a heading in a Text follows Dynamic Type's tracking and Bold Text.
+    /// Takes only a `Text`: a call that compiles as its argument resolved to the twin, not to the View modifier.
+    static func part(_ text: Text) -> Text { text }
+
+    @Test("Text.textRole gives a part of a Text the role's font and the tracking of the default text size")
+    func textTwin() {
+        for role in Westron.TextRole.all {
+            let part: Text = Text("Inbox").textRole(role)
+            #expect(part == Text("Inbox").font(Font(role)).tracking(role.tracking(atSize: role.platformSize)))
+        }
+        // A heading's tracking is its share of the default size, whatever size Dynamic Type draws: −1 % of the Mac's
+        // 26 points for largeTitle, of iOS's 34; Onest Bold stays Onest Bold under Bold Text (`Font(role)`).
+        #if os(macOS)
+            let largeTitle: CGFloat = 26
+        #else
+            let largeTitle: CGFloat = 34
+        #endif
+        let large = Westron.TextRole.heading.large
+        #expect(large.platformSize == largeTitle)
+        #expect(
+            Text("Inbox").textRole(large) as Text
+                == Text("Inbox").font(.custom("Onest-Bold", size: largeTitle, relativeTo: .largeTitle))
+                .tracking(-0.01 * largeTitle))
+        #expect(
+            Text("Inbox").textRole(.code.strong) as Text
+                == Text("Inbox").font(
+                    .custom(
+                        "GeistMono-SemiBold", size: Westron.TextRole.code.strong.platformSize,
+                        relativeTo: .subheadline)
+                ).tracking(0))
+    }
+
+    @Test("where only a Text fits the call takes the twin; where a view fits, the View modifier")
+    func twinResolution() {
+        let styled = Text("3").font(Font(.footnote.medium)).tracking(0)
+        // Inside interpolation, with the role written as `.footnote.medium`: the styled part, not a description.
+        #expect(Text("Inbox \(Text("3").textRole(.footnote.medium))") == Text("Inbox \(styled)"))
+        #expect(Self.part(Text("3").textRole(.footnote.medium)) == styled)
+        // A role in a variable: typed as Text first, as TokenAdapters.swift says. Interpolated directly it would take
+        // the View modifier through SwiftUI's deprecated catch-all and print a debug description (the compiler warns).
+        let role = Westron.TextRole.footnote.medium
+        let part: Text = Text("3").textRole(role)
+        #expect(Text("Inbox \(part)") == Text("Inbox \(styled)"))
+        #expect(Text("Inbox \(Text("3").textRole(role) as Text)") == Text("Inbox \(styled)"))
+        // Joined with `+`.
+        _ = Text("Inbox ") + Text("3").textRole(.footnote.medium) + Text("3").textRole(role)
+        // As a view, the View modifier, which reads the environment.
         let view = Text("Inbox").textRole(.heading.large)
         #expect(!(view is Text))
-        // A part inside interpolation, where only a Text fits, takes the font alone.
-        _ = Text("Inbox \(Text("3").font(Font(.footnote.medium)))")
     }
 
     @Test("Font(role) is the role's own weight in its text style, following Dynamic Type but not Bold Text")

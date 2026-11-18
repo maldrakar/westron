@@ -2,9 +2,9 @@ import SwiftUI
 import WestronUI
 
 extension CatalogEntry {
-    /// A role two ways side by side: the View modifier, which reads the environment, and a part inside a `Text`, which
-    /// cannot, as a `Text.textRole(_:) -> Text` would be drawn (spec/components/text, P2). At accessibility5 and with
-    /// Bold Text on (`-WestronLegibilityWeight bold`) they show what such a part does not follow.
+    /// A role two ways side by side: the View modifier, which reads the environment, and its `Text` twin inside
+    /// interpolation, which cannot (spec/components/text, P2). At accessibility5 and with Bold Text on
+    /// (`-WestronLegibilityWeight bold`) they show what the twin does not follow.
     static let typographyInText = CatalogEntry(
         id: "typography-in-text", title: "Text roles in a Text", section: .foundations
     ) {
@@ -22,9 +22,8 @@ private struct TypographyInTextPage: View {
         TokenPage(
             title: "Text roles in a Text",
             summary: "Left or above, .textRole(_:) on the view: the tracking is a share of the drawn size, and Onest "
-                + "and Geist Mono move a weight up under Bold Text. Right or below, a part inside a Text, what a "
-                + "Text.textRole(_:) could do: the size follows, the tracking is the default size's, the weight the "
-                + "role's own."
+                + "and Geist Mono move a weight up under Bold Text. Right or below, Text.textRole(_:) inside a Text: "
+                + "the size follows, the tracking is the default size's, the weight the role's own."
         ) {
             VStack(alignment: .leading, spacing: .space150) {
                 ForEach(Self.roles, id: \.name) { role in
@@ -71,24 +70,14 @@ private struct RoleComparison: View {
             .onGeometryChange(for: CGFloat.self, of: { $0.size.width }, action: { viewWidth = $0 })
     }
 
-    /// A part of a `Text`, inside interpolation, where only a `Text` fits: what a function returning `Text` can apply,
-    /// with no environment to read. That is `Font(role)` and the tracking of the default text size, the role's share of
-    /// the size its font takes at `large`.
+    /// The `Text` twin inside interpolation, where only a `Text` fits. The role is a variable, so the part is typed as
+    /// `Text` first: interpolated directly, it would take the View modifier and print a debug description.
     private var twinSample: some View {
-        Text("\(Text(sample).font(Font(role)).tracking(Self.defaultTracking(role)))")
+        let part: Text = Text(sample).textRole(role)
+        return Text("\(part)")
             .foregroundStyle(.text.primary)
             .fixedSize()
             .onGeometryChange(for: CGFloat.self, of: { $0.size.width }, action: { textWidth = $0 })
-    }
-
-    /// The role's tracking at the default text size: its share of the size SwiftUI resolves its font at in a default
-    /// environment, or, before OS 26, of the token's size, which is iOS's default.
-    static func defaultTracking(_ role: Westron.TextRole) -> CGFloat {
-        let share = CGFloat(role.letterSpacing / role.size)
-        if #available(iOS 26, macOS 26, watchOS 26, *) {
-            return share * Font(role).resolve(in: EnvironmentValues().fontResolutionContext).pointSize
-        }
-        return share * CGFloat(role.size)
     }
 
     /// `heading.large · view 98.5 pt · in a Text 98.5 pt`.

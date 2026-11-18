@@ -510,6 +510,28 @@ struct TokenOptionContractTests {
                 "\(textSource):11: missing: Text's modifier on Text, `public func textRole(_: Westron.TextRole) -> "
                     + "Text` in extension Text"
             ])
+        // WestronUI has the twin, so none is pending: it is required.
+        #expect(APIParity.pendingTwins.isEmpty)
+        // The twin may be `@_disfavoredOverload`, so that on a Text the call takes the View modifier; the modifier may
+        // not, and the twin takes no other attribute that changes the call.
+        let disfavored = twin.replacingOccurrences(
+            of: "    public func textRole(", with: "    @_disfavoredOverload public func textRole(")
+        #expect(try check("approved", adapters: modifier + disfavored, pending: []) == [])
+        let disfavoredModifier = try check(
+            "approved",
+            adapters: modifier.replacingOccurrences(
+                of: "    public func textRole(", with: "    @_disfavoredOverload public func textRole(") + twin,
+            pending: [])
+        #expect(disfavoredModifier.count == 1)
+        #expect(disfavoredModifier.first?.contains("Text's modifier has `@_disfavoredOverload`") == true)
+        let spiTwin = try check(
+            "approved",
+            adapters: modifier
+                + twin.replacingOccurrences(
+                    of: "    public func textRole(", with: "    @_spi(Catalog) public func textRole("),
+            pending: [])
+        #expect(spiTwin.count == 1)
+        #expect(spiTwin.first?.contains("Text's modifier on Text has `@_spi(Catalog)`") == true)
         // A missing or changed modifier is reported; so is a changed twin.
         #expect(
             try check("approved", adapters: "import SwiftUI\n") == [

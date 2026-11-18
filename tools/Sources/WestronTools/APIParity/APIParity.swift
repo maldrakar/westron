@@ -19,8 +19,9 @@ import Foundation
 /// From each contract that is approved or later and extends an Apple system view (`extension-on-system-control`), the
 /// hand-written modifier `AppleComponents.Extension` derives: `public func textRole(_: Westron.TextRole) -> some View`
 /// in `extension View`, and, on a base whose own modifiers return it (`SystemStyles.returningBase`), the twin
-/// `public func textRole(_: Westron.TextRole) -> Text` in `extension Text`. A twin of a base in `pendingTwins` is
-/// checked when it is declared and not reported while it is missing.
+/// `public func textRole(_: Westron.TextRole) -> Text` in `extension Text`, which may be `@_disfavoredOverload`
+/// (`twinExtras`). A twin of a base in `pendingTwins` is checked when it is declared and not reported while it is
+/// missing.
 ///
 /// **What it reports**, as `file:line: message`:
 /// - expected API that is missing, or differs in access, signature, values, order, default or constraints;
@@ -81,9 +82,14 @@ public enum APIParity {
 
     /// The bases of an `extension-on-system-control` whose twin on the base (`AppleComponents.Extension.onBase`) is not
     /// written yet: it is checked when it is declared, with the signature the contract gives, and not reported while it
-    /// is missing. `Text.textRole(_:) -> Text` (the Text contract's P2) is written in a change of its own; once it is
-    /// in WestronUI, `SwiftUI.Text` leaves this list and the twin is required like the rest of the API.
-    public static let pendingTwins: Set<String> = ["SwiftUI.Text"]
+    /// is missing. `Text.textRole(_:) -> Text` (the Text contract's P2) is in WestronUI, so the list is empty and every
+    /// twin is required like the rest of the API.
+    public static let pendingTwins: Set<String> = []
+
+    /// The one attribute a twin on the base may carry beyond `harmlessExtras`: `@_disfavoredOverload`, so that on the
+    /// base itself the call takes the modifier on `View`, which reads the environment, and the twin only where nothing
+    /// but the base fits, as inside `Text` interpolation (spec/components/text, P2).
+    public static let twinExtras: Set<String> = ["@_disfavoredOverload"]
 
     /// Attributes and modifiers on expected API that change nothing about where or how a product calls it.
     /// Everything else is a difference: `@available` and `@backDeployed` narrow where it can be called, `@_spi` who can
@@ -211,6 +217,8 @@ public enum APIParity {
         var result = "some View"
         /// Whether it is reported when missing; a pending twin is not (`pendingTwins`).
         var required = true
+        /// Attributes it may carry beyond `harmlessExtras` (`twinExtras` for a twin).
+        var allowedExtras: Set<String> = []
 
         var signature: String {
             "\(name)(" + parameters.map(\.description).joined(separator: ", ") + ") -> \(result)"
@@ -258,7 +266,8 @@ public enum APIParity {
                         ExpectedFunction(
                             what: "\(item.component)'s modifier on \(api.control)", contracts: [item],
                             name: api.modifier, parameters: parameters, types: [], line: line, extends: api.control,
-                            result: api.control, required: !pendingTwins.contains(api.base)))
+                            result: api.control, required: !pendingTwins.contains(api.base),
+                            allowedExtras: twinExtras))
                 }
                 continue
             }
@@ -333,8 +342,8 @@ public enum APIParity {
             problems.append(Problem(file: d.file, line: d.line, message))
         }
         /// Extras that change where or how a product calls an expected declaration.
-        func reportExtras(_ d: SwiftDeclarations.Declaration, _ what: String) {
-            let changing = d.extras.filter { !harmlessExtras.contains($0) }
+        func reportExtras(_ d: SwiftDeclarations.Declaration, _ what: String, allowing allowed: Set<String> = []) {
+            let changing = d.extras.filter { !harmlessExtras.contains($0) && !allowed.contains($0) }
             guard !changing.isEmpty else { return }
             problem(
                 d,
@@ -431,7 +440,7 @@ public enum APIParity {
             if !d.access.isPublic {
                 problem(d, "\(item.what), \(d.signature), is \(d.access); the conventions make it public")
             }
-            reportExtras(d, item.what)
+            reportExtras(d, item.what, allowing: item.allowedExtras)
         }
         for item in unmatched {
             // A changed overload: same name, and it names the component's types or has the same first parameter.
