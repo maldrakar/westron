@@ -15,8 +15,14 @@
 ///   the `button-states` pages do, and marks a cell whose value falls back.
 /// - A sheet holds the combinations with one value of every axis but the column axis (the variant, else the first
 ///   option): its columns are the column axis's values and its rows rest and the states, at most `maxColumns` by
-///   `maxRows`, so a sheet fits an iPhone in portrait and the catalog's macOS window. A sheet whose every combination a
-///   constraint forbids is left out.
+///   `maxRows`, so a sheet fits an iPhone in portrait and the catalog's macOS window at the default text size. A sheet
+///   whose every combination a constraint forbids is left out.
+///
+/// What the generator does not do (#72), so that the contract alone drives every generated combination and sheet: the
+/// catalog (`WestronCatalog/SnapshotMatrix/ComponentMatrix.swift`) captures the sheets at other text sizes too and
+/// splits a sheet into parts where it does not fit one picture at a text size, and a component's catalog code adds
+/// hand-written supplementary sheets for what no contract option sets (Button's label without an icon), on these
+/// sheets' axes and marked "not a contract option". Neither reaches this type or the generated files.
 public struct SnapshotMatrix: Equatable, Sendable {
     public struct Axis: Equatable, Sendable {
         public let name: String

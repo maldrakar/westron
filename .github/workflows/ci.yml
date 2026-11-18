@@ -180,34 +180,42 @@ jobs:
           if-no-files-found: warn
 
   snapshot-matrix:
-    name: Snapshot matrix
-    # The owner's review surface for the second approval gate (#24): every combination of every contract in the four
-    # themes, one `xcodebuild test` per platform, uploaded as the `snapshot-matrix` artifact (open index.html in each
-    # platform's folder). Informational: it must never be a required check. It runs when the accessibility audit does
-    # (audit-scope), in parallel with the other jobs. Its pages compare only with another CI artifact from the same
+    name: Snapshot matrix (${{ matrix.platform }})
+    # The owner's review surface for the second approval gate (#24, #72): every combination of every contract in the
+    # four themes, on iOS also at the smallest and the largest text size, with the catalog's supplementary sheets; one
+    # `xcodebuild test` per platform, one job per platform side by side, each uploaded as `snapshot-matrix-<platform>`
+    # (open index.html in it). Informational: it must never be a required check. It runs when the accessibility audit
+    # does (audit-scope), in parallel with the other jobs. Its pages compare only with another CI artifact from the same
     # runner image (decisions/0008): download two and run `tools/apple/snapshot-matrix.sh compare`.
     needs: audit-scope
     if: >-
       !cancelled() && (github.event_name == 'push' || needs.audit-scope.result != 'success'
       || needs.audit-scope.outputs.audit != 'false')
+    strategy:
+      fail-fast: false
+      matrix:
+        # Locally, with Button (2026-11-18), the UI test takes 711 s for iOS's 144 images and 315 s for macOS's 72,
+        # plus the builds. One job took 32–40 of its 50 min with 48 + 48 images before; the runner is 2.2–3 times
+        # slower plus its clean builds, so about 35–50 min for iOS and 15–25 for macOS (decisions/0008).
+        include:
+          - platform: ios
+            timeout: 75
+          - platform: macos
+            timeout: 45
     runs-on: xcode-27
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
-    # Locally about 4.5 min for iOS and 3.5 for macOS plus the builds; the runner is 2.2–3 times slower (decisions/0008).
-    timeout-minutes: 50
+    timeout-minutes: ${{ matrix.timeout }}
     steps:
       - uses: actions/checkout@v7
-      - name: iOS
-        run: tools/apple/snapshot-matrix.sh ios
-      - name: macOS
-        # Also after a failed iOS capture: each platform's page shows what went wrong.
-        if: ${{ !cancelled() }}
-        run: tools/apple/snapshot-matrix.sh macos
+      - name: Capture
+        run: tools/apple/snapshot-matrix.sh ${{ matrix.platform }}
       - uses: actions/upload-artifact@v7
+        # Also after a failed capture: the page shows what went wrong.
         if: ${{ !cancelled() }}
         with:
-          name: snapshot-matrix
+          name: snapshot-matrix-${{ matrix.platform }}
           path: |
-            .build/snapshot-matrix/
-            .build/logs/snapshot-matrix-*.log
+            .build/snapshot-matrix/${{ matrix.platform }}/
+            .build/logs/snapshot-matrix-${{ matrix.platform }}*.log
           if-no-files-found: warn

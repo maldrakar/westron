@@ -115,3 +115,18 @@ Date: 2026-11-14. Status: accepted.
   needs one run per platform; that is also #24. 2026-11-18: `tools/apple/snapshot-matrix.sh` takes the whole matrix
   in one `xcodebuild test` invocation per platform, relaunching the catalog for each sheet and theme inside it; the
   CI job `snapshot-matrix` runs it for iOS and macOS and uploads the pages as an artifact.
+- 2026-11-18, #72: the matrix also shows text sizes and what no contract option sets, at the owner's request.
+  - **Text sizes:** the four themes stay at `large`; the light theme is captured at `xSmall` and `accessibility5` too.
+    Only the cells follow the size; the sheet's own text stays at `large`. At `accessibility5` a 3 × 6 sheet does not
+    fit an iPhone 17, so it is captured in parts of one column each, a fixed split by text size, so the file names stay
+    deterministic; the `large` sheets and their file names are unchanged. macOS has no Dynamic Type: SwiftUI there draws
+    a cell the same at every `dynamicTypeSize` (checked in `ComponentMatrixTests`), so a Mac captures `large` alone
+    rather than three copies of one picture.
+  - **Supplementary sheets:** a component's catalog code may add hand-written sheets for what no contract option sets,
+    on the generated sheets' axes and marked "not a contract option" on the sheet and the page; Button's label without
+    an icon is the first. The generator and the generated files do not change: the contract still drives every
+    generated sheet.
+  - **Cost:** with Button, 144 images on iOS (was 48) and 72 on macOS (was 48): locally the UI test takes about 12 minutes
+    for iOS (711 s, iPhone 17 simulator, iOS 26.3.1) and 5 for macOS (315 s), plus the builds. One CI job for both
+    took 32–40 of its 50 minutes before; it would now need well over an hour, so the job `snapshot-matrix` runs one job
+    per platform side by side, with 75 and 45 minutes, and uploads `snapshot-matrix-ios` and `snapshot-matrix-macos`.

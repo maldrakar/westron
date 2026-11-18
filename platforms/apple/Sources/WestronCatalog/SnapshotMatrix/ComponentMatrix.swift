@@ -7,7 +7,13 @@ import SwiftUI
 /// and the list of them into `Generated/ComponentMatrix+All.swift`; the hand-written `<Component>MatrixCell` draws one
 /// cell with the real component. The matrix is not a catalog entry: `Catalog.entries` drives the accessibility audit,
 /// and the matrix is for the owner's review, so the catalog shows a sheet only with `-WestronMatrixSheet`, and
-/// `tools/apple/snapshot-matrix.sh` captures every sheet in every theme.
+/// `tools/apple/snapshot-matrix.sh` captures every sheet in every theme at the default text size, and in the light
+/// theme at the smallest and the largest text size (`Capture`).
+///
+/// Two things here are the catalog's, not the contract's (#72): a text size at which a generated sheet does not fit one
+/// picture splits it into parts (`pictures(of:at:)`), and a component's catalog code may add supplementary sheets for
+/// what no contract option sets (`Supplement`, `supplements`), hand-written on the generated axes and marked as such.
+/// Neither changes the generated matrix: the contract still drives every generated sheet and combination.
 public struct ComponentMatrix: Sendable {
     struct Option: Sendable {
         let name: String
@@ -62,7 +68,7 @@ public struct ComponentMatrix: Sendable {
 
     /// One screenshot: the combinations with the values `fixed` of every option but the column one.
     public struct Sheet: Sendable, Identifiable {
-        /// `size-s_role-default_iconOnly-false`: unique in its matrix.
+        /// `size-s_role-default_iconOnly-false`: unique in its matrix; a part adds `_part-<n>-of-<count>`.
         public let id: String
         /// The values of every option but the column option, in the options' order.
         let fixed: [String]
@@ -70,12 +76,121 @@ public struct ComponentMatrix: Sendable {
         let columns: [String]
         /// The states of the rows; nil is rest.
         let rows: [String?]
+        /// For a part of a sheet that does not fit one picture at a text size (`pictures(of:at:)`), its number from 1
+        /// and the number of parts; nil for a whole sheet.
+        public let part: (number: Int, count: Int)?
 
-        init(_ id: String, fixed: [String], columns: [String], rows: [String?]) {
+        init(
+            _ id: String, fixed: [String], columns: [String], rows: [String?],
+            part: (number: Int, count: Int)? = nil
+        ) {
             self.id = id
             self.fixed = fixed
             self.columns = columns
             self.rows = rows
+            self.part = part
+        }
+    }
+
+    /// A group of hand-written sheets for what a contract option does not set, such as Button's label without an
+    /// icon (#72). Its sheets are the generated sheets that keep the option values in `keeps`, with their axes, states
+    /// and rows as generated, and each cell is drawn by `cell` instead of the matrix's cell: nothing the contract
+    /// already lists is listed again by hand. The sheet and the review page mark them "not a contract option".
+    public struct Supplement: Sendable {
+        /// The contract's id of the component.
+        public let component: String
+        /// `label-without-icon`: the start of its sheets' ids.
+        public let id: String
+        /// `label without an icon`.
+        public let title: String
+        /// What it shows and why no contract option sets it; the sheet and the review page show it.
+        public let note: String
+        /// Contract options and the value each keeps; the column option is not one of them.
+        let keeps: [String: String]
+        let cell: @MainActor @Sendable (Combination) -> AnyView
+
+        init<Content: View>(
+            component: String, id: String, title: String, note: String, keeps: [String: String],
+            @ViewBuilder cell: @escaping @MainActor @Sendable (Combination) -> Content
+        ) {
+            self.component = component
+            self.id = id
+            self.title = title
+            self.note = note
+            self.keeps = keeps
+            self.cell = { AnyView(cell($0)) }
+        }
+    }
+
+    /// The text sizes the matrix is captured at (design-language/08-accessibility.md, "Text size"): the smallest, the
+    /// default and the largest accessibility size, the one the accessibility audit uses. The names are the catalog's
+    /// `-WestronDynamicType` values, which are SwiftUI's `DynamicTypeSize` cases.
+    public enum TextSize: String, CaseIterable, Sendable {
+        case xSmall
+        case large
+        case accessibility5
+
+        public var launchArguments: [String] { ["-WestronDynamicType", rawValue] }
+
+        /// The themes a sheet is captured in at this size: all four at the default; the light theme alone at the
+        /// others, which show how the component grows with the text, not its colors.
+        public var themes: [Theme] { self == .large ? Theme.allCases : [.light] }
+
+        /// The most columns and rows of one picture at this size; nil when a generated sheet (at most 3 × 6) fits
+        /// whole. At accessibility5 a button of size l with an icon and a label takes about 320 of an iPhone 17's 402
+        /// points, so a picture holds one column of a sheet: its six rows fit the screen's height under a short
+        /// header (`MatrixSheetView`).
+        var limit: (columns: Int, rows: Int)? {
+            #if os(macOS)
+                nil
+            #else
+                self == .accessibility5 ? (columns: 1, rows: 6) : nil
+            #endif
+        }
+
+        /// The text sizes the current OS is captured at, the default first. macOS has no Dynamic Type: SwiftUI there
+        /// draws the same at every `dynamicTypeSize` (`ComponentMatrixTests`), so a Mac is captured at the default
+        /// alone.
+        public static var captured: [TextSize] {
+            #if os(macOS)
+                [.large]
+            #else
+                [.large, .xSmall, .accessibility5]
+            #endif
+        }
+
+        /// Why the current OS is captured at fewer text sizes, for the review page; nil when it takes them all.
+        public static var notCapturedNote: String? {
+            #if os(macOS)
+                "macOS has no Dynamic Type: SwiftUI draws a component the same at every text size there (the catalog's "
+                    + "-WestronDynamicType changes nothing on a Mac; ComponentMatrixTests checks it), so the matrix is "
+                    + "captured at the default text size only."
+            #else
+                nil
+            #endif
+        }
+    }
+
+    /// One capture of every sheet: a theme at a text size.
+    public struct Capture: Hashable, Sendable {
+        public let theme: Theme
+        public let textSize: TextSize
+
+        public init(theme: Theme, textSize: TextSize) {
+            self.theme = theme
+            self.textSize = textSize
+        }
+
+        /// The capture's name in file names and in the manifest: the theme at the default text size, `dark-hc`, as
+        /// before text sizes were captured; the theme and the size at another, `light.accessibility5`.
+        public var name: String { textSize == .large ? theme.rawValue : "\(theme.rawValue).\(textSize.rawValue)" }
+
+        public var launchArguments: [String] { theme.launchArguments + textSize.launchArguments }
+
+        /// Every capture of the current OS: the four themes at the default text size, then each other text size in
+        /// the light theme.
+        public static var all: [Capture] {
+            TextSize.captured.flatMap { size in size.themes.map { Capture(theme: $0, textSize: size) } }
         }
     }
 
@@ -120,9 +235,11 @@ public struct ComponentMatrix: Sendable {
     let excluded: [Exclusion]
     let advisedAgainst: [Exclusion]
     /// Every combination of the matrix, on every OS.
-    let combinations: [Combination]
-    let allSheets: [Sheet]
-    private let makeCell: @MainActor @Sendable (Combination) -> AnyView
+    private(set) var combinations: [Combination]
+    private(set) var allSheets: [Sheet]
+    private var makeCell: @MainActor @Sendable (Combination) -> AnyView
+    /// The supplement whose sheets these are (`supplements`); nil for the matrix generated from the contract.
+    public private(set) var supplement: Supplement?
 
     init<Content: View>(
         component: String, options: [Option], states: [String], unbound: [String], columns: String?,
@@ -141,6 +258,35 @@ public struct ComponentMatrix: Sendable {
         self.combinations = combinations
         self.allSheets = sheets
         self.makeCell = { AnyView(cell($0)) }
+        self.supplement = nil
+    }
+
+    /// The component's supplementary sheets (`Supplement.all`), each group as a matrix of its own: the combinations and
+    /// the sheets of this matrix that keep the supplement's values, the sheets' ids starting with the supplement's id,
+    /// and the supplement's cell. Empty for a supplement itself.
+    public var supplements: [ComponentMatrix] {
+        guard supplement == nil else { return [] }
+        return Supplement.all.filter { $0.component == component }.map(supplemented(by:))
+    }
+
+    private func supplemented(by supplement: Supplement) -> ComponentMatrix {
+        let kept = supplement.keeps.sorted { $0.key < $1.key }.map { name, value in
+            guard let index = options.firstIndex(where: { $0.name == name }), name != columnOption,
+                options[index].values.contains(value)
+            else {
+                preconditionFailure("\(component), supplement \(supplement.id): no option \(name) with value \(value)")
+            }
+            return (index: index, value: value)
+        }
+        let keeps = { (values: [String]) in kept.allSatisfy { values[$0.index] == $0.value } }
+        var matrix = self
+        matrix.combinations = combinations.filter { keeps($0.values) }
+        matrix.allSheets = allSheets.filter { sheet in keeps(values(sheet, column: sheet.columns[0])) }.map { sheet in
+            Sheet("\(supplement.id)_\(sheet.id)", fixed: sheet.fixed, columns: sheet.columns, rows: sheet.rows)
+        }
+        matrix.makeCell = supplement.cell
+        matrix.supplement = supplement
+        return matrix
     }
 
     /// `ios`, `macos` or `watchos`: the key of the current OS in the contract's `platforms.apple`.
@@ -175,6 +321,28 @@ public struct ComponentMatrix: Sendable {
     /// The sheets the current OS draws: those with a row left.
     public var sheets: [Sheet] {
         allSheets.filter { !rows(of: $0).isEmpty }
+    }
+
+    /// The pictures a sheet is captured in at a text size: the sheet itself where it fits, otherwise its parts, the
+    /// columns and the rows the current OS draws taken `TextSize.limit` at a time, column by column, top to bottom.
+    /// The split is the catalog's, not the contract's: it depends on the text size alone, so the parts are the same on
+    /// every run.
+    public func pictures(of sheet: Sheet, at size: TextSize) -> [Sheet] {
+        guard let limit = size.limit else { return [sheet] }
+        let rows = rows(of: sheet)
+        let parts = Self.chunks(sheet.columns, of: limit.columns).flatMap { columns in
+            Self.chunks(rows, of: limit.rows).map { (columns: columns, rows: $0) }
+        }
+        guard parts.count > 1 else { return [sheet] }
+        return parts.enumerated().map { index, part in
+            Sheet(
+                "\(sheet.id)_part-\(index + 1)-of-\(parts.count)", fixed: sheet.fixed, columns: part.columns,
+                rows: part.rows, part: (number: index + 1, count: parts.count))
+        }
+    }
+
+    private static func chunks<T>(_ items: [T], of size: Int) -> [[T]] {
+        stride(from: 0, to: items.count, by: size).map { Array(items[$0..<min($0 + size, items.count)]) }
     }
 
     private var columnIndex: Int? { options.firstIndex { $0.name == columnOption } }
@@ -219,10 +387,19 @@ public struct ComponentMatrix: Sendable {
         return Array(zip(names, sheet.fixed)).map { (option: $0.0, value: $0.1) }
     }
 
-    /// `size s · role default · iconOnly false`.
+    /// `size s · role default · iconOnly false`; a supplement's title first, `label without an icon · size s · …`.
+    /// A part's number is not in it (`partTitle(of:)`).
     public func title(of sheet: Sheet) -> String {
         let fixed = fixedValues(of: sheet).map { "\($0.option) \($0.value)" }
-        return fixed.isEmpty ? "every combination" : fixed.joined(separator: " · ")
+        let title = fixed.isEmpty ? "every combination" : fixed.joined(separator: " · ")
+        return supplement.map { "\($0.title) · \(title)" } ?? title
+    }
+
+    /// `part 2 of 6: primary; hover, focus, pressed`, what a part of a sheet holds; nil for a whole sheet.
+    public func partTitle(of sheet: Sheet) -> String? {
+        guard let part = sheet.part else { return nil }
+        let rows = rows(of: sheet).map { $0 ?? "rest" }.joined(separator: ", ")
+        return "part \(part.number) of \(part.count): \(sheet.columns.joined(separator: ", ")); \(rows)"
     }
 
     /// The column option's name, or `""` for a contract without options.
@@ -232,8 +409,9 @@ public struct ComponentMatrix: Sendable {
     /// `-WestronMatrixSheet`, and the start of its file names.
     public func key(of sheet: Sheet) -> String { "\(component).\(sheet.id)" }
 
-    /// The file name of a sheet's capture in a theme: `button.size-s_role-default_iconOnly-false.dark-hc.png`.
-    public func fileName(of sheet: Sheet, theme: Theme) -> String { "\(key(of: sheet)).\(theme.rawValue).png" }
+    /// The file name of a sheet's picture in a capture: `button.size-s_role-default_iconOnly-false.dark-hc.png` at the
+    /// default text size, `button.size-s_role-default_iconOnly-false_part-1-of-6.light.accessibility5.png` at another.
+    public func fileName(of sheet: Sheet, capture: Capture) -> String { "\(key(of: sheet)).\(capture.name).png" }
 
     /// What the sheet and the review page say about the states that draw as rest; nil when every state is bound.
     public var unboundNote: String? {
@@ -276,10 +454,14 @@ public struct ComponentMatrix: Sendable {
         makeCell(combination)
     }
 
-    /// A sheet by its key, `button.size-s_role-default_iconOnly-false`, among the sheets the current OS draws.
+    /// A sheet by its key, `button.size-s_role-default_iconOnly-false`, among the sheets the current OS draws, their
+    /// parts at every text size, and the supplements' sheets and parts.
     public static func sheet(key: String) -> (matrix: ComponentMatrix, sheet: Sheet)? {
-        for matrix in all {
-            if let sheet = matrix.sheets.first(where: { matrix.key(of: $0) == key }) { return (matrix, sheet) }
+        for matrix in all.flatMap({ [$0] + $0.supplements }) {
+            for sheet in matrix.sheets {
+                let pictures = [sheet] + TextSize.allCases.flatMap { matrix.pictures(of: sheet, at: $0) }
+                if let found = pictures.first(where: { matrix.key(of: $0) == key }) { return (matrix, found) }
+            }
         }
         return nil
     }

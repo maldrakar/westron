@@ -64,7 +64,24 @@ and the parity lint (#21) are proved on it before a second component starts. The
 ### Sizes and shape
 
 - **Chosen: `s`, `m`, `l`, default `m`.** The heights are `size.control.s|m|l`: 24, 32 and 40 with a pointer, 32,
-  44 and 52 on touch. The hit area is at least the platform's recommended target (chapter 08).
+  44 and 52 on touch. The hit area is at least the platform's recommended target (chapter 08), except on macOS
+  (below).
+- **The hit area on macOS** (decided 2026-11-18, after the Apple implementation, #75).
+  - Size s is drawn 24 pt tall, below macOS's recommended 28. On macOS a click outside the system button's frame
+    misses, whatever the content shape, so reaching the target means growing the frame (measured in the catalog's
+    `ButtonBehaviorTests`, #23).
+  - Considered: growing the frame by 2 pt on each side inside the system button and taking it back with a negative
+    padding outside, so the drawn and laid out size stay; growing the layout frame to 28 pt; the drawn 24 pt as the
+    hit area.
+  - **Chosen: on macOS the hit area is the drawn button; size s takes clicks in its 24 pt.** It is a recorded platform
+    difference, in the contract's `platforms.apple.macos`, not a gap. The whole drawn button takes clicks, the empty
+    inside of `secondary` and `tertiary` included: until the style gave the button its drawn shape to hit-test,
+    macOS took clicks on those two only where they paint, the label and the border.
+  - Why: the grown frame overlaps a neighbor closer than 4 pt, and the later sibling wins there, inside the
+    neighbor's drawn area: with no spacing, a click 1 pt inside the first button ran the second (measured with real
+    clicks in the review of #69); the style cannot see its neighbors. A layout frame of 28 pt breaks the alignment
+    that size s exists for, in toolbars and table rows. A pointer is precise, and the system's own small controls
+    take clicks in their frame only.
 - **Chosen: `radius.control` everywhere,** icon-only included.
 - **Narrower than the longest word** (decided 2026-11-17, after the Apple implementation, #23).
   - Considered, side by side in the catalog at sizes m and l, at the default text size and at accessibility3: a
@@ -115,6 +132,7 @@ and the parity lint (#21) are proved on it before a second component starts. The
 - Hover exists only with a pointer: never on iPhone or watchOS.
 - The focus ring is the system's on Apple and GTK; on the web it is an outline in `color.border.focus`.
 - On macOS, Return and Escape trigger the default and cancel actions.
+- On macOS the hit area is the drawn button, so size s takes clicks in its 24 pt (above).
 - **Known issue on Apple (#23): the `trash` glyph and the accessibility audit.** With `trash` as the destructive
   samples' icon, the Dynamic Type accessibility audit of the catalog's `button-destructive` page times out ("Audit
   failed to complete in time") on the screenful of size m and l samples at accessibility5, on the code before and

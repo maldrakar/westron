@@ -1,5 +1,6 @@
-# westron's Button contract (#22), approved by the owner on 2026-11-16: decisions/0001-button-contract.md records the
-# owner's answers and the bindings the owner confirmed on top of them.
+# westron's Button contract (#22), approved by the owner on 2026-11-16; the macOS hit area decided by the owner on
+# 2026-11-18 (#75): decisions/0001-button-contract.md records the owner's answers and the bindings the owner confirmed
+# on top of them.
 id: button
 status: approved
 description: >-
@@ -32,7 +33,7 @@ options:
     description: >-
       The height is size.control.s, m or l: 24, 32 and 40 with a pointer (macOS), 32, 44 and 52 on touch. It is a
       minimum, so the button grows with its text. The hit area is at least the platform's recommended target
-      (chapter 08), also where the drawn height is smaller.
+      (chapter 08), also where the drawn height is smaller, except where the contract's platforms block says otherwise.
   role:
     type: enum
     values: [default, destructive]
@@ -133,7 +134,12 @@ platforms:
       description: Hover only with a pointer, on iPad; an iPhone never enters it.
     macos:
       keyboardIntents: [defaultAction, cancelAction]
-      description: Return triggers the default action and Escape the cancel action.
+      description: >-
+        Return triggers the default action and Escape the cancel action. The hit area is the drawn button, so size s
+        takes clicks in its 24 pt, below the recommended 28 (the owner's decision of 2026-11-18, decisions/0001): a
+        click outside the system button's frame misses, a frame grown with an outset and taken back by a negative
+        padding takes clicks inside a neighbor closer than 4 pt, and a layout frame of 28 breaks the alignment size s
+        is for. A pointer is precise, and the system's own small controls take clicks in their frame only.
     watchos:
       options: { size: [m] }
       fallback: { size: m }
