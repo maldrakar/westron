@@ -113,6 +113,8 @@ still drives every generated sheet and combination:
   and rows stay at `large`, and the sheet says so. At `accessibility5` a 3 × 6 sheet does not fit an iPhone: a button of
   size l with an icon and a label takes about 320 of its 402 points. So there a sheet is captured in parts, one column
   each (`pictures(of:at:)`, `_part-<n>-of-<count>` in the file name), with a short header that says what the part holds.
+  The parts are laid out for the default device, iPhone 17 in portrait, which six rows just fit: on another device
+  (`--device`), a shorter one above all, the capture may fail its check that every cell is inside the picture there.
   macOS has no Dynamic Type: SwiftUI draws a cell the same at every `dynamicTypeSize` there, `-WestronDynamicType`
   included (`ComponentMatrixTests` checks it), so a Mac is captured at `large` alone and its page says why.
 - **Supplementary sheets** show what no contract option sets. A component's catalog code adds a

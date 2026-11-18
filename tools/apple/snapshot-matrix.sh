@@ -12,6 +12,9 @@
 # <component>.<sheet>[_part-<n>-of-<count>].light.<text size>.png, the manifest matrix.json and the review page
 # index.html go to DIR, by default .build/snapshot-matrix/<platform>/; the script prints the path of index.html and
 # fails when an expected image is missing or a sheet failed its checks. Log: .build/logs/.
+# The sheets are laid out for the default device, iPhone 17 in portrait: at accessibility5 a part of one column and six
+# rows just fits it, so another --device, a shorter one above all, may fail the check that every cell is inside the
+# picture there.
 # Compare: compares two capture directories image by image and writes a report page, by default to
 # .build/snapshot-matrix/compare/; prints its path; exits 0 when every image is the same and 1 when one differs.
 # Only captures from the same environment compare (decisions/0008). macOS needs Automation Mode
@@ -23,7 +26,7 @@ cd "$root"
 # shellcheck source=tools/apple/xcode-env.sh
 source tools/apple/xcode-env.sh
 
-usage() { sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
 absolute() { case "$1" in /*) echo "$1" ;; *) echo "$root/$1" ;; esac; }
 
@@ -75,8 +78,11 @@ name="snapshot-matrix-$platform${component:+-$component}"
 log=".build/logs/$name.log"
 mkdir -p "$out" .build/logs .build/xcode/results
 # Only a capture's own files are removed, so --out can name a directory that holds other files: the images the previous
-# manifest names (in this format, or the earlier one with a file name per theme), any <component>.*.png of a component
-# in spec/components (a capture that failed before its manifest), the manifest and the page.
+# manifest names (in this format, or the earlier one with a file name per theme), any <component>.*.<capture>.png of a component
+# in spec/components whose name ends in a capture's name (a capture that failed before its manifest), the manifest and
+# the page. The capture names are ComponentMatrix.Capture's: the themes at the default text size, then light at the
+# other text sizes.
+captures=(light dark light-hc dark-hc light.xSmall light.accessibility5)
 if [ -f "$out/matrix.json" ]; then
   { jq -r '(.. | objects | select(has("file")) | .file), (.components[]?.sheets[]?.images[]? | strings)' \
     "$out/matrix.json" 2> /dev/null || true; } | while read -r file; do
@@ -85,7 +91,7 @@ if [ -f "$out/matrix.json" ]; then
 fi
 for contract in spec/components/*/; do
   id="$(basename "$contract")"
-  rm -f -- "$out/$id."*.png
+  for capture in "${captures[@]}"; do rm -f -- "$out/$id."*".$capture.png"; done
 done
 rm -f -- "$out/matrix.json" "$out/index.html"
 
