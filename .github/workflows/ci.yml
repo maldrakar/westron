@@ -37,6 +37,10 @@ jobs:
         run: tools/apple/check.sh format
       - name: Build and tests (macOS)
         run: tools/apple/check.sh package
+      - name: Package tests on the iOS simulator
+        # The same unit tests through xcodebuild, where they take the iOS branches of the code (#73). This job's only
+        # simulator; the jobs that boot one already run their own UI tests on it.
+        run: tools/apple/check.sh package-ios
       - name: Tools tests on macOS (the SwiftUI type list is not stale)
         run: |
           source tools/apple/xcode-env.sh
