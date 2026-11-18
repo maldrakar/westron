@@ -330,7 +330,8 @@ struct ContractCheckTests {
                 contractProblems(replacing("base: SwiftUI.Button", with: "base: SwiftUI.Picker")),
                 "platforms.apple.base", "does not know the system styles of SwiftUI.Picker"))
         let own = replacing(
-            "    strategy: style-on-system-control\n    base: SwiftUI.Button", with: "    strategy: own-component")
+            "    strategy: style-on-system-control\n    base: SwiftUI.Button",
+            with: "    strategy: own-component\n    form: view")
         #expect(contractProblems(own.replacingOccurrences(of: "tertiary", with: "plain")) == [])
     }
 

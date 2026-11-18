@@ -15,8 +15,9 @@ import Foundation
 ///   fallbacks; the declared states, `<Component>State`, with whether the current OS enters each, `isEntered`.
 ///
 /// Draft contracts are skipped: an API appears once the contract is approved (decisions/0005), so a draft never breaks
-/// the build. Own components are skipped too: their API is a view, which conventions question Q2 still leaves open.
-/// No drawing is generated: style bodies are written natively (decisions/0001).
+/// the build. An own component (`own-component`) gets the enums of its options alone, in the same file: its modifier
+/// or view is hand-written, and the API parity lint holds its signature to the contract (`Own`; spec/conventions.md,
+/// "Own components"). No drawing is generated: style bodies are written natively (decisions/0001).
 ///
 /// An extension of a system view (`extension-on-system-control`, Text) gets no file: its modifier is hand-written in
 /// WestronUI, its argument is the token accessor the token generator writes, and the API parity lint holds its
@@ -95,7 +96,19 @@ public struct AppleComponents: Generator {
         var apis: [API] = []
         var problems: [ContractProblem] = []
         var extensions: [(api: Extension, source: String)] = []
+        var owns: [(api: Own, source: String)] = []
+        var files: [GeneratedFile] = []
         for (contract, source) in contracts {
+            if givesAPI(contract), contract.apple?.strategy == ownStrategy {
+                do {
+                    let own = try Own(contract, source: source)
+                    owns.append((own, source))
+                    if let file = own.file(source: source) { files.append(file) }
+                } catch {
+                    problems.append(error)
+                }
+                continue
+            }
             if givesAPI(contract), contract.apple?.strategy == SystemStyles.extensionStrategy {
                 do {
                     let api = try Extension(contract, source: source)
@@ -114,16 +127,17 @@ public struct AppleComponents: Generator {
             }
             guard generates(contract), let apple = contract.apple, let base = apple.base else { continue }
             do {
-                apis.append(try API(contract, apple: apple, base: base, source: source))
+                let api = try API(contract, apple: apple, base: base, source: source)
+                apis.append(api)
+                files.append(
+                    GeneratedFile(path: "\(outputDirectory)/\(api.component)+Contract.swift", contents: api.swift()))
             } catch {
                 problems.append(error)
             }
         }
-        problems += collisions(apis) + ambiguities(apis)
+        problems += collisions(apis) + ambiguities(apis) + ownCollisions(owns, apis: apis)
         guard problems.isEmpty else { throw Problems(problems: problems) }
-        return apis.map {
-            GeneratedFile(path: "\(outputDirectory)/\($0.component)+Contract.swift", contents: $0.swift())
-        }
+        return files
     }
 
     /// A component's id as a Swift type name, in UpperCamelCase: `Button` for `button`, `ListRow` for `list-row`.
@@ -137,9 +151,12 @@ public struct AppleComponents: Generator {
     }
 
     /// Whether a contract gives API on Apple: approved or later, styled on a system control or extending a system
-    /// view, with its base. The API parity lint expects that API, and the snapshot matrix draws it.
+    /// view, with its base, or an own component with its form (`Own`). The API parity lint expects that API, and the
+    /// snapshot matrix draws it.
     public static func givesAPI(_ contract: ComponentContract) -> Bool {
-        guard contract.status != "draft", let apple = contract.apple, apple.base != nil else { return false }
+        guard contract.status != "draft", let apple = contract.apple else { return false }
+        if apple.strategy == ownStrategy { return apple.form.flatMap(Own.Form.init(rawValue:)) != nil }
+        guard apple.base != nil else { return false }
         return apple.strategy == strategy || apple.strategy == SystemStyles.extensionStrategy
     }
 
@@ -231,6 +248,9 @@ public struct AppleComponents: Generator {
     /// the header names.
     /// - Throws: `ContractProblem` when the contract cannot give the API the conventions prescribe.
     public static func file(for contract: ComponentContract, source: String) throws(ContractProblem) -> GeneratedFile? {
+        if givesAPI(contract), contract.apple?.strategy == ownStrategy {
+            return try Own(contract, source: source).file(source: source)
+        }
         guard generates(contract), let apple = contract.apple, let base = apple.base else { return nil }
         let api = try API(contract, apple: apple, base: base, source: source)
         return GeneratedFile(path: "\(outputDirectory)/\(api.component)+Contract.swift", contents: api.swift())

@@ -23,6 +23,12 @@ import Foundation
 /// (`twinExtras`). A twin of a base in `pendingTwins` is checked when it is declared and not reported while it is
 /// missing.
 ///
+/// From each contract that is approved or later and is an Apple own component (`own-component`) with its
+/// `platforms.apple.form`, what `AppleComponents.Own` derives: the enums of its enum options, as above, and either its
+/// modifier in `extension View`, `public func surface(_: SurfaceVariant, outlined: Bool = false) -> some View`, or its
+/// view, `public struct Rule: View` with `public init(axis: RuleAxis = .horizontal)` and `public var body: some View`
+/// (`checkViews`).
+///
 /// **What it reports**, as `file:line: message`:
 /// - expected API that is missing, or differs in access, signature, values, order, default or constraints;
 /// - component API that no contract gives: a type named after a component (`ButtonShape`, a public `ButtonVariantStyle`
@@ -177,6 +183,10 @@ public enum APIParity {
             guard let apple = contract.apple else {
                 return "its contract (\(source)) plans Apple, so it has no API there yet"
             }
+            if apple.strategy == AppleComponents.ownStrategy {
+                return "its contract (\(source)) is an \(apple.strategy) that names no form (modifier or view) in "
+                    + "platforms.apple.form, so the conventions give it no API"
+            }
             if apple.strategy != AppleComponents.strategy, apple.strategy != SystemStyles.extensionStrategy {
                 return "its contract (\(source)) is an \(apple.strategy), whose API the conventions leave open (Q2)"
             }
@@ -228,9 +238,22 @@ public enum APIParity {
         var containers: Set<String> { extends == "View" ? viewTypes : [extends, "SwiftUI." + extends] }
     }
 
+    /// An own component's view (`AppleComponents.Own`, form `view`): the type, its initializer and its body.
+    struct ExpectedView {
+        let contract: Contract
+        /// `Rule`.
+        let type: String
+        let parameters: [SwiftDeclarations.Parameter]
+
+        var initializer: String {
+            "init(" + parameters.map(\.description).joined(separator: ", ") + ")"
+        }
+    }
+
     struct Expected {
         var enums: [ExpectedEnum] = []
         var functions: [ExpectedFunction] = []
+        var views: [ExpectedView] = []
         /// Contracts the lint cannot derive API from.
         var problems: [Problem] = []
     }
@@ -240,6 +263,10 @@ public enum APIParity {
         var expected = Expected()
         var stateOwners: [(state: String, contracts: [Contract])] = []
         for item in contracts where item.hasAPI {
+            if item.contract.apple?.strategy == AppleComponents.ownStrategy {
+                expectOwn(item, into: &expected)
+                continue
+            }
             guard let apple = item.contract.apple, let baseName = apple.base else { continue }
             if apple.strategy == SystemStyles.extensionStrategy {
                 let api: AppleComponents.Extension
@@ -466,6 +493,10 @@ public enum APIParity {
                         "missing: \(item.what), `public func \(item.signature)` in extension \(item.extends)"))
             }
         }
+
+        // The views of own components.
+        problems += checkViews(
+            expected.views, declarations: declarations, accounted: &accounted, expectedCount: &expectedCount)
 
         // Public API that no contract accounts for.
         let components = contracts.sorted { $0.component.count > $1.component.count }

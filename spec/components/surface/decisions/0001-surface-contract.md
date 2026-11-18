@@ -1,8 +1,9 @@
 # 0001. The Surface contract
 
-Date: 2026-11-18. Status: draft for approval (#29). The owner answered the interview on 2026-11-18. This record keeps
-three things apart: what the owner answered, what the documents had already decided, and what the agent proposes on
-top of both, which is still to confirm.
+Date: 2026-11-18. Status: accepted. The owner answered the interview on 2026-11-18 and delegated the approval of the
+contract; it was approved as written under that delegation on 2026-11-18 (#29), P1–P12 as proposed. P5 and P12,
+decided by the agent under the delegation, still wait for the owner's confirmation. This record keeps three things
+apart: what the owner answered, what the documents had already decided, and what the agent proposed on top of both.
 
 ## Context
 
@@ -98,3 +99,10 @@ as API no contract gives (conventions Q2). For `.surface(_:outlined:)`:
   and `noAPIReason` treat every own component as having no API).
 - **The snapshot matrix:** `AppleComponents.givesAPI` admits only a style or an extension, so an own component gets no
   matrix; it would get one with a hand-written `SurfaceMatrixCell`, three kinds by `outlined`, in the four themes.
+
+**How the tools settled it (#29, with the implementation).** The contract names its shape in a structured field,
+`platforms.apple.form: modifier`, added to the schema with this work: the generator and the lint read the shape from
+it, not from the description. `tools/westron generate` writes `SurfaceVariant` into
+`WestronUI/Generated/Surface+Contract.swift`; the modifier `surface(_:outlined:)` is hand-written, as Text's
+`textRole(_:)` is, and the API parity lint holds its signature to the contract (`spec/conventions.md`, "Own
+components"). The snapshot matrix is generated, three kinds by `outlined`.

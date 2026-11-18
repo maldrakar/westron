@@ -1,8 +1,10 @@
 # 0001. The Rule contract
 
-Date: 2026-11-18. Status: draft for approval (#29, which calls it a divider). The owner answered the interview on
-2026-11-18. This record keeps three things apart: what the owner answered, what the documents had already decided,
-and what the agent proposes on top of both, which is still to confirm.
+Date: 2026-11-18. Status: accepted (#29, which calls it a divider). The owner answered the interview on 2026-11-18
+and delegated the approval of the contract; it was approved as written under that delegation on 2026-11-18, P1–P7 as
+proposed. P2, decided by the agent under the delegation, still waits for the owner's confirmation. This record keeps
+three things apart: what the owner answered, what the documents had already decided, and what the agent proposed on
+top of both.
 
 ## Context
 
@@ -66,3 +68,9 @@ API no contract gives (conventions Q2).
 - **`APIParity`:** expect `public struct Rule: View` and its `init(axis: RuleAxis = .horizontal)` from the contract.
 - **The snapshot matrix:** `AppleComponents.givesAPI` admits own components with API, and a hand-written
   `RuleMatrixCell` draws both axes in the four themes.
+
+**How the tools settled it (#29, with the implementation).** The contract names its shape in a structured field,
+`platforms.apple.form: view`, added to the schema with this work. `tools/westron generate` writes `RuleAxis` into
+`WestronUI/Generated/Rule+Contract.swift`; `Rule` and its initializer are hand-written, and the API parity lint holds
+them to the contract: `public struct Rule: View`, `public init(axis: RuleAxis = .horizontal)` and
+`public var body: some View` (`spec/conventions.md`, "Own components"). The snapshot matrix is generated, both axes.

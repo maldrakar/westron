@@ -1,9 +1,9 @@
 import Foundation
 
 /// The snapshot matrix generator (#24): from every contract that gives API on Apple (approved or later, styled on a
-/// system control or extending a system view, `AppleComponents.givesAPI`), it writes the component's `SnapshotMatrix`
-/// into the catalog, `WestronCatalog/Generated/<Component>+Matrix.swift`, and the registry of every matrix,
-/// `ComponentMatrix+All.swift`:
+/// system control, extending a system view or an own component with its form, `AppleComponents.givesAPI`), it writes
+/// the component's `SnapshotMatrix` into the catalog, `WestronCatalog/Generated/<Component>+Matrix.swift`, and the
+/// registry of every matrix, `ComponentMatrix+All.swift`:
 ///
 /// - `ComponentMatrix.<component>`: the axes, the states and those no token binding names, every combination, what a
 ///   constraint excludes or advises against, what each Apple OS draws differently and the sheets, for the catalog to
@@ -128,7 +128,7 @@ public struct AppleSnapshotMatrix: Generator {
                 "; constraints forbid \(matrix.excluded.count * (matrix.states.count + 1)) of them, so the matrix "
                 + "has \(matrix.combinations.count)"
         }
-        summary += ", on \(matrix.sheets.count) sheets."
+        summary += ", on \(matrix.sheets.count) sheet\(matrix.sheets.count == 1 ? "" : "s")."
         out += ["extension ComponentMatrix {"]
         out += doc([summary], indent: 1)
         out += ["    static let \(member) = ComponentMatrix("]
@@ -205,7 +205,8 @@ public struct AppleSnapshotMatrix: Generator {
                 "                fixed: \(list(sheet.fixed.map(literal))),",
                 "                columns: \(list(sheet.columns.map(literal))),",
                 "                rows: \(list(sheet.rows.map(literal)))",
-                "            ),",
+                // swift format takes the comma off a lone element that spans lines.
+                "            )" + (matrix.sheets.count == 1 ? "" : ","),
             ]
         }
         out += ["        ]"]
