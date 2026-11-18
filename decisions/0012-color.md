@@ -206,7 +206,8 @@ moves no other color.
   - Otherwise `control` moves away from the canvas the least lightness that meets the target.
   - If step 9's label no longer reads there at 4.5:1 (7:1 in high contrast), the other label takes over: white for a
     dark ink, the ink for white. `control` then moves on until both targets hold.
-  - Hue and chroma stay step 9's. Nothing is added to `palette.json`: the targets are the non-text and text targets
+  - Hue and chroma stay step 9's, within sRGB: where the moved lightness cannot hold that chroma, the gamut mapping
+    lowers it, as it lowers amber's. Nothing is added to `palette.json`: the targets are the non-text and text targets
     above.
 - **New semantic colors.** `color.category.<name>.control` and `color.category.<name>.on-control`, for all twelve list
   colors. `control` declares `non-text` on the three grounds, and `on-control` declares `text` on `control`.

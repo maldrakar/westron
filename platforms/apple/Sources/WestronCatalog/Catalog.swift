@@ -14,6 +14,7 @@ public enum Catalog {
         .text,
         .surface,
         .rule,
+        .checkbox,
         .colorBackgrounds,
         .colorForegrounds,
         .colorCategories,

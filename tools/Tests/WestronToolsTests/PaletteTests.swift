@@ -136,6 +136,37 @@ struct PaletteTests {
         #expect(ratio(light["amber.control-contrast"]!, amber) >= 4.5)
     }
 
+    @Test("a control fill that moved is the least move: a little closer to the canvas, it misses a target")
+    func controlFillIsTheLeastMove() throws {
+        let palette = try realPalette()
+        let solved = try PaletteSolver.solve(palette)
+        // Half a percent of OKLCH lightness: more than the 8-bit rounding of the stored color moves it.
+        let back = 0.005
+        var moved: [String] = []
+        for theme in PaletteSolver.themes {
+            let highContrast = theme.hasSuffix("-hc")
+            let nonText = highContrast ? 4.5 : 3
+            let text = highContrast ? 7 : 4.5
+            // Toward the canvas: lighter in a light theme, darker in a dark one.
+            let towardCanvas: Double = theme.hasPrefix("dark") ? -1 : 1
+            let colors = full(solved, theme)
+            let grounds = ["neutral.1", "neutral.raised", "neutral.sunken"].map { colors[$0]! }
+            for hue in palette.hues {
+                let control = try #require(colors["\(hue.name).control"])
+                guard control != colors["\(hue.name).9"] else { continue }
+                moved.append("\(theme) \(hue.name)")
+                let label = try #require(colors["\(hue.name).control-contrast"])
+                // The solver's own color at the stored lightness, stepped back, with step 9's chroma and hue.
+                let closer = PaletteSolver.color(
+                    OKLCH(control).l + towardCanvas * back, hue.chroma * palette.stepChroma[8], hue.hue)
+                let meets = grounds.allSatisfy { ratio(closer, $0) >= nonText } && ratio(label, closer) >= text
+                #expect(!meets, "\(theme) \(hue.name).control moved further from the canvas than it must")
+            }
+        }
+        // The light themes move amber and olive at least, so the check is not empty.
+        #expect(moved.contains("light amber") && moved.contains("light olive"), "moved: \(moved)")
+    }
+
     @Test("a dark label at 7:1 on a fill at 4.5:1 to a light canvas is impossible, so the control takes white")
     func controlLabelFlips() throws {
         let solved = try PaletteSolver.solve(load(fixture))
