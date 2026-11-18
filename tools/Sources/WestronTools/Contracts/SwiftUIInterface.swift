@@ -45,6 +45,54 @@ public enum SwiftUIInterface {
         return names
     }
 
+    /// The OSes westron's Apple library ships on: a style unavailable on all three is not one a contract can shadow.
+    public static let westronOSes: Set<String> = ["iOS", "macOS", "watchOS"]
+
+    /// The static styles an interface declares on style protocols, such as `plain` on `ButtonStyle`: the static
+    /// members of each `extension SwiftUI.<Protocol> where Self == …` block (`SwiftUICore.` too), names in backticks
+    /// unquoted. A block whose `@available` attributes, on the lines right above it, make it unavailable on iOS, macOS
+    /// and watchOS alike is left out, as tvOS's `card` is.
+    public static func styleNames(of protocols: Set<String>, in text: String) -> Set<String> {
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: false)
+        var names: Set<String> = []
+        var attributes: [Substring] = []
+        var index = 0
+        while index < lines.count {
+            let line = lines[index]
+            index += 1
+            if line.hasPrefix("@available(") {
+                attributes.append(line)
+                continue
+            }
+            defer { attributes = [] }
+            guard line.hasPrefix("extension "), line.contains(" where Self == ") else { continue }
+            let extended = line.dropFirst("extension ".count).prefix { $0 != " " }
+            guard let name = extended.split(separator: ".").last, protocols.contains(String(name)),
+                ["SwiftUI", "SwiftUICore"].contains(String(extended.split(separator: ".").first ?? ""))
+            else { continue }
+            var unavailable: Set<String> = []
+            for attribute in attributes {
+                let arguments = attribute.dropFirst("@available(".count).prefix { $0 != ")" }
+                    .split(separator: ",").map { String($0.drop { $0 == " " }) }
+                guard arguments.count == 2, arguments[1] == "unavailable" else { continue }
+                if arguments[0] == "*" { unavailable.formUnion(westronOSes) } else { unavailable.insert(arguments[0]) }
+            }
+            let skipped = westronOSes.isSubset(of: unavailable)
+            while index < lines.count, lines[index] != "}" {
+                let member = lines[index]
+                index += 1
+                guard !skipped else { continue }
+                let words = member.split(separator: " ")
+                guard let position = words.firstIndex(of: "static"), position + 2 < words.count,
+                    ["var", "func"].contains(words[position + 1])
+                else { continue }
+                let identifier = words[position + 2].drop { $0 == "`" }.prefix(while: isIdentifier)
+                if !identifier.isEmpty { names.insert(String(identifier)) }
+            }
+        }
+        return names
+    }
+
     private static func isIdentifier(_ character: Character) -> Bool {
         character.isLetter || character.isNumber || character == "_"
     }

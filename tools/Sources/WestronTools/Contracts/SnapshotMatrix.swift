@@ -138,6 +138,11 @@ public struct SnapshotMatrix: Equatable, Sendable {
                     Axis(
                         name: option.name, values: ["false", "true"], isBool: true,
                         systemType: systemOptions[option.name]))
+            case .icons:
+                throw ContractProblem(
+                    source: source, path: .root.key("options").key(option.name),
+                    "\(option.name) takes its values from the icon registry: the snapshot matrix does not take such "
+                        + "an option yet")
             case .tokenGroup(let group, _):
                 let path = DocumentPath.root.key("options").key(option.name)
                 guard let accessor = AppleComponents.tokenAccessors[group] else {

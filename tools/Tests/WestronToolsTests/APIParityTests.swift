@@ -733,16 +733,16 @@ struct APIParityTests {
     func systemStatesPerBase() throws {
         #expect(SystemStyles.byBase["SwiftUI.Button"]?.states == ["pressed", "hover", "focus", "disabled"])
 
-        let toggle = try contract(
+        let picker = try contract(
             contractYAML(
-                id: "switch", states: "[pressed, selected]",
-                apple: "        strategy: style-on-system-control\n        base: SwiftUI.Toggle"), id: "switch")
-        let found = problems([try contract(contractYAML()), toggle], try files())
+                id: "segments", states: "[pressed, selected]",
+                apple: "        strategy: style-on-system-control\n        base: SwiftUI.Picker"), id: "segments")
+        let found = problems([try contract(contractYAML()), picker], try files())
         #expect(found.count == 1)
         #expect(
             found[0].hasPrefix(
-                "spec/components/switch/switch.spec.yaml:14: no style modifier and no system states are known for "
-                    + "SwiftUI.Toggle (SystemStyles.byBase)"))
+                "spec/components/segments/segments.spec.yaml:14: no style modifier and no system states are known for "
+                    + "SwiftUI.Picker (SystemStyles.byBase)"))
     }
 
     // MARK: Reading

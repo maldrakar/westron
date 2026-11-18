@@ -1,0 +1,129 @@
+# westron's TextField contract (#30), a draft: decisions/0001-text-field-contract.md records the owner's answers of
+# 2026-11-18, what the documents already decide, and what the agent proposes on top of them, to confirm.
+id: text-field
+status: draft
+description: >-
+  A field a person types text into: westron's style on the platform's own text field, which keeps editing,
+  selection, input methods, the keyboard and the system's text input. framed is a field that stands on its
+  own, such as the name field in a list's row: an outline in color.border.strong, which meets 3:1 against the
+  ground, and no fill of its own, so the ground under it shows. inline is a field set into a text it belongs to, such
+  as the title and the notes inside an open task card: no outline and no padding, in the text role of its context.
+  Focus is westron's ring, color.border.focus at stroke.thick, around the field on every platform, in both variants;
+  the system's own focus ring is turned off where it has one. Disabled draws the whole field at opacity.disabled,
+  with no colors of its own (design-language/08). The placeholder is in color.text.placeholder. There is no error
+  state, hint or message in this version: no pilot screen shows one, and a field marked only by a danger border
+  would tell an error by color alone (design-language/08, "Color is never the only signal"). The text, and with it a
+  framed field's height, follows the person's text size (design-language/08, "Settings the person chooses").
+consumers: [todo-app/lists-screen, todo-app/list-screen]
+
+options:
+  variant:
+    type: enum
+    values: [framed, inline]
+    description: >-
+      No default: every use names its variant. The system's own style names (automatic, plain, roundedBorder,
+      squareBorder, bordered) are not values: westron's overload would shadow them (decisions/0003).
+  size:
+    type: enum
+    values: [s, m, l]
+    default: m
+    description: >-
+      framed: the height is size.control.s, m or l, 24, 32 and 40 with a pointer (macOS), 32, 44 and 52 on touch, as
+      a minimum, so the field grows with its text; its text role and padding follow the size, as Button's do. A
+      field drawn at s keeps a hit area of the platform's recommended size (design-language/08). inline takes its
+      height and its text role from its context, so the size changes nothing on it.
+
+slots: [label, placeholder]
+states: [focus, disabled]
+
+tokens:
+  container.height:
+    cases:
+      - { when: { variant: framed, size: s }, token: size.control.s }
+      - { when: { variant: framed, size: m }, token: size.control.m }
+      - { when: { variant: framed, size: l }, token: size.control.l }
+  container.radius:
+    cases:
+      - { when: { variant: framed }, token: radius.control }
+  container.paddingHorizontal:
+    cases:
+      - { when: { variant: framed, size: s }, token: space.100 }
+      - { when: { variant: framed, size: m }, token: space.150 }
+      - { when: { variant: framed, size: l }, token: space.200 }
+  container.borderColor:
+    cases:
+      - { when: { variant: framed }, token: color.border.strong }
+  container.borderWidth:
+    cases:
+      - { when: { variant: framed }, token: stroke.thin }
+  container.opacity:
+    cases:
+      - { when: { state: disabled }, token: opacity.disabled }
+  text.font:
+    cases:
+      - { when: { variant: framed, size: s }, token: typography.footnote.regular }
+      - { when: { variant: framed, size: [m, l] }, token: typography.body.regular }
+  text.color: color.text.primary
+  placeholder.color: color.text.placeholder
+  focusRing.color:
+    cases:
+      - { when: { state: focus }, token: color.border.focus }
+  focusRing.width:
+    cases:
+      - { when: { state: focus }, token: stroke.thick }
+
+accessibility:
+  role: textField
+  intents: [edit]
+  keyboardIntents: [edit]
+  label: required
+  states: { disabled: disabled }
+  description: >-
+    Every field has an accessible label that names what it holds ("List name"), also where no label is visible; a
+    placeholder is not a label, since it disappears as the person types. The text is the field's value. In
+    disabled, the field is announced as unavailable.
+
+platforms:
+  apple:
+    strategy: style-on-system-control
+    base: SwiftUI.TextField
+    description: >-
+      .textFieldStyle(.framed, size: .s) on the system TextField, and on SecureField, which takes the same modifier.
+      The style is a TextFieldStyle, which SwiftUI declares with only the underscored requirement
+      _body(configuration:); the implementation probes it on iOS, macOS and watchOS and records what holds. A call
+      without size: takes it from controlSize (spec/conventions.md). The label and the placeholder are the system
+      field's own: TextField("List name", text: $name, prompt: Text("Untitled")), and so is a multiline field,
+      TextField(_:text:axis:) with .vertical, such as a card's notes. Corners are continuous.
+    ios:
+      description: >-
+        Focus is the field being edited, with the keyboard up. There is no pointer to hover with on an iPhone, and
+        the field shows nothing on hover on an iPad either.
+    macos:
+      description: >-
+        westron's focus ring replaces the system's, which is turned off with focusEffectDisabled(), so focus is
+        drawn in color.border.focus rather than in the accent color the person chose in System Settings. This is
+        the owner's decision for this component (decisions/0001); design-language/08 ("Keyboard and focus") and 09
+        ("What stays with the system", macOS) still say the system draws the focus ring on macOS, and are revised
+        when the contract is approved.
+    watchos:
+      options: { size: [m] }
+      fallback: { size: m }
+      states: [disabled]
+      description: >-
+        The watch's field is the system's as it is: a tap opens the system's text input, there is no focus to draw,
+        and roundedBorder, like westron's outline, has no place there. Both variants draw the system field; the
+        Swift enum keeps every size and the style falls back to m.
+  web:
+    strategy: style-on-system-control
+    base: input
+    description: >-
+      Provisional until phase 6 (#40): a native <input> with westron's CSS, a multiline field a <textarea>. The
+      focus ring is an outline in focusRing.color and focusRing.width on :focus-visible. Corners are circular.
+  linux:
+    strategy: style-on-system-control
+    base: GtkEntry
+    description: >-
+      Provisional until phase 7: the stock GtkEntry with westron's style classes for the variants and the sizes; the
+      focus ring there is decided with the GNOME library. Corners are circular.
+  android:
+    status: planned

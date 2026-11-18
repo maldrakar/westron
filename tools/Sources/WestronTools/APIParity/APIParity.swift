@@ -275,7 +275,7 @@ public enum APIParity {
             var types: Set<String> = []
             for option in item.contract.options where apple.systemOptions[option.name] == nil {
                 switch option.kind {
-                case .tokenGroup:
+                case .tokenGroup, .icons:
                     continue  // The generator gives a style no such option yet, and fails on it.
                 case .bool(let value):
                     rest.append(.init(label: option.name, type: "Bool", defaultValue: "\(value)"))

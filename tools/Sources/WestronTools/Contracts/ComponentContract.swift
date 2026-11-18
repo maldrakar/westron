@@ -10,6 +10,9 @@ public struct ComponentContract: Equatable, Sendable {
             /// The tokens under a token group, `typography`, whose paths after it are the values; `default` is nil
             /// when every use must name one. The values are in tokens/, not in the contract.
             case tokenGroup(String, default: String?)
+            /// The names of the icon registry, `spec/icons/icons.yaml`, in its order: the values are in the registry,
+            /// not in the contract. There is no default: every use names its glyph.
+            case icons
         }
 
         public let name: String
@@ -166,8 +169,10 @@ public struct ComponentContract: Equatable, Sendable {
                     Option(
                         name: member.key, kind: .tokenGroup(group, default: member.value["default"]?.string),
                         description: description))
+            case "icons":
+                options.append(Option(name: member.key, kind: .icons, description: description))
             default:
-                throw problem(path.key("type"), "must be enum, bool or tokens")
+                throw problem(path.key("type"), "must be enum, bool, tokens or icons")
             }
         }
         let states = document["states"]?.elements?.compactMap(\.string) ?? []

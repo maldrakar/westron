@@ -41,9 +41,20 @@ struct ContractRules {
         return result
     }
 
+    /// The options of type `icons`, by name.
+    private var iconOptions: Set<String> {
+        Set((document["options"]?.members ?? []).filter { $0.value["type"] == .string("icons") }.map(\.key))
+    }
+
     /// Why an option of type `tokens` cannot be named at a place, for a message.
     private func tokenOptionNamed(_ option: String, _ group: String, in place: String) -> String {
         "\(option) takes its values from the tokens of \(group), and \(place) do not name such an option yet"
+    }
+
+    /// Why an option of type `icons` cannot be named at a place, for a message.
+    private func iconOptionNamed(_ option: String, in place: String) -> String {
+        "\(option) takes its values from the icon registry (\(IconRegistry.defaultFile)), and \(place) do not name "
+            + "such an option yet"
     }
 
     private var states: [String]? {
@@ -227,7 +238,7 @@ struct ContractRules {
 
     /// The Apple strategy fits its base: a style goes on a control that has a style modifier, and an extension on a
     /// control or view that has none (`SystemStyles`). No option value is the static name of a system style of the
-    /// Apple base control (decisions/0003).
+    /// Apple base control, which westron's overload would shadow (decisions/0003).
     mutating func checkSystemStyles() {
         let apple = DocumentPath.root.key("platforms").key("apple")
         guard let strategy = value(at: apple.key("strategy"))?.string, let base = value(at: apple.key("base"))?.string
@@ -270,8 +281,8 @@ struct ContractRules {
                 guard let value = element.string, styles.contains(value) else { continue }
                 report(
                     .root.key("options").key(member.key).key("values").index(index),
-                    "\"\(value)\" is the name of a system style of \(base), so a call such as .\(value) would be "
-                        + "ambiguous (decisions/0003); choose another name")
+                    "\"\(value)\" is the name of a system style of \(base), so a call such as .\(value) would "
+                        + "silently take westron's style instead of the system's (decisions/0003); choose another name")
             }
         }
     }
@@ -329,6 +340,8 @@ struct ContractRules {
                 }
             } else if let group = tokenOptions[option] {
                 report(place, tokenOptionNamed(option, group, in: states ? "cases" : "constraints"))
+            } else if iconOptions.contains(option) {
+                report(place, iconOptionNamed(option, in: states ? "cases" : "constraints"))
             } else {
                 report(place, unknownOption(option) + (states ? ", and the key state names states" : ""))
             }
@@ -518,6 +531,8 @@ struct ContractRules {
                 guard let declared = enums[option] else {
                     if let group = tokenOptions[option] {
                         report(place, tokenOptionNamed(option, group, in: "platform restrictions"))
+                    } else if iconOptions.contains(option) {
+                        report(place, iconOptionNamed(option, in: "platform restrictions"))
                     } else {
                         report(
                             place,
@@ -702,6 +717,11 @@ struct ContractRules {
                         path.key(member.key),
                         "\(member.key) takes its values from the tokens of \(group), which are westron's, not the "
                             + "system's: a system option's values are its system type's; remove it here")
+                } else if iconOptions.contains(member.key) {
+                    report(
+                        path.key(member.key),
+                        "\(member.key) takes its values from westron's icon registry (\(IconRegistry.defaultFile)), "
+                            + "not from a system type: remove it here")
                 } else if !names.contains(member.key) {
                     report(path.key(member.key), unknownOption(member.key))
                 }
@@ -709,8 +729,34 @@ struct ContractRules {
         }
     }
 
-    /// The states assistive technology announces are states of the contract.
+    /// The abstract role of a component that adds no role of its own: assistive technology reads its content as if
+    /// the component were not there (ARIA's `none`).
+    static let noRole = "none"
+
+    /// The states assistive technology announces are states of the contract. A component whose role is `none` gives
+    /// assistive technology nothing to act on or announce: no intents, no keyboard intents, its own or a platform's,
+    /// no announced states, and no required label.
     mutating func checkAccessibility() {
+        let accessibility = DocumentPath.root.key("accessibility")
+        if document["accessibility"]?["role"]?.string == Self.noRole {
+            let why = "the role is \(Self.noRole): the component adds no role of its own, so assistive technology"
+            for key in ["intents", "keyboardIntents"] where !(document["accessibility"]?[key]?.elements ?? []).isEmpty {
+                report(accessibility.key(key), "\(why) has nothing to do with it; remove them, or give it its role")
+            }
+            if !(document["accessibility"]?["states"]?.members ?? []).isEmpty {
+                report(accessibility.key("states"), "\(why) announces no state of it; remove them, or give it its role")
+            }
+            if document["accessibility"]?["label"]?.string == "required" {
+                report(
+                    accessibility.key("label"),
+                    "\(why) reads no label of it: a label is required only of a component with a role; make it "
+                        + "optional, or give it its role")
+            }
+            for (platform, path) in restrictions where !(platform["keyboardIntents"]?.elements ?? []).isEmpty {
+                report(
+                    path.key("keyboardIntents"), "\(why) has nothing to do with it; remove them, or give it its role")
+            }
+        }
         let declared = states ?? []
         for member in document["accessibility"]?["states"]?.members ?? [] where !declared.contains(member.key) {
             report(

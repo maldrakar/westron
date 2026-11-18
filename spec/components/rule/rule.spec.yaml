@@ -1,0 +1,54 @@
+# westron's Rule contract (#29, which calls it a divider), a draft: decisions/0001-rule-contract.md records the
+# owner's answers of 2026-11-18, what the documents already decide, and what the agent proposes on top of them, to
+# confirm.
+id: rule
+status: draft
+description: >-
+  A straight line that separates two groups: westron's own line, color.border.default at stroke.thin, the same on
+  every platform, rather than the system's separator, whose thickness and color the system fixes. A horizontal rule
+  spans the width it is given, a vertical one the height, such as the divider between two groups of a bar; the
+  product gives it that length and the space around it with its stack and spacing tokens. In the standard themes a
+  rule is decoration, since space and alignment also show the grouping; in the high-contrast themes its color
+  reaches 3:1 and its width stays (design-language/02, 04). Only straight rules: a sidebar's nesting guides, a
+  dashed outline and the line of a labeled area belong to the components that draw them (decisions/0013, "Left
+  for later"). It has no states.
+consumers: [todo-app/lists-screen, todo-app/list-screen]
+
+options:
+  axis:
+    type: enum
+    values: [horizontal, vertical]
+    default: horizontal
+    description: >-
+      horizontal runs along the width and separates groups stacked one above the other; vertical runs along the
+      height and separates groups side by side.
+
+tokens:
+  line.color: color.border.default
+  line.thickness: stroke.thin
+
+accessibility:
+  role: none
+  description: >-
+    Decorative: hidden from assistive technology, which already reads the groups it separates by their own content.
+
+platforms:
+  apple:
+    strategy: own-component
+    description: >-
+      A view named Rule, Rule() and Rule(axis: .vertical): a type named Divider would collide with SwiftUI.Divider in
+      every file that imports SwiftUI (decisions/0003, point 3). It is a filled rectangle of stroke.thin across its
+      axis that fills the length it is offered along it, so it needs no stack to orient it, unlike the system
+      Divider; it is hidden from accessibility. On watchOS a rule is drawn as on the other OSes.
+  web:
+    status: planned
+    description: >-
+      Provisional until phase 6 (#40): an <hr> with westron's CSS for a horizontal rule, hidden from assistive
+      technology with aria-hidden; a vertical rule is an element of its own, decided with the library's shape.
+  linux:
+    status: planned
+    description: >-
+      Provisional until phase 7: a stock GtkSeparator in its orientation, with westron's color and width through a
+      style class, hidden from assistive technology.
+  android:
+    status: planned

@@ -318,7 +318,8 @@ struct ContractCheckTests {
             contractProblems(replacing("values: [default, destructive]", with: "values: [default, destructive, link]"))
                 == [
                     "options.role.values[2]: \"link\" is the name of a system style of SwiftUI.Button, so a call "
-                        + "such as .link would be ambiguous (decisions/0003); choose another name"
+                        + "such as .link would silently take westron's style instead of the system's (decisions/0003); "
+                        + "choose another name"
                 ])
     }
 
@@ -326,8 +327,8 @@ struct ContractCheckTests {
     func unknownBase() {
         #expect(
             has(
-                contractProblems(replacing("base: SwiftUI.Button", with: "base: SwiftUI.Toggle")),
-                "platforms.apple.base", "does not know the system styles of SwiftUI.Toggle"))
+                contractProblems(replacing("base: SwiftUI.Button", with: "base: SwiftUI.Picker")),
+                "platforms.apple.base", "does not know the system styles of SwiftUI.Picker"))
         let own = replacing(
             "    strategy: style-on-system-control\n    base: SwiftUI.Button", with: "    strategy: own-component")
         #expect(contractProblems(own.replacingOccurrences(of: "tertiary", with: "plain")) == [])

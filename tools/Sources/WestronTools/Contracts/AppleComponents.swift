@@ -179,6 +179,15 @@ public struct AppleComponents: Generator {
             else {
                 throw problem(applePath, "not an \(SystemStyles.extensionStrategy) with a base")
             }
+            // Icon (#28): its API is initializers of the base taking Westron.Icon, which the conventions do not derive
+            // from a contract yet.
+            if let option = contract.options.first(where: { $0.kind == .icons }) {
+                throw problem(
+                    .root.key("options").key(option.name),
+                    "\(option.name) takes its values from the icon registry: the conventions give an "
+                        + "\(SystemStyles.extensionStrategy) no API for such an option yet, so the generator and the "
+                        + "API parity lint do not support it yet")
+            }
             let shape =
                 "an \(SystemStyles.extensionStrategy) takes one option, whose values are tokens, as the argument of its "
                 + "modifier, and no states: the conventions give it no other API yet (spec/conventions.md, "
@@ -362,6 +371,12 @@ public struct AppleComponents: Generator {
                         "\(option.name) takes its values from the tokens of \(group): the generator does not give a "
                             + "style such an option yet")
                 }
+                if case .icons = option.kind {
+                    throw problem(
+                        .root.key("options").key(option.name),
+                        "\(option.name) takes its values from the icon registry: the generator does not give a style "
+                            + "such an option yet")
+                }
             }
             let optionNames = contract.options.map(\.name)
             for name in apple.systemOptions.keys.sorted() where !optionNames.contains(name) {
@@ -523,7 +538,7 @@ public struct AppleComponents: Generator {
                 switch option.kind {
                 case .bool(let value):
                     result.append((name, "\(option.name): Bool = \(value)", false))
-                case .tokenGroup:
+                case .tokenGroup, .icons:
                     continue  // API's initializer rejects it.
                 case .enumeration:
                     guard let item = enums.first(where: { $0.option.name == option.name }) else { continue }
@@ -572,7 +587,7 @@ public struct AppleComponents: Generator {
                     let summary =
                         option.description.map(Self.firstSentence) ?? "The contract's option `\(option.name)`."
                     items.append("- \(option.name): \(summary) By default `\(value)`.")
-                case .tokenGroup:
+                case .tokenGroup, .icons:
                     continue  // API's initializer rejects it.
                 case .enumeration:
                     guard let item else { continue }
