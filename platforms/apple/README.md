@@ -49,7 +49,12 @@ let ink = Westron.Color.text.primary.dark                 // Westron.RGB(hex: 0x
   `tint`, which WestronUI overloads for it; any other call takes `Color(.text.primary)`.
 - Text roles are taken with `.textRole(_:)` or `Font(_:)`, in the role's text style, so they follow Dynamic Type:
   Onest and Geist Mono through `Font.custom(_:size:relativeTo:)`, the rest `Font.system` (decisions/0011). `Font` has
-  no westron statics, so SwiftUI's `Font.body` stays as it is.
+  no westron statics, so SwiftUI's `Font.body` stays as it is. `.textRole(_:)` on a view also tracks by the role's
+  share of the drawn size and takes the heavier Onest or Geist Mono under Bold Text; its `Text` twin, for a part inside
+  interpolation or `Text + Text`, cannot read the environment, so it keeps the default size's tracking and the role's
+  own weight. Inside interpolation, type a part whose role is a variable as `Text` first
+  (`let part: Text = Text(count).textRole(role)`): otherwise it takes the View modifier and prints a debug description,
+  and the compiler warns that `appendInterpolation` is deprecated (spec/components/text).
 - Motions with a spring are `.spring(duration:bounce:)`; the others are `.timingCurve`, and `.delay` when they wait.
 - The adapters from WestronTokens values to SwiftUI values are hand-written in `Sources/WestronUI/TokenAdapters.swift`.
 
@@ -63,7 +68,7 @@ let icon = Westron.Icon(rawValue: list.icon) ?? .fallback   // by the name the s
 
 Image(icon)                                       // its SF Symbol, which takes the font of the text it goes with
     .textRole(.body.regular)
-    .foregroundStyle(list.color.text)
+    .foregroundStyle(list.color.icon)             // color.category.<name>.icon (design-language/07)
 Label("Rename", icon: .pen)                       // as Label(_:systemImage:)
 Button("Add", systemImage: Westron.Icon.plus.systemName) { add() }   // any call that takes systemImage:
 ```
@@ -91,14 +96,25 @@ same command that stops a macOS one. Only the accessibility audit, half an hour 
 Open in Xcode 27.1: `platforms/apple/Catalog/Catalog.xcodeproj`. Without arguments, the catalog shows navigation
 across all entries. With `-WestronEntry <id>`, it shows one entry full screen; this is how
 `tools/apple/catalog-screenshot.sh` captures it. `-WestronAppearance light|dark`, `-WestronContrast standard|high` and
-`-WestronDynamicType <size>` set the conditions; `-WestronScrollAnchor <0…1>` holds a point of the entry's scroll
-content in view (the accessibility audit uses it).
+`-WestronDynamicType <size>` set the conditions, and `-WestronLegibilityWeight regular|bold` the system's Bold Text;
+`-WestronScrollAnchor <0…1>` holds a point of the entry's scroll content in view (the accessibility audit uses it).
+`catalog-screenshot.sh` has no option for the last two: the screenshot test reads them from
+`TEST_RUNNER_WESTRON_LEGIBILITY_WEIGHT` and `TEST_RUNNER_WESTRON_SCROLL_ANCHOR`, set before the script, with `--out`,
+since the file name does not show them. The test runner inherits them from the environment: set them on the command
+only, as below; an exported value silently applies to every later capture, and nothing in its file name says so.
+
+```sh
+TEST_RUNNER_WESTRON_LEGIBILITY_WEIGHT=bold tools/apple/catalog-screenshot.sh ios --entry typography-in-text \
+  --out .build/screenshots/ios-typography-in-text-bold.png
+```
 
 The Foundations section holds the token samples, each fitting one screenshot on an iPhone 17 and in the macOS window:
 `color-backgrounds` and `color-foregrounds` draw every color in the four themes side by side, each cell under its own
 color scheme and contrast; `color-categories` draws the list colors and `color-status` the statuses and the chart
 series in the catalog's theme; `color-in-use` draws a task list, a table of deployments, notices and buttons with the
-semantic colors, the page the owner approves the palette on; `typography`,
+semantic colors, the page the owner approves the palette on; `typography` draws the text roles, and
+`typography-in-text` each role in Onest or Geist Mono through `.textRole(_:)` beside its `Text` twin inside
+interpolation, with the width each takes, so that accessibility5 and Bold Text show what the twin does not follow;
 `space`, `shape` and `motion` show the rest, and `icons` draws every icon with its name at the size of body text. To
 review the colors in every mode:
 
@@ -116,9 +132,13 @@ rest and each state alone, the combinations a constraint of severity `error` lea
 differently (`platforms.apple`), and the sheets. A sheet fixes every option but the variant (or, without one, the first
 option that is not a bool): its values are the columns, rest and the states the rows, at most 3 × 6, so it fits an
 iPhone 17 in portrait and the macOS window. Text, with no states, has six sheets of one row: five of three roles each, and the last of two.
+Surface has two sheets of one row, the three kinds with `outlined` false and true; Rule one, both axes.
 The hand-written `<Component>MatrixCell` (Button's is in `Components/ButtonPages.swift`, Text's in
 `Components/TextPages.swift`) draws one cell with the real component: Button's with hover, focus and pressed forced
-as on the `button-states` pages, disabled and loading with the real modifiers; Text's with `.textRole(_:)`. The rows of a state the OS never enters are left
+as on the `button-states` pages, disabled and loading with the real modifiers; Text's with `.textRole(_:)`; Surface's
+(`Components/SurfacePages.swift`) with `.surface(_:outlined:)` around sample content, a plain surface on the canvas
+and an outlined one on a fill (a raised or dragged one in a sunken well, a sunken one in a raised card); Rule's
+(`Components/RulePages.swift`) between two lines or two words. The rows of a state the OS never enters are left
 out, as on those pages; a value the OS does not offer is drawn with its fallback and marked, and a combination a
 `warning` constraint advises against is drawn with a caption. A state no token binding names in a case looks as rest,
 and the sheet and the review page say so: Button's focus, whose ring the system draws. The sheets are not catalog
@@ -143,7 +163,9 @@ still drives every generated sheet and combination:
   listed again by hand. Each sheet and its section of the review page are marked "Not a contract option". Button has
   one, `label-without-icon`: its generated cells have an icon and a label or are icon-only, so a label without an
   icon, which while loading has the indicator before the label and widens the button (P13), is shown on the sheets
-  with iconOnly false: every variant, size and role, at rest and in each state, 108 combinations on 6 sheets. Like the
+  with iconOnly false: every variant, size and role, at rest and in each state, 108 combinations on 6 sheets. Surface
+  has one, `nesting`, on the sheet with outlined true: for raised and dragged, two outlined cards of the kind in a
+  sunken column; for sunken, an outlined well in a raised card. Like the
   matrix, supplements are not catalog entries, so the accessibility audit does not walk them.
 
 ```sh

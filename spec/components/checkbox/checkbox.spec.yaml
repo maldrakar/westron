@@ -84,17 +84,17 @@ platforms:
       the check, so that every westron control that takes the list's color reads it; the API parity lint accounts for
       it as a reviewed adapter in its own file (APIParity.otherAdapters, Category.swift), since no contract option can
       give it (decisions/0001, P15). ToggleStyleConfiguration has no isPressed, so the style's body is a system Button
-      that toggles the value, drawn by a ButtonStyle, which sees isPressed; the button also gives the activation and
-      the keyboard focus of a system button. For assistive technology the body is replaced by the system's own Toggle
-      on the same value and label (accessibilityRepresentation), so VoiceOver meets the toggle's role and value and no
-      button. The circle's diameter is 1.2 times the line height of the text role that reaches the style, and its hit
+      that toggles the value, drawn by a ButtonStyle, which sees isPressed; the button is the check's activation and
+      its focusable element (keyboard focus on macOS: platforms.apple.macos). For assistive technology the body is
+      replaced by the system's own Toggle on the same value and label (accessibilityRepresentation), so VoiceOver
+      meets the toggle's role and value and no button. The circle's diameter is 1.2 times the line height of the text role that reaches the style, and its hit
       area is a square of at least size.control.m around it, the label beside it included (decisions/0001, P10, P16,
       P17). A row whose title is a separate text hides the label with .labelsHidden(), and the label stays the
       toggle's accessible name, so the separate title is hidden from assistive technology and not read twice
-      (the catalog's live row, CheckboxBehaviorTests); a custom style sees .labelsHidden() only from iOS 18, macOS 15 and watchOS 11
-      (labelsVisibility), so on iOS 17, macOS 14 and watchOS 10 the label is still drawn beside the circle. The
-      focus ring is the system's, so the focusRing bindings do not apply, as for Button. The mark is the
-      registry's check glyph.
+      (the catalog's live row, CheckboxBehaviorTests); a custom style sees .labelsHidden() only from iOS 18,
+      macOS 15 and watchOS 11 (labelsVisibility), so on iOS 17, macOS 14 and watchOS 10 the label is still drawn
+      beside the circle. The focus ring is the system's, so the focusRing bindings do not apply, as for Button. The
+      mark is the registry's check glyph.
     ios:
       description: >-
         VoiceOver meets the system Toggle of the representation: a switch with its label, its value on or off, and no
@@ -103,9 +103,11 @@ platforms:
       description: >-
         The system's checkbox toggle is square; westron's check stays round, as on the other OSes. Assistive
         technology meets a checkbox with its label and its value, and no button (CatalogUITests/CheckboxBehaviorTests).
-        The hit area is at least size.control.m, 32 pt, above the recommended 28. Keyboard focus is the system
-        button's: a Mac gives it only with the system's keyboard navigation on, as it does to its own checkbox; with
-        it off, neither takes focus, from Tab or from code (decisions/0001, "Open points").
+        The hit area is at least size.control.m, 32 pt, above the recommended 28. Keyboard focus, measured with the
+        Mac's keyboard navigation off: neither westron's check nor a system Toggle in checkbox style takes focus,
+        from Tab or from code; with .focusable() added, both take focus and show the system's ring, and Space
+        toggles neither. With keyboard navigation on, Tab and Space are unverified, pending the owner's run of
+        CheckboxBehaviorTests.testKeyboardFocusAndSpace (decisions/0001, "Open points").
     watchos:
       states: [checked, pressed, disabled]
       description: >-

@@ -35,7 +35,7 @@ private let noRoleFixture = """
       axis: { type: enum, values: [horizontal, vertical], default: horizontal }
     accessibility: { role: none }
     platforms:
-      apple: { strategy: own-component }
+      apple: { strategy: own-component, form: view }
       web: { status: planned }
       linux: { status: planned }
       android: { status: planned }
@@ -248,7 +248,8 @@ struct NoRoleContractTests {
             ])
         #expect(
             noRoleProblems(
-                "apple: { strategy: own-component }", "apple: { strategy: own-component, keyboardIntents: [x] }")
+                "apple: { strategy: own-component, form: view }",
+                "apple: { strategy: own-component, form: view, keyboardIntents: [x] }")
                 == [
                     "platforms.apple.keyboardIntents: \(why) has nothing to do with it; remove them, or give it its "
                         + "role"

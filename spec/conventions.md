@@ -38,12 +38,12 @@ decisions/0003 rejected.
 
 | Contract concept | SwiftUI (authoritative) | Web (provisional) | GTK: Rust + GTK4/libadwaita (provisional) | Compose (provisional) |
 |---|---|---|---|---|
-| **Component id and naming** | System control: no westron type. The contract binds to the system control (`Button`), and westron adds an overload of its style modifier. Own component: a `View` named after the id in UpperCamelCase (`empty-state` → `EmptyState`), no prefix. Generated types are `<Component><Option>`: `ButtonVariant`, `ButtonSize`. A name that would collide with a SwiftUI type is recorded in the `platforms` block (decisions/0003, point 3) | System control: the native element (`<button>`) with westron's CSS. Own component: a custom element, whose name must contain a hyphen, so it differs from the contract's and the `platforms` block records it; the namespace is decided in #40 | System control: the stock widget (`gtk::Button`) with westron's style classes and an extension trait. Own component: a GObject subclass, `Badge` in westron's crate; its GType name carries the library's namespace, as every GTK library's does, and the `platforms` block records it | System control: the Material3 composable inside `WestronTheme`. Own component: a `@Composable` function named after the id in UpperCamelCase. Where Material3 has a composable of the same name (`Badge`), the strategy differs from Apple's and the `platforms` block records it |
-| **Enum option: the variant** | A generated `public enum ButtonVariant: String, CaseIterable, Sendable`; cases are the contract's values in lowerCamelCase. It is the first, unlabeled argument of the style overload and has no default, so it is always written: `.buttonStyle(.primary, size: .m)`, `.buttonStyle(.secondary)`; the contract gives the variant no default. A value must not match a system style's static name (`plain`, `bordered`, …); the validator checks it (#18). Another enum option is a labeled argument named after it. Own component: Q2 | A `variant` attribute and property on a custom element; on a native element a class or data attribute (#40) | A Rust `enum ButtonVariant { Primary, … }` that adds a CSS class: the stock class where one exists (`.suggested-action`, `.destructive-action`), westron's own otherwise. The value-to-class map is in the `platforms` block | A generated `enum class ButtonVariant { Primary, … }` passed as a parameter; the variant picks westron's colors and shape for the Material3 composable, through `ButtonDefaults`-style factories or the Compose Style API, decided in phase 8 |
+| **Component id and naming** | System control: no westron type. The contract binds to the system control (`Button`), and westron adds an overload of its style modifier. Own component: the shape its `platforms.apple.form` names, no prefix: a modifier on `View` named after the id in lowerCamelCase (`surface` → `.surface(.raised)`), or a `View` named after the id in UpperCamelCase (`rule` → `Rule()`, `empty-state` → `EmptyState`) (below, "Own components"). Generated types are `<Component><Option>`: `ButtonVariant`, `ButtonSize`. A name that would collide with a SwiftUI type is recorded in the `platforms` block (decisions/0003, point 3) | System control: the native element (`<button>`) with westron's CSS. Own component: a custom element, whose name must contain a hyphen, so it differs from the contract's and the `platforms` block records it; the namespace is decided in #40 | System control: the stock widget (`gtk::Button`) with westron's style classes and an extension trait. Own component: a GObject subclass, `Badge` in westron's crate; its GType name carries the library's namespace, as every GTK library's does, and the `platforms` block records it | System control: the Material3 composable inside `WestronTheme`. Own component: a `@Composable` function named after the id in UpperCamelCase. Where Material3 has a composable of the same name (`Badge`), the strategy differs from Apple's and the `platforms` block records it |
+| **Enum option: the variant** | A generated `public enum ButtonVariant: String, CaseIterable, Sendable`; cases are the contract's values in lowerCamelCase. It is the first, unlabeled argument of the style overload and has no default, so it is always written: `.buttonStyle(.primary, size: .m)`, `.buttonStyle(.secondary)`; the contract gives the variant no default. A value must not match a system style's static name (`plain`, `bordered`, …); the validator checks it (#18). Another enum option is a labeled argument named after it. Own component: the same generated enum; the first, unlabeled argument of its modifier (`.surface(.raised)`); a view with a variant is not derived yet (Q2) | A `variant` attribute and property on a custom element; on a native element a class or data attribute (#40) | A Rust `enum ButtonVariant { Primary, … }` that adds a CSS class: the stock class where one exists (`.suggested-action`, `.destructive-action`), westron's own otherwise. The value-to-class map is in the `platforms` block | A generated `enum class ButtonVariant { Primary, … }` passed as a parameter; the variant picks westron's colors and shape for the Material3 composable, through `ButtonDefaults`-style factories or the Compose Style API, decided in phase 8 |
 | **Option whose values are tokens** (`type: tokens`, `group: typography`) | The accessor of the token group, which the token generator already writes (decisions/0010): `Westron.TextRole` for `typography`, its values the group's tokens, `.heading.large`. No `<Component><Option>` enum is generated, since the values are the tokens', and its names follow them. The parity lint expects the accessor as the argument's type, and the snapshot matrix enumerates the group's tokens in token order (below, "Extensions of a system view") | A class per value on the element, named from the token path; the prefix is decided in #40 | A style class per value, named from the token path | The theme's value for the token, through `WestronTheme` |
 | **Option whose values are icons** (`type: icons`) | `Westron.Icon`, the enum the icon generator already writes from `spec/icons/icons.yaml` (decisions/0011), whose cases are the registry's names: `Image(.tray)`. No `<Component><Option>` enum is generated. How an approved contract's API takes it (an initializer of the base, not a modifier) is not derived yet: generation, the snapshot matrix and the parity lint report such a contract as not supported (Icon, #28) | westron's glyph by name, an inline SVG (#40) | The symbolic icon's name, mapped from the registry in phase 7 | A drawable by name, mapped in phase 8 |
 | **Size option** | A generated `public enum ButtonSize` with the contract's values `s`, `m`, `l`, never `small/regular/large`. A labeled `size:` argument of the style overload. When the call leaves it out, the size comes from `@Environment(\.controlSize)`: `mini` and `small` → `s`, `regular` → `m`, `large` and `extraLarge` → `l`; an explicit `size:` wins. What `size:` does to `controlSize` inside the label is Q5 | A `size` attribute (`size="m"`) or a class, sizes in westron's CSS | A Rust `enum ButtonSize { S, M, L }` that adds westron's own size class: libadwaita has no size classes | `enum class ButtonSize { S, M, L }` as a parameter |
-| **Bool option** | A labeled `Bool` argument of the style overload, named as in the contract, with the contract's default: `.buttonStyle(.primary, size: .m, iconOnly: true)`. Not an environment modifier, which would make the option look like a state, and not a system modifier the style cannot read (`.labelStyle(.iconOnly)`, see "Slots"). A bool that is a state follows the state rows | A boolean attribute, present or absent; an absent attribute is `false` (Q1) | A boolean GObject property, or a style class | A `Boolean` parameter with the contract's default |
+| **Bool option** | A labeled `Bool` argument of the style overload, named as in the contract, with the contract's default: `.buttonStyle(.primary, size: .m, iconOnly: true)`; so too on an own component's modifier or initializer, `.surface(.sunken, outlined: true)`. Not an environment modifier, which would make the option look like a state, and not a system modifier the style cannot read (`.labelStyle(.iconOnly)`, see "Slots"). A bool that is a state follows the state rows | A boolean attribute, present or absent; an absent attribute is `false` (Q1) | A boolean GObject property, or a style class | A `Boolean` parameter with the contract's default |
 | **States the system control has** (pressed, hover, focus, disabled, checked) | The system owns them, and the style reads them: pressed is `configuration.isPressed`, disabled is `@Environment(\.isEnabled)` set by `.disabled(_:)`, focus is `@Environment(\.isFocused)`, hover is `onHover`. A control whose value is on or off is in `checked` when it is on: `ToggleStyleConfiguration.isOn`; its configuration has no `isPressed`, so a toggle style follows a press itself, as it follows hover (`SystemStyles`). Touch iOS and watchOS never enter hover, and `onHover` does not exist on watchOS. The system draws the focus ring (chapter 08). Where states hold at once, the first matching case of a binding wins, as the contract orders them | CSS pseudo-classes: `:active`, `:hover`, `:focus-visible`, `:disabled`; a native element still matches `:hover` while disabled, and `:hover` and `:active` while `aria-busy`, so westron's CSS excludes what the contract excludes | CSS pseudo-classes `:active`, `:hover`, `:focus-visible`, `:disabled`; disabled is `set_sensitive(false)` | `interactionSource` (`collectIsPressedAsState`, `collectIsHoveredAsState`, `collectIsFocusedAsState`); disabled is the `enabled = false` parameter, Compose's positive name |
 | **States the system control lacks** (loading) | A modifier sets an environment value, and the style reads it (decisions/0003): `.loading(isSaving)`. One shared modifier per state, named as the state, for every component that has it: `.loading(_:)`, not `.buttonLoading(_:)` | An attribute that is also the accessible state: `aria-busy="true"`, styled by westron's CSS | A westron style class plus the accessible state `gtk::AccessibleState::Busy` | A `Boolean` parameter (`loading = true`), as Compose passes per-component state; a cascading value would go through `CompositionLocal` |
 | **Context a style reads** (a list's color) | A value a contract takes from the context, not from an option or a state: one shared modifier, named after the token type it takes, sets an environment value that every westron style which takes it reads, and it cascades like `.tint(_:)`: `.category(_: Westron.Category?)`, nil the accent (Checkbox, #31). A reviewed adapter for the parity lint, in a file of its own (below, "Context a style reads") | A custom property or class on an ancestor, read by westron's CSS (#40) | A style class on an ancestor (phase 7) | A `CompositionLocal` (phase 8) |
@@ -120,7 +120,7 @@ enum ButtonState: String, CaseIterable, Sendable {
   for every enum option (its restrictions and fallbacks on each Apple OS, as `#if os(…)`), and `<Component>State`
   with `isEntered`. The hand-written style switches over these enums exhaustively, so a value renamed, added or
   removed in the contract fails the build there until the style follows it (#20). A draft contract generates nothing,
-  so a contract in review never breaks the build, and an own component waits for Q2. The generator first runs
+  so a contract in review never breaks the build; an own component gets its enums alone ("Own components"). The generator first runs
   `spec check` on every contract and generates nothing while one fails it (#62).
 - **An option that is the system's own API gets no type.** The Apple entry names it in `systemOptions`, with the
   system type that carries it: Button's `role` is `systemOptions: { role: SwiftUI.ButtonRole }`, so no `ButtonRole`
@@ -357,30 +357,66 @@ contract says so with `strategy: extension-on-system-control` and the view as it
 
 ### Own components, when no system control exists
 
-When the platform has no control for the job (Badge, Banner, EmptyState), westron builds a `View` named as in the
-contract, with no prefix (decisions/0003, point 2):
+When the platform has no control for the job (Surface, Rule, Badge, EmptyState), westron builds its own component,
+named as in the contract, with no prefix (decisions/0003, point 2). Its API takes one of two shapes, which the
+contract names in `platforms.apple.form`, a field the schema requires of an `own-component` on Apple and forbids on a
+style or an extension, so that the generator and the API parity lint read the shape from the contract, not from its
+prose (settled for these two shapes with Surface and Rule, #29; question 2 keeps the rest):
 
 ```swift
-// Signatures only; EmptyState's contract decides its slots.
-public struct EmptyState<Title: View, Actions: View>: View {
-    public init(@ViewBuilder title: () -> Title, @ViewBuilder actions: () -> Actions)
+// form: modifier — the component draws around the content it is given and lays nothing out.
+extension View {
+    public func surface(_ variant: SurfaceVariant, outlined: Bool = false) -> some View
 }
 
-extension EmptyState where Title == Text {
-    public init(_ title: LocalizedStringKey, @ViewBuilder actions: () -> Actions)
+// form: view — the component is a view of its own.
+public struct Rule: View {
+    public init(axis: RuleAxis = .horizontal)
+    public var body: some View
 }
 ```
 
-- **Slots are `@ViewBuilder` closures**, one per slot, named after it, with initializers that take text and a
-  `Westron.Icon` for the common case, as SwiftUI's `Label` does. An optional slot is an initializer without it, not
-  an optional closure.
-- **Options** use the same generated enums. Whether they are initializer parameters or a style modifier on the
-  component is Q2.
+- **`modifier`**: a modifier on `View` named after the id in lowerCamelCase (`surface`), with the options as a
+  style overload has them: the variant first and unlabeled, every other option labeled in the contract's order, a
+  contract default as the argument's default, a bool option `<name>: Bool = <default>`; it returns `some View`. The
+  view it modifies is the content, so the contract has one slot at most. A product keeps its own stack and padding:
+  `Text("Card").padding(.space.card).surface(.raised)`.
+- **`view`**: a `public struct` named after the id in UpperCamelCase that conforms to `View` and nothing else, with
+  one public initializer whose parameters are the options, each labeled in the contract's order with the contract's
+  default, and `public var body: some View`: `Rule()`, `Rule(axis: .vertical)`. A type named as a SwiftUI type fails
+  generation (`Divider` is why Rule is not named so).
+- **Generated enums, a hand-written entry point** (the choice Text made for an extension, "Extensions of a system
+  view"). `tools/westron generate` writes the enums of the enum options, `<Component><Option>` by the style's naming
+  rules (`SurfaceVariant`, `RuleAxis`), into `WestronUI/Generated/<Component>+Contract.swift`, and nothing else: no
+  import, no signature. The modifier or the view is hand-written in `WestronUI/<Component>/`, since its body is the
+  whole implementation: a generated modifier could only forward to a hand-written `ViewModifier`, and a generated
+  view would split one type between a generated declaration and a hand-written body. The API parity lint
+  (`AppleComponents.Own`, `APIParity.expectOwn`, `checkViews`) holds the hand-written signature to the contract: the
+  modifier, or the view's type, conformance, initializer and body, missing, changed or doubled, and any other public
+  member of the view's type or function named after the component is reported as API no contract gives. An option
+  added to the contract fails the lint, and the matrix cell's build, until the code follows it.
+- **Not derived yet**, so generation and the lint fail on it, naming the part: states, an option named `size`, an
+  option whose values are tokens or icons, `systemOptions`, a restriction of Apple or an Apple OS (an own component
+  has no generated `offered` tables a body could read), more than one slot for a modifier, and slots or a variant for
+  a view. The first contract that needs one settles it here.
+- **The snapshot matrix** is generated as for a style: the options are the axes (Surface: variant × outlined, Rule:
+  axis), its cell the hand-written `<Component>MatrixCell` with the real component.
+- **Slots of a view**, when the conventions derive them, are `@ViewBuilder` closures, one per slot, named after it,
+  with initializers that take text and a `Westron.Icon` for the common case, as SwiftUI's `Label` does. An optional
+  slot is an initializer without it, not an optional closure:
+
+  ```swift
+  // Signatures only; EmptyState's contract decides its slots.
+  public struct EmptyState<Title: View, Actions: View>: View {
+      public init(@ViewBuilder title: () -> Title, @ViewBuilder actions: () -> Actions)
+  }
+  ```
 - **States.** An interactive part of an own component is a system control inside it, such as a Banner's dismiss
   `Button`, so its pressed, hover, focus and disabled states are the system's. A state the system lacks goes
   through the environment, as above.
 - **Accessibility.** An own component declares its role, label, value, states and actions from the contract's
-  `accessibility` block (chapter 08), through the modifiers in the table.
+  `accessibility` block (chapter 08), through the modifiers in the table. Role `none` adds nothing to a modifier's
+  content (Surface) and hides a view with no content (Rule).
 
 ### Token bindings stay in code, through the accessors
 
@@ -406,8 +442,10 @@ left open, and the last one what the size question left open.
 1. **The default of a bool option.** A bool option is a labeled `Bool` argument with the contract's default (the
    table). Should the contract require every bool option to default to `false`? An HTML boolean attribute can only
    express that default.
-2. **Options of an own component.** (a) Initializer parameters, `Badge("3", variant: .info)`: the report's
-   parity-first shape. (b) A style modifier on the component, `Badge("3").badgeStyle(.info)`, cascading through the
+2. **Options of an own component.** Settled for a modifier and for a view without slots or a variant, with Surface
+   and Rule (#29, "Own components"): the options are the modifier's arguments or the initializer's parameters. Still
+   open for a view with slots or a variant: (a) initializer parameters, `Badge("3", variant: .info)`: the report's
+   parity-first shape; (b) a style modifier on the component, `Badge("3").badgeStyle(.info)`, cascading through the
    environment: the same call shape as a system control, and a later system control could replace the own component
    without changing call sites.
 3. **A forbidden combination in code.** (a) Nothing beyond the validator, the catalog and the snapshot matrix.

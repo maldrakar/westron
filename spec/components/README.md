@@ -11,12 +11,13 @@ Each component is a folder `spec/components/<id>/`:
 A new contract starts with the `/new-component` skill. The first contract is Button,
 [`button/button.spec.yaml`](button/button.spec.yaml), approved by the owner on 2026-11-16 (#22). Text,
 [`text/text.spec.yaml`](text/text.spec.yaml), approved by the owner on 2026-11-18 (#27), is the first contract with an
-option whose values are tokens and with an extension of a system view. The drafts of phase 3 are Icon
-([`icon/`](icon/icon.spec.yaml), #28), the first with an option whose values are the icon registry's names; Surface
-and Rule ([`surface/`](surface/surface.spec.yaml), [`rule/`](rule/rule.spec.yaml), #29), the first own components and
-the first with no role of their own; and TextField ([`text-field/`](text-field/text-field.spec.yaml), #30). Checkbox
-([`checkbox/`](checkbox/checkbox.spec.yaml), #31), the first whose control has a value that is on or off and the first
-that takes a value from its context (the list's color), was approved on 2026-11-18 under the owner's delegation.
+option whose values are tokens and with an extension of a system view. Surface and Rule
+([`surface/`](surface/surface.spec.yaml), [`rule/`](rule/rule.spec.yaml), #29), approved on 2026-11-18 under the
+owner's delegation, are the first own components, one a modifier and one a view, and the first with no role of their
+own. The drafts of phase 3 are Icon ([`icon/`](icon/icon.spec.yaml), #28), the first with an option whose values are
+the icon registry's names; and TextField ([`text-field/`](text-field/text-field.spec.yaml), #30). Checkbox
+([`checkbox/`](checkbox/checkbox.spec.yaml), #31), approved on 2026-11-18 under the owner's delegation, is the first
+whose control has a value that is on or off and the first that takes a value from its context (the list's color).
 
 ## Format
 
@@ -56,7 +57,7 @@ accessibility:
 platforms:                      # all four; each is `status: planned` or a strategy
   apple:
     strategy: style-on-system-control   # or extension-on-system-control, or own-component, which has no base
-                                        # (decisions/0003)
+                                        # (decisions/0003) and names its form: modifier or view
     base: SwiftUI.Button
     systemOptions: { role: SwiftUI.ButtonRole }   # options that are the system's own API: no type is generated
     macos: { keyboardIntents: [defaultAction, cancelAction] }   # added to accessibility.keyboardIntents
@@ -135,7 +136,18 @@ no option is `inout`, `var` or `let` (an option becomes an argument label). Othe
 options (`ButtonVariant`, `ButtonSize`), the overload of the base control's style modifier
 (`.buttonStyle(.primary, size: .m)`), which applies the hand-written `<Component>VariantStyle`, and the tables that
 style reads (the `controlSize` mapping, each OS's fallbacks, the states). Its exact form is in
-[`spec/conventions.md`](../conventions.md). A draft contract and an own component generate nothing yet.
+[`spec/conventions.md`](../conventions.md). A draft contract generates nothing.
+
+An approved `own-component` names the shape of its API in `platforms.apple.form`, which the schema requires of it and
+forbids on a style or an extension: `modifier`, a modifier on `View` named after the component
+(`.surface(.raised)`), or `view`, a `View` named after it (`Rule(axis: .vertical)`). The generator writes the enums of
+its enum options alone into `WestronUI/Generated/<Component>+Contract.swift` (`SurfaceVariant`, `RuleAxis`); the
+modifier or the view is hand-written, and the API parity lint expects its signature from the contract: the variant
+unlabeled first and every other option labeled with its default for a modifier, every option labeled with its default
+for a view's `init`, which conforms to `View` alone and has `public var body: some View`. States, a `size` option, an
+option whose values are tokens or icons, `systemOptions`, a restriction of Apple or an Apple OS, more than one slot for
+a modifier, and slots or a variant for a view fail generation and the lint as not derived yet
+([`spec/conventions.md`](../conventions.md), "Own components").
 
 An approved `extension-on-system-control` gets no file in `WestronUI/Generated/`: its modifier is hand-written, its
 argument is the token accessor the token generator already writes, and the API parity lint expects its signature from
@@ -143,12 +155,12 @@ the contract (Text: `.textRole(_: Westron.TextRole)` on `View`, and its twin on 
 generator checks its shape: one option, whose values are the tokens of a group with an accessor on Apple
 (`AppleComponents.tokenAccessors`: `typography` → `Westron.TextRole`), and no states; it fails on any other. An
 approved style or extension with an option whose values are icons fails generation, the snapshot matrix and the API
-parity lint as not supported yet: the conventions do not derive the API that takes a `Westron.Icon` yet. An approved
-own component with such an option generates nothing and passes, as every own component does. An
-approved `style-on-system-control` with an option whose values are tokens still fails, as not supported yet; an
-approved own component with such an option generates nothing, as every own component does.
+parity lint as not supported yet: the conventions do not derive the API that takes a `Westron.Icon` yet; so does an
+approved own component with such an option. An
+approved `style-on-system-control` with an option whose values are tokens still fails, as not supported yet, and so
+does an approved own component with such an option.
 
-Every approved contract with API on Apple, either strategy, gets its snapshot matrix too,
+Every approved contract with API on Apple, any strategy, gets its snapshot matrix too,
 `platforms/apple/Sources/WestronCatalog/Generated/<Component>+Matrix.swift` (#24): an option whose values are tokens is
 an axis of the group's tokens, in token order, read from `tokens/`.
 

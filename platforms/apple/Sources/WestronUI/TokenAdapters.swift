@@ -102,35 +102,184 @@ extension Color.RGBColorSpace {
     }
 }
 
+// MARK: - Text roles
+//
+// A role is its font and its tracking (spec/components/text). The tracking is a share of the size the font is drawn
+// at, the token's letterSpacing over its fontSize, so it is recomputed for each Dynamic Type size and on each OS. Under
+// Bold Text a role in a font westron ships takes the instance one weight up; the system font does so by itself. On
+// watchOS every role is the system font. `.textRole(_:)` on a view reads the environment for all of it; `Font(_:)`
+// and `Text.textRole(_:)` cannot (spec/components/text, P2).
+//
+// `Text.textRole(_:) -> Text` is `@_disfavoredOverload`, so that `Text("Inbox").textRole(.heading.medium)` as a view
+// takes the View modifier. The twin is what the call resolves to where only a `Text` fits: inside interpolation with
+// a role written as `.heading.large`, and in `Text + Text`. It follows Dynamic Type's size, but its tracking is the
+// share of the default text size, and under Bold Text a role in Onest or Geist Mono keeps its own weight; the system
+// font's roles still draw heavier by themselves. One trap: inside interpolation, a role in a variable or written in
+// full (`Westron.TextRole.heading.large`) resolves to the View modifier through SwiftUI's deprecated catch-all, which
+// prints a debug description; the compiler warns "'appendInterpolation' is deprecated". Type the part first:
+// `let part: Text = Text(count).textRole(role)`, or `Text(count).textRole(role) as Text`, then interpolate it.
+
 extension Font {
-    /// A text role in its text style, so that it follows Dynamic Type (decisions/0011): a font westron ships as
+    /// A text role's font in its text style, so that it follows Dynamic Type (decisions/0011): a font westron ships as
     /// `Font.custom(_:size:relativeTo:)` at the text style's size on this platform, and the system font as
-    /// `Font.system(_:design:weight:)`.
+    /// `Font.system(_:design:weight:)`; on watchOS always the system font.
+    ///
+    /// A font carries no tracking, and an initializer cannot read the environment: this is the role's own weight
+    /// whatever the Bold Text setting, where the system font still draws heavier by itself. `.textRole(_:)` applies
+    /// the tracking and the heavier instance of a font westron ships.
     public init(_ role: Westron.TextRole) {
-        if let font = role.font, BundledFonts.registered {
-            self = .custom(font, size: role.platformSize, relativeTo: Font.TextStyle(role.textStyle))
-        } else {
-            self = .system(
-                Font.TextStyle(role.textStyle), design: Font.Design(role.design), weight: Font.Weight(role.weight))
-        }
+        self = role.font(boldText: false)
+    }
+}
+
+extension Text {
+    /// Sets a text role on a part of a text, keeping it a `Text`: inside interpolation,
+    /// `Text("\(title) \(Text(count).textRole(.footnote.medium))")`, or joined with `+`.
+    ///
+    /// A `Text` cannot read the environment: the part takes the role's font, which follows Dynamic Type, and the
+    /// tracking of the default text size, which does not; under Bold Text a role in Onest or Geist Mono keeps its own
+    /// weight. A role in a variable inside interpolation takes the View modifier and prints a debug description (the
+    /// compiler warns): write `let part: Text = Text(count).textRole(role)` and interpolate `part`.
+    @_disfavoredOverload
+    public func textRole(_ role: Westron.TextRole) -> Text {
+        font(role.font(boldText: false)).tracking(role.tracking(atSize: role.platformSize))
+    }
+}
+
+extension View {
+    /// Sets a text role: its font and its tracking, which a font cannot carry, from the environment. The tracking is
+    /// the role's share of the size Dynamic Type draws the font at, and under Bold Text a role in Onest or Geist Mono
+    /// takes the instance one weight up (spec/components/text):
+    ///
+    ///     Text("Inbox").textRole(.heading.medium)
+    public func textRole(_ role: Westron.TextRole) -> some View {
+        modifier(TextRoleModifier(role: role))
+    }
+}
+
+private struct TextRoleModifier: ViewModifier {
+    let role: Westron.TextRole
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.legibilityWeight) private var legibilityWeight
+
+    func body(content: Content) -> some View {
+        content
+            .font(role.font(boldText: legibilityWeight == .bold))
+            .tracking(role.tracking(atSize: role.drawnSize(at: dynamicTypeSize)))
     }
 }
 
 extension Westron.TextRole {
+    /// Whether this platform draws every role in the system font: the watch does, for its screen
+    /// (spec/components/text, `platforms.apple.watchos`).
+    static var systemFontOnly: Bool {
+        #if os(watchOS)
+            true
+        #else
+            false
+        #endif
+    }
+
+    /// The PostScript name of the font westron ships that draws the role, or nil for the system font: the role's own,
+    /// or under Bold Text the instance of its family one weight up (`Weight.boldTextStep`).
+    func shippedFont(boldText: Bool, systemFontOnly: Bool = Self.systemFontOnly) -> String? {
+        guard !systemFontOnly, let font else { return nil }
+        guard boldText else { return font }
+        let family = font.split(separator: "-").first.map(String.init) ?? font
+        return family + "-" + weight.boldTextStep.postScriptStyle
+    }
+
+    /// The role's SwiftUI font: the shipped font at the text style's size on this platform, relative to the text style,
+    /// or the system font in the text style, its design and weight, where the role names no shipped font, on watchOS,
+    /// and where registration failed.
+    func font(boldText: Bool, systemFontOnly: Bool = Self.systemFontOnly) -> Font {
+        if let name = shippedFont(boldText: boldText, systemFontOnly: systemFontOnly), BundledFonts.registered {
+            return .custom(name, size: platformSize, relativeTo: Font.TextStyle(textStyle))
+        }
+        return .system(Font.TextStyle(textStyle), design: Font.Design(design), weight: Font.Weight(weight))
+    }
+
+    /// The tracking at a size, in points: the token's letterSpacing over its fontSize, as a share of `size`.
+    func tracking(atSize size: CGFloat) -> CGFloat {
+        CGFloat(letterSpacing / self.size) * size
+    }
+
     /// The role's size at the default text size on this platform, as the system font takes it for the text style:
-    /// the Mac's smaller sizes on macOS, iOS's at the default content size on iOS. watchOS has no API for the
-    /// default size, so there the token's size, which is iOS's, is used.
+    /// the Mac's smaller sizes on macOS, iOS's at the default content size on iOS. watchOS has no API for its default
+    /// size, so there it is the size the system gives the text style now.
     var platformSize: CGFloat {
         #if os(macOS)
             NSFont.preferredFont(forTextStyle: NSFont.TextStyle(textStyle)).pointSize
         #elseif os(watchOS)
-            CGFloat(size)
+            UIFont.preferredFont(forTextStyle: UIFont.TextStyle(textStyle)).pointSize
         #else
             UIFont.preferredFont(
                 forTextStyle: UIFont.TextStyle(textStyle),
                 compatibleWith: UITraitCollection(preferredContentSizeCategory: .large)
             ).pointSize
         #endif
+    }
+
+    /// The size SwiftUI draws the role's font at, at a Dynamic Type size. On iOS a shipped font is scaled as
+    /// `Font.custom(_:size:relativeTo:)` scales it, by its text style's metrics to whole points, and the system font
+    /// takes the text style's own size, which differs at the accessibility sizes (58 and 60 points for largeTitle at
+    /// accessibility5); `TextRoleTests` holds both to what SwiftUI resolves. macOS has no Dynamic Type, so it is the
+    /// Mac's size. watchOS reads it from SwiftUI where it can (watchOS 26), and before that takes the size the system
+    /// gives the text style now, which an app's own `dynamicTypeSize` does not change.
+    func drawnSize(at dynamicTypeSize: DynamicTypeSize) -> CGFloat {
+        #if os(macOS)
+            return platformSize
+        #elseif os(watchOS)
+            if #available(watchOS 26, *) {
+                var environment = EnvironmentValues()
+                environment.dynamicTypeSize = dynamicTypeSize
+                return font(boldText: false).resolve(in: environment.fontResolutionContext).pointSize
+            }
+            return platformSize
+        #else
+            let traits = UITraitCollection(preferredContentSizeCategory: UIContentSizeCategory(dynamicTypeSize))
+            let style = UIFont.TextStyle(textStyle)
+            if shippedFont(boldText: false) != nil, BundledFonts.registered {
+                return UIFontMetrics(forTextStyle: style).scaledValue(for: platformSize, compatibleWith: traits)
+                    .rounded()
+            }
+            return UIFont.preferredFont(forTextStyle: style, compatibleWith: traits).pointSize
+        #endif
+    }
+}
+
+extension Westron.TextRole.Weight {
+    /// The weight a font westron ships takes under Bold Text, the rule the owner set (spec/components/text,
+    /// decisions/0001): Regular to SemiBold, skipping Medium, SemiBold to Bold, Bold to ExtraBold (`heavy`, 800); any
+    /// other weight one step up. The system font has a step of its own and takes it by itself.
+    var boldTextStep: Self {
+        switch self {
+        case .ultraLight: .thin
+        case .thin: .light
+        case .light: .regular
+        case .regular: .semibold
+        case .medium: .semibold
+        case .semibold: .bold
+        case .bold: .heavy
+        case .heavy: .black
+        case .black: .black
+        }
+    }
+
+    /// How a static instance's PostScript name ends at this weight, as the token generator names them:
+    /// `Onest-SemiBold`, `Onest-ExtraBold` (decisions/0011).
+    var postScriptStyle: String {
+        switch self {
+        case .ultraLight: "Thin"
+        case .thin: "ExtraLight"
+        case .light: "Light"
+        case .regular: "Regular"
+        case .medium: "Medium"
+        case .semibold: "SemiBold"
+        case .bold: "Bold"
+        case .heavy: "ExtraBold"
+        case .black: "Black"
+        }
     }
 }
 
@@ -152,7 +301,7 @@ extension Westron.TextRole {
             }
         }
     }
-#elseif !os(watchOS)
+#else
     extension UIFont.TextStyle {
         init(_ style: Westron.TextRole.TextStyle) {
             switch style {
@@ -172,24 +321,21 @@ extension Westron.TextRole {
     }
 #endif
 
-extension View {
-    /// Sets a text role: its font and its tracking, which a font cannot carry. Headings are tracked
-    /// (decisions/0013), so they take this rather than `.font(_:)` alone:
-    ///
-    ///     Text("Inbox").textRole(.heading.medium)
-    public func textRole(_ role: Westron.TextRole) -> some View {
-        font(Font(role)).tracking(CGFloat(role.letterSpacing))
-    }
-}
-
-/// The fonts westron ships, in WestronUI's `Fonts` folder with their licenses. They are registered for the process
-/// the first time a text role needs one, so a product has nothing to set up.
+/// The fonts westron ships, in WestronUI's `Fonts` folder with their licenses: six static instances, the weights the
+/// roles use and the ones they take under Bold Text (decisions/0011). They are registered for the process the first
+/// time a text role needs one, so a product has nothing to set up. watchOS never registers them: it draws every role
+/// in the system font.
 enum BundledFonts {
+    /// The font files in WestronUI's bundle.
+    static var urls: [URL] {
+        Bundle.module.urls(forResourcesWithExtension: "ttf", subdirectory: "Fonts") ?? []
+    }
+
     /// Whether the fonts are registered. A failure leaves the roles on the system font, which every one of them
     /// names as its fallback.
     static let registered: Bool = {
-        guard let urls = Bundle.module.urls(forResourcesWithExtension: "ttf", subdirectory: "Fonts"), !urls.isEmpty
-        else { return false }
+        let urls = Self.urls
+        guard !urls.isEmpty else { return false }
         var failed = false
         for url in urls {
             var error: Unmanaged<CFError>?
@@ -320,7 +466,7 @@ extension Image {
     ///
     ///     Image(Westron.Icon(rawValue: list.icon) ?? .fallback)
     ///         .textRole(.body.regular)
-    ///         .foregroundStyle(Westron.Category.amber.text)
+    ///         .foregroundStyle(Westron.Category.amber.icon)
     public init(_ icon: Westron.Icon) {
         self.init(systemName: icon.systemName)
     }

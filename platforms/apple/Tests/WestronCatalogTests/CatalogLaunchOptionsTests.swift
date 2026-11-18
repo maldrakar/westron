@@ -17,6 +17,7 @@ struct CatalogLaunchOptionsTests {
             "-WestronAppearance", "dark",
             "-WestronContrast", "high",
             "-WestronDynamicType", "accessibility2",
+            "-WestronLegibilityWeight", "bold",
         ])
         #expect(
             options
@@ -24,7 +25,8 @@ struct CatalogLaunchOptionsTests {
                     entryID: "environment",
                     appearance: .dark,
                     contrast: .high,
-                    dynamicTypeSize: .accessibility2
+                    dynamicTypeSize: .accessibility2,
+                    legibilityWeight: .bold
                 )
         )
     }
@@ -93,6 +95,20 @@ struct CatalogLaunchOptionsTests {
         }
     }
 
+    @Test("The legibility weight maps to SwiftUI's, bold being the system's Bold Text")
+    func legibilityWeight() throws {
+        #expect(
+            try CatalogLaunchOptions(arguments: ["-WestronLegibilityWeight", "regular"]).legibilityWeight == .regular)
+        #expect(CatalogLaunchOptions.LegibilityWeight.bold.legibilityWeight == .bold)
+        #expect(try CatalogLaunchOptions(arguments: []).legibilityWeight == nil)
+        #expect(
+            throws: CatalogLaunchOptions.ParseError.invalidValue(
+                flag: "-WestronLegibilityWeight", value: "heavy", allowed: ["regular", "bold"])
+        ) {
+            try CatalogLaunchOptions(arguments: ["-WestronLegibilityWeight", "heavy"])
+        }
+    }
+
     @Test("Font size names cover every DynamicTypeSize")
     func dynamicTypeNames() {
         let named = CatalogLaunchOptions.dynamicTypeSizes.map(\.size)
@@ -114,7 +130,7 @@ struct CatalogRegistryTests {
         #expect(
             Catalog.entries(in: .foundations).map(\.id) == [
                 "color-backgrounds", "color-foregrounds", "color-categories", "color-status", "color-in-use",
-                "typography", "space", "shape", "controls", "motion", "icons",
+                "typography", "typography-in-text", "space", "shape", "controls", "motion", "icons",
             ])
     }
 

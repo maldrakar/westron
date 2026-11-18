@@ -9,7 +9,7 @@ import WestronUI
 
 extension ComponentMatrix {
     /// Checkbox's matrix: 1 variant × 5 states (rest and each state alone) = 5 combinations, none forbidden by a
-    /// constraint, on 1 sheets.
+    /// constraint, on 1 sheet.
     static let checkbox = ComponentMatrix(
         component: "checkbox",
         options: [Option("variant", values: ["check"])],

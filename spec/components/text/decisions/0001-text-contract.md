@@ -214,3 +214,34 @@ share `subheadline.regular`. The pilot uses neither code role.
 - The parity lint expects `.textRole(_:)` from the contract, no longer as a reviewed adapter; `Font.init(_:)` stays
   one, since it turns a token into a font and adds no modifier. The `Text` twin is checked once it is declared, and
   required once it is in WestronUI (`APIParity.pendingTwins`).
+
+## P2 at implementation (2026-11-18)
+
+Added after approval, under the owner's delegation; it waits for the owner's confirmation. The coordinator chose to
+ship `Text.textRole(_:) -> Text` marked `@_disfavoredOverload` and to record its limits in `platforms.apple`.
+
+- **What a call resolves to.** Checked by compiling a client against a separate library module, as a product uses
+  WestronUI, with Xcode 27.1 for macOS 14, the iOS 17 simulator and watchOS 10 (the same on all three), and in
+  `TextRoleTests`:
+
+  | Call | Resolves to |
+  |---|---|
+  | `Text("a").textRole(.heading.large)` where a view fits, the role written as a member or in a variable | the View modifier |
+  | `Text("\(Text(s).textRole(.heading.large)) b")`, the role written as `.heading.large` | the twin |
+  | `Text("a") + Text("b").textRole(.heading.large)`, or with a role in a variable | the twin |
+  | `let part: Text = Text("a").textRole(role)`, or `Text("a").textRole(role) as Text`, then interpolated | the twin |
+  | `Text("\(Text("a").textRole(role)) b")` with a role in a variable, or written in full (`Westron.TextRole.heading.large`) | the View modifier, through SwiftUI's deprecated catch-all `appendInterpolation`: a debug description, and the compiler warns |
+  | `let part = Text("a").textRole(role)` untyped, then interpolated | the View modifier, as above |
+
+- **Without the attribute** the twin wins on every `Text`, so `Text("Inbox").textRole(.heading.medium)` would lose
+  the tracking of the drawn size and the heavier instance under Bold Text. Two overloads on `Text` that differ only
+  by what they return are ambiguous.
+- **What the twin follows.** A `Text` cannot read the environment: the twin follows Dynamic Type's size, but its
+  tracking is the share of the default text size, and under Bold Text a role in Onest or Geist Mono keeps its own
+  weight; the system font's roles still draw heavier by themselves. Measured in the catalog's `typography-in-text`
+  entry on an iPhone 17 simulator, the view modifier against the twin:
+  - `heading.large` at accessibility5: 204.0 pt against 205.3 pt (tracking −0.58 against −0.34 pt);
+  - `heading.large` under Bold Text: 121.0 pt against 119.7 pt (Onest ExtraBold against Onest Bold);
+  - `code.regular` under Bold Text: Geist Mono SemiBold against Regular.
+- **Alternatives** left for the owner: the twin under a name of its own, so it never competes with the View
+  modifier; or no twin, a part of a `Text` taking `.font(Font(role))`.

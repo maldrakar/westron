@@ -458,7 +458,11 @@ struct APIParityTests {
         let own = try problems(
             [try contract(contractYAML()), banner], files(extra: ["Banner.swift": "public struct Banner {}\n"]))
         #expect(own.count == 1)
-        #expect(own[0].contains("is an own-component, whose API the conventions leave open (Q2)"))
+        // An own component that names no form (which the schema requires) has no API the lint could derive.
+        #expect(
+            own[0].contains(
+                "is an own-component that names no form (modifier or view) in platforms.apple.form, so the "
+                    + "conventions give it no API"))
 
         // In the token area too: a name that marks component API is never a token accessor.
         let absent = try problems(files(tokens: tokensSwift + "\npublic enum BadgeVariant { case info }\n"))

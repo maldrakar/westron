@@ -1,7 +1,8 @@
-# westron's Surface contract (#29), a draft: decisions/0001-surface-contract.md records the owner's answers of
-# 2026-11-18, what the documents already decide, and what the agent proposes on top of them, to confirm.
+# westron's Surface contract (#29), approved on 2026-11-18 under the owner's delegation of that day:
+# decisions/0001-surface-contract.md records the owner's answers, what the documents already decide, and the proposals
+# approved on top of them; P5 and P12 still wait for the owner's confirmation.
 id: surface
-status: draft
+status: approved
 description: >-
   The ground a card or a panel stands on, which westron draws behind content the product lays out: a background, a
   corner and, where it stands off what is under it, a shadow. raised is a card or a panel raised off the canvas, such
@@ -65,6 +66,7 @@ accessibility:
 platforms:
   apple:
     strategy: own-component
+    form: modifier
     description: >-
       A view modifier on the content, .surface(.raised) or .surface(.sunken, outlined: true), rather than a container
       type: it lays nothing out, so the product keeps its own stack and padding. SwiftUI's GroupBox is not the base:
