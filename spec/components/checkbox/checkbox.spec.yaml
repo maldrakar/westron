@@ -14,9 +14,8 @@ description: >-
   non-text pair on canvas, surface and sunken. Checking pops the disc and its mark in with motion.check, the one
   overshoot in westron: they scale up from 80 % to full size, and the spring's bounce carries them past it and back;
   Reduce Motion drops the scale and keeps the fill appearing (design-language/05). Unchecking fades the disc and the
-  mark out in motion.fade, with no pop. A
-  press scales the check down to 98 % in motion.press, as every control's press does (design-language/05, "Shapes
-  belong to components"), and Reduce Motion drops that scale too. The circle has no size option: it is sized by the
+  mark out in motion.fade, with no pop. A press scales the check down to 98 % in motion.press, as every control's
+  press does (design-language/05, "Shapes belong to components"), and Reduce Motion drops that scale too. The circle has no size option: it is sized by the
   text role of the label beside it, as an icon is, and grows with the person's text size (design-language/07, "Size
   relative to text"). Its hit area is at least the platform's recommended target, 44 pt on iOS and watchOS and 28 pt
   on macOS, also where the circle is smaller (design-language/08). Disabled draws the whole check at

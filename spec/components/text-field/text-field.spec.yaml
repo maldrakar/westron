@@ -8,8 +8,8 @@ description: >-
   own, such as the name field in a list's row: an outline in color.border.strong, which meets 3:1 against the
   ground, and no fill of its own, so the ground under it shows. inline is a field set into a text it belongs to, such
   as the title and the notes inside an open task card: no outline and no padding, in the text role of its context.
-  Focus is westron's ring, color.border.focus at stroke.thick, around the field on every platform, in both variants;
-  the system's own focus ring is turned off where it has one. Disabled draws the whole field at opacity.disabled,
+  Focus is westron's ring, color.border.focus at stroke.thick, around the field in both variants, on every Apple OS
+  and on the web; the system's own focus ring is turned off where it has one. Disabled draws the whole field at opacity.disabled,
   with no colors of its own (design-language/08). The placeholder is in color.text.placeholder. There is no error
   state, hint or message in this version: no pilot screen shows one, and a field marked only by a danger border
   would tell an error by color alone (design-language/08, "Color is never the only signal"). The text, and with it a
@@ -102,7 +102,7 @@ platforms:
       description: >-
         westron's focus ring replaces the system's, which is turned off with focusEffectDisabled(), so focus is
         drawn in color.border.focus rather than in the accent color the person chose in System Settings. This is
-        the owner's decision for this component (decisions/0001); design-language/08 ("Keyboard and focus") and 09
+        the owner's decision for this component (its decisions/0001); design-language/08 ("Keyboard and focus") and 09
         ("What stays with the system", macOS) still say the system draws the focus ring on macOS, and are revised
         when the contract is approved.
     watchos:
