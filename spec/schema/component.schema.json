@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "westron component contract",
-  "description": "One neutral contract per component, spec/components/<id>/<id>.spec.yaml, written in YAML (decisions/0004). Every platform implementation is generated from it and checked against it. `tools/westron spec check` validates a contract against this schema, then applies the rules a schema cannot express: the file name matches the id; no unquoted YAML 1.1 boolean word other than true and false; option values are unique and a default is one of them; no value or state is a word Swift cannot use as a case (init, self, none) and no option one it cannot use as an argument label (inout, var, let); no value is the name of a system style of the base control (decisions/0003); the Apple strategy fits its base, a style on a control with a style modifier and an extension on one without; an option of type tokens names a group of tokens/ whose tokens are semantic, exist in every mode and are of one type, its default is one of them, and no constraint, case, binding by value, restriction or systemOptions names it; constraints, token bindings, platform restrictions and accessibility states name only options, values and states that exist; no option is named `state`; a binding by value gives every value of its option a token; every case of a binding is reachable, not covered by earlier cases alone or together, and so is its `token`, which cases that match every combination leave unused; a fallback maps each value a platform drops to a value it keeps, and on Apple every value reaches, through Apple's fallback and then the OS's, a value each OS offers; a platform's systemOptions name options that exist and are not restricted; every bound token exists in tokens/ and is not a primitive. Lists of names are checked for repeats there too, with a message that names the repeat.",
+  "description": "One neutral contract per component, spec/components/<id>/<id>.spec.yaml, written in YAML (decisions/0004). Every platform implementation is generated from it and checked against it. `tools/westron spec check` validates a contract against this schema, then applies the rules a schema cannot express: the file name matches the id; no unquoted YAML 1.1 boolean word other than true and false; option values are unique and a default is one of them; no value or state is a word Swift cannot use as a case (init, self, none) and no option one it cannot use as an argument label (inout, var, let); no value is the name of a system style of the base control, which westron's overload would shadow (decisions/0003); the Apple strategy fits its base, a style on a control with a style modifier and an extension on one without; an option of type tokens names a group of tokens/ whose tokens are semantic, exist in every mode and are of one type, its default is one of them, and no constraint, case, binding by value, restriction or systemOptions names it; no constraint, case, restriction or systemOptions names an option of type icons; constraints, token bindings, platform restrictions and accessibility states name only options, values and states that exist; no option is named `state`; a binding by value gives every value of its option a token; every case of a binding is reachable, not covered by earlier cases alone or together, and so is its `token`, which cases that match every combination leave unused; a fallback maps each value a platform drops to a value it keeps, and on Apple every value reaches, through Apple's fallback and then the OS's, a value each OS offers; a platform's systemOptions name options that exist and are not restricted; every bound token exists in tokens/ and is not a primitive; a component whose accessibility role is none has no intents, keyboard intents or announced states, and no required label. Lists of names are checked for repeats there too, with a message that names the repeat.",
   "type": "object",
   "required": ["id", "status", "consumers", "accessibility", "platforms"],
   "additionalProperties": false,
@@ -29,7 +29,7 @@
       }
     },
     "options": {
-      "description": "What a product chooses, by option name: an enum with its values and, unless every use must name a value, its default; a bool with its default; or tokens, whose values are the tokens under one token group, read from tokens/ rather than listed. The names and values become generated names on every platform (AGENTS.md, rule 4).",
+      "description": "What a product chooses, by option name: an enum with its values and, unless every use must name a value, its default; a bool with its default; tokens, whose values are the tokens under one token group, read from tokens/ rather than listed; or icons, whose values are the names of the icon registry, spec/icons/icons.yaml, read from it rather than listed. The names and values become generated names on every platform (AGENTS.md, rule 4).",
       "type": "object",
       "propertyNames": { "$ref": "#/$defs/name" },
       "additionalProperties": { "$ref": "#/$defs/option" }
@@ -91,7 +91,7 @@
       "type": "object",
       "required": ["type"],
       "properties": {
-        "type": { "enum": ["enum", "bool", "tokens"] }
+        "type": { "enum": ["enum", "bool", "tokens", "icons"] }
       },
       "allOf": [
         {
@@ -105,6 +105,10 @@
         {
           "if": { "properties": { "type": { "const": "tokens" } } },
           "then": { "$ref": "#/$defs/tokenOption" }
+        },
+        {
+          "if": { "properties": { "type": { "const": "icons" } } },
+          "then": { "$ref": "#/$defs/iconOption" }
         }
       ]
     },
@@ -150,6 +154,16 @@
           "description": "A token's path after the group: `body.regular`.",
           "$ref": "#/$defs/tokenGroupPath"
         },
+        "description": { "$ref": "#/$defs/text" }
+      }
+    },
+    "iconOption": {
+      "description": "One icon of westron's icon registry, spec/icons/icons.yaml: the values are the registry's names, in its order, such as `tray` or `chevron`. The contract does not list them, so the option and the registry cannot drift; `tools/westron icons check` validates the registry. It has no default: every use names its glyph (the registry's own `default` is what draws for a name a version does not know, not what a use without a name draws). Constraints, cases and platform restrictions do not name such an option yet, and it is never a system option.",
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "icons" },
         "description": { "$ref": "#/$defs/text" }
       }
     },
@@ -232,7 +246,7 @@
       "additionalProperties": false,
       "properties": {
         "role": {
-          "description": "The abstract role, such as `button`, `checkbox`, `slider`.",
+          "description": "The abstract role, such as `button`, `checkbox`, `slider`; `none` when the component adds no role of its own (ARIA's `none`): assistive technology reads its content, if it has any, as if the component were not there, and it takes no intents, keyboard intents or announced states, and no required label.",
           "$ref": "#/$defs/name"
         },
         "intents": {

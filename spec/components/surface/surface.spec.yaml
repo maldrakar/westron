@@ -1,0 +1,88 @@
+# westron's Surface contract (#29), a draft: decisions/0001-surface-contract.md records the owner's answers of
+# 2026-11-18, what the documents already decide, and what the agent proposes on top of them, to confirm.
+id: surface
+status: draft
+description: >-
+  The ground a card or a panel stands on, which westron draws behind content the product lays out: a background, a
+  corner and, where it stands off what is under it, a shadow. raised is a card or a panel raised off the canvas, such
+  as an open task card; dragged is what a drag carries, such as a card lifted off its column; sunken is a well below
+  the content, such as a board column. A surface has no padding of its own: the product pads its content with a
+  token, space.card for a card. It draws its role's radius, radius.card, with continuous corners on Apple and
+  circular ones elsewhere. A shape nested inside it keeps its own role's radius, except one that sits within the
+  surface's corner, closer to its edge than the surface's radius, which takes max(outer − inset, 4) so the two
+  corners share a center; the product applies that rule where it nests such a shape, and the contract computes no
+  pair (design-language/04, "Nested corners share a center"). In the standard themes a raised or dragged surface is
+  set off from the canvas by its tone and, in light, by its shadow; dark draws no raised shadow, since the surface is
+  lighter than the canvas, and keeps the dragged one. outlined adds a hairline, color.border.default at
+  stroke.hairline, for a surface on a fill, where tone does not set it off (design-language/04, "Lines"). In the
+  high-contrast themes every raised or dragged surface draws a line in color.border.default at stroke.thin, whether
+  or not outlined is set, because a shadow alone does not mark an edge (decisions/0013); an outlined surface then
+  draws that line instead of its hairline. The bindings below cannot say this, since a case has no contrast key, so
+  this description is the contract for it. westron's shadow never goes on what the system draws itself, a sheet, a
+  popover, a menu or glass, and a surface never takes glass (design-language/04, "Shadows"; 09, "Liquid Glass"). It
+  has no states.
+consumers: [todo-app/lists-screen, todo-app/list-screen]
+
+options:
+  variant:
+    type: enum
+    values: [raised, dragged, sunken]
+    description: >-
+      No default: every use names its kind. The kinds differ by height: sunken lies below the canvas, raised barely
+      lifts, dragged is unmistakable (design-language/04, "Shadows").
+  outlined:
+    type: bool
+    default: false
+    description: >-
+      The hairline for a surface that sits on a fill rather than on the canvas. In the high-contrast themes a raised
+      or dragged surface draws the thicker high-contrast line in any case, an outlined one included.
+
+slots: [content]
+
+tokens:
+  container.background:
+    cases:
+      - { when: { variant: [raised, dragged] }, token: color.background.surface }
+      - { when: { variant: sunken }, token: color.background.sunken }
+  container.radius: radius.card
+  container.shadow:
+    cases:
+      - { when: { variant: raised }, token: shadow.raised }
+      - { when: { variant: dragged }, token: shadow.dragged }
+  container.borderColor:
+    cases:
+      - { when: { outlined: true }, token: color.border.default }
+  container.borderWidth:
+    cases:
+      - { when: { outlined: true }, token: stroke.hairline }
+
+accessibility:
+  role: none
+  description: >-
+    A surface adds no role, trait or label of its own: assistive technology reads its content as if the surface were
+    not there. Where a card is one thing to a screen reader, the product groups it, as it would without a surface.
+
+platforms:
+  apple:
+    strategy: own-component
+    description: >-
+      A view modifier on the content, .surface(.raised) or .surface(.sunken, outlined: true), rather than a container
+      type: it lays nothing out, so the product keeps its own stack and padding. SwiftUI's GroupBox is not the base:
+      it is not available on watchOS, so a style on it could not hold on every Apple OS, and it brings a padding and
+      a label of its own. The background is clipped to a continuous rounded rectangle of radius.card, the shadow is
+      View.shadow(_:), which picks the layers of the environment's theme, and the high-contrast line follows
+      colorSchemeContrast. On watchOS a surface is drawn as on the other OSes, always in the dark themes.
+  web:
+    status: planned
+    description: >-
+      Provisional until phase 6 (#40): a class on the element the product chooses, with background, border-radius,
+      box-shadow and, under prefers-contrast: more, a border. Forced colors remove the shadow, and the border then
+      marks the edge. Corners are circular.
+  linux:
+    status: planned
+    description: >-
+      Provisional until phase 7: whether a raised surface takes libadwaita's .card class, with its own shadow, dark
+      variant and high-contrast outline, or westron's tokens is design-language/04's open question 4, decided there.
+      Corners are circular.
+  android:
+    status: planned

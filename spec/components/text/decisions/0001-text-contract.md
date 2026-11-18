@@ -75,15 +75,16 @@ so that the roles are not listed twice (below, "The schema").
 - **`code.strong` under Bold Text draws Geist Mono Bold,** the owner's answer at approval.
   - Considered: (a) Geist Mono Bold, one step up, as Onest SemiBold goes to Bold, at the cost of a second new font
     file, `GeistMono-Bold.ttf`, about 100 KB; (b) Geist Mono SemiBold, as without the setting, with no second file.
-  - **Chosen: (a).** The two code roles stay one weight apart under Bold Text, `code.regular` in SemiBold and
-    `code.strong` in Bold. With (b) they would draw the same weight, since `code.regular` moves up to SemiBold, and
-    emphasis inside code would show only by its color, if the product gave it one.
+  - **Chosen: (a).** The agent's reason, given with the options, for the owner's choice: the two code roles stay one
+    weight apart under Bold Text, `code.regular` in SemiBold and `code.strong` in Bold. With (b) they would draw the
+    same weight, since `code.regular` moves up to SemiBold, and emphasis inside code would show only by its color, if
+    the product gave it one.
 - **The steps are a rule of the Apple adapter, not tokens,** the owner's answer at approval: a role in Onest or Geist
   Mono moves one weight up under Bold Text, as the table lists, as the system font does by itself.
   - Considered: the rule in the adapter; a primitive `font.weight.extrabold` and a Bold Text weight token per role.
-  - **Chosen: the rule.** `font.weight` keeps its four weights (regular, medium, semibold, bold), so Onest ExtraBold
-    has no token, and no role gets a second weight. Bold Text is an Apple setting; the web has no counterpart
-    (`platforms.web`).
+  - **Chosen: the rule.** The agent's reasons, given with the options, for the owner's choice: `font.weight` keeps
+    its four weights (regular, medium, semibold, bold), so Onest ExtraBold has no token, and no role gets a second
+    weight. Bold Text is an Apple setting; the web has no counterpart (`platforms.web`).
 - **Today the package ships four instances:** Onest SemiBold and Bold, Geist Mono Regular and SemiBold
   (`platforms/apple/Sources/WestronUI/Fonts`, about 100 KB each). The implementation adds Onest ExtraBold (800) and
   Geist Mono Bold (700), cut as the others are, from the variable font with fontTools (decisions/0011). Both weights
@@ -149,7 +150,8 @@ confirmed P1–P6 as proposed on 2026-11-18, when approving the contract.
   cannot see the Dynamic Type size or the Bold Text setting by itself: `Font.custom(_:size:relativeTo:)` still scales
   the font, but the tracking in points and the heavier instance are chosen when the `Text` is built. The
   implementation must show, in the catalog at accessibility5 and with Bold Text on, whether the `Text` twin follows
-  both. If it does not, the contract records the difference in `platforms.apple` before approval, or P2 is dropped.
+  both. The contract was approved before it showed it, so if the twin does not follow both, the contract is changed
+  first, as decisions/0005 asks: it records the difference in `platforms.apple`, or P2 is dropped.
 - **Tabular digits** stay open (chapter 03, question 3).
 - **Headings on GNOME** stay open for phase 7 (design-language/09, question 4): whether a heading role keeps or
   replaces libadwaita's title classes.
@@ -195,7 +197,8 @@ share `subheadline.regular`. The pilot uses neither code role.
   - Considered: an enum listing the seventeen names, which could drift from the tokens and cannot spell
     `heading.large`, since a name has no dot; an enum with camelCase names and a binding by value to the tokens, which
     is the flat enum the owner rejected.
-- **Generated at approval** (spec/conventions.md, "Extensions of a system view"). The modifier stays hand-written:
+- **At approval: the API hand-written and held to the contract, the matrix generated** (spec/conventions.md,
+  "Extensions of a system view"). No API is generated. The modifier stays hand-written:
   its name and its argument come from the option's token accessor, `Westron.TextRole` → `.textRole(_:)`, so the
   contract names neither. The API parity lint expects it from the contract, on `View` and as the `Text` twin, and the
   snapshot matrix enumerates the seventeen roles from `tokens/` (`WestronCatalog/Generated/Text+Matrix.swift`).

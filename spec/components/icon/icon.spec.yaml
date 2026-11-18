@@ -1,0 +1,73 @@
+# westron's Icon contract (#28), a draft: decisions/0001-icon-contract.md records the owner's answers of 2026-11-18,
+# what the documents already decide, and what the agent proposes on top of them, to confirm.
+id: icon
+status: draft
+description: >-
+  An icon of westron's registry on the platform's own image view: westron adds no image type of its own, only the
+  names and how a glyph is drawn (design-language/07, decisions/0011). Next to text, an icon takes that text's role
+  for its size and its weight, so it sits on the line like a letter and grows with the person's text size; without
+  text, it takes the role of its control's label; it never has a size of its own. Where it must be smaller or larger
+  than its text, it takes the platform's relative scale, small, medium or large. It has no color option: it draws in
+  the color its context gives it, and that is one of the roles chapter 07 lists, the color of the text it goes with,
+  color.status.<name>.icon for a status glyph, color.category.<name>.icon for a list's glyph,
+  color.icon.tertiary for a chevron or a grip, or the on-fill color of a solid fill it sits on (on-accent, a
+  status's on-fill, a list's on-fill). It is drawn in one color, outlined at rest; a filled glyph marks a state.
+  The component has no states. An icon inside a shape, such as a list's tile, is a component of its own (phase 4).
+consumers: [todo-app/lists-screen, todo-app/list-screen]
+
+options:
+  glyph:
+    type: icons
+    description: >-
+      No default: every use names its glyph. The values are the names of the icon registry, spec/icons/icons.yaml,
+      in its order, so the contract and the registry cannot drift. A name says what the glyph draws, never what it
+      means on a screen, and a released name is never renamed or removed; a name this version does not know draws
+      the registry's default, bullets (design-language/07, "Names").
+  scale:
+    type: enum
+    values: [small, medium, large]
+    default: medium
+    description: >-
+      The platform's relative scale against the text the icon takes its size from: medium is the text's own size.
+      It is never a size in points (design-language/07, "Size relative to text").
+
+slots: [label]
+
+accessibility:
+  role: image
+  label: optional
+  description: >-
+    An icon without a label is decorative and hidden from assistive technology: beside its own words it would only
+    repeat them, and the system's name for a glyph ("tray", "pencil") is not what it means on the screen. A
+    meaningful standalone icon is made with a label, which names what it means there, not what it draws ("Today",
+    not "Sun"); it is then announced as an image with that label. An icon-only control is labeled by the control,
+    not by its icon (Button, iconOnly). An icon is never the only signal of a status: a status glyph comes with a
+    word or a value (design-language/07, 08).
+
+platforms:
+  apple:
+    strategy: extension-on-system-control
+    base: SwiftUI.Image
+    systemOptions: { scale: SwiftUI.Image.Scale }
+    description: >-
+      Image(.tray) draws the glyph's SF Symbol and is hidden from assistive technology; Image(.sun, label: "Today")
+      is announced as an image labeled "Today". Label("Rename", icon: .pen) keeps the system Label, whose icon is
+      decorative beside its title. The glyph is the SF Symbol the registry names: a symbol takes the font of its
+      context (.textRole(_:)), which gives it the size and the weight of the text beside it, and the context's
+      foregroundStyle, which gives it its color; rendering is monochrome. scale is SwiftUI's own Image.Scale, set
+      with .imageScale(_:), so no enum is generated for it. westron's own glyphs become custom symbols built from a
+      variable template, so they get the same weights, scales and alignment, with phase 6 (design-language/07, open
+      question 1). On watchOS the icon is drawn as on the other OSes.
+  web:
+    status: planned
+    description: >-
+      Provisional until phase 6 (#40): westron's own glyph as an inline SVG at 1em, in currentColor, so it takes the
+      size, weight and color of the text around it; scale is a factor of that size. The web has no platform icon set,
+      so westron's set covers standard actions too (decisions/0011).
+  linux:
+    status: planned
+    description: >-
+      Provisional until phase 7: a stock GtkImage with a symbolic icon, which takes the CSS color of its context; the
+      standard icons are Adwaita's, copied into the app, the domain icons westron's (design-language/07).
+  android:
+    status: planned

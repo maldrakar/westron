@@ -11,7 +11,11 @@ Each component is a folder `spec/components/<id>/`:
 A new contract starts with the `/new-component` skill. The first contract is Button,
 [`button/button.spec.yaml`](button/button.spec.yaml), approved by the owner on 2026-11-16 (#22). Text,
 [`text/text.spec.yaml`](text/text.spec.yaml), approved by the owner on 2026-11-18 (#27), is the first contract with an
-option whose values are tokens and with an extension of a system view.
+option whose values are tokens and with an extension of a system view. The drafts of phase 3 are Icon
+([`icon/`](icon/icon.spec.yaml), #28), the first with an option whose values are the icon registry's names; Surface
+and Rule ([`surface/`](surface/surface.spec.yaml), [`rule/`](rule/rule.spec.yaml), #29), the first own components and
+the first with no role of their own; TextField ([`text-field/`](text-field/text-field.spec.yaml), #30); and Checkbox
+([`checkbox/`](checkbox/checkbox.spec.yaml), #31), the first whose control has a value that is on or off.
 
 ## Format
 
@@ -100,6 +104,20 @@ no option is `inout`, `var` or `let` (an option becomes an argument label). Othe
   cases, bindings by value and platform restrictions do not name such an option yet: its values have dots, which a
   name cannot (Text, the first such contract, needs none of them). Nor is it a system option: its values are
   westron's tokens, not a system type's.
+- **Options whose values are icons.** `glyph: { type: icons }` takes as its values the names of the icon registry,
+  [`spec/icons/icons.yaml`](../icons/icons.yaml), in its order: `tray`, `sun`, `chevron`. The contract does not list
+  them, so it cannot drift from the registry, which `tools/westron icons check` validates. It has no default: every
+  use names its glyph (the registry's own `default` is what draws for a name a version does not know). As with tokens,
+  constraints, cases, bindings by value and platform restrictions do not name such an option yet, and it is never a
+  system option. Icon, the first such contract, needs none of them.
+- **No role of its own.** `accessibility.role: none` is a component that adds no role for assistive technology, as
+  ARIA's `none`: its content, if it has any, is read as if the component were not there (Surface), and a component
+  with no content is hidden (Rule). Such a component has nothing to act on or announce, so it takes no `intents`,
+  `keyboardIntents` (its own or a platform's), `states` under `accessibility` and no `label: required`.
+- **A value that is on or off.** A control whose value is on or off, the system `Toggle` that Checkbox styles, is in
+  the state `checked` when it is on and in none of it when it is off; `accessibility.states` announces it
+  (`checked: checked`). The control carries it itself, as it carries `pressed` (`SystemStyles`), so no westron
+  modifier sets it.
 - **Extensions of a system view.** `strategy: extension-on-system-control` is for a system control or view, named in
   `base`, that takes no style: SwiftUI has no `textStyle`, so westron adds a modifier to `SwiftUI.Text` instead of a
   style (decisions/0003, point 1). On Apple its base is one of `SystemStyles.withoutStyle`, and a base that has a
@@ -123,6 +141,9 @@ argument is the token accessor the token generator already writes, and the API p
 the contract (Text: `.textRole(_: Westron.TextRole)` on `View`, and its twin on `Text`, which returns a `Text`). The
 generator checks its shape: one option, whose values are the tokens of a group with an accessor on Apple
 (`AppleComponents.tokenAccessors`: `typography` → `Westron.TextRole`), and no states; it fails on any other. An
+approved style or extension with an option whose values are icons fails generation, the snapshot matrix and the API
+parity lint as not supported yet: the conventions do not derive the API that takes a `Westron.Icon` yet. An approved
+own component with such an option generates nothing and passes, as every own component does. An
 approved `style-on-system-control` with an option whose values are tokens still fails, as not supported yet; an
 approved own component with such an option generates nothing, as every own component does.
 
@@ -153,14 +174,17 @@ Besides the schema, the check enforces what a schema cannot:
   generated API (above);
 - no option value is the name of a system style of the Apple base control, such as `plain` for `SwiftUI.Button`
   (decisions/0003); a base the check has no style modifier and style names for is an error until they are added to
-  `tools/Sources/WestronTools/Contracts/SystemStyles.swift`; a control with no style modifier (`SwiftUI.Slider`,
-  `SwiftUI.Stepper`) takes no style, and `SwiftUI.SecureField` takes `textFieldStyle`, as `SwiftUI.TextField` does;
+  `tools/Sources/WestronTools/Contracts/SystemStyles.swift`, which knows `SwiftUI.Button`, `SwiftUI.TextField` and
+  `SwiftUI.Toggle`, and on macOS a test holds each list to the static styles SwiftUI's interface declares; a control
+  with no style modifier (`SwiftUI.Slider`, `SwiftUI.Stepper`) takes no style, and `SwiftUI.SecureField` takes
+  `textFieldStyle`, as `SwiftUI.TextField` does;
 - the Apple strategy fits its base: an `extension-on-system-control` extends a base of `SystemStyles.withoutStyle`,
-  such as `SwiftUI.Text`, not one that takes a style, such as `SwiftUI.Button`, and a style never goes on a base of
+  `SwiftUI.Text` or `SwiftUI.Image`, not one that takes a style, such as `SwiftUI.Button`, and a style never goes on a base of
   `withoutStyle`; a base in neither list is an error until it is added there;
 - an option whose values are tokens names a group of `tokens/`, not a token and not a path with nothing under it; the
   group's tokens are semantic, exist in every mode and are of one type; its default is one of them, by its path after
   the group; no constraint, case, binding by value, platform restriction or `systemOptions` names it;
+- no constraint, case, platform restriction or `systemOptions` names an option whose values are icons;
 - constraints and cases name options, values and states that exist, a bool option with `true` or `false`;
 - a binding by value uses the values of one enum option, every one of them; every case is reachable, and so is a
   binding's `token`, which the cases leave no room for when they match every combination. The check enumerates the
@@ -171,6 +195,8 @@ Besides the schema, the check enforces what a schema cannot:
   maps dropped values to kept ones; on Apple every value reaches, through Apple's fallback and then the OS's, a value
   each OS offers; `systemOptions` name options that exist, and are not restricted;
 - `accessibility.states` names states that exist; a platform's keyboard intents do not repeat the component's, an
-  Apple OS's do not repeat Apple's.
+  Apple OS's do not repeat Apple's;
+- a component whose role is `none` has no intents, keyboard intents (its own or a platform's) or announced states, and
+  its label is not `required`.
 
 It prints every problem as `file: place.in.document: message` and exits with 1; `tools/check.sh` runs it, in CI too.
