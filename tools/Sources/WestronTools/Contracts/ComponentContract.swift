@@ -53,6 +53,9 @@ public struct ComponentContract: Equatable, Sendable {
         public let strategy: String
         /// The system control or view, such as `SwiftUI.Button`; nil for an own component.
         public let base: String?
+        /// The shape of an own component's API, `modifier` or `view` (spec/conventions.md, "Own components"); nil for
+        /// a style or an extension.
+        public let form: String?
         /// By option name, the system API that carries the option on Apple, such as `role: SwiftUI.ButtonRole`: no
         /// type is generated for it.
         public let systemOptions: [String: String]
@@ -62,11 +65,12 @@ public struct ComponentContract: Equatable, Sendable {
         public let targets: [String: Restriction]
 
         public init(
-            strategy: String, base: String?, systemOptions: [String: String] = [:],
+            strategy: String, base: String?, form: String? = nil, systemOptions: [String: String] = [:],
             restriction: Restriction = Restriction(), targets: [String: Restriction] = [:]
         ) {
             self.strategy = strategy
             self.base = base
+            self.form = form
             self.systemOptions = systemOptions
             self.restriction = restriction
             self.targets = targets
@@ -108,6 +112,8 @@ public struct ComponentContract: Equatable, Sendable {
     public let options: [Option]
     /// In the contract's order.
     public let states: [String]
+    /// In the contract's order.
+    public let slots: [String]
     /// nil when Apple is planned.
     public let apple: Apple?
     /// In the contract's order.
@@ -119,12 +125,13 @@ public struct ComponentContract: Equatable, Sendable {
 
     public init(
         id: String, status: String, options: [Option], states: [String], apple: Apple?,
-        constraints: [Constraint] = [], boundStates: [String]? = nil
+        constraints: [Constraint] = [], boundStates: [String]? = nil, slots: [String] = []
     ) {
         self.id = id
         self.status = status
         self.options = options
         self.states = states
+        self.slots = slots
         self.apple = apple
         self.constraints = constraints
         self.boundStates = boundStates ?? states
@@ -194,7 +201,8 @@ public struct ComponentContract: Equatable, Sendable {
                 }
             }
             apple = Apple(
-                strategy: strategy, base: entry["base"]?.string, systemOptions: systemOptions,
+                strategy: strategy, base: entry["base"]?.string, form: entry["form"]?.string,
+                systemOptions: systemOptions,
                 restriction: try Self.restriction(entry, at: applePath, source: source), targets: targets)
         } else {
             apple = nil
@@ -221,7 +229,8 @@ public struct ComponentContract: Equatable, Sendable {
         }
         self.init(
             id: id, status: status, options: options, states: states, apple: apple, constraints: constraints,
-            boundStates: states.filter(named.contains))
+            boundStates: states.filter(named.contains),
+            slots: document["slots"]?.elements?.compactMap(\.string) ?? [])
     }
 
     /// A constraint's `when` or `require`: by option name, a value, a list of values, or `true` or `false`.

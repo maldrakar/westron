@@ -1,8 +1,8 @@
-# westron's Rule contract (#29, which calls it a divider), a draft: decisions/0001-rule-contract.md records the
-# owner's answers of 2026-11-18, what the documents already decide, and what the agent proposes on top of them, to
-# confirm.
+# westron's Rule contract (#29, which calls it a divider), approved on 2026-11-18 under the owner's delegation of that
+# day: decisions/0001-rule-contract.md records the owner's answers, what the documents already decide, and the
+# proposals approved on top of them; P2 still waits for the owner's confirmation.
 id: rule
-status: draft
+status: approved
 description: >-
   A straight line that separates two groups: westron's own line, color.border.default at stroke.thin, the same on
   every platform, rather than the system's separator, whose thickness and color the system fixes. A horizontal rule
@@ -35,6 +35,7 @@ accessibility:
 platforms:
   apple:
     strategy: own-component
+    form: view
     description: >-
       A view named Rule, Rule() and Rule(axis: .vertical): a type named Divider would collide with SwiftUI.Divider in
       every file that imports SwiftUI (decisions/0003, point 3). It is a filled rectangle of stroke.thin across its

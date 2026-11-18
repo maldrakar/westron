@@ -116,9 +116,13 @@ rest and each state alone, the combinations a constraint of severity `error` lea
 differently (`platforms.apple`), and the sheets. A sheet fixes every option but the variant (or, without one, the first
 option that is not a bool): its values are the columns, rest and the states the rows, at most 3 × 6, so it fits an
 iPhone 17 in portrait and the macOS window. Text, with no states, has six sheets of one row: five of three roles each, and the last of two.
+Surface has two sheets of one row, the three kinds with `outlined` false and true; Rule one, both axes.
 The hand-written `<Component>MatrixCell` (Button's is in `Components/ButtonPages.swift`, Text's in
 `Components/TextPages.swift`) draws one cell with the real component: Button's with hover, focus and pressed forced
-as on the `button-states` pages, disabled and loading with the real modifiers; Text's with `.textRole(_:)`. The rows of a state the OS never enters are left
+as on the `button-states` pages, disabled and loading with the real modifiers; Text's with `.textRole(_:)`; Surface's
+(`Components/SurfacePages.swift`) with `.surface(_:outlined:)` around sample content, a plain surface on the canvas
+and an outlined one on a fill (a raised or dragged one in a sunken well, a sunken one in a raised card); Rule's
+(`Components/RulePages.swift`) between two lines or two words. The rows of a state the OS never enters are left
 out, as on those pages; a value the OS does not offer is drawn with its fallback and marked, and a combination a
 `warning` constraint advises against is drawn with a caption. A state no token binding names in a case looks as rest,
 and the sheet and the review page say so: Button's focus, whose ring the system draws. The sheets are not catalog
@@ -143,7 +147,9 @@ still drives every generated sheet and combination:
   listed again by hand. Each sheet and its section of the review page are marked "Not a contract option". Button has
   one, `label-without-icon`: its generated cells have an icon and a label or are icon-only, so a label without an
   icon, which while loading has the indicator before the label and widens the button (P13), is shown on the sheets
-  with iconOnly false: every variant, size and role, at rest and in each state, 108 combinations on 6 sheets. Like the
+  with iconOnly false: every variant, size and role, at rest and in each state, 108 combinations on 6 sheets. Surface
+  has one, `nesting`, on the sheet with outlined true: for raised and dragged, two outlined cards of the kind in a
+  sunken column; for sunken, an outlined well in a raised card. Like the
   matrix, supplements are not catalog entries, so the accessibility audit does not walk them.
 
 ```sh
