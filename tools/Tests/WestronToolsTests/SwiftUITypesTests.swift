@@ -104,6 +104,14 @@ struct SwiftUITypesTests {
                     },
                     "\(base): SwiftUI declares no \(entry.modifier)")
             }
+            // A base without a style has no `<control>Style` modifier: SwiftUI.Text has no `textStyle`.
+            for base in SystemStyles.withoutStyle {
+                let control = base.split(separator: ".").last.map(String.init) ?? base
+                let modifier = control.prefix(1).lowercased() + control.dropFirst() + "Style"
+                #expect(
+                    !interfaces.contains { $0.contains("func \(modifier)<") || $0.contains("func \(modifier)(") },
+                    "\(base): SwiftUI declares \(modifier), so it takes a style: move it to SystemStyles.byBase")
+            }
         }
     #endif
 }
