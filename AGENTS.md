@@ -5,10 +5,11 @@ contracts, design language) and a native library on each platform. Its look is i
 The pilot platform is Apple (SwiftUI), the pilot product is [todo-app](https://github.com/maldrakar/todo-app)
 (decisions/0006): its screens decide which components come first, and it is the first to adopt westron's look.
 
-Phase 1 "Design language and tokens" is in progress; phases are GitHub milestones, tasks are issues. Order matters
-more than speed: tokens first (phase 1), then the contract schema and the end-to-end Button slice (phase 2). Until
-API generation and the parity lint work on Button, no second component starts: otherwise drift would appear before
-the mechanism that catches it (`reports/`, section "Work plan").
+Phases 1 and 2 are done, phase 3 "Primitives and forms (Apple)" is next; phases are GitHub milestones, tasks are
+issues. Order matters more than speed: tokens (phase 1), then the contract schema, API generation, the parity lint,
+the snapshot matrix and the end-to-end Button slice on Apple (phase 2). A second component waits until API generation
+and the parity lint work on Button, or drift would appear before the mechanism that catches it; that condition is now
+met (`reports/`, section "Work plan").
 
 ## Where things are
 

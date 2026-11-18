@@ -141,7 +141,7 @@ A state shown in color also shows a shape, a glyph or a word ([1.4.1](https://ww
 | Contrast check (#15) | Every declared pair in `dev.westron.contrast`, by kind (`text`, `large-text`, `non-text`, `separator`, `chart`), in all four themes | `tools/westron tokens contrast` in CI, on every token change |
 | Raw-values lint | Colors, sizes and motion that bypass the tokens, and so the themes | Hook and CI |
 | Accessibility audit (#25) | `performAccessibilityAudit` on catalog entries: contrast, labels, hit regions, clipped text, Dynamic Type, traits | UI tests, from phase 2 |
-| Snapshot matrix (#24) | Themes and text sizes side by side, for the owner's review | Second approval gate |
+| Snapshot matrix (#24) | Every option value at rest and in each state, in the four themes side by side at the `large` text size, for the owner's review. Other text sizes: the accessibility audit's Dynamic Type test (`testAccessibilityDynamicType`) and `tools/apple/catalog-screenshot.sh --dynamic-type` | Second approval gate |
 | `a11y-auditor` subagent | Roles, labels, Dynamic Type, Reduce Motion, Reduce Transparency, keyboard, by reading code and screenshots | After each implementation, before the owner sees it |
 
 The subagent is defined in [`.claude/agents/a11y-auditor.md`](../.claude/agents/a11y-auditor.md). GNOME has no ready

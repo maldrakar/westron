@@ -102,7 +102,9 @@ modifiers. The rows of a state the OS never enters are left out, as on those pag
 drawn with its fallback and marked, and a combination a `warning` constraint advises against is drawn with a caption.
 A state no token binding names in a case looks as rest, and the sheet and the review page say so: Button's focus,
 whose ring the system draws. The sheets are not catalog entries, so the accessibility audit does not walk them;
-`-WestronMatrixSheet <component>.<sheet>` shows one.
+`-WestronMatrixSheet <component>.<sheet>` shows one. The matrix shows only what a contract option sets, and a label
+without an icon is not one: Button's cells have an icon and a label, or are icon-only. So loading without an icon, the
+indicator before the label and the button wider, is on the `button-states` catalog pages and in `ButtonLabelKindTests`.
 
 ```sh
 tools/apple/snapshot-matrix.sh ios                       # or macos; --component button for one component
