@@ -27,7 +27,9 @@ decisions/0003 rejected.
   a provisional cell is a direction, not a rule.
 - **Two cases on every platform** (decisions/0003, chapter 09): when the platform has a system control, westron
   gives it a style and extensions; when it has none, westron builds its own component, named as in the contract with
-  no prefix. A cell covers both cases where they differ.
+  no prefix. A cell covers both cases where they differ. A system view that takes no style, such as SwiftUI's
+  `Text`, gets extensions only: the contract's strategy is then `extension-on-system-control` (the rows "Extension of
+  a system view" and "Option whose values are tokens", and the section on it below).
 - **"Q*n*"** points to an open question at the end. The cell then shows the options, not a decision.
 - The examples use Button. Its real values are in its contract,
   [`spec/components/button/button.spec.yaml`](components/button/button.spec.yaml).
@@ -38,11 +40,13 @@ decisions/0003 rejected.
 |---|---|---|---|---|
 | **Component id and naming** | System control: no westron type. The contract binds to the system control (`Button`), and westron adds an overload of its style modifier. Own component: a `View` named after the id in UpperCamelCase (`empty-state` → `EmptyState`), no prefix. Generated types are `<Component><Option>`: `ButtonVariant`, `ButtonSize`. A name that would collide with a SwiftUI type is recorded in the `platforms` block (decisions/0003, point 3) | System control: the native element (`<button>`) with westron's CSS. Own component: a custom element, whose name must contain a hyphen, so it differs from the contract's and the `platforms` block records it; the namespace is decided in #40 | System control: the stock widget (`gtk::Button`) with westron's style classes and an extension trait. Own component: a GObject subclass, `Badge` in westron's crate; its GType name carries the library's namespace, as every GTK library's does, and the `platforms` block records it | System control: the Material3 composable inside `WestronTheme`. Own component: a `@Composable` function named after the id in UpperCamelCase. Where Material3 has a composable of the same name (`Badge`), the strategy differs from Apple's and the `platforms` block records it |
 | **Enum option: the variant** | A generated `public enum ButtonVariant: String, CaseIterable, Sendable`; cases are the contract's values in lowerCamelCase. It is the first, unlabeled argument of the style overload and has no default, so it is always written: `.buttonStyle(.primary, size: .m)`, `.buttonStyle(.secondary)`; the contract gives the variant no default. A value must not match a system style's static name (`plain`, `bordered`, …); the validator checks it (#18). Another enum option is a labeled argument named after it. Own component: Q2 | A `variant` attribute and property on a custom element; on a native element a class or data attribute (#40) | A Rust `enum ButtonVariant { Primary, … }` that adds a CSS class: the stock class where one exists (`.suggested-action`, `.destructive-action`), westron's own otherwise. The value-to-class map is in the `platforms` block | A generated `enum class ButtonVariant { Primary, … }` passed as a parameter; the variant picks westron's colors and shape for the Material3 composable, through `ButtonDefaults`-style factories or the Compose Style API, decided in phase 8 |
+| **Option whose values are tokens** (`type: tokens`, `group: typography`) | The accessor of the token group, which the token generator already writes (decisions/0010): `Westron.TextRole` for `typography`, its values the group's tokens, `.heading.large`. No `<Component><Option>` enum is generated, since the values are the tokens', and its names follow them. What generation, the parity lint and the snapshot matrix do with such an option is Q6 | A class per value on the element, named from the token path; the prefix is decided in #40 | A style class per value, named from the token path | The theme's value for the token, through `WestronTheme` |
 | **Size option** | A generated `public enum ButtonSize` with the contract's values `s`, `m`, `l`, never `small/regular/large`. A labeled `size:` argument of the style overload. When the call leaves it out, the size comes from `@Environment(\.controlSize)`: `mini` and `small` → `s`, `regular` → `m`, `large` and `extraLarge` → `l`; an explicit `size:` wins. What `size:` does to `controlSize` inside the label is Q5 | A `size` attribute (`size="m"`) or a class, sizes in westron's CSS | A Rust `enum ButtonSize { S, M, L }` that adds westron's own size class: libadwaita has no size classes | `enum class ButtonSize { S, M, L }` as a parameter |
 | **Bool option** | A labeled `Bool` argument of the style overload, named as in the contract, with the contract's default: `.buttonStyle(.primary, size: .m, iconOnly: true)`. Not an environment modifier, which would make the option look like a state, and not a system modifier the style cannot read (`.labelStyle(.iconOnly)`, see "Slots"). A bool that is a state follows the state rows | A boolean attribute, present or absent; an absent attribute is `false` (Q1) | A boolean GObject property, or a style class | A `Boolean` parameter with the contract's default |
 | **States the system control has** (pressed, hover, focus, disabled) | The system owns them, and the style reads them: pressed is `configuration.isPressed`, disabled is `@Environment(\.isEnabled)` set by `.disabled(_:)`, focus is `@Environment(\.isFocused)`, hover is `onHover`. Touch iOS and watchOS never enter hover, and `onHover` does not exist on watchOS. The system draws the focus ring (chapter 08). Where states hold at once, the first matching case of a binding wins, as the contract orders them | CSS pseudo-classes: `:active`, `:hover`, `:focus-visible`, `:disabled`; a native element still matches `:hover` while disabled, and `:hover` and `:active` while `aria-busy`, so westron's CSS excludes what the contract excludes | CSS pseudo-classes `:active`, `:hover`, `:focus-visible`, `:disabled`; disabled is `set_sensitive(false)` | `interactionSource` (`collectIsPressedAsState`, `collectIsHoveredAsState`, `collectIsFocusedAsState`); disabled is the `enabled = false` parameter, Compose's positive name |
 | **States the system control lacks** (loading) | A modifier sets an environment value, and the style reads it (decisions/0003): `.loading(isSaving)`. One shared modifier per state, named as the state, for every component that has it: `.loading(_:)`, not `.buttonLoading(_:)` | An attribute that is also the accessible state: `aria-busy="true"`, styled by westron's CSS | A westron style class plus the accessible state `gtk::AccessibleState::Busy` | A `Boolean` parameter (`loading = true`), as Compose passes per-component state; a cascading value would go through `CompositionLocal` |
 | **Slots** | System control: the control's own `@ViewBuilder` label. The contract's `label` and `icon` are the title and the icon of a `Label` inside it: `Button { save() } label: { Label("Save", icon: .check) }`. Own component: a `@ViewBuilder` closure per slot, named after the slot, plus convenience initializers that take text and a `Westron.Icon`, as SwiftUI's `Label` does | The element's content; `<slot>` and `<slot name="icon">` in a custom element | Child widgets: `adw::ButtonContent` for an icon and a label; an own component exposes a child property per slot | `@Composable` lambda parameters: `content`, `icon: (@Composable () -> Unit)? = null` |
+| **Extension of a system view** (`extension-on-system-control`) | The base takes no style (SwiftUI has no `textStyle`), so westron adds a modifier in `extension View`, named after what it sets, and the same on the base where the base's own modifiers return it: `.textRole(.heading.large)` on any view, and `Text.textRole(_:) -> Text`. No westron type and no style. The base is one of `SystemStyles.withoutStyle`; a base with a style modifier takes a style instead, and `spec check` reports the other strategy (below) | The native element the product chooses, with westron's class | The stock widget with a style class (`GtkLabel`): in GTK terms a style on the system control, so the strategy there is `style-on-system-control` | A `TextStyle` from `WestronTheme` passed to the Material3 composable (`Text(style = …)`) |
 | **Constraints between options** | The contract states them (`when` / `require` / `severity`) and the validator checks the contract (#18). The catalog and the snapshot matrix (#24) leave out combinations a constraint forbids. What code does with a forbidden combination is Q3 | As SwiftUI: checked in the contract; runtime behavior with Q3 | As SwiftUI | As SwiftUI |
 | **Token bindings** | Written by hand in the style's or the component's body (decisions/0001), through WestronUI's accessors: `.background(.background.accent, in: …)`, `.radius.control`, `.textRole(.body.strong)`, `.animation(.press, value: …)`. No raw values: the raw-values lint and the `spec-reviewer` subagent check them (decisions/0005) | CSS custom properties generated from the token paths (#39), read with `var(…)` in westron's CSS | libadwaita's variables (`--accent-bg-color`, …) and westron's `style.css` variables, both generated; Rust constants for values outside CSS | `WestronTheme` values through `CompositionLocal`, and a Material `ColorScheme` mapped from the tokens (chapter 09) |
 | **Accessibility: role** | System control: it keeps its own role and traits (chapter 08). Own component: `.accessibilityElement(children:)` and `.accessibilityAddTraits` (`.isButton`, `.isHeader`, `.isSelected`, `.isToggle`) | The native element's implicit role; a custom element sets it through `ElementInternals.role` | The stock widget's role; an own widget sets `gtk::AccessibleRole` on its class | The Material composable's semantics; an own component sets `Modifier.semantics { role = … }` |
@@ -283,6 +287,31 @@ westron's `ButtonStyle` applies to `configuration.label` inside `makeBody` overr
 `ButtonStyle` has no public way to read the outer label style, so it could not know to draw the square either. A
 probe on macOS confirmed both (#22).
 
+### Extensions of a system view, when it takes no style
+
+```swift
+Text("Inbox").textRole(.heading.medium)
+Text("\(title) \(Text(count).textRole(.footnote.medium))")  // a part of a text keeps its own role
+```
+
+Some system views have no style protocol and no style modifier: `SwiftUI.Text` has none, so a role cannot be a
+`TextStyle`. westron then adds extensions to the system view and nothing else (decisions/0003, point 1), and the
+contract says so with `strategy: extension-on-system-control` and the view as its `base`.
+
+- **The modifier is named after what it sets,** not after the component: `.textRole(_:)`, as SwiftUI's own
+  `.font(_:)` is. It goes on `View`, so it cascades over the subtree as `.font(_:)` does, and, where the base's own
+  modifiers return the base, on the base too: `Text.textRole(_:)` returns a `Text`, so a part of a text keeps its
+  role inside Text interpolation, and in `Text + Text`, which OS 26 deprecates for interpolation.
+- **Its argument is the token accessor** when the option's values are tokens (the table): `.textRole(.heading.large)`,
+  with `Westron.TextRole`, so the names are the tokens' on every platform and no enum repeats them.
+- **The base is checked.** `SystemStyles.withoutStyle` lists the bases with no style modifier, and on macOS a test
+  checks that SwiftUI declares no `<control>Style` for them. `spec check` rejects an extension on a base that takes a
+  style (`SwiftUI.Button`: westron gives it one) and a style on a base of `withoutStyle`.
+- **Not generated yet.** The text-role extension was written by hand with the tokens (decisions/0011, 0013), and the
+  parity lint reviews it in its list of adapters. Generation fails on an approved `extension-on-system-control`, as
+  not supported yet, until the generator, the lint and the snapshot matrix support the strategy (Q6), so such a
+  contract stays draft until then.
+
 ### Own components, when no system control exists
 
 When the platform has no control for the job (Badge, Banner, EmptyState), westron builds a `View` named as in the
@@ -346,3 +375,9 @@ left open, and the last one what the size question left open.
 5. **`controlSize` beyond the mapping.** Does an explicit `size:` also set `controlSize` for the system controls
    inside the label, such as the loading `ProgressView`? Does the `compact` density also set `controlSize(.small)`
    on its subtree (chapter 06, question 2)?
+6. **The generated layer of an extension and of an option whose values are tokens** (Text, #27). (a) Generate the
+   signature of the extension from the contract, `public func textRole(_ role: Westron.TextRole) -> some View` and
+   its `Text` twin, and have the parity lint expect them instead of listing them as adapters; the matrix enumerates
+   the group's tokens. (b) Keep the extension hand-written, and have the lint expect its signature from the contract
+   and the matrix read the tokens. Either way, the name of the modifier (`textRole`, not `text`) and the accessor
+   type (`Westron.TextRole`) must come from somewhere the contract or the tokens name.

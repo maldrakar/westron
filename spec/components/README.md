@@ -9,7 +9,9 @@ Each component is a folder `spec/components/<id>/`:
 | `reference/` | Reference screenshots approved by the human |
 
 A new contract starts with the `/new-component` skill. The first contract is Button,
-[`button/button.spec.yaml`](button/button.spec.yaml), approved by the owner on 2026-11-16 (#22).
+[`button/button.spec.yaml`](button/button.spec.yaml), approved by the owner on 2026-11-16 (#22). Text,
+[`text/text.spec.yaml`](text/text.spec.yaml), is a draft (#27): the first contract with an option whose values are
+tokens and with an extension of a system view.
 
 ## Format
 
@@ -48,7 +50,8 @@ accessibility:
   states: { loading: busy }     # the abstract state assistive technology announces in a state
 platforms:                      # all four; each is `status: planned` or a strategy
   apple:
-    strategy: style-on-system-control   # or own-component, which has no base (decisions/0003)
+    strategy: style-on-system-control   # or extension-on-system-control, or own-component, which has no base
+                                        # (decisions/0003)
     base: SwiftUI.Button
     systemOptions: { role: SwiftUI.ButtonRole }   # options that are the system's own API: no type is generated
     macos: { keyboardIntents: [defaultAction, cancelAction] }   # added to accessibility.keyboardIntents
@@ -90,6 +93,16 @@ no option is `inout`, `var` or `let` (an option becomes an argument label). Othe
   iOS and macOS and `m` on watchOS; watchOS maps only `l`, since `s` is Apple's to map. Elsewhere a fallback is
   optional.
 - **Keyboard intents.** A platform or an Apple OS lists in `keyboardIntents` only what it adds to the component's.
+- **Options whose values are tokens.** `role: { type: tokens, group: typography }` takes as its values the tokens
+  under the group, each by its path after the group: `heading.large` for `typography.heading.large`. The contract
+  does not list them, so it cannot drift from `tokens/`; on Apple the values are the token accessor's names
+  (`.textRole(.heading.large)`). `default`, when given, is one of them; without it, every use names one. Constraints,
+  cases, bindings by value and platform restrictions do not name such an option yet: its values have dots, which a
+  name cannot (Text, the first such contract, needs none of them).
+- **Extensions of a system view.** `strategy: extension-on-system-control` is for a system control or view, named in
+  `base`, that takes no style: SwiftUI has no `textStyle`, so westron adds a modifier to `SwiftUI.Text` instead of a
+  style (decisions/0003, point 1). On Apple its base is one of `SystemStyles.withoutStyle`, and a base that has a
+  style modifier takes `style-on-system-control` instead (`spec/conventions.md`).
 - **System options.** A platform names in `systemOptions` the options its system control already carries in its own
   API, each with the type that carries it, such as `role: SwiftUI.ButtonRole`. The generator makes no type and no
   argument for them; the style reads them from the control (`spec/conventions.md`). Their values are the system's, so
@@ -102,7 +115,10 @@ no option is `inout`, `var` or `let` (an option becomes an argument label). Othe
 options (`ButtonVariant`, `ButtonSize`), the overload of the base control's style modifier
 (`.buttonStyle(.primary, size: .m)`), which applies the hand-written `<Component>VariantStyle`, and the tables that
 style reads (the `controlSize` mapping, each OS's fallbacks, the states). Its exact form is in
-[`spec/conventions.md`](../conventions.md). A draft contract and an own component generate nothing yet.
+[`spec/conventions.md`](../conventions.md). A draft contract and an own component generate nothing yet. Nor does an
+`extension-on-system-control`, or an option whose values are tokens: generation fails on an approved contract with
+either, as not supported yet, until the generator, the API parity lint and the snapshot matrix give them API, so a
+contract of that kind stays draft until then.
 
 Generation fails, with every problem, when a contract does not pass the check below; when a generated name is a
 public SwiftUI type; when two contracts generate one type name (`button`'s option `groupSize` and `button-group`'s
@@ -129,6 +145,12 @@ Besides the schema, the check enforces what a schema cannot:
   (decisions/0003); a base the check has no style modifier and style names for is an error until they are added to
   `tools/Sources/WestronTools/Contracts/SystemStyles.swift`; a control with no style modifier (`SwiftUI.Slider`,
   `SwiftUI.Stepper`) takes no style, and `SwiftUI.SecureField` takes `textFieldStyle`, as `SwiftUI.TextField` does;
+- the Apple strategy fits its base: an `extension-on-system-control` extends a base of `SystemStyles.withoutStyle`,
+  such as `SwiftUI.Text`, not one that takes a style, such as `SwiftUI.Button`, and a style never goes on a base of
+  `withoutStyle`; a base in neither list is an error until it is added there;
+- an option whose values are tokens names a group of `tokens/`, not a token and not a path with nothing under it; the
+  group's tokens are semantic, exist in every mode and are of one type; its default is one of them, by its path after
+  the group; no constraint, case or platform restriction names it;
 - constraints and cases name options, values and states that exist, a bool option with `true` or `false`;
 - a binding by value uses the values of one enum option, every one of them; every case is reachable, and so is a
   binding's `token`, which the cases leave no room for when they match every combination. The check enumerates the

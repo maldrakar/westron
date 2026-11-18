@@ -7,6 +7,9 @@ public struct ComponentContract: Equatable, Sendable {
             /// The values in the contract's order; `default` is nil when every use must name a value.
             case enumeration(values: [String], default: String?)
             case bool(default: Bool)
+            /// The tokens under a token group, `typography`, whose paths after it are the values; `default` is nil
+            /// when every use must name one. The values are in tokens/, not in the contract.
+            case tokenGroup(String, default: String?)
         }
 
         public let name: String
@@ -43,9 +46,9 @@ public struct ComponentContract: Equatable, Sendable {
 
     /// The Apple entry of `platforms`, when it is not planned.
     public struct Apple: Equatable, Sendable {
-        /// `style-on-system-control` or `own-component`.
+        /// `style-on-system-control`, `extension-on-system-control` or `own-component`.
         public let strategy: String
-        /// The system control, such as `SwiftUI.Button`; nil for an own component.
+        /// The system control or view, such as `SwiftUI.Button`; nil for an own component.
         public let base: String?
         /// By option name, the system API that carries the option on Apple, such as `role: SwiftUI.ButtonRole`: no
         /// type is generated for it.
@@ -155,8 +158,16 @@ public struct ComponentContract: Equatable, Sendable {
                     throw problem(path.key("default"), "a bool option needs true or false as its default")
                 }
                 options.append(Option(name: member.key, kind: .bool(default: value), description: description))
+            case "tokens":
+                guard let group = member.value["group"]?.string else {
+                    throw problem(path.key("group"), "an option of type tokens needs its token group")
+                }
+                options.append(
+                    Option(
+                        name: member.key, kind: .tokenGroup(group, default: member.value["default"]?.string),
+                        description: description))
             default:
-                throw problem(path.key("type"), "must be enum or bool")
+                throw problem(path.key("type"), "must be enum, bool or tokens")
             }
         }
         let states = document["states"]?.elements?.compactMap(\.string) ?? []

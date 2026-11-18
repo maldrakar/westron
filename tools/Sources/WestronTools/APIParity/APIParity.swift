@@ -156,6 +156,9 @@ public enum APIParity {
             guard let apple = contract.apple else {
                 return "its contract (\(source)) plans Apple, so it has no API there yet"
             }
+            if apple.strategy == SystemStyles.extensionStrategy {
+                return "its contract (\(source)) is an \(apple.strategy), whose API the generator does not give yet"
+            }
             if apple.strategy != AppleComponents.strategy {
                 return "its contract (\(source)) is an \(apple.strategy), whose API the conventions leave open (Q2)"
             }
@@ -223,6 +226,8 @@ public enum APIParity {
             var types: Set<String> = []
             for option in item.contract.options where apple.systemOptions[option.name] == nil {
                 switch option.kind {
+                case .tokenGroup:
+                    continue  // The generator gives a style no such option yet, and fails on it.
                 case .bool(let value):
                     rest.append(.init(label: option.name, type: "Bool", defaultValue: "\(value)"))
                 case .enumeration(let values, let defaultValue):

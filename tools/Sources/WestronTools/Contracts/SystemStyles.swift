@@ -9,7 +9,19 @@
 /// and takes `textFieldStyle`, as `SwiftUI.TextField` does; neither is here until a contract needs it. Add a control
 /// with its modifier, its styles and the states it carries; on macOS, a test checks that the modifier exists in SwiftUI's interface
 /// (`SwiftUITypesTests`).
+///
+/// A contract whose Apple strategy is `extension-on-system-control` names a base in `withoutStyle`: a control or view
+/// that SwiftUI gives no style modifier, so westron adds extensions to it instead of a style (decisions/0003, point
+/// 1). A base in `byBase` takes a style, and one in neither is an error, as above.
 public enum SystemStyles {
+    /// The Apple strategy of a component that adds extensions to a system view with no style.
+    public static let extensionStrategy = "extension-on-system-control"
+
+    /// The Apple bases with no style modifier that an `extension-on-system-control` may extend. On macOS, a test
+    /// checks that SwiftUI's interface declares no `<control>Style` modifier for them (`SwiftUITypesTests`): for
+    /// `SwiftUI.Text`, no `textStyle`.
+    public static let withoutStyle: Set<String> = ["SwiftUI.Text"]
+
     public struct Base: Equatable, Sendable {
         /// The style modifier, `buttonStyle` for `SwiftUI.Button`: the generated overload has its name.
         public let modifier: String

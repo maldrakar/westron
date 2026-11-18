@@ -103,18 +103,27 @@ public struct SnapshotMatrix: Equatable, Sendable {
     public let platforms: [Platform]
     public let sheets: [Sheet]
 
-    /// - Throws: `ContractProblem` when a value an Apple OS drops has no fallback; `spec check` rejects such a
-    ///   contract first.
+    /// - Throws: `ContractProblem` when a value an Apple OS drops has no fallback, which `spec check` rejects first;
+    ///   when an option takes its values from a token group, which the matrix does not support yet.
     public init(_ contract: ComponentContract, source: String) throws(ContractProblem) {
         component = contract.id
         let systemOptions = contract.apple?.systemOptions ?? [:]
-        let axes = contract.options.map { option in
+        var axes: [Axis] = []
+        for option in contract.options {
             switch option.kind {
             case .enumeration(let values, _):
-                Axis(name: option.name, values: values, isBool: false, systemType: systemOptions[option.name])
+                axes.append(
+                    Axis(name: option.name, values: values, isBool: false, systemType: systemOptions[option.name]))
             case .bool:
-                Axis(
-                    name: option.name, values: ["false", "true"], isBool: true, systemType: systemOptions[option.name])
+                axes.append(
+                    Axis(
+                        name: option.name, values: ["false", "true"], isBool: true,
+                        systemType: systemOptions[option.name]))
+            case .tokenGroup(let group, _):
+                throw ContractProblem(
+                    source: source, path: .root.key("options").key(option.name),
+                    "\(option.name) takes its values from the tokens of \(group): the snapshot matrix does not "
+                        + "support such an option yet")
             }
         }
         self.axes = axes

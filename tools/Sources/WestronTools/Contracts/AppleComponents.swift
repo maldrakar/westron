@@ -83,6 +83,15 @@ public struct AppleComponents: Generator {
         var apis: [API] = []
         var problems: [ContractProblem] = []
         for (contract, source) in contracts {
+            if contract.status != "draft", contract.apple?.strategy == SystemStyles.extensionStrategy {
+                problems.append(
+                    ContractProblem(
+                        source: source, path: .root.key("platforms").key("apple").key("strategy"),
+                        "the generator does not support \(SystemStyles.extensionStrategy) yet: a contract of it "
+                            + "stays draft until the generator, the API parity lint and the snapshot matrix give it "
+                            + "API (spec/conventions.md)"))
+                continue
+            }
             guard generates(contract), let apple = contract.apple, let base = apple.base else { continue }
             do {
                 apis.append(try API(contract, apple: apple, base: base, source: source))
@@ -244,6 +253,14 @@ public struct AppleComponents: Generator {
                     "no style modifier is known for \(base) (SystemStyles.byBase), so there is no overload to generate")
             }
             self.modifier = modifier
+            for option in contract.options {
+                if case .tokenGroup(let group, _) = option.kind {
+                    throw problem(
+                        .root.key("options").key(option.name),
+                        "\(option.name) takes its values from the tokens of \(group): the generator does not give a "
+                            + "style such an option yet")
+                }
+            }
             let optionNames = contract.options.map(\.name)
             for name in apple.systemOptions.keys.sorted() where !optionNames.contains(name) {
                 throw problem(applePath.key("systemOptions").key(name), "no option \(name)")
@@ -404,6 +421,8 @@ public struct AppleComponents: Generator {
                 switch option.kind {
                 case .bool(let value):
                     result.append((name, "\(option.name): Bool = \(value)", false))
+                case .tokenGroup:
+                    continue  // API's initializer rejects it.
                 case .enumeration:
                     guard let item = enums.first(where: { $0.option.name == option.name }) else { continue }
                     if option.name == "size" {
@@ -451,6 +470,8 @@ public struct AppleComponents: Generator {
                     let summary =
                         option.description.map(Self.firstSentence) ?? "The contract's option `\(option.name)`."
                     items.append("- \(option.name): \(summary) By default `\(value)`.")
+                case .tokenGroup:
+                    continue  // API's initializer rejects it.
                 case .enumeration:
                     guard let item else { continue }
                     if option.name == "size" {
