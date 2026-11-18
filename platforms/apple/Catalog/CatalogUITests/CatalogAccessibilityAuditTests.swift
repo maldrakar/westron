@@ -12,6 +12,18 @@ import XCTest
 /// back to its top when its content grows. Where the system's size reaches the page (`testDefaultSettings`), they run
 /// in a pass of their own: one launch per window of the page, held in view by the catalog's scroll anchor
 /// (`-WestronScrollAnchor`) from the top of the page to its bottom (see `audit(entryID:_:)`).
+///
+/// Failures of the machinery, not of a page, are told apart from the audit's findings (#74). On the CI runner the
+/// simulator now and then stalls for a minute or more, and whatever the test asks of it then fails: terminating or
+/// launching the catalog, a UI query, the audit itself ("Audit failed to complete in time", -56), or the entry does
+/// not render. XCTest stops the test method at a failed terminate, launch, query or drag, so the rest of the entries go
+/// unaudited. Withholding such a failure from XCTest (not passing it on in `record(_:)`) keeps the method going, but on
+/// an app in an unknown state; so the test records every failure as it comes and only reports, one line per event (see
+/// `record(_:)`): which entries it audits, when each starts and finishes, and each failure with its kind,
+/// `infrastructure` (the messages in `infrastructureMarkers`) or `finding` (everything else, the audit's issues
+/// first). `tools/apple/check.sh a11y` reads those lines and runs the test once more for the entries the first run did
+/// not finish or that failed for infrastructure alone, with "a11y: retrying …" in its output; an entry with a finding
+/// is never audited again, so a finding that shows once still fails the run.
 final class CatalogAccessibilityAuditTests: XCTestCase {
     override func setUp() {
         super.setUp()
@@ -19,11 +31,44 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         continueAfterFailure = true
     }
 
+    /// Reports every failure with the entry it belongs to and its kind, for `tools/apple/check.sh a11y`, which retries
+    /// the entries that failed for infrastructure alone; then records it as usual: nothing is dropped here.
+    override func record(_ issue: XCTIssue) {
+        let description = issue.compactDescription.replacingOccurrences(of: "\n", with: " ")
+        let kind = Self.isInfrastructure(description) ? "infrastructure" : "finding"
+        let place = currentEntry.map { "in \($0)" } ?? "outside an entry"
+        print("a11y: \(currentTest): failure \(place) (\(kind)): \(description)")
+        super.record(issue)
+    }
+
+    /// The failures of the machinery, told by their messages: XCTest's own for a terminate and a launch seen on the CI
+    /// runner (#74), and its timeouts of a request to the simulator, "Timed out while …": a UI query on the CI runner,
+    /// and a UI query, a drag ("synthesizing event") and a screenshot when the local simulator's `testmanagerd` was
+    /// stopped for minutes; and this test's own for an entry that did not render and an audit that did not complete
+    /// twice (`infrastructurePrefix`). Every other failure is a finding. A new message joins only with evidence that it
+    /// is the machinery's.
+    static let infrastructureMarkers = [
+        infrastructurePrefix,
+        "Failed to terminate dev.westron.catalog",
+        "Application 'dev.westron.catalog' does not have a process ID",
+        "Timed out while ",
+    ]
+    /// Starts the messages of this test's own infrastructure failures.
+    static let infrastructurePrefix = "infrastructure: "
+
+    static func isInfrastructure(_ description: String) -> Bool {
+        infrastructureMarkers.contains { description.contains($0) }
+    }
+
+    /// The test method and the entry being audited, for `record(_:)`.
+    private var currentTest = "?"
+    private var currentEntry: String?
+
     /// The default: the system's font size, the light theme, standard contrast. Every audit type runs. The theme is
     /// set, not left to the simulator, so the run does not depend on the machine.
     @MainActor
     func testDefaultSettings() {
-        audit(Configuration(appearance: .light, types: Configuration.allTypes))
+        audit(Configuration(appearance: .light, types: Configuration.allTypes), test: "testDefaultSettings")
     }
 
     /// The largest accessibility font size. Every audit type runs except `dynamicType`: the catalog pins this size in
@@ -33,25 +78,29 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
     func testAccessibilityDynamicType() {
         audit(
             Configuration(
-                appearance: .light, dynamicType: "accessibility5", types: Configuration.typesWithoutDynamicType))
+                appearance: .light, dynamicType: "accessibility5", types: Configuration.typesWithoutDynamicType),
+            test: "testAccessibilityDynamicType")
     }
 
     /// Increased contrast, the `-hc` themes: only colors change, so the contrast audit runs.
     @MainActor
     func testIncreasedContrast() {
-        audit(Configuration(appearance: .light, increasedContrast: true, types: .contrast))
+        audit(
+            Configuration(appearance: .light, increasedContrast: true, types: .contrast), test: "testIncreasedContrast")
     }
 
     /// The dark theme: only colors change, so the contrast audit runs.
     @MainActor
     func testDarkAppearance() {
-        audit(Configuration(appearance: .dark, types: .contrast))
+        audit(Configuration(appearance: .dark, types: .contrast), test: "testDarkAppearance")
     }
 
     /// The dark theme with increased contrast.
     @MainActor
     func testDarkIncreasedContrast() {
-        audit(Configuration(appearance: .dark, increasedContrast: true, types: .contrast))
+        audit(
+            Configuration(appearance: .dark, increasedContrast: true, types: .contrast),
+            test: "testDarkIncreasedContrast")
     }
 
     // MARK: - Running the audit
@@ -109,7 +158,8 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
     private var statusBarBottom: CGFloat?
 
     @MainActor
-    private func audit(_ configuration: Configuration) {
+    private func audit(_ configuration: Configuration, test: String) {
+        currentTest = test
         // WESTRON_ENTRY=<id>[,<id>…] narrows the run to those entries: to fix an entry's issues, or to split a run.
         let environment = ProcessInfo.processInfo.environment
         var entries =
@@ -128,10 +178,22 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             }
             XCTAssertFalse(entries.isEmpty, "WESTRON_ENTRY_SHARD=\(text) selects no entry")
         }
+        // A test hook (#74): WESTRON_A11Y_FAIL_ONCE=<id> fails that entry for infrastructure before it is audited, as a
+        // stalled simulator would. `tools/apple/check.sh a11y` passes it to the first run only, so its retry shows.
+        let failOnce = environment["WESTRON_A11Y_FAIL_ONCE"]
+        print("a11y: \(test): entries \(entries.joined(separator: ","))")
         for entryID in entries {
+            currentEntry = entryID
+            print("a11y: \(test): started \(entryID)")
             XCTContext.runActivity(named: "\(entryID) \(configuration.arguments.joined(separator: " "))") { _ in
+                if entryID == failOnce {
+                    XCTFail("\(Self.infrastructurePrefix)\(entryID): injected by WESTRON_A11Y_FAIL_ONCE")
+                    return
+                }
                 audit(entryID: entryID, configuration)
             }
+            print("a11y: \(test): finished \(entryID)")
+            currentEntry = nil
         }
     }
 
@@ -161,7 +223,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                     entryID, configuration.arguments + ["-WestronScrollAnchor", String(format: "%.3f", anchor)])
             else { return }
             settle(entry, entryID, screen: window + 1)
-            auditScreen(app, entryID, configuration, types: separate, screen: window + 1)
+            auditScreen(app, entryID, configuration, types: separate, screen: window + 1, nextDrag: nil)
             app.terminate()
         }
     }
@@ -180,7 +242,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             object: nil
         )
         guard XCTWaiter.wait(for: [appeared], timeout: 30) == .completed else {
-            XCTFail("\(entryID): the catalog did not render the entry within 30 s")
+            XCTFail("\(Self.infrastructurePrefix)\(entryID): the catalog did not render the entry within 30 s")
             app.terminate()
             return nil
         }
@@ -204,7 +266,8 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         var position = scrollPosition(entry)
         for screen in 1...Self.maxScreens {
             settle(entry, entryID, screen: screen)
-            auditScreen(app, entryID, configuration, types: types, screen: screen)
+            let deferred = auditScreen(
+                app, entryID, configuration, types: types, screen: screen, nextDrag: entry.frame.height * Self.step)
             // The end is where a drag no longer moves the page. It is told by where the page's first text is after
             // each drag (an audit may move the page a little), not by a picture: the scroll indicator shows after
             // every drag, at the end of the page too.
@@ -212,6 +275,10 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             settle(entry, entryID, screen: screen)
             let next = scrollPosition(entry)
             if next == position {
+                // No screenful follows to show the deferred elements whole, so they count here.
+                for issue in deferred {
+                    XCTFail("\(entryID), screen \(screen): \(issue) (cut by the bottom of the last screenful)")
+                }
                 #if os(macOS)
                     if screen == 1 {
                         // Not verified that the scroll event reaches the page on macOS: a longer page that does not
@@ -227,22 +294,28 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         return Self.maxScreens
     }
 
+    /// Audits what is on screen with the types given. `nextDrag` is how far the drag after this screenful moves the
+    /// page, `nil` when none follows. Returns the contrast issues deferred to the next screenful (`performAudit`).
     @MainActor
+    @discardableResult
     private func auditScreen(
         _ app: XCUIApplication, _ entryID: String, _ configuration: Configuration, types: XCUIAccessibilityAuditType,
-        screen: Int
-    ) {
-        guard !types.isEmpty else { return }
-        // An audit now and then gives up ("Audit failed to complete in time"): it is run once more, and if it fails
-        // again the entry fails, but the run goes on to the next entry.
+        screen: Int, nextDrag: CGFloat?
+    ) -> [String] {
+        guard !types.isEmpty else { return [] }
+        // An audit now and then gives up ("Audit failed to complete in time", -56): it is run once more, and if it
+        // fails again the entry fails for infrastructure (`tools/apple/check.sh a11y` then audits it again in a run
+        // of its own), but this run goes on to the next entry.
         do {
-            try performAudit(app, entryID, configuration, types: types, screen: screen)
+            return try performAudit(app, entryID, configuration, types: types, screen: screen, nextDrag: nextDrag)
         } catch {
-            print("a11y: audit of \(entryID), screen \(screen) did not complete (\(error)); running it again")
+            print("a11y: retrying the audit of \(entryID), screen \(screen): it did not complete (\(error))")
             do {
-                try performAudit(app, entryID, configuration, types: types, screen: screen)
+                return try performAudit(app, entryID, configuration, types: types, screen: screen, nextDrag: nextDrag)
             } catch {
-                XCTFail("\(entryID), screen \(screen): the audit did not complete: \(error)")
+                XCTFail(
+                    "\(Self.infrastructurePrefix)\(entryID), screen \(screen): the audit did not complete: \(error)")
+                return []
             }
         }
     }
@@ -250,9 +323,10 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
     @MainActor
     private func performAudit(
         _ app: XCUIApplication, _ entryID: String, _ configuration: Configuration, types: XCUIAccessibilityAuditType,
-        screen: Int
-    ) throws {
+        screen: Int, nextDrag: CGFloat?
+    ) throws -> [String] {
         let visible = visibleArea(app)
+        var deferred: [String] = []
         try app.performAccessibilityAudit(for: types) { issue in
             // After a drag, the contrast audit also reports an element off the screen or under the status bar,
             // measured on pixels that are not its own (the clock over a line of text). Such an element is judged on
@@ -264,6 +338,21 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                     "a11y: suppressed in \(entryID): \(Self.describe(issue)) (off the screen or under the status bar)")
                 return true
             }
+            // The same at the bottom: an element the bottom of the screen cuts is measured on the strip that shows,
+            // under the home indicator, whose color changes with the page beneath it. On the CI runner "Report not
+            // sent" on color-in-use, 18 pt of it on screen, failed contrast once and passed on the rerun (#74). It is
+            // judged on the next screenful, but only if the next drag brings it whole into view; if no screenful
+            // follows after all (the page ends), it counts (`auditScreens`).
+            if issue.auditType == .contrast, let element = issue.element, let nextDrag,
+                Self.cutByBottom(element.frame, visible: visible, nextDrag: nextDrag)
+            {
+                let description = Self.describe(issue)
+                print(
+                    "a11y: deferred in \(entryID), screen \(screen): \(description) (cut by the bottom of the screen; "
+                        + "the next screenful shows it whole)")
+                deferred.append(description)
+                return true
+            }
             if let suppression = Self.suppressions.first(where: {
                 $0.matches(issue, entryID: entryID, configuration: configuration)
             }) {
@@ -273,6 +362,19 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             print("a11y: issue in \(entryID), screen \(screen): \(Self.describe(issue))")
             return false
         }
+        return deferred
+    }
+
+    /// How far inside the screenful an element must lie after the drag to count as whole: a drag's distance varies by
+    /// a few points.
+    private static let dragMargin: CGFloat = 24
+
+    /// Whether the bottom of the screen cuts the element, and the drag of `nextDrag` points up brings it whole into
+    /// view, below the status bar.
+    static func cutByBottom(_ frame: CGRect, visible: CGRect, nextDrag: CGFloat) -> Bool {
+        frame.maxY > visible.maxY && frame.minY < visible.maxY
+            && frame.minY - nextDrag >= visible.minY + dragMargin
+            && frame.maxY - nextDrag <= visible.maxY - dragMargin
     }
 
     /// The part of the screen the page shows itself on: below the status bar on iOS. Looked up once per run.

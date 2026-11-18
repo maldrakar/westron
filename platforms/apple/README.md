@@ -185,7 +185,11 @@ gets another shard.
   longer moves the page. A page that is still moving after 5 s (an animation that runs on) is audited as it is, with
   a line in the log, and is not waited for again.
 - After a drag, the contrast audit also reports an element under the status bar or off the screen, measured on the
-  clock or on nothing. Such an element is not counted there; the screenful before showed it whole.
+  clock or on nothing. Such an element is not counted there; the screenful before showed it whole. An element the
+  bottom of the screen cuts is measured on the strip that shows, under the home indicator, and is judged on the next
+  screenful instead (`a11y: deferred in …`), but only when the next drag brings it whole into view; if the page ends
+  there after all, it counts. On the CI runner "Report not sent" on `color-in-use`, 18 pt of it on screen, failed
+  contrast once in `testAccessibilityDynamicType` and passed on the rerun (#74).
 - The Dynamic Type and text clipped audits enlarge the page's text. A dragged scroll view goes back to its top when
   its content grows, so after a drag they would measure only the top of the page; and after them, the page's
   accessibility tree and its pixels disagree for a while, so that the next audit reads every text as failing
@@ -209,6 +213,24 @@ gets another shard.
 - When a run ends, passed, failed or interrupted, the script stops the simulator's `testmanagerd` (launchd starts it
   again for the next test): after audits it has been seen to keep running at 400–1400 % CPU for hours with no test
   left (2026-11-17). A daemon that another `xcodebuild` on the same simulator still uses is left alone.
+- A failed run is retried once, narrowly, when the machinery failed rather than a page (#74). On the CI runner the
+  simulator now and then stalls for a minute or more, and whatever the test asks of it then fails: terminating the
+  catalog ("Failed to terminate dev.westron.catalog:<pid>: Failed to terminate dev.westron.catalog:0", the same
+  message a simulator whose `testmanagerd` is stopped gives), launching it ("does not have a process ID"), a UI
+  query ("Timed out while evaluating UI query"; in the same local experiment also a drag and a screenshot, "Timed
+  out while synthesizing event", "… requesting screenshot"), the audit ("Audit failed to complete in time", -56, which the test already retries once on the spot)
+  or the entry not rendering within 30 s. XCTest stops the test method at a failed terminate, launch, query or drag,
+  so the rest of the shard went unaudited and the leg failed. The test prints which entries it audits,
+  when each starts and finishes, and each failure with its kind, `infrastructure` (those messages, listed in
+  `CatalogAccessibilityAuditTests.infrastructureMarkers`) or `finding` (everything else). When the run fails, the
+  script reads those lines and runs the test once more (`test-without-building`, after stopping `testmanagerd`) for
+  the entries the run did not finish or that failed for infrastructure alone, with `a11y: retrying <test> for
+  <entries>` in its output and, on GitHub Actions, a warning on the run; its log is `<name>-retry-<test>.log`. A
+  test with a finding, or a failure outside an entry, is not retried: no entry is audited twice after a finding, so
+  a finding that shows once in two runs still fails the leg. A retry that fails again fails the leg. What the retry
+  can hide: a catalog page that hangs the app only sometimes, since a hung app also times out UI queries.
+  `WESTRON_A11Y_FAIL_ONCE=<id>` is a test hook that fails that entry for infrastructure in the first run only, to
+  see the retry at work.
 - `WESTRON_ENTRY_SHARD=<i>/<n>` then audits every n-th of those entries, in registry order, from the i-th (1-based):
   the n shards hold each entry exactly once (`CatalogShard`, tested in `CatalogShardTests`). The log and the result
   bundle get `-shard<i>of<n>` in their names, and the run logs the entries of its shard (`a11y: shard 2/3: …`). A

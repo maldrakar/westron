@@ -10,7 +10,9 @@
 #                                    configurations named (testDefaultSettings testAccessibilityDynamicType
 #                                    testIncreasedContrast testDarkAppearance testDarkIncreasedContrast; default: all);
 #                                    WESTRON_ENTRY=<id>[,<id>…] limits it to those entries, WESTRON_ENTRY_SHARD=<i>/<n>
-#                                    then to every n-th of them from the i-th
+#                                    then to every n-th of them from the i-th; a run that fails for infrastructure
+#                                    (a stalled simulator) is retried once for the entries it hit, never for a
+#                                    finding (#74); WESTRON_A11Y_FAIL_ONCE=<id> fakes such a failure to show it
 #   tools/apple/check.sh format      swift format lint without changes, tools/ included
 #   tools/apple/check.sh fix-format  swift format that rewrites the files, tools/ included
 #   tools/apple/check.sh all         everything except fix-format and a11y (package-ios included)
@@ -105,6 +107,63 @@ a11y_interrupted() {
   exit "$status"
 }
 
+# Runs xcodebuild <action> for the audit into <log> and <results> on <destination>, with the -only-testing arguments
+# after them; prints what the run reported and returns xcodebuild's status. Without -collect-test-diagnostics never, a
+# failed run waits minutes for a sysdiagnose of the simulator. xcodebuild runs in the background and the script waits
+# for it, so that an interruption reaches the traps at once; however the run ends, the simulator's test daemon is
+# stopped (stop_test_daemon), and an interruption exits with the shell's status for its signal, 130 for INT and 143
+# for TERM.
+a11y_run() {
+  local action="$1" log="$2" results="$3" destination="$4" udid="$5" status=0
+  shift 5
+  rm -rf "$results"
+  xcodebuild -project platforms/apple/Catalog/Catalog.xcodeproj -scheme Catalog -destination "$destination" \
+    -derivedDataPath .build/xcode/catalog -resultBundlePath "$results" -collect-test-diagnostics never \
+    "$@" "$action" > "$log" 2>&1 &
+  a11y_xcodebuild=$!
+  trap 'a11y_interrupted "$udid" 130' INT
+  trap 'a11y_interrupted "$udid" 143' TERM
+  wait "$a11y_xcodebuild" || status=$?
+  trap - INT TERM
+  stop_test_daemon "$udid"
+  # The issues the audit found, suppressed and deferred, each failure with its kind, then the test cases and the
+  # totals. The test's lines of which entry starts and finishes are for a11y_plan alone.
+  grep -E "^a11y: |: error: |Test Case .*(passed|failed)|Executed [0-9]+ test" "$log" | grep -v "\[MT\]" \
+    | grep -vE "^a11y: test[A-Za-z]+: (entries|started|finished) " || true
+  return "$status"
+}
+
+# What a failed run of the audit test <test> leaves to do, from the lines CatalogAccessibilityAuditTests prints into
+# <log>: `pass` (the test passed), `retry <ids>` (the entries to audit once more: the ones the run did not finish, or
+# that failed for infrastructure alone; `*` for all of them, when the test audited nothing) or `fail` (a finding, a
+# failure outside an entry, or a failure the lines do not explain). An entry with a finding is never retried.
+a11y_plan() {
+  local log="$1" test="$2"
+  awk -v test="$test" -v q="'" '
+    function after(prefix) { return substr($0, length(prefix) + 1) }
+    BEGIN { p = "a11y: " test ": " }
+    index($0, "Test Case " q "-[CatalogUITests.CatalogAccessibilityAuditTests " test "]" q " passed") { passed = 1 }
+    index($0, p "entries ") == 1 { count = split(after(p "entries "), entries, ",") }
+    index($0, p "finished ") == 1 { finished[after(p "finished ")] = 1 }
+    index($0, p "failure in ") == 1 {
+      rest = after(p "failure in ")
+      entry = substr(rest, 1, index(rest, " (") - 1)
+      if (index(rest, " (infrastructure): ") == length(entry) + 1) infrastructure[entry] = 1
+      else finding[entry] = 1
+    }
+    index($0, p "failure outside an entry ") == 1 { outside = 1 }
+    END {
+      if (passed) { print "pass"; exit }
+      if (outside) { print "fail"; exit }
+      if (count == 0) { print "retry *"; exit }
+      for (i = 1; i <= count; i++) if (entries[i] in finding) { print "fail"; exit }
+      list = ""
+      for (i = 1; i <= count; i++)
+        if (!(entries[i] in finished) || (entries[i] in infrastructure)) list = list (list == "" ? "" : ",") entries[i]
+      print (list == "" ? "fail" : "retry " list)
+    }' "$log"
+}
+
 a11y() {
   local platform=ios destination udid="" test name
   case "${1:-}" in ios | macos) platform="$1"; shift ;; esac
@@ -138,30 +197,70 @@ a11y() {
     name+="-shard${WESTRON_ENTRY_SHARD//\//of}"
     log=".build/logs/$name.log" results=".build/xcode/results/$name.xcresult"
   fi
+  # A test hook: WESTRON_A11Y_FAIL_ONCE=<id> fails that entry for infrastructure in the first run only, to show the
+  # retry below at work.
+  if [ -n "${WESTRON_A11Y_FAIL_ONCE:-}" ]; then export TEST_RUNNER_WESTRON_A11Y_FAIL_ONCE="$WESTRON_A11Y_FAIL_ONCE"; fi
   mkdir -p .build/logs .build/xcode/results
-  rm -rf "$results"
   echo "== a11y: $destination${selection:+ (${selection#-})}"
-  local status=0
-  # Without -collect-test-diagnostics never, a failed run waits minutes for a sysdiagnose of the simulator. xcodebuild
-  # runs in the background and the script waits for it, so that an interruption reaches the traps at once.
-  xcodebuild -project platforms/apple/Catalog/Catalog.xcodeproj -scheme Catalog -destination "$destination" \
-    -derivedDataPath .build/xcode/catalog -resultBundlePath "$results" -collect-test-diagnostics never \
-    "${only[@]}" test > "$log" 2>&1 &
-  a11y_xcodebuild=$!
-  # However the run ends, the simulator's test daemon is stopped (stop_test_daemon); an interruption exits with the
-  # shell's status for its signal, 130 for INT and 143 for TERM.
-  trap 'a11y_interrupted "$udid" 130' INT
-  trap 'a11y_interrupted "$udid" 143' TERM
-  wait "$a11y_xcodebuild" || status=$?
-  trap - INT TERM
-  stop_test_daemon "$udid"
-  # The issues the audit found and suppressed, then the test cases and the totals.
-  grep -E "^a11y: |: error: |Test Case .*(passed|failed)|Executed [0-9]+ test" "$log" | grep -v "\[MT\]" || true
-  if [ "$status" -ne 0 ]; then
-    grep -E "BUILD FAILED|TEST FAILED|\*\* TEST" "$log" | tail -5 >&2 || true
+  if a11y_run test "$log" "$results" "$destination" "$udid" "${only[@]}"; then return 0; fi
+  if grep -q "BUILD FAILED" "$log"; then
+    echo "check.sh: accessibility audit failed to build ($platform), log: $log" >&2
+    return 1
+  fi
+
+  # The run failed. On the CI runner the simulator now and then stalls, and XCTest fails what the test asks of it then
+  # (#74): an entry the stall hit is audited once more, in a run of its own, and so are the entries a stopped test
+  # method did not reach. An entry with a finding is never audited again, and nor is any entry of a test with one, so
+  # a finding fails the run however rarely it shows.
+  local failed=0 plan entries what retry_name retry_log retry_results
+  local first_entry="${TEST_RUNNER_WESTRON_ENTRY:-}" first_shard="${TEST_RUNNER_WESTRON_ENTRY_SHARD:-}"
+  unset TEST_RUNNER_WESTRON_A11Y_FAIL_ONCE
+  [ $# -gt 0 ] || set -- "${a11y_tests[@]}"
+  for test in "$@"; do
+    plan="$(a11y_plan "$log" "$test")"
+    case "$plan" in
+      pass) continue ;;
+      fail)
+        echo "check.sh: a11y: $test failed with a finding, or with a failure that is not the infrastructure's" >&2
+        failed=1
+        continue
+        ;;
+    esac
+    entries="${plan#retry }"
+    what="$test for ${entries/#\*/all its entries}"
+    echo "a11y: retrying $what: the first run failed for infrastructure (log: $log)"
+    if [ -n "${GITHUB_ACTIONS:-}" ]; then
+      echo "::warning title=Accessibility audit retried::$what: the first run failed for infrastructure; see $log"
+    fi
+    retry_name="$name-retry-$test"
+    retry_log=".build/logs/$retry_name.log" retry_results=".build/xcode/results/$retry_name.xcresult"
+    # The simulator may have died with the run; it is found, and booted again if need be.
+    if [ "$platform" = ios ]; then
+      udid="$(westron_simulator_udid "${WESTRON_SIM_DEVICE:-iPhone 17}")" || return 1
+      destination="id=$udid"
+    fi
+    if [ "$entries" != "*" ]; then
+      # The entries to retry are already the shard's, so the shard is not taken again.
+      export TEST_RUNNER_WESTRON_ENTRY="$entries"
+      unset TEST_RUNNER_WESTRON_ENTRY_SHARD
+    else
+      # All of the first run's selection, as it was.
+      unset TEST_RUNNER_WESTRON_ENTRY TEST_RUNNER_WESTRON_ENTRY_SHARD
+      if [ -n "$first_entry" ]; then export TEST_RUNNER_WESTRON_ENTRY="$first_entry"; fi
+      if [ -n "$first_shard" ]; then export TEST_RUNNER_WESTRON_ENTRY_SHARD="$first_shard"; fi
+    fi
+    if ! a11y_run test-without-building "$retry_log" "$retry_results" "$destination" "$udid" \
+      "-only-testing:CatalogUITests/CatalogAccessibilityAuditTests/$test"; then
+      echo "check.sh: a11y: $test failed again on its retry, log: $retry_log, result: $retry_results" >&2
+      failed=1
+    fi
+  done
+  if [ "$failed" -ne 0 ]; then
+    grep -E "TEST FAILED|\*\* TEST" "$log" | tail -5 >&2 || true
     echo "check.sh: accessibility audit failed ($platform), log: $log, result: $results" >&2
     return 1
   fi
+  echo "a11y: passed after a retry; the first run's log: $log"
 }
 
 format() {
@@ -181,5 +280,5 @@ case "${1:-}" in
   format) format ;;
   fix-format) fix_format ;;
   all) format; package; package_ios; platforms; catalog ;;
-  *) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+  *) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac
