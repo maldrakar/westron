@@ -107,17 +107,21 @@ public struct ComponentMatrix: Sendable {
         public let note: String
         /// Contract options and the value each keeps; the column option is not one of them.
         let keeps: [String: String]
+        /// The most rows of one picture at a text size that splits sheets (`TextSize.limit`), where the supplement's
+        /// cells are taller than a generated sheet's, such as a card of fields; nil takes the text size's own.
+        let rowsWhenSplit: Int?
         let cell: @MainActor @Sendable (Combination) -> AnyView
 
         init<Content: View>(
             component: String, id: String, title: String, note: String, keeps: [String: String],
-            @ViewBuilder cell: @escaping @MainActor @Sendable (Combination) -> Content
+            rowsWhenSplit: Int? = nil, @ViewBuilder cell: @escaping @MainActor @Sendable (Combination) -> Content
         ) {
             self.component = component
             self.id = id
             self.title = title
             self.note = note
             self.keeps = keeps
+            self.rowsWhenSplit = rowsWhenSplit
             self.cell = { AnyView(cell($0)) }
         }
     }
@@ -325,13 +329,14 @@ public struct ComponentMatrix: Sendable {
 
     /// The pictures a sheet is captured in at a text size: the sheet itself where it fits, otherwise its parts, the
     /// columns and the rows the current OS draws taken `TextSize.limit` at a time, column by column, top to bottom.
-    /// The split is the catalog's, not the contract's: it depends on the text size alone, so the parts are the same on
-    /// every run.
+    /// The split is the catalog's, not the contract's: it depends on the text size alone, and for a supplement with
+    /// taller cells on its `rowsWhenSplit`, so the parts are the same on every run.
     public func pictures(of sheet: Sheet, at size: TextSize) -> [Sheet] {
         guard let limit = size.limit else { return [sheet] }
         let rows = rows(of: sheet)
+        let rowLimit = supplement?.rowsWhenSplit.map { min($0, limit.rows) } ?? limit.rows
         let parts = Self.chunks(sheet.columns, of: limit.columns).flatMap { columns in
-            Self.chunks(rows, of: limit.rows).map { (columns: columns, rows: $0) }
+            Self.chunks(rows, of: rowLimit).map { (columns: columns, rows: $0) }
         }
         guard parts.count > 1 else { return [sheet] }
         return parts.enumerated().map { index, part in

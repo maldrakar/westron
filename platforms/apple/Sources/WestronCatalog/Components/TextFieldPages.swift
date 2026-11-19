@@ -125,7 +125,10 @@ extension ComponentMatrix.Supplement {
         note: "The context of a field is not a contract option. Here, as in the pilot's open task card, the title is "
             + "set in heading.small and the notes, a multiline field (axis: .vertical), in subheadline.regular and "
             + "text.secondary, on the surface ground: an inline field takes them; a framed field keeps its own.",
-        keeps: ["size": "m"]
+        keeps: ["size": "m"],
+        // A card with a title and two lines of notes is taller than a generated cell: at the largest text size two
+        // rows of cards fill a picture, so a sheet is split into one picture per column and per two rows.
+        rowsWhenSplit: 2
     ) { combination in
         TextFieldCardSample(values: TextFieldMatrixValues(combination))
     }
