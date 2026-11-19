@@ -17,6 +17,10 @@ public struct AppleIcons: Generator {
         self.registryFile = registryFile
     }
 
+    /// The Swift type of an icon, which `tokens(_:source:)` declares: an option whose values are the registry's names
+    /// takes it as its type (`AppleComponents.Own`), as a token option takes its group's accessor.
+    public static let iconType = "Westron.Icon"
+
     public static let tokensFile = "platforms/apple/Sources/WestronTokens/Generated/Icons.swift"
     public static let swiftUIFile = "platforms/apple/Sources/WestronUI/Generated/Icons+SwiftUI.swift"
 
@@ -70,9 +74,9 @@ public struct AppleIcons: Generator {
                     + "version does not know, such as one a newer version wrote, reads as nil, and the product draws "
                     + "`fallback` instead: `Westron.Icon(rawValue: name) ?? .fallback`. A released name is never "
                     + "renamed or removed.",
-                "On Apple, WestronUI draws an icon as its SF Symbol: `Image(icon)`, `Label(\"Rename\", icon: .pen)`.",
+                "On Apple, WestronUI draws an icon as its SF Symbol: `Icon(icon)`, `Label(\"Rename\", icon: .pen)`.",
             ], indent: 1)
-        out.append("    public enum Icon: String, CaseIterable, Sendable {")
+        out.append("    public enum \(iconType.split(separator: ".").last!): String, CaseIterable, Sendable {")
         for icon in registry.icons {
             out += AppleTokensSwift.doc(Doc(description: icon.description), indent: 2)
             out += ["        case \(icon.name)", ""]
@@ -82,7 +86,7 @@ public struct AppleIcons: Generator {
                 description:
                     "The icon to draw for a name this version does not know: `\(registry.fallback)`."),
             indent: 2)
-        out.append("        public static let fallback = Westron.Icon.\(registry.fallback)")
+        out.append("        public static let fallback = \(iconType).\(registry.fallback)")
         out += ["    }", "}"]
         return out.joined(separator: "\n") + "\n"
     }

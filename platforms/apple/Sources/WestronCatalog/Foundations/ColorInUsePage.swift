@@ -145,7 +145,7 @@ private struct Check: View {
             if done {
                 Circle()
                     .fill(.background.accent)
-                Image(Westron.Icon.check)
+                Icon(.check, label: "Done")
                     .font(Font(.caption.medium).weight(.bold))
                     .foregroundStyle(.text.onAccent)
             } else {
@@ -291,7 +291,7 @@ private struct Notice: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: .space100) {
-            Image(status.icon)
+            Icon(status.icon)
                 .foregroundStyle(status.iconColor)
             VStack(alignment: .leading, spacing: 0) {
                 Text(title)
@@ -317,7 +317,7 @@ private struct FilledButton: View {
 
     var body: some View {
         HStack(spacing: .space50) {
-            if let icon { Image(icon) }
+            if let icon { Icon(icon) }
             Text(title)
         }
         .textRole(.footnote.strong)

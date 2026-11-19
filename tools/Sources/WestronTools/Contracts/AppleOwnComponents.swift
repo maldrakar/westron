@@ -13,15 +13,22 @@ extension AppleComponents {
     ///   the content, so the contract has at most one slot.
     /// - `view`: a `public struct` named after the component in UpperCamelCase that conforms to `View`, with one
     ///   public initializer whose parameters are the options, labeled, in the contract's order, with the contract's
-    ///   defaults, and `public var body: some View`: `public init(axis: RuleAxis = .horizontal)`. It has no slots and no
-    ///   variant yet: the conventions do not derive their initializers yet.
+    ///   defaults, and `public var body: some View`: `public init(axis: RuleAxis = .horizontal)`. An option whose values
+    ///   are the icon registry's names is the glyph the view draws: the first, unlabeled parameter, typed as the icon
+    ///   generator's `Westron.Icon` (`AppleIcons.iconType`), with no default. Such a view may have the one slot `label`,
+    ///   its spoken label: then it has three initializers, `init(_ icon: Westron.Icon)` (decorative; left out when
+    ///   `accessibility.label` is `required`), `init(_ icon: Westron.Icon, label: LocalizedStringKey)`, and, for a label
+    ///   that is not localized, `@_disfavoredOverload init<S: StringProtocol>(_ icon: Westron.Icon, label: S)`, as
+    ///   `Label(_:icon:)` takes its title (`labelInitializers`). Other slots and a variant are not derived yet.
     ///
     /// The generator writes the enums of the enum options, `<Component><Option>`, into
     /// `WestronUI/Generated/<Component>+Contract.swift`, by the naming rules of a style. The modifier or the view is
     /// hand-written, since its body is the whole implementation; the API parity lint holds its signature to this.
-    /// Every other shape fails generation and the lint as not derived yet: an option whose values are tokens or icons,
-    /// an option named `size` (whose default comes from `controlSize` on a style), states, system options and
-    /// restrictions of Apple or an Apple OS, since the generated file has no tables a hand-written body could read.
+    /// An option in `platforms.apple.systemOptions` is the system's own environment modifier, which a product writes
+    /// on the component and the system views inside it read (Icon's `scale`, `.imageScale(_:)`): it is no parameter
+    /// and gets no enum. Every other shape fails generation and the lint as not derived yet: an option whose values are
+    /// tokens, icons on a modifier, an option named `size` (whose default comes from `controlSize` on a style), states,
+    /// and restrictions of Apple or an Apple OS, since the generated file has no tables a hand-written body could read.
     public struct Own: Equatable, Sendable {
         public enum Form: String, Equatable, Sendable {
             case modifier
@@ -44,8 +51,43 @@ extension AppleComponents {
         public let name: String
         /// The enums of the enum options, in the contract's order.
         public let enums: [Enum]
-        /// The modifier's or the initializer's parameters, as the lint compares them.
+        /// One initializer of a view.
+        public struct Initializer: Equatable, Sendable, CustomStringConvertible {
+            public let parameters: [SwiftDeclarations.Parameter]
+            /// What the declaration carries beyond the lint's harmless extras, as Swift's parser reads it: the
+            /// attribute and the generic clause of the one that takes a label that is not localized.
+            public let extras: [String]
+
+            public init(parameters: [SwiftDeclarations.Parameter], extras: [String] = []) {
+                self.parameters = parameters
+                self.extras = extras
+            }
+
+            /// `init(axis: RuleAxis = .horizontal)`, `@_disfavoredOverload init<S: StringProtocol>(_: Westron.Icon,
+            /// label: S)`.
+            public var description: String { signature(access: "") }
+
+            /// The declaration a product sees: `@_disfavoredOverload public init<S: StringProtocol>(…)`.
+            public var declaration: String { signature(access: "public ") }
+
+            private func signature(access: String) -> String {
+                let attributes = extras.filter { $0.hasPrefix("@") }.map { $0 + " " }.joined()
+                let generics = extras.filter { $0.hasPrefix("<") }.joined()
+                return attributes + access + "init" + generics + "("
+                    + parameters.map(\.description).joined(separator: ", ") + ")"
+            }
+        }
+
+        /// The type of a localized label, as `Label(_:icon:)` takes its title.
+        public static let labelType = "LocalizedStringKey"
+        /// A label that is not localized: a generic `StringProtocol`, preferred less than the localized one, as
+        /// `Label(_:icon:)` takes its title.
+        public static let verbatimLabel = (type: "S", extras: ["@_disfavoredOverload", "<S: StringProtocol>"])
+
+        /// The modifier's parameters, or a view's first initializer's, as the lint compares them.
         public let parameters: [SwiftDeclarations.Parameter]
+        /// A view's initializers, in order; empty for a modifier.
+        public let initializers: [Initializer]
 
         /// `surface(_:outlined:)`, `Rule.init(axis:)`.
         public var signatureName: String {
@@ -71,11 +113,6 @@ extension AppleComponents {
             if !contract.states.isEmpty {
                 throw problem(.root.key("states"), "an \(AppleComponents.ownStrategy) with states: \(notYet)")
             }
-            if let name = apple.systemOptions.keys.sorted().first {
-                throw problem(
-                    applePath.key("systemOptions").key(name),
-                    "an \(AppleComponents.ownStrategy) has no system control to carry an option")
-            }
             let restrictions =
                 [(applePath, apple.restriction)]
                 + ComponentContract.appleOSes.compactMap { os in apple.targets[os].map { (applePath.key(os), $0) } }
@@ -87,11 +124,21 @@ extension AppleComponents {
             var enums: [Enum] = []
             var first: [SwiftDeclarations.Parameter] = []
             var rest: [SwiftDeclarations.Parameter] = []
-            for option in contract.options {
+            var glyph: String?
+            for option in contract.options where apple.systemOptions[option.name] == nil {
                 let path = DocumentPath.root.key("options").key(option.name)
                 switch option.kind {
-                case .tokenGroup, .icons:
-                    throw problem(path, "an option whose values are tokens or icons: \(notYet)")
+                case .tokenGroup:
+                    throw problem(path, "an option whose values are tokens: \(notYet)")
+                case .icons:
+                    guard form == .view else {
+                        throw problem(path, "a modifier with an option whose values are icons: \(notYet)")
+                    }
+                    guard glyph == nil else {
+                        throw problem(path, "a second option whose values are icons: \(notYet)")
+                    }
+                    glyph = option.name
+                    first.append(.init(label: "_", type: AppleIcons.iconType))
                 case .bool(let value):
                     rest.append(.init(label: option.name, type: "Bool", defaultValue: "\(value)"))
                 case .enumeration(let values, let defaultValue):
@@ -123,8 +170,11 @@ extension AppleComponents {
                 }
                 name = component.prefix(1).lowercased() + component.dropFirst()
             case .view:
-                if !contract.slots.isEmpty {
-                    throw problem(.root.key("slots"), "a view with slots: \(notYet)")
+                if !contract.slots.isEmpty, !(glyph != nil && contract.slots == ["label"]) {
+                    throw problem(
+                        .root.key("slots"),
+                        "a view with slots other than an icon's spoken label (an option whose values are icons and "
+                            + "the one slot label): \(notYet)")
                 }
                 if SwiftUITypes.names.contains(component) {
                     throw problem(
@@ -138,6 +188,25 @@ extension AppleComponents {
             self.form = form
             self.enums = enums
             parameters = first + rest
+            if form == .view, glyph != nil, contract.slots == ["label"] {
+                initializers = Self.labelInitializers(
+                    first + rest, decorative: contract.accessibilityLabel != "required")
+            } else {
+                initializers = form == .view ? [Initializer(parameters: first + rest)] : []
+            }
+        }
+
+        /// The initializers of an icon's view with a spoken label: without one, decorative, unless the label is
+        /// required; with a localized label; with one that is not localized.
+        static func labelInitializers(_ parameters: [SwiftDeclarations.Parameter], decorative: Bool) -> [Initializer] {
+            var result: [Initializer] = []
+            if decorative { result.append(Initializer(parameters: parameters)) }
+            result.append(Initializer(parameters: parameters + [.init(label: "label", type: labelType)]))
+            result.append(
+                Initializer(
+                    parameters: parameters + [.init(label: "label", type: verbatimLabel.type)],
+                    extras: verbatimLabel.extras))
+            return result
         }
 
         /// The generated file, the enums of the options, or nil when the contract has no enum option.

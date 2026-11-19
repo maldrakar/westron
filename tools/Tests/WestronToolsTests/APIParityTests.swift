@@ -285,6 +285,8 @@ struct APIParityTests {
                     of: "_ variant: ButtonVariant,", with: "_ variant: ButtonVariant = .primary,")))
         #expect(variantDefault.count == 1)
         #expect(variantDefault[0].contains("differs from the contract"))
+        // The overload is generated, so generating again fixes it.
+        #expect(variantDefault[0].hasSuffix("; run tools/westron generate"))
 
         let internalOverload = try problems(
             files(
@@ -327,6 +329,7 @@ struct APIParityTests {
         )
         #expect(defaulted.count == 1)
         #expect(defaulted[0].contains("the state modifier of loading differs from the contract"))
+        #expect(!defaulted[0].contains("tools/westron generate"))
 
         let second = try problems(
             files(

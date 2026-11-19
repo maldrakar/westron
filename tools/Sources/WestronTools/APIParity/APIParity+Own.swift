@@ -27,13 +27,15 @@ extension APIParity {
                     parameters: api.parameters, types: Set(api.enums.map(\.type)),
                     line: (item.source, item.line(of: "form"))))
         case .view:
-            expected.views.append(ExpectedView(contract: item, type: api.name, parameters: api.parameters))
+            expected.views.append(ExpectedView(contract: item, type: api.name, initializers: api.initializers))
         }
     }
 
     /// Checks each own component's view: a public top-level struct that conforms to `View` alone, its public
-    /// initializer with the contract's parameters, and its public `body: some View`. What it finds is accounted for;
-    /// any other public member of the type is component API no contract gives, reported by `check`.
+    /// initializers with the contract's parameters (and the extras an icon's verbatim label takes), and its public
+    /// `body: some View`, each reported when missing or
+    /// different. What it finds is accounted for; any other public member of the type is component API no contract
+    /// gives, reported by `check`.
     static func checkViews(
         _ views: [ExpectedView], declarations: [SwiftDeclarations.Declaration], accounted: inout Set<Int>,
         expectedCount: inout Int
@@ -61,8 +63,9 @@ extension APIParity {
                 problems.append(
                     Problem(
                         file: view.contract.source, line: line,
-                        "missing: public struct \(view.type): View, with `public \(view.initializer)` and `public var "
-                            + "body: some View`, which \(contract) gives as a view"))
+                        "missing: public struct \(view.type): View, with "
+                            + view.initializers.map { "`\($0.declaration)`" }.joined(separator: ", ")
+                            + " and `public var body: some View`, which \(contract) gives as a view"))
                 continue
             }
             for extra in found.dropFirst() {
@@ -87,25 +90,47 @@ extension APIParity {
             reportExtras(d, view.type)
             let members = declarations.indices.filter { declarations[$0].container == view.type }
             let initializers = members.filter { declarations[$0].kind == .initializer && !accounted.contains($0) }
-            if let exact = initializers.first(where: { declarations[$0].parameters == view.parameters }) {
+            var unmatched: [AppleComponents.Own.Initializer] = []
+            for expectedInit in view.initializers {
+                guard
+                    let exact = initializers.first(where: {
+                        !accounted.contains($0) && declarations[$0].parameters == expectedInit.parameters
+                    })
+                else {
+                    unmatched.append(expectedInit)
+                    continue
+                }
                 accounted.insert(exact)
                 expectedCount += 1
                 let i = declarations[exact]
+                let what = "\(view.type).\(expectedInit)"
                 if !i.access.isPublic {
-                    problem(i, "\(view.type).\(view.initializer) is \(i.access); \(contract) makes it public")
+                    problem(i, "\(what) is \(i.access); \(contract) makes it public")
                 }
-                reportExtras(i, "\(view.type).\(view.initializer)")
-            } else if let near = initializers.first(where: { declarations[$0].access.isPublic }) {
-                accounted.insert(near)
-                problem(
-                    declarations[near],
-                    "\(view.type)'s initializer differs from the contract: expected `\(view.initializer)`, found "
-                        + "`\(declarations[near].signature)`")
-            } else {
-                problems.append(
-                    Problem(
-                        file: view.contract.source, line: line,
-                        "missing: `public \(view.initializer)` in \(view.type), which \(contract) gives"))
+                if expectedInit.extras.isEmpty {
+                    reportExtras(i, what)
+                } else if Set(i.extras.filter { !harmlessExtras.contains($0) }) != Set(expectedInit.extras) {
+                    problem(
+                        i,
+                        "\(view.type)'s initializer differs from the contract: expected `\(expectedInit)`, found "
+                            + "`\(i.signature)`")
+                }
+            }
+            for expectedInit in unmatched {
+                if let near = initializers.first(where: {
+                    !accounted.contains($0) && declarations[$0].access.isPublic
+                }) {
+                    accounted.insert(near)
+                    problem(
+                        declarations[near],
+                        "\(view.type)'s initializer differs from the contract: expected `\(expectedInit)`, found "
+                            + "`\(declarations[near].signature)`")
+                } else {
+                    problems.append(
+                        Problem(
+                            file: view.contract.source, line: line,
+                            "missing: `\(expectedInit.declaration)` in \(view.type), which \(contract) gives"))
+                }
             }
             if let body = members.first(where: {
                 declarations[$0].kind == .var && declarations[$0].name == "body" && !declarations[$0].isStatic
@@ -122,6 +147,9 @@ extension APIParity {
                         "\(view.type).body is \(b.resultType ?? "untyped"); \(contract) gives `some View`, so the "
                             + "type of the drawing stays out of the API")
                 }
+            } else {
+                // The compiler reports a View without a body too; the lint says what the contract gives.
+                problem(d, "missing: `public var body: some View` in \(view.type), which \(contract) gives as a view")
             }
         }
         return problems

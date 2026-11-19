@@ -57,6 +57,8 @@ final class SnapshotMatrixTests: XCTestCase {
     struct Component: Codable {
         var component: String
         var columns: String
+        /// The option down the rows in place of the states (Icon's glyphs); nil for rest and each state.
+        var rows: String?
         var notes: [String]
         /// The matrix generated from the contract first, then each supplement.
         var groups: [Group] = []
@@ -139,7 +141,8 @@ final class SnapshotMatrixTests: XCTestCase {
             textSizeNote: ComponentMatrix.TextSize.notCapturedNote)
         manifest.components = components.map { groups in
             Component(
-                component: groups[0].component, columns: groups[0].columnName, notes: groups[0].notes,
+                component: groups[0].component, columns: groups[0].columnName, rows: groups[0].rowOption,
+                notes: groups[0].notes,
                 groups: groups.map { matrix in
                     Group(
                         id: matrix.supplement?.id ?? "contract",

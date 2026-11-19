@@ -211,10 +211,10 @@ struct OwnComponentTests {
                 "options.size: a size option") == true)
         #expect(
             failure(ownYAML(options: "  role: { type: tokens, group: typography }"))?.contains(
-                "options.role: an option whose values are tokens or icons") == true)
+                "options.role: an option whose values are tokens: \(notYet)") == true)
         #expect(
             failure(ownYAML(options: "  glyph: { type: icons }"))?.contains(
-                "options.glyph: an option whose values are tokens or icons") == true)
+                "options.glyph: a modifier with an option whose values are icons: \(notYet)") == true)
         #expect(
             failure(ownYAML(slots: "[content, footer]"))?.contains(
                 "slots: a modifier's content is the view it modifies") == true)
@@ -228,6 +228,7 @@ struct OwnComponentTests {
                               options: { variant: [raised] }
                               fallback: { variant: raised }
                         """))?.contains("platforms.apple.watchos: an own-component that an OS restricts") == true)
+        // A system option is the system's own environment modifier: no parameter and no enum (Icon's scale).
         #expect(
             failure(
                 ownYAML(
@@ -235,7 +236,7 @@ struct OwnComponentTests {
                             strategy: own-component
                             form: modifier
                             systemOptions: { outlined: SwiftUI.Bool }
-                        """))?.contains("platforms.apple.systemOptions.outlined") == true)
+                        """)) == nil)
         let viewWithVariant = viewYAML(options: "  variant: { type: enum, values: [quiet, loud] }")
         #expect(failure(viewWithVariant, id: "rule")?.contains("options.variant: a view with a variant") == true)
         let viewWithSlots = viewYAML().replacingOccurrences(of: "slots: []", with: "slots: [label]")
@@ -382,6 +383,8 @@ struct OwnComponentTests {
             ["Surface/Surface.swift": Self.surfaceSwift.replacingOccurrences(of: "= false", with: "= true")])
         #expect(changed.count == 1)
         #expect(changed[0].contains("Surface's modifier differs from the contract"))
+        // The modifier is hand-written: generating again changes nothing, so the lint does not advise it.
+        #expect(!changed[0].contains("tools/westron generate"))
         let extra = try Self.parity(
             [(ownYAML(), "surface")],
             [
@@ -438,6 +441,15 @@ struct OwnComponentTests {
             ])
         #expect(typedBody.count == 1)
         #expect(typedBody[0].contains("Rule.body is Rectangle"))
+
+        let withoutBody = try Self.parity(
+            rule,
+            [
+                "Rule/Rule.swift": Self.ruleSwift.replacingOccurrences(
+                    of: "public var body: some View {\n        Rectangle()\n    }", with: "")
+            ])
+        #expect(withoutBody.count == 1)
+        #expect(withoutBody[0].contains("missing: `public var body: some View` in Rule"))
 
         let missingEnum = APIParity.check(
             contracts: [

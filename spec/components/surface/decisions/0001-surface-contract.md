@@ -86,6 +86,10 @@ bindings carry only `outlined`'s hairline.
 
 ## What the tools need before an approved Surface is generated
 
+**Superseded by "How the tools settled it" below.** This is what the agent proposed before the implementation; the
+generated signature it describes was not built: the modifier is hand-written and the lint holds it to the contract. Kept
+as the record of the proposal.
+
 Today an approved own component generates nothing, and the parity lint reports any public API named as its component
 as API no contract gives (conventions Q2). For `.surface(_:outlined:)`:
 

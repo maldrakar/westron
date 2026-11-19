@@ -196,8 +196,8 @@ public struct AppleComponents: Generator {
             else {
                 throw problem(applePath, "not an \(SystemStyles.extensionStrategy) with a base")
             }
-            // Icon (#28): its API is initializers of the base taking Westron.Icon, which the conventions do not derive
-            // from a contract yet.
+            // An extension whose option is the icon registry's names is not derived: no initializer of SwiftUI's Image
+            // can hide or name a symbol, so Icon (#28) is an own view (`Own`).
             if let option = contract.options.first(where: { $0.kind == .icons }) {
                 throw problem(
                     .root.key("options").key(option.name),

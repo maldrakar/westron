@@ -302,7 +302,7 @@
       }
     },
     "systemOptions": {
-      "description": "Options that are the platform's own API: by option name, the system type or member that carries it, such as `role: SwiftUI.ButtonRole`. The generators make no type for such an option and give the style overload no argument for it: a product sets it on the system control (`Button(role: .destructive)`), and the style reads it there (spec/conventions.md).",
+      "description": "Options that are the platform's own API: by option name, the system type or member that carries it, such as `role: SwiftUI.ButtonRole`. The generators make no type for such an option and give the style overload no argument for it: a product sets it on the system control (`Button(role: .destructive)`), and the style reads it there; on an own component it is the system's environment modifier, which the product writes on the component and the system views inside it read (Icon's `scale: SwiftUI.Image.Scale`, `.imageScale(_:)`) (spec/conventions.md).",
       "type": "object",
       "minProperties": 1,
       "propertyNames": { "$ref": "#/$defs/name" },

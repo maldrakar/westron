@@ -237,6 +237,9 @@ public enum APIParity {
         var required = true
         /// Attributes it may carry beyond `harmlessExtras` (`twinExtras` for a twin).
         var allowedExtras: Set<String> = []
+        /// Whether `tools/westron generate` writes it, so that generating again fixes a difference: a style overload.
+        /// A hand-written modifier (an own component's, an extension's) is fixed in its source.
+        var generated = false
 
         var signature: String {
             "\(name)(" + parameters.map(\.description).joined(separator: ", ") + ") -> \(result)"
@@ -246,16 +249,12 @@ public enum APIParity {
         var containers: Set<String> { extends == "View" ? viewTypes : [extends, "SwiftUI." + extends] }
     }
 
-    /// An own component's view (`AppleComponents.Own`, form `view`): the type, its initializer and its body.
+    /// An own component's view (`AppleComponents.Own`, form `view`): the type, its initializers and its body.
     struct ExpectedView {
         let contract: Contract
         /// `Rule`.
         let type: String
-        let parameters: [SwiftDeclarations.Parameter]
-
-        var initializer: String {
-            "init(" + parameters.map(\.description).joined(separator: ", ") + ")"
-        }
+        let initializers: [AppleComponents.Own.Initializer]
     }
 
     struct Expected {
@@ -339,7 +338,8 @@ public enum APIParity {
             expected.functions.append(
                 ExpectedFunction(
                     what: "\(item.component)'s style overload", contracts: [item], name: base.modifier,
-                    parameters: first + rest, types: types, line: (item.source, item.line(of: "base"))))
+                    parameters: first + rest, types: types, line: (item.source, item.line(of: "base")),
+                    generated: true))
             for state in item.contract.states where !base.states.contains(state) {
                 if let index = stateOwners.firstIndex(where: { $0.state == state }) {
                     stateOwners[index].contracts.append(item)
@@ -493,7 +493,7 @@ public enum APIParity {
                     declarations[near],
                     "\(item.what) differs from the contract: expected `\(item.signature)`, found "
                         + "`\(declarations[near].signature)`"
-                        + (item.types.isEmpty ? "" : "; run tools/westron generate"))
+                        + (item.generated ? "; run tools/westron generate" : ""))
             } else if item.required {
                 problems.append(
                     Problem(

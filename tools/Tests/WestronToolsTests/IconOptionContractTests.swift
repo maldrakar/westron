@@ -162,12 +162,12 @@ struct IconOptionContractTests {
         }
         do {
             _ = try SnapshotMatrix(approved, source: iconSource)
-            Issue.record("the matrix took an icons option")
+            Issue.record("the matrix took an icons option without the registry's names")
         } catch {
             #expect(
                 error.description
-                    == "\(iconSource): options.glyph: glyph takes its values from the icon registry: the snapshot "
-                    + "matrix does not take such an option yet")
+                    == "\(iconSource): options.glyph: glyph takes its values from the icon registry: the matrix needs "
+                    + "its names")
         }
         let lint = APIParity.check(
             contracts: [
