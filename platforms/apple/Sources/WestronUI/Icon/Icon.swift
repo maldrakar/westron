@@ -17,9 +17,16 @@ import SwiftUI
 ///
 /// Without a label it is decorative and hidden from assistive technology: beside its own words it would only repeat
 /// them, and the system's name for a symbol says what it draws ("Increase Brightness" for the sun), not what it means
-/// here. A standalone icon that means something takes a label, and is announced as an image with it. An icon-only
-/// control is labeled by the control, not by its icon. Where only an `Image` fits, as inside `Text` interpolation,
-/// `Image(_: Westron.Icon)` draws the same glyph, with the system's spoken name.
+/// here. A standalone icon that means something takes a label, and is announced as an image with it; a modifier such
+/// as `.accessibilityLabel(_:)` on a decorative icon does not unhide it, so the label goes in `label:`. An icon-only
+/// control is labeled by the control, not by its icon, so a control whose only content is an icon gives it its name:
+///
+///     Button { add() } label: { Label("Add task", icon: .plus) }.buttonStyle(.primary, iconOnly: true)
+///     Button { add() } label: { Icon(.plus, label: "Add task") }
+///
+/// Where only an `Image` fits, as inside `Text` interpolation, `Image(_: Westron.Icon)` draws the same glyph, with the
+/// system's spoken name. The glyph is drawn in one color (`symbolRenderingMode(.monochrome)`), whatever its context
+/// asks (design-language/07, "One color").
 public struct Icon: View {
     let icon: Westron.Icon
     /// The spoken label; nil for a decorative icon.
@@ -50,6 +57,7 @@ public struct Icon: View {
 
     public var body: some View {
         Image(icon)
+            .symbolRenderingMode(.monochrome)
             .accessibilityLabel(label ?? Text(verbatim: ""))
             .accessibilityHidden(label == nil)
     }

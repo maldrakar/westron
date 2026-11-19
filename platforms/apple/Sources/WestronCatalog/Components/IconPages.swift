@@ -16,8 +16,9 @@ extension Image.Scale {
     init(contract value: String) {
         switch value {
         case "small": self = .small
+        case "medium": self = .medium
         case "large": self = .large
-        default: self = .medium
+        default: preconditionFailure("no Image.Scale for the contract's scale \(value)")
         }
     }
 }
@@ -158,7 +159,7 @@ private struct IconPage: View {
                         HStack(spacing: .space150) {
                             IconBesideText(icon: .tray, role: item.role, word: item.word)
                             IconBesideText(icon: .check, role: item.role, word: item.word)
-                            TokenDetail(item.name)
+                            TokenDetail(item.name.replacingOccurrences(of: ".", with: " "))
                         }
                     }
                 }
@@ -182,7 +183,7 @@ private struct IconPage: View {
                     HStack(spacing: .space150) {
                         Label("Rename", icon: .pen)
                             .accessibilityIdentifier(IconPageID.label)
-                        TokenDetail("Label: its title alone")
+                        TokenDetail("Label: the system's, image then title")
                     }
                     .textRole(.body.regular)
                     .foregroundStyle(.text.primary)

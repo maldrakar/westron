@@ -145,7 +145,7 @@ private struct Check: View {
             if done {
                 Circle()
                     .fill(.background.accent)
-                Icon(.check)
+                Icon(.check, label: "Done")
                     .font(Font(.caption.medium).weight(.bold))
                     .foregroundStyle(.text.onAccent)
             } else {

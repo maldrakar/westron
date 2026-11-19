@@ -127,9 +127,17 @@ inside, as a style holds the system's control, and adds only what the `Image` ca
   `Text("Today")`.
 - **`Image(_: Westron.Icon)` stays a reviewed adapter**, not this component, for where only an `Image` fits, such as
   `Text` interpolation; its documentation says it keeps the system's name.
-- **`Label(_:icon:)`'s icon is hidden** beside its title (design-language/07:101–102, 08:92–93): the adapter's `Icon`
-  type is the hidden `Image`, `ModifiedContent<Image, AccessibilityAttachmentModifier>`. Its call sites and the parity
-  lint's adapter list do not change.
+- **`Label(_:icon:)` stays as the system makes it** (tried and left, under the coordinator's instruction to hide its
+  icon only if that was contained). design-language/07:101–102 and 08:92–93 say a decorative icon beside its own
+  label is hidden, and on its own a `Label` is read as the symbol's system name and then its title (the snapshot
+  above). Making the adapter's icon a hidden `Image` (`Icon == ModifiedContent<Image,
+  AccessibilityAttachmentModifier>`) compiled, kept every call site and drew the icon in a `Menu`, but the
+  accessibility hierarchy of that menu on iOS 26.3 lost the items built from it: "Rename" and "Delete" were cells
+  with no button, where the same menu's `Label("Plain", systemImage: "pencil")` kept its button. The pilot's Rename
+  and Delete menus are built so, so the adapter keeps `Label(_:systemImage:)`, and the contract records the
+  difference. **For the owner:** a `Label` outside a control could take `Icon` for its icon by hand,
+  `Label { Text("Rename") } icon: { Icon(.pen) }`, which the menu case would need checking for too; or westron accepts
+  the system's reading of a lone label.
 - **`scale`** (proposed by the agent, decided under the delegation): it stays a contract option and an Apple system
   option, `SwiftUI.Image.Scale`. On an own component a system option is the system's environment modifier, which the
   product writes on the component and the symbol inside reads: `Icon(.chevron).imageScale(.small)`. So `Icon` takes no

@@ -58,7 +58,10 @@ platforms:
       and SwiftUI has no initializer of an Image of a symbol and no modifier returning an Image that hides it or
       names it (decisions/0001, "The Apple view"). Image(_: Westron.Icon) stays an adapter, not this component, for
       where only an Image fits, such as Text interpolation: it keeps the system's name. Label("Rename", icon: .pen)
-      keeps the system Label, its icon hidden beside its title. The glyph is the SF Symbol the registry names: a
+      keeps the system Label, as Label(_:systemImage:) makes it, and differs from the accessibility rule above: in a
+      control the title names it, but a label on its own is read as the symbol's system name and then its title.
+      Hiding its icon would hide a menu item built from the label as a whole, so westron leaves it as the system makes
+      it (decisions/0001, "The Apple view"). The glyph is the SF Symbol the registry names: a
       symbol takes the font of its context (.textRole(_:)), which gives it the size and the weight of the text beside
       it, and the context's foregroundStyle, which gives it its color; rendering is monochrome. scale is SwiftUI's own
       Image.Scale, which the product sets with .imageScale(_:) on the icon or its container and the symbol inside

@@ -52,17 +52,16 @@ struct IconTests {
         #expect(Westron.Icon.newWindow.systemName == "macwindow.badge.plus")
     }
 
-    @Test("an icon's image is its SF Symbol; a label takes the icon, hidden beside its title")
+    @Test("an icon's image is its SF Symbol; a label takes the icon as the system's Image")
     @MainActor
     func adapters() {
         for icon in Westron.Icon.allCases {
             #expect(Image(icon) == Image(systemName: icon.systemName), "\(icon)")
         }
-        // The icon's type is the hidden image: assistive technology reads the title alone (design-language/07, 08).
-        let localized: Label<Text, ModifiedContent<Image, AccessibilityAttachmentModifier>> = Label(
-            "Rename", icon: .pen)
-        let verbatim: Label<Text, ModifiedContent<Image, AccessibilityAttachmentModifier>> = Label(
-            String("Work"), icon: .folder)
+        // The system's Label of an Image, as Label(_:systemImage:): a hidden icon would hide a menu item built from it
+        // (spec/components/icon, decisions/0001).
+        let localized: Label<Text, Image> = Label("Rename", icon: .pen)
+        let verbatim: Label<Text, Image> = Label(String("Work"), icon: .folder)
         _ = (localized, verbatim)
     }
 
