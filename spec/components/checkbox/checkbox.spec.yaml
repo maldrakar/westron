@@ -1,8 +1,9 @@
-# westron's Checkbox contract (#31), the round check that completes a task, a draft:
-# decisions/0001-checkbox-contract.md records the owner's answers of 2026-11-18, the scope of #31, what the documents
-# already decide, and what the agent proposes on top of them, to confirm.
+# westron's Checkbox contract (#31), the round check that completes a task, approved on 2026-11-18 under the owner's
+# delegation: decisions/0001-checkbox-contract.md records the owner's answers of 2026-11-18, the scope of #31, what the
+# documents already decide, what the agent proposed on top of them, and what the implementation on Apple decided under
+# the same delegation, pending the owner's confirmation.
 id: checkbox
-status: draft
+status: approved
 description: >-
   The round check that marks a task or a subtask done: westron's style on the platform's own toggle, which keeps
   its role, its value and its keyboard. It is a circle on every platform, never a square box. Unchecked, it is a ring
@@ -11,13 +12,14 @@ description: >-
   comes from the context, the accent when the context sets none. With the accent the disc is
   color.background.accent and the mark color.text.on-accent; with a list's color the disc is
   color.category.<name>.control and the mark color.category.<name>.on-control, for each of the twelve list colors,
-  the disc meeting 3:1 as a non-text color on canvas, surface and sunken (tokens expected from the tokens work, not
-  in tokens/ yet, so not bound below). Checking pops the disc and its mark in with motion.check, the one
+  the disc meeting 3:1 as a non-text color on canvas, surface and sunken, 4.5:1 in high contrast. The bindings below
+  are the accent's, since the list's color is the context's and not an option of the contract; this text is the
+  contract for a list's color. Checking pops the disc and its mark in with motion.check, the one
   overshoot in westron: they scale up from 80 % to full size, and the spring's bounce carries them past it and back;
   Reduce Motion drops the scale and keeps the fill appearing (design-language/05). Unchecking fades the disc and the
   mark out in motion.fade, with no pop. A press scales the check down to 98 % in motion.press, as every control's
-  press does (design-language/05, "Shapes belong to components"), and Reduce Motion drops that scale too. The circle has no size option: it is sized by the
-  text role of the label beside it, as an icon is, and grows with the person's text size (design-language/07, "Size
+  press does (design-language/05, "Shapes belong to components"), and Reduce Motion drops that scale too. The
+  circle has no size option: it is sized by the text role of the label beside it, as an icon is, and grows with the person's text size (design-language/07, "Size
   relative to text"). Its hit area is at least the platform's recommended target, 44 pt on iOS and watchOS and 28 pt
   on macOS, also where the circle is smaller (design-language/08). Disabled draws the whole check at
   opacity.disabled, with no colors of its own.
@@ -74,21 +76,43 @@ platforms:
     strategy: style-on-system-control
     base: SwiftUI.Toggle
     description: >-
-      .toggleStyle(.check) on the system Toggle: Toggle(isOn: $task.isDone) { Text(task.title) }. checked is
-      configuration.isOn. ToggleStyleConfiguration has no isPressed, so the style follows the press itself and keeps
-      the Toggle's trait and value for VoiceOver; the implementation probes how on each OS and records it. The list's
-      color reaches the style through the environment; how a product sets it is the implementation's to propose
-      with the category control tokens. The focus ring is the system's, so the focusRing bindings do not apply, as
-      for Button. The mark is the registry's check glyph.
+      .toggleStyle(.check) on the system Toggle, with the text role set on the toggle, so that the label and the
+      circle share it: Toggle(task.title, isOn: $task.isDone).toggleStyle(.check).textRole(.body.regular). checked is
+      configuration.isOn. The list's color reaches the style through the environment: .category(_:), a shared
+      modifier that takes a Westron.Category? (nil, the default, is the accent) and cascades like .tint(_:), set once
+      around a list's rows: .category(Westron.Category(rawValue: list.color)). It is named for what it sets, not for
+      the check, so that every westron control that takes the list's color reads it; the API parity lint accounts for
+      it as a reviewed adapter in its own file (APIParity.otherAdapters, Category.swift), since no contract option can
+      give it (decisions/0001, P15). ToggleStyleConfiguration has no isPressed, so the style's body is a system Button
+      that toggles the value, drawn by a ButtonStyle, which sees isPressed; the button is the check's activation and
+      its focusable element (keyboard focus on macOS: platforms.apple.macos). For assistive technology the body is
+      replaced by the system's own Toggle on the same value and label (accessibilityRepresentation), so VoiceOver
+      meets the toggle's role and value and no button. The circle's diameter is 1.2 times the line height of the text role that reaches the style, and its hit
+      area is a square of at least size.control.m around it, the label beside it included (decisions/0001, P10, P16,
+      P17). A row whose title is a separate text hides the label with .labelsHidden(), and the label stays the
+      toggle's accessible name, so the separate title is hidden from assistive technology and not read twice
+      (the catalog's live row, CheckboxBehaviorTests); a custom style sees .labelsHidden() only from iOS 18,
+      macOS 15 and watchOS 11 (labelsVisibility), so on iOS 17, macOS 14 and watchOS 10 the label is still drawn
+      beside the circle. The focus ring is the system's, so the focusRing bindings do not apply, as for Button. The
+      mark is the registry's check glyph.
     ios:
-      description: VoiceOver announces the Toggle's own trait and value. No hover.
+      description: >-
+        VoiceOver meets the system Toggle of the representation: a switch with its label, its value on or off, and no
+        button (CatalogUITests/CheckboxBehaviorTests). No hover. The hit area is at least 44 pt, size.control.m.
     macos:
       description: >-
-        The system's checkbox toggle is square; westron's check stays round, as on the other OSes. The hit area is at
-        least 28 pt.
+        The system's checkbox toggle is square; westron's check stays round, as on the other OSes. Assistive
+        technology meets a checkbox with its label and its value, and no button (CatalogUITests/CheckboxBehaviorTests).
+        The hit area is at least size.control.m, 32 pt, above the recommended 28. Keyboard focus, measured with the
+        Mac's keyboard navigation off: neither westron's check nor a system Toggle in checkbox style takes focus,
+        from Tab or from code; with .focusable() added, both take focus and show the system's ring, and Space
+        toggles neither. With keyboard navigation on, Tab and Space are unverified, pending the owner's run of
+        CheckboxBehaviorTests.testKeyboardFocusAndSpace (decisions/0001, "Open points").
     watchos:
       states: [checked, pressed, disabled]
-      description: No keyboard focus to draw. The hit area is at least 44 pt.
+      description: >-
+        No keyboard focus to draw. VoiceOver meets the system Toggle of the representation, as on iOS. The hit area is
+        at least 44 pt, size.control.m.
   web:
     strategy: style-on-system-control
     base: input

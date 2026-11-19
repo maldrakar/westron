@@ -494,7 +494,8 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             guard issue.auditType == type else { return false }
             if let description, issue.compactDescription != description { return false }
             if let appearance, configuration.appearance != appearance { return false }
-            if let value, issue.element?.value as? String != value { return false }
+            // A value as text: iOS gives a switch's as a string, macOS a checkbox's as a number.
+            if let value, issue.element?.value.map({ "\($0)" }) != value { return false }
             if let enabled, issue.element?.isEnabled != enabled { return false }
             if let detail, !issue.detailedDescription.contains(detail) { return false }
             return label(issue.element?.label)
@@ -542,6 +543,39 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                 ["Save", "Delete"].contains($0 ?? "")
             }
         }
+        suppressions += [
+            // Contrast on the disabled Checkbox sample, drawn whole at opacity.disabled by the contract: WCAG exempts
+            // an inactive control (design-language chapter 08). Only an element that is not enabled matches.
+            Suppression(.entry("checkbox"), type: .contrast, reason: "an inactive control", enabled: false) {
+                ["disabled", "disabled, checked"].contains($0 ?? "")
+            },
+            // "Contrast nearly passed" on a checked check: the audit measures its disc against the canvas and holds
+            // it to text's 4.5:1, while the disc is a graphic, held to the non-text 3:1 (4.5:1 in high contrast,
+            // where the audit passes it) by the non-text declarations of color.background.accent and
+            // color.category.<name>.control, which `tools/westron tokens contrast` checks in every theme (WCAG
+            // 1.4.11; decisions/0012). Only an enabled check that is on, with one of the page's checked labels,
+            // matches, and only "nearly passed", which is at least 3:1; the same text.primary labels are audited
+            // unsuppressed on the page's unchecked rows.
+            Suppression(
+                .entry("checkbox"), type: .contrast, reason: "a checked disc, a non-text graphic at 3:1",
+                description: "Contrast nearly passed", value: "1", enabled: true
+            ) { label in
+                [
+                    "checked", "pressed, checked", "focus, checked", "Outline the sections", "blue", "sky", "teal",
+                    "emerald", "green", "olive", "amber",
+                    "orange", "red", "pink", "violet", "indigo",
+                ].contains(label ?? "")
+            },
+            // The live row's check, whose label is hidden (`.labelsHidden()`) beside a separate title, as in the
+            // pilot's task row. Its element is the circle's 44 pt square named by the hidden label, and the audit
+            // measures it as if that name were drawn there: the ring, a graphic at border.strong's non-text 3:1, as
+            // text ("Contrast nearly passed"), and the name as text that may be clipped. Nothing is drawn but the
+            // circle, so neither applies; the title beside it is hidden from assistive technology and drawn whole.
+            Suppression(
+                .entry("checkbox"), type: .contrast, reason: "a hidden label: the ring, a non-text graphic at 3:1",
+                description: "Contrast nearly passed"
+            ) { $0 == "Call the plumber" },
+        ]
         #if os(iOS)
             // The TextField focus pages focus a field for real, so the system keyboard is up while they are audited
             // (spec/components/text-field). The keyboard's own prediction cells have no description, and at the
@@ -560,6 +594,10 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                 ]
             }
             suppressions += [
+                // The same row's hidden label, which the text clipped audit (iOS only) measures as drawn text.
+                Suppression(.entry("checkbox"), type: .textClipped, reason: "a hidden label, not drawn") {
+                    $0 == "Call the plumber"
+                },
                 // "Text clipped" with no element on the background colors. It appeared when the page got its
                 // layout for accessibility sizes, which puts a name on a line above its cells. The audit names no
                 // element, so there is nothing to fix by; the same page at accessibility5 passes the text clipped
@@ -567,7 +605,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                 // accessibility3 shows every label whole.
                 Suppression(.entry("color-backgrounds"), type: .textClipped, reason: "an issue with no element") {
                     $0 == nil
-                }
+                },
             ]
         #endif
         return suppressions
