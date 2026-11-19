@@ -177,8 +177,9 @@ still drives every generated sheet and combination:
   matrix, supplements are not catalog entries, so the accessibility audit does not walk them.
 
 ```sh
-tools/apple/snapshot-matrix.sh ios                       # or macos; --component button for one component
+tools/apple/snapshot-matrix.sh ios                       # or macos; --component button,rule for some components
 tools/apple/snapshot-matrix.sh compare <before> <after>  # exit 0 when every image is the same, 1 otherwise
+tools/apple/snapshot-matrix.sh merge --expect button,rule <out> <capture>…  # captures taken apart, one page
 ```
 
 The capture runs the UI test `SnapshotMatrixTests` once (one `xcodebuild test`), which launches the catalog for every
@@ -196,24 +197,33 @@ device and scale, and each picture's size) and prints its path; it fails when an
 check. The
 comparison writes `before/`, `after/`, `diff/` and its `index.html` to `.build/snapshot-matrix/compare/` (`--out` to
 change it). Compare only captures from the same environment: two local runs, or two CI artifacts (decisions/0008).
-Between two iOS captures (both manifests say `ios`, at one scale) the comparison ignores the home indicator's box,
-160 × 12 pt at the bottom centre of the screen, from 16 to 4 pt above its bottom (`homeIndicatorBox` in
-`tools/apple/snapshot-pages.swift`): the system draws the indicator over the app, and from launch to launch draws it or
-not, or at another opacity, so two captures of the same commit differed there and nowhere else (iPhone 17, iOS 26.3:
-every differing pixel in x 387–819, y 2583–2598 of 1206 × 2622). The box lies in the bottom safe-area inset (34 pt on
-iPhone 17), under which a sheet that fits draws only its canvas; it is ignored in an image only where the content
-stays clear of it in both pictures, that is when the band around it (from 4 pt above it down to its bottom, across the
-whole width) is one color (`clearOfContent`). A sheet that does not fit the screen reaches into the band, and its box
-is compared like the rest. The pixels that differ in an ignored box are not hidden: a diff draws them in amber, a
-changed image's line counts them apart, and an image that differs there alone is listed as unchanged with their
-number, as is the summary line. Of the sheets of Button, Checkbox and Text field (2026-11-19), every one but Checkbox's
-twelve list colors at `accessibility5` ends 22 pt or more above the bottom of the screen; that one, which overflows the
-screen at both ends, ends 13 pt above it and is compared whole.
-CI's `snapshot-matrix` job runs one job per platform and component (`--component`), side by side, for the components
-of the generated registry `ComponentMatrix.all`, each uploaded as `snapshot-matrix-<platform>-<component>`; then
-`snapshot-matrix-pages` puts them together with `tools/apple/snapshot-matrix.sh merge <out> <capture>…` and uploads one
-page per platform, `snapshot-matrix-ios` and `snapshot-matrix-macos`, as before. One job for a platform no longer fits:
-phase 3 brings about 337 images on iOS and 176 on macOS.
+Between two iOS captures (both manifests say `ios`, at one scale) the comparison ignores the home indicator
+(`HomeIndicator` in `tools/apple/snapshot-pages.swift`): the system draws it over the app, and from launch to launch
+draws it or not, or at another opacity, so two captures of the same commit differed there and nowhere else (iPhone 17,
+iOS 26.3: every differing pixel in x 387–819, y 2583–2598 of 1206 × 2622, a capsule of 144 × 5 pt centred 10.3 pt above
+the bottom). A pixel is ignored only on that footprint, with 1.5 pt of tolerance, and only when three things hold in
+the image:
+- the content stays clear of the box around the indicator (160 × 12 pt, from 16 to 4 pt above the bottom of the
+  screen) in both pictures: the band from 4 pt above the box down to its bottom, across the whole width, is one color
+  (`clearOfContent`). The box lies in the bottom safe-area inset (34 pt on iPhone 17), under which a sheet that fits
+  draws only its canvas; a sheet that does not fit reaches into the band and is compared whole. Of the iOS sheets of
+  all seven components (2026-11-19), every one but Checkbox's twelve list colors at `accessibility5` ends 22 pt or
+  more above the bottom; that one overflows the screen at both ends and ends 13 pt above it;
+- nothing in the box differs off the footprint (`onlyOnFootprint`): a block, a dot or a line elsewhere in the box, or
+  wider or taller than the indicator, is reported, together with whatever differs on the footprint;
+- both captures are iOS at one scale.
+
+What is ignored stays visible: a diff draws it in amber, a changed image's line counts it apart, and every image that
+differs on the indicator alone counts as unchanged but gets its diff picture under a heading of its own, "Unchanged but
+for the home indicator", not collapsed, and in the summary line.
+
+CI's `snapshot-matrix` job packs the components of the generated registry `ComponentMatrix.all` into legs by their
+number of images (first fit, the largest first, at most 40 minutes of capture on the runner, 15 s an iOS image and 8 s
+a macOS one; the counts are in the workflow's `IMAGES`, and the page job warns when a capture's count differs). Each leg
+captures its components in one run (`--component a,b`) and uploads `snapshot-matrix-<platform>-<a+b>`; then
+`snapshot-matrix-pages` puts each platform's legs together with `merge --expect` and uploads one page per platform,
+`snapshot-matrix-ios` and `snapshot-matrix-macos`, as before. A page whose component no leg brought names it at its top.
+With Text field, 364 iOS images go in three legs and 184 macOS images in one.
 
 ### Accessibility audit
 
@@ -231,19 +241,19 @@ WESTRON_ENTRY=controls,icons tools/apple/check.sh a11y     # those entries only
 WESTRON_ENTRY_SHARD=2/3 tools/apple/check.sh a11y          # every third entry, from the second (after WESTRON_ENTRY)
 ```
 
-CI runs the audit in its own job, `accessibility-audit`, side by side (`fail-fast: false`, 35 minutes each), every test
-split by entries (`WESTRON_ENTRY_SHARD`): `testDefaultSettings` into five shards, `testAccessibilityDynamicType` into
-six, and each of the three contrast tests into two, seventeen legs sized for the 29 entries phase 3 brings (each leg
-about 19–21 minutes, its build included; the arithmetic is in `.github/workflows/ci.yml`). The runner is about 3 times
-slower than a local Mac: with the Button entries (PR #66, 2026-11-17) it took over 36.6 minutes for
+CI runs the audit in its own job, `accessibility-audit`, side by side (`fail-fast: false`, 45 minutes each): ten legs
+for the 28 entries of phase 3, `testDefaultSettings` in three shards (`WESTRON_ENTRY_SHARD`),
+`testAccessibilityDynamicType` in four, and each of the three contrast tests in one leg, about 25–28 minutes each, its
+build included (the arithmetic is in `.github/workflows/ci.yml`). Each leg pays about 10 minutes of build and setup
+before its first entry, and at most 5 Mac jobs run at once, so fewer, longer legs finish the run sooner. The runner is
+about 3 times slower than a local Mac: with the Button entries (PR #66, 2026-11-17) it took over 36.6 minutes for
 `testAccessibilityDynamicType`, past the timeout, 32.4 minutes for `testDefaultSettings`, and 16–19 minutes for each of
-the others, against 627 s, 476 s and 194–196 s locally. The cost is seventeen parallel jobs, each with its own catalog
-build, about six runner-hours per run, so the audit runs on every push to `main` and on a pull request only when it
-changes a path the audit depends on:
+the others, against 627 s, 476 s and 194–196 s locally. The cost is ten parallel jobs, about 4.3 runner-hours per run,
+so the audit runs on every push to `main` and on a pull request only when it changes a path the audit depends on:
 `platforms/apple/`, `tokens/`, `spec/`, `tools/apple/`, `Package.swift`, `Package.resolved`, `.xcode-version` or
 `.github/workflows/ci.yml`. The job `audit-scope` decides, from the pull request's merge commit; otherwise the audit's
-jobs show as skipped. If `audit-scope` itself fails, the audit runs. A leg that nears 22 minutes as pages are added
-gets another shard, so that a retry still fits its 35.
+jobs show as skipped. If `audit-scope` itself fails, the audit runs. A leg that passes about 30 minutes as pages are
+added (a contrast leg at about 31 entries) gets another shard, so that a retry still fits its 45.
 
 | Test | Launch arguments | Audit types on iOS |
 |---|---|---|
@@ -315,17 +325,17 @@ gets another shard, so that a retry still fits its 35.
     every test passed (the runner died, or the result bundle was not written, after the last test), with
     `a11y: xcodebuild exited with status <n> although every test passed` in its output. A retry that fails again
     fails the leg.
-  - A retry must fit a time budget, 30 minutes from the start of `check.sh a11y`, its build included
-    (`WESTRON_A11Y_RETRY_BUDGET`): a CI leg times out at 35, and a leg the timeout kills uploads no logs. A retry
+  - A retry must fit a time budget, 40 minutes from the start of `check.sh a11y`, its build included
+    (`WESTRON_A11Y_RETRY_BUDGET`): a CI leg times out at 45, and a leg the timeout kills uploads no logs. A retry
     is estimated at 90 s plus, for each entry to retry, the mean time of the entries the first run finished
     without a failure and without an audit the test retried on the spot (-56), from XCTest's `t = <s>s` activity
     times in the log; a stalled entry's time is never used. When there are none, as with a stall in the first
     entry, each entry counts at a time measured on CI with a margin: 90 s for `testDefaultSettings`, 130 s for
     `testAccessibilityDynamicType`, 38 s for the other three. A whole test is retried only in the first half of
     the budget. Past it, the leg fails with a line that says so. On CI the step spends 6.5–17.1 minutes, median
-    10.0 and mean 10.4, before its first entry, so a stall in the first entry of the slowest leg is retried after a
-    build of usual length (about 28.4 minutes in all), and not after a slow one (`tools/apple/check.sh` has the
-    numbers).
+    10.0 and mean 10.4, before its first entry, so a stall in the first entry of the slowest leg, a contrast test's
+    28 entries, is retried after a build of usual length (about 32.6 minutes in all) and after one of up to about
+    17.8 minutes (`tools/apple/check.sh` has the numbers).
   - What the retry can hide: a catalog page that hangs the app only sometimes, since a hung app also times out UI
     queries.
   - `WESTRON_A11Y_FAIL_ONCE=<id>` is a test hook that fails that entry for infrastructure in the first run only, to

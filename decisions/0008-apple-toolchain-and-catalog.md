@@ -88,13 +88,15 @@ Date: 2026-11-14. Status: accepted.
   (one failed, one passed after a retry). The step spends 6.5–17.1 minutes, median 10.0 and mean 10.4, before its
   first entry; so a stall in the first entry of the slowest leg is retried within the budget after a usual build
   (10.4 + 3 + 15 = 28.4 minutes), and the budget of 30 and the leg's 35 minutes stay as they are.
-  2026-11-19 (phase 3): the catalog grows from 17 entries to 23 (Text, Surface, Rule, Checkbox) and, with Text field
-  and Icon, to about 29, and the whole phase reaches `main` in one pull request, so its first run must already fit.
-  From the times per entry on CI above (90, 130 and 38 s) and the mean 10.4 minutes before the first entry, a leg is
-  to stay under about 22 minutes: `testDefaultSettings` in five shards (6 entries, about 19 minutes),
-  `testAccessibilityDynamicType` in six (5 entries, about 21) and each contrast test in two (15 entries, about 20),
-  seventeen legs and about six runner-hours. A stall in the first entry of the slowest leg is retried by 25.7 minutes,
-  so the budget of 30 and the 35 minutes stay.
+  2026-11-19 (phase 3): the catalog grows from 17 entries to 28 (Text, Surface, Rule, Checkbox, Icon, Text field),
+  and the whole phase reaches `main` in one pull request, so its first run must already fit. Seventeen legs of 35
+  minutes would fit, but each pays the mean 10.4 minutes before its first entry, and at most 5 Mac jobs run at once
+  on this repository: a run with 35 Mac jobs took about 2 hours and kept other branches' `apple` job waiting. So ten
+  legs of 45 minutes with a retry budget of 40, from the times per entry above (90, 130 and 38 s):
+  `testDefaultSettings` in three shards (10 entries, about 25.4 minutes), `testAccessibilityDynamicType` in four
+  (7 entries, about 25.6) and each contrast test in one leg (28 entries, about 28.1); about 4.3 runner-hours. A stall
+  in the first entry of the slowest leg is retried by 32.6 minutes, and still after up to 17.8 minutes before the
+  first entry (17.1 seen), against 14.7 with the seventeen legs; a leg without a retry ends by 34.8 minutes.
 
 ## Consequences
 
@@ -125,11 +127,13 @@ Date: 2026-11-14. Status: accepted.
     (`index.html`) names its OS version, device and scale, and the size of each picture.
     2026-11-19: on iOS the picture is the whole screen, and the system draws the home indicator over it, from launch
     to launch or not, or at another opacity: two captures of Button on the same commit differed in 54, 83 or 84 of
-    its 144 images, every pixel in the indicator's place. The comparison of two iOS captures ignores that box
-    (160 × 12 pt at the bottom centre, in the bottom safe-area inset), but only in an image whose content stays clear
-    of it in both pictures, and reports what differs there apart; a sheet that overflows the screen is compared whole.
-    What a capture is does not change. Rejected: hiding the indicator in the catalog (`.persistentSystemOverlays(.hidden)`,
-    UIKit's `prefersHomeIndicatorAutoHidden`), which only allows the system to hide it on its own schedule, after a
+    its 144 images, every pixel in the indicator's place. The comparison of two iOS captures ignores the pixels on
+    the indicator's footprint (a capsule of 144 × 5 pt at the bottom centre, in the bottom safe-area inset, with
+    1.5 pt of tolerance), but only in an image whose content stays clear of the box around it in both pictures and
+    where nothing else in that box differs; a sheet that overflows the screen is compared whole, and a block or dot in
+    the box off the footprint is reported. Every image that differs on the indicator alone is still shown, with its
+    diff, under a heading of its own. What a capture is does not change. Rejected: hiding the indicator in the catalog
+    (`.persistentSystemOverlays(.hidden)`, UIKit's `prefersHomeIndicatorAutoHidden`), which only allows the system to hide it on its own schedule, after a
     few seconds without touches, so whether it shows still depends on timing, and which would change the catalog for
     one tool; it could not be shown to be deterministic cheaply either, since unchanged one capture showed the
     indicator in none of Button's 144 images and the next in 54. And cropping the bottom inset out of every picture,
@@ -163,9 +167,11 @@ Date: 2026-11-14. Status: accepted.
     for iOS (711 s, iPhone 17 simulator, iOS 26.3.1) and 5 for macOS (315 s), plus the builds. One CI job for both
     took 32–40 of its 50 minutes before; it would now need well over an hour, so the job `snapshot-matrix` runs one job
     per platform side by side, with 75 and 45 minutes, and uploads `snapshot-matrix-ios` and `snapshot-matrix-macos`.
-  - 2026-11-19 (phase 3): with Text, Surface, Rule and Checkbox, 240 images on iOS and 124 on macOS, and with Text
-    field and Icon about 337 and 176: about 84 minutes of capture on iOS on the runner, past any one job. The job now
-    runs per platform and component (`--component`), over the generated registry `ComponentMatrix.all`, Button with
-    75 and 45 minutes and every other component with 45 and 35; a job `snapshot-matrix-pages` merges each platform's
-    captures into one page (`snapshot-matrix.sh merge`), so the owner still opens `snapshot-matrix-ios` and
-    `snapshot-matrix-macos`. Each job builds the catalog anew: about fourteen jobs and four runner-hours.
+  - 2026-11-19 (phase 3): with Text, Surface, Rule, Checkbox, Icon and Text field, 364 images on iOS and 184 on
+    macOS: about 91 minutes of capture on iOS on the runner, past any one job. One job per component (fourteen, each
+    with its own build) was too many for 5 concurrent Mac runners, so the components go into legs packed by their
+    number of images (first fit, the largest first, at most 40 minutes of capture each, from a table of counts in the
+    workflow that the page job checks against each capture), one `xcodebuild test` per leg (`--component a,b`): three
+    legs for iOS and one for macOS, each with a timeout from its images. A job `snapshot-matrix-pages` merges each
+    platform's legs into one page (`snapshot-matrix.sh merge --expect`), which names any component no leg brought, so
+    the owner still opens `snapshot-matrix-ios` and `snapshot-matrix-macos`.
