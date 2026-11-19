@@ -22,6 +22,11 @@ import Foundation
 /// `public func textRole(_: Westron.TextRole) -> Text` in `extension Text`, which may be `@_disfavoredOverload`
 /// (`twinExtras`).
 ///
+/// From each contract that is approved or later, styled on an Apple system control and with
+/// `accessibility.hiddenLabel`, what `AppleComponents.HiddenLabel` derives: the base control's initializers with no label
+/// view that require the accessible name, `Toggle(isOn:accessibilityLabel:)` and its twin, in an extension constrained
+/// on the label westron gives it (`checkHiddenLabels`).
+///
 /// From each contract that is approved or later and is an Apple own component (`own-component`) with its
 /// `platforms.apple.form`, what `AppleComponents.Own` derives: the enums of its enum options, as above, and either its
 /// modifier in `extension View`, `public func surface(_: SurfaceVariant, outlined: Bool = false) -> some View`, or its
@@ -248,10 +253,17 @@ public enum APIParity {
         let initializers: [AppleComponents.Own.Initializer]
     }
 
+    /// The initializers of a control with no drawn label (`AppleComponents.HiddenLabel`).
+    struct ExpectedHiddenLabel {
+        let contract: Contract
+        let api: AppleComponents.HiddenLabel
+    }
+
     struct Expected {
         var enums: [ExpectedEnum] = []
         var functions: [ExpectedFunction] = []
         var views: [ExpectedView] = []
+        var hiddenLabels: [ExpectedHiddenLabel] = []
         /// Contracts the lint cannot derive API from.
         var problems: [Problem] = []
     }
@@ -261,6 +273,16 @@ public enum APIParity {
         var expected = Expected()
         var stateOwners: [(state: String, contracts: [Contract])] = []
         for item in contracts where item.hasAPI {
+            do {
+                if let api = try AppleComponents.HiddenLabel(item.contract, source: item.source) {
+                    expected.hiddenLabels.append(ExpectedHiddenLabel(contract: item, api: api))
+                }
+            } catch {
+                expected.problems.append(
+                    Problem(
+                        file: item.source, line: item.line(of: "hiddenLabel"),
+                        "the lint cannot derive \(item.component)'s API: \(error.message); spec check reports it too"))
+            }
             if item.contract.apple?.strategy == AppleComponents.ownStrategy {
                 expectOwn(item, into: &expected)
                 continue
@@ -493,6 +515,10 @@ public enum APIParity {
         // The views of own components.
         problems += checkViews(
             expected.views, declarations: declarations, accounted: &accounted, expectedCount: &expectedCount)
+
+        // The initializers of a control with no drawn label.
+        problems += checkHiddenLabels(
+            expected.hiddenLabels, declarations: declarations, accounted: &accounted, expectedCount: &expectedCount)
 
         // Public API that no contract accounts for.
         let components = contracts.sorted { $0.component.count > $1.component.count }

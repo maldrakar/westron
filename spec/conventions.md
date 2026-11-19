@@ -6,7 +6,8 @@ default and the shape of a bool option. They are rules now, and the remaining qu
 added, under the owner's delegation of 2026-11-18 and pending the owner's confirmation with the phase's pull request:
 the options whose values are tokens or icons, `extension-on-system-control` ("Extensions of a system view"),
 `platforms.apple.form` and system options on own components ("Own components"), the accessibility role `none`, and
-"Context a style reads" with `.category(_:)`.
+"Context a style reads" with `.category(_:)`. On 2026-11-19 (#86) `accessibility.hiddenLabel` and its initializer
+("A label that is not drawn"), the form the owner's choice, the name pending the owner's confirmation.
 
 A component contract (`spec/components/<id>/<id>.spec.yaml`) is neutral: options, states, slots, constraints, token
 bindings, accessibility and a `platforms` block. This document is the one rule for how each of those concepts becomes
@@ -57,6 +58,7 @@ decisions/0003 rejected.
 | **Token bindings** | Written by hand in the style's or the component's body (decisions/0001), through WestronUI's accessors: `.background(.background.accent, in: …)`, `.radius.control`, `.textRole(.body.strong)`, `.animation(.press, value: …)`. No raw values: the raw-values lint and the `spec-reviewer` subagent check them (decisions/0005) | CSS custom properties generated from the token paths (#39), read with `var(…)` in westron's CSS | libadwaita's variables (`--accent-bg-color`, …) and westron's `style.css` variables, both generated; Rust constants for values outside CSS | `WestronTheme` values through `CompositionLocal`, and a Material `ColorScheme` mapped from the tokens (chapter 09) |
 | **Accessibility: role** | System control: it keeps its own role and traits (chapter 08). Own component: `.accessibilityElement(children:)` and `.accessibilityAddTraits` (`.isButton`, `.isHeader`, `.isSelected`, `.isToggle`). Role `none`: nothing on a container, whose children stay as they are (Surface); `.accessibilityHidden(true)` on a component with no content (Rule) | The native element's implicit role; a custom element sets it through `ElementInternals.role`. Role `none`: `role="none"` on a container, `aria-hidden="true"` on a component with no content | The stock widget's role; an own widget sets `gtk::AccessibleRole` on its class; how role `none` maps is decided in phase 7 | The Material composable's semantics; an own component sets `Modifier.semantics { role = … }`; role `none` adds no semantics of its own, and how a component with no content is hidden is decided in phase 8 |
 | **Accessibility: intents** | `.accessibilityLabel`, `.accessibilityValue`, `.accessibilityAction(named:)`, `.accessibilityAdjustableAction`, `.accessibilityAction(.escape)` for dismiss | ARIA states and properties, and events | `update_property` and `update_state` (`gtk::AccessibleProperty`, `gtk::AccessibleState`); `GtkAccessible` documents no custom accessible actions, so how a named action reaches Orca is decided in phase 7 | `semantics { stateDescription, customActions, onClick(label = …) }` |
+| **Accessibility: a label that is not drawn** (`hiddenLabel`) | An initializer of the base control that takes no label view and requires the name: `Toggle(isOn: $done, accessibilityLabel: title)`, with a `StringProtocol` twin; its label is an `EmptyView` carrying the name, so nothing is drawn or laid out on any OS. Not `.labelsHidden()` alone, which a custom style sees only from iOS 18, macOS 15 and watchOS 11 (below, "A label that is not drawn") | `aria-label` on the native element, with no `<label>` (#40) | The accessible property `gtk::AccessibleProperty::Label` on the stock widget, with no child label (phase 7) | `Modifier.semantics { contentDescription = … }` on the composable, with no label content (phase 8) |
 | **Accessibility: keyboard intents** | System control: the system handles activation and focus. Own component: `.focusable()`, `.onKeyPress` (iOS 17, macOS 14; not on watchOS), `.keyboardShortcut` (not on watchOS); on macOS also `.onMoveCommand` and `.onExitCommand`. On watchOS the Digital Crown: `.digitalCrownRotation` | Native behavior; a custom element handles `keydown` and sets `tabindex` | Native behavior; an own widget adds a `gtk::ShortcutController` or `gtk::EventControllerKey`, and mnemonics | `Modifier.focusable()` and `Modifier.onKeyEvent` |
 | **The `platforms` block and recorded differences** | The Apple entry names the strategy (a style on a system control, or an own component), the base control, and what each of iOS, macOS and watchOS supports, with a reason for each deviation; the fields come with #18. Code that one OS needs goes behind `#if os(…)`. The parity lint (#21) compares the public API with the contract and this block. A value an OS does not support keeps its enum case on every OS, and the style falls back to the value the block's `fallback` names: a watch draws `.buttonStyle(.primary, size: .l)` at `m` | The web entry: element or custom element, its name, attribute names | The GTK entry: base widget, variant-to-class map, own size classes | The Android entry: the Material3 composable used, deviations |
 | **Defaults** | An option's contract default is the argument's default value. An option with no default in the contract is a required argument: the variant has none, so it is always written. The size is the exception: left out, it comes from `controlSize`, and its contract default is the size `regular` maps to, `m` | An absent attribute means the contract's default; an option without one is a required attribute | The property's default | The parameter's default value, in a `<Component>Defaults` object where Compose expects one |
@@ -320,6 +322,45 @@ A product's own `.labelStyle(.iconOnly)` cannot do this. The label style is an e
 westron's `ButtonStyle` applies to `configuration.label` inside `makeBody` overrides the product's outer one, and a
 `ButtonStyle` has no public way to read the outer label style, so it could not know to draw the square either. A
 probe on macOS confirmed both (#22).
+
+### A label that is not drawn
+
+```swift
+HStack {
+    Toggle(isOn: $task.isDone, accessibilityLabel: task.title).toggleStyle(.check)
+    Text(task.title).accessibilityHidden(true)
+}
+```
+
+A control beside its own title, such as a task's check in a row, draws no label, yet its title is its accessible
+name. The contract says so with `accessibility.hiddenLabel: true`, which needs `label: required` and the slot `label`
+(Checkbox, #86).
+
+- **An initializer that requires the name**, in an extension of the base control constrained on the label it builds:
+  the control's own parameters before its label (`SystemStyles.Base.hiddenLabelParameters`; `isOn: Binding<Bool>` for
+  `Toggle`), then `accessibilityLabel:`, a `LocalizedStringKey`, and an `@_disfavoredOverload` twin that takes any
+  `StringProtocol`, as `Icon(_:label:)` takes its label:
+
+  ```swift
+  extension Toggle where Label == ModifiedContent<EmptyView, AccessibilityAttachmentModifier> {
+      public init(isOn: Binding<Bool>, accessibilityLabel: LocalizedStringKey)
+      @_disfavoredOverload
+      public init<S: StringProtocol>(isOn: Binding<Bool>, accessibilityLabel: S)
+  }
+  ```
+
+  The label is `EmptyView().accessibilityLabel(_:)`: a style lays out nothing for it, so no gap is left, and the
+  system control of a style's accessibility representation takes its name from it, the same on every OS (measured on
+  iOS 17.5 and 26.3, Checkbox's decisions/0002). westron adds no type for it.
+- **Not `.labelsHidden()` alone.** A custom style learns of it only through `labelsVisibility`, from iOS 18, macOS 15
+  and watchOS 11, so on westron's minimum OS the label would be drawn. It keeps working where the OS tells the style,
+  and is the system's, not westron's. No westron modifier repeats it: a modifier is one more thing to remember, while
+  the initializer takes the name as a required argument (an empty string still compiles, as `Toggle("", isOn:)`
+  does).
+- **The parity lint** derives the initializers from the contract (`AppleComponents.HiddenLabel`), as it derives an own
+  component's view: missing, changed, without the `where` clause or not public, each is reported at the contract's
+  `hiddenLabel` or the declaration. They are hand-written, since the body is the whole implementation. Another base
+  takes the field once `SystemStyles` names its parameters; until then `spec check` reports it as not derived.
 
 ### Extensions of a system view, when it takes no style
 

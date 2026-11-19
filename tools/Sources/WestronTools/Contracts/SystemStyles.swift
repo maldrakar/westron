@@ -43,6 +43,11 @@ public enum SystemStyles {
         /// them (spec/conventions.md, "States the system control has"). A contract's other states each get the shared
         /// modifier named as the state, such as `.loading(_:)`; the API parity lint (#21) expects it.
         public let states: [String]
+        /// The parameters of the control's own initializer with a label view, without the label, for westron's
+        /// initializer of a control with no drawn label (`AppleComponents.HiddenLabel`): `isOn: Binding<Bool>` for
+        /// `SwiftUI.Toggle`, as in `Toggle(isOn:label:)`. nil where no contract has needed one yet: a contract with
+        /// `accessibility.hiddenLabel` on such a base fails `spec check` as not derived yet.
+        public var hiddenLabelParameters: [SwiftDeclarations.Parameter]? = nil
     }
 
     public static let byBase: [String: Base] = [
@@ -69,6 +74,8 @@ public enum SystemStyles {
             // configuration.isOn and isMixed; a press, which the style follows itself as it follows hover with
             // onHover, since ToggleStyleConfiguration has no isPressed; @Environment(\.isFocused) and
             // @Environment(\.isEnabled).
-            states: ["checked", "mixed", "pressed", "hover", "focus", "disabled"]),
+            states: ["checked", "mixed", "pressed", "hover", "focus", "disabled"],
+            // Toggle(isOn:label:), the label left to westron's initializer (Checkbox, #86).
+            hiddenLabelParameters: [.init(label: "isOn", type: "Binding<Bool>")]),
     ]
 }

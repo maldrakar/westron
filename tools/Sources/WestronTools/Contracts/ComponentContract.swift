@@ -124,13 +124,17 @@ public struct ComponentContract: Equatable, Sendable {
     public let boundStates: [String]
     /// `accessibility.label`: `required` or `optional`; nil when the contract gives none.
     public let accessibilityLabel: String?
+    /// `accessibility.hiddenLabel`: an instance may draw no label and be given its label as its accessible name alone
+    /// (spec/conventions.md, "A label that is not drawn"); false when the contract gives none.
+    public let hiddenLabel: Bool
 
     public init(
         id: String, status: String, options: [Option], states: [String], apple: Apple?,
         constraints: [Constraint] = [], boundStates: [String]? = nil, slots: [String] = [],
-        accessibilityLabel: String? = nil
+        accessibilityLabel: String? = nil, hiddenLabel: Bool = false
     ) {
         self.accessibilityLabel = accessibilityLabel
+        self.hiddenLabel = hiddenLabel
         self.id = id
         self.status = status
         self.options = options
@@ -235,7 +239,8 @@ public struct ComponentContract: Equatable, Sendable {
             id: id, status: status, options: options, states: states, apple: apple, constraints: constraints,
             boundStates: states.filter(named.contains),
             slots: document["slots"]?.elements?.compactMap(\.string) ?? [],
-            accessibilityLabel: document["accessibility"]?["label"]?.string)
+            accessibilityLabel: document["accessibility"]?["label"]?.string,
+            hiddenLabel: document["accessibility"]?["hiddenLabel"] == .bool(true))
     }
 
     /// A constraint's `when` or `require`: by option name, a value, a list of values, or `true` or `false`.

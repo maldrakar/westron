@@ -108,10 +108,11 @@ private struct CheckboxLookBody<Label: View>: View {
     }
 }
 
-/// The label beside the circle, unless `.labelsHidden()` hides it, as in a row whose title is a separate text; it
-/// stays the toggle's accessible name either way. A custom style sees `.labelsHidden()` only through
-/// `labelsVisibility`, from iOS 18, macOS 15 and watchOS 11; before them the label is drawn (the contract's
-/// `platforms.apple`).
+/// The label beside the circle, unless `.labelsHidden()` hides it; it stays the toggle's accessible name either way. A
+/// custom style sees `.labelsHidden()` only through `labelsVisibility`, from iOS 18, macOS 15 and watchOS 11; before
+/// them the label is drawn. So a row whose title is a separate text writes `Toggle(isOn:accessibilityLabel:)`
+/// (Toggle+AccessibilityLabel.swift), whose label is an `EmptyView` carrying the name: nothing is drawn or laid out for
+/// it on any OS (the contract's `platforms.apple`, decisions/0002).
 private struct CheckboxLabel<Label: View>: View {
     let label: Label
 
