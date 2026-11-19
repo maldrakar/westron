@@ -1,5 +1,7 @@
 # westron's Text contract (#27), approved by the owner on 2026-11-18: decisions/0001-text-contract.md records the
-# owner's answers, the options considered and the proposals the owner confirmed on top of them.
+# owner's answers, the options considered and the proposals the owner confirmed on top of them. The shape and limits
+# of the Text.textRole(_:) -> Text twin were decided at implementation under the owner's delegation of 2026-11-18,
+# pending the owner's confirmation (decisions/0001, "P2 at implementation").
 id: text
 status: approved
 description: >-

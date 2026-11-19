@@ -20,8 +20,7 @@ import Foundation
 /// hand-written modifier `AppleComponents.Extension` derives: `public func textRole(_: Westron.TextRole) -> some View`
 /// in `extension View`, and, on a base whose own modifiers return it (`SystemStyles.returningBase`), the twin
 /// `public func textRole(_: Westron.TextRole) -> Text` in `extension Text`, which may be `@_disfavoredOverload`
-/// (`twinExtras`). A twin of a base in `pendingTwins` is checked when it is declared and not reported while it is
-/// missing.
+/// (`twinExtras`).
 ///
 /// From each contract that is approved or later and is an Apple own component (`own-component`) with its
 /// `platforms.apple.form`, what `AppleComponents.Own` derives: the enums of its enum options, as above, and either its
@@ -93,12 +92,6 @@ public enum APIParity {
     /// `View.tint(_: Westron.Color)` is to the system's, and no contract option can give it: the color is the
     /// context's, not one control's (spec/conventions.md, "Context a style reads").
     public static let otherAdapters: [String: [String: Set<String>]] = ["Category.swift": ["View": ["category"]]]
-
-    /// The bases of an `extension-on-system-control` whose twin on the base (`AppleComponents.Extension.onBase`) is not
-    /// written yet: it is checked when it is declared, with the signature the contract gives, and not reported while it
-    /// is missing. `Text.textRole(_:) -> Text` (the Text contract's P2) is in WestronUI, so the list is empty and every
-    /// twin is required like the rest of the API.
-    public static let pendingTwins: Set<String> = []
 
     /// The one attribute a twin on the base may carry beyond `harmlessExtras`: `@_disfavoredOverload`, so that on the
     /// base itself the call takes the modifier on `View`, which reads the environment, and the twin only where nothing
@@ -233,8 +226,6 @@ public enum APIParity {
         /// The type its extension extends, `View` or a base such as `Text`, and what it returns.
         var extends = "View"
         var result = "some View"
-        /// Whether it is reported when missing; a pending twin is not (`pendingTwins`).
-        var required = true
         /// Attributes it may carry beyond `harmlessExtras` (`twinExtras` for a twin).
         var allowedExtras: Set<String> = []
         /// Whether `tools/westron generate` writes it, so that generating again fixes a difference: a style overload.
@@ -265,8 +256,8 @@ public enum APIParity {
         var problems: [Problem] = []
     }
 
-    /// The API the conventions derive from the contracts; a twin of a base in `pendingTwins` is not required.
-    static func expected(_ contracts: [Contract], pendingTwins: Set<String> = pendingTwins) -> Expected {
+    /// The API the conventions derive from the contracts.
+    static func expected(_ contracts: [Contract]) -> Expected {
         var expected = Expected()
         var stateOwners: [(state: String, contracts: [Contract])] = []
         for item in contracts where item.hasAPI {
@@ -300,8 +291,7 @@ public enum APIParity {
                         ExpectedFunction(
                             what: "\(item.component)'s modifier on \(api.control)", contracts: [item],
                             name: api.modifier, parameters: parameters, types: [], line: line, extends: api.control,
-                            result: api.control, required: !pendingTwins.contains(api.base),
-                            allowedExtras: twinExtras))
+                            result: api.control, allowedExtras: twinExtras))
                 }
                 continue
             }
@@ -361,14 +351,12 @@ public enum APIParity {
     // MARK: - Check
 
     /// Compares the declarations of `files` with the contracts. `sourceRoot` is the directory the files are in, as it
-    /// prefixes their paths; the token files are relative to it. `pendingTwins` is the list of that name, which tests
-    /// replace.
+    /// prefixes their paths; the token files are relative to it.
     public static func check(
-        contracts: [Contract], files: [(path: String, text: String)], sourceRoot: String,
-        pendingTwins: Set<String> = pendingTwins
+        contracts: [Contract], files: [(path: String, text: String)], sourceRoot: String
     ) -> Report {
         let declarations = SwiftDeclarations(files: files).declarations
-        let expected = expected(contracts, pendingTwins: pendingTwins)
+        let expected = expected(contracts)
         var problems = expected.problems
         /// Indexes of declarations that expected API accounts for, or that a problem already names.
         var accounted: Set<Int> = []
@@ -494,7 +482,7 @@ public enum APIParity {
                     "\(item.what) differs from the contract: expected `\(item.signature)`, found "
                         + "`\(declarations[near].signature)`"
                         + (item.generated ? "; run tools/westron generate" : ""))
-            } else if item.required {
+            } else {
                 problems.append(
                     Problem(
                         file: item.line.source, line: item.line.line,

@@ -101,7 +101,8 @@ Date: 2026-11-14. Status: accepted.
   in the first entry of the slowest leg is retried by 32.6 minutes, and still after up to 17.8 minutes before the
   first entry (17.1 seen), against 14.7 with the seventeen legs; a leg without a retry ends by 34.8 minutes. With
   the snapshot legs below, a run has 17 Mac jobs, about 7.7 runner-hours: an estimated 1.5 hours at best and about
-  1.6–1.9 expected.
+  1.6–1.9 expected. Decided by the coordinator under the owner's delegation of 2026-11-18, pending the owner's
+  confirmation.
 
 ## Consequences
 
@@ -142,7 +143,8 @@ Date: 2026-11-14. Status: accepted.
     few seconds without touches, so whether it shows still depends on timing, and which would change the catalog for
     one tool; it could not be shown to be deterministic cheaply either, since unchanged one capture showed the
     indicator in none of Button's 144 images and the next in 54. And cropping the bottom inset out of every picture,
-    which would change what a capture is and hide from review whatever a sheet draws there.
+    which would change what a capture is and hide from review whatever a sheet draws there. Decided by the
+    coordinator under the owner's delegation of 2026-11-18, pending the owner's confirmation.
   - **The capture sets what it can itself:** the theme and the contrast for each image, the text size (`large`, the
     default), the language and the locale (`en`, `en_US`), on macOS the window's size (720 × 540, whatever size the
     system restores) and the picture of the sheet alone, without the title bar and the desktop at the window's
@@ -179,4 +181,5 @@ Date: 2026-11-14. Status: accepted.
     workflow that the page job checks against each capture), one `xcodebuild test` per leg (`--component a,b`): three
     legs for iOS and one for macOS, each with a timeout from its images. A job `snapshot-matrix-pages` merges each
     platform's legs into one page (`snapshot-matrix.sh merge --expect`), which names any component no leg brought, so
-    the owner still opens `snapshot-matrix-ios` and `snapshot-matrix-macos`.
+    the owner still opens `snapshot-matrix-ios` and `snapshot-matrix-macos`. Decided by the coordinator under the
+    owner's delegation of 2026-11-18, pending the owner's confirmation.

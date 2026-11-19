@@ -86,8 +86,8 @@ platforms:
       give it (decisions/0001, P15). ToggleStyleConfiguration has no isPressed, so the style's body is a system Button
       that toggles the value, drawn by a ButtonStyle, which sees isPressed; the button is the check's activation and
       its focusable element (keyboard focus on macOS: platforms.apple.macos). For assistive technology the body is
-      replaced by the system's own Toggle on the same value and label (accessibilityRepresentation), so VoiceOver
-      meets the toggle's role and value and no button. The circle's diameter is 1.2 times the line height of the text role that reaches the style, and its hit
+      replaced by the system's own Toggle on the same value and label (accessibilityRepresentation), so assistive
+      technology is meant to meet the toggle's role and value and no button. The circle's diameter is 1.2 times the line height of the text role that reaches the style, and its hit
       area is a square of at least size.control.m around it, the label beside it included (decisions/0001, P10, P16,
       P17). A row whose title is a separate text hides the label with .labelsHidden(), and the label stays the
       toggle's accessible name, so the separate title is hidden from assistive technology and not read twice
@@ -97,14 +97,16 @@ platforms:
       mark is the registry's check glyph.
     ios:
       description: >-
-        VoiceOver meets the system Toggle of the representation: a switch with its label, its value on or off, and no
-        button, measured on iOS 26.3 (CatalogUITests/CheckboxBehaviorTests); iOS 17 runs the same code, not
+        The accessibility hierarchy holds the system Toggle of the representation: a switch with its label, its value
+        on or off, and no button, measured on iOS 26.3 as XCUITest reads the hierarchy
+        (CatalogUITests/CheckboxBehaviorTests), not with VoiceOver itself; iOS 17 runs the same code, not
         measured. No hover. The hit area is at least 44 pt, size.control.m.
     macos:
       description: >-
-        The system's checkbox toggle is square; westron's check stays round, as on the other OSes. Assistive
-        technology meets a checkbox with its label and its value, and no button, measured on macOS 26
-        (CatalogUITests/CheckboxBehaviorTests); macOS 14 runs the same code, not measured. The hit area is at least size.control.m, 32 pt, above the recommended 28. Keyboard focus, measured with the
+        The system's checkbox toggle is square; westron's check stays round, as on the other OSes. The
+        accessibility hierarchy holds a checkbox with its label and its value, and no button, measured on macOS 26 as
+        XCUITest reads the hierarchy (CatalogUITests/CheckboxBehaviorTests), not with VoiceOver itself; macOS 14 runs
+        the same code, not measured. The hit area is at least size.control.m, 32 pt, above the recommended 28. Keyboard focus, measured with the
         Mac's keyboard navigation off: neither westron's check nor a system Toggle in checkbox style takes focus,
         from Tab or from code; with .focusable() added, both take focus and show the system's ring, and Space
         toggles neither. With keyboard navigation on, Tab and Space are unverified, pending the owner's run of

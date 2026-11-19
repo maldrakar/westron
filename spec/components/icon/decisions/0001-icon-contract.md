@@ -94,8 +94,9 @@ Symbols:
   platform image of the symbol does not take the font: `Image(nsImage:)` of `tray` stays 18 × 13 pt at `.largeTitle`,
   where `Image(systemName:)` grows to 36 × 26. Only `Image(systemName:)` follows the text, and it keeps the system's
   name.
-- **What VoiceOver gets today.** The accessibility hierarchy of the catalog on an iPhone 17 simulator, iOS 26.3, which
-  ran in Russian (the English meaning in brackets): a bare `Image(.tray)` is an image "Ящик Входящие" (Inbox tray),
+- **What assistive technology gets today.** The accessibility hierarchy, as XCUITest reads it (VoiceOver itself was
+  not run), of the catalog on an iPhone 17 simulator, iOS 26.3, which ran in Russian (the English meaning in
+  brackets): a bare `Image(.tray)` is an image "Ящик Входящие" (Inbox tray),
   `Image(.sun)` an image "Повысить Яркость" (Increase Brightness), `Image(.pen)` an image "Изменить" (Edit); `Image`
   beside `Text("Inbox")` in a stack is two elements; `Label("Rename", icon: .pen)` is an image "Изменить" and the text
   "Rename". The system's name says what a symbol draws, or what Apple uses it for, never what it means on the screen.
@@ -145,8 +146,8 @@ inside, as a style holds the system's control, and adds only what the `Image` ca
   catalog's `icon` entry, iPhone 17, iOS 26.3). (a) `Label("Rename", icon: .pen)` as shipped: the item is a button
   named "Rename", holding the system's image of the symbol, and the icon is drawn. (b) `Label { Text("Delete") } icon:
   { Icon(.trash) }`, the alternative this record first offered the owner: the icon is drawn in the menu (the test's
-  screenshot), but the item is a cell with no button and no text, which VoiceOver cannot reach, as with the hidden
-  adapter. So a `Label` whose icon is hidden breaks a system menu; (b) is not an option for menus. **For the owner:**
+  screenshot), but the item is a cell with no button and no text, which assistive technology cannot reach, as with
+  the hidden adapter. So a `Label` whose icon is hidden breaks a system menu; (b) is not an option for menus. **For the owner:**
   westron accepts the system's reading of a lone `Label`, or a lone label outside menus takes `Icon` by hand, with
   the menu case excluded.
 - **`scale`** (proposed by the agent, decided under the delegation): it stays a contract option and an Apple system

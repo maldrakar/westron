@@ -1,9 +1,12 @@
 # 0001. The Surface contract
 
-Date: 2026-11-18. Status: accepted. The owner answered the interview on 2026-11-18 and delegated the approval of the
-contract; it was approved as written under that delegation on 2026-11-18 (#29), P1–P12 as proposed. P5 and P12,
-decided by the agent under the delegation, still wait for the owner's confirmation. This record keeps three things
-apart: what the owner answered, what the documents had already decided, and what the agent proposed on top of both.
+Date: 2026-11-18. Status: approved on 2026-11-18 under the owner's delegation of 2026-11-18 (#29), pending the
+owner's confirmation. The owner answered the interview on 2026-11-18 and delegated the approval: the coordinator, not
+the owner, approved the contract as written and every one of its "Proposed" items, P1–P12, all of them pending the
+owner's confirmation. The owner's own answers are the section "What the owner answered". Of the proposals, P5 (every
+kind draws `radius.card`) and P12 (the high-contrast line replaces the hairline) are substantive choices the agent
+made where the owner and the documents were silent. This record keeps three things apart: what the owner answered,
+what the documents had already decided, and what the agent proposed on top of both.
 
 ## Context
 

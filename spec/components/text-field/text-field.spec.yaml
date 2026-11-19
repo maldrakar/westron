@@ -104,7 +104,7 @@ platforms:
       and so is a multiline field, TextField(_:text:axis:) with .vertical, such as a card's notes. The label: on iOS
       26.3, and on macOS 26.7 outside a Form, the system field with a prompt exposes no accessibility label from its
       title, with westron's style or without it, and the prompt is only its placeholder value (measured in #30; inside
-      a macOS Form the title becomes a static text and the field's title element, which VoiceOver reads), so the
+      a macOS Form the title becomes a static text and the field's title element in the accessibility tree), so the
       product gives the field its name itself: TextField("List name", text: $name, prompt: Text("Untitled")).accessibilityLabel("List
       name"). The placeholder's color differs from the contract on Apple: a TextFieldStyle cannot set the prompt's
       color (neither foregroundStyle at any level nor tint reaches it), so the prompt is drawn in the system's

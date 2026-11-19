@@ -1,9 +1,13 @@
 # 0001. The TextField contract
 
-Date: 2026-11-18. Status: accepted (#30), approved as written on 2026-11-18 under the owner's delegation of that day.
-The owner answered the interview on 2026-11-18. This record keeps three things apart: what the owner answered, what the
-documents had already decided, and what the agent proposed on top of both, which the approval confirms; the items
-decided by the agent under the delegation stay marked so, pending the owner's confirmation.
+Date: 2026-11-18. Status: approved on 2026-11-18 under the owner's delegation of 2026-11-18 (#30), pending the
+owner's confirmation. The owner answered the interview on 2026-11-18 and delegated the approval: the coordinator, not
+the owner, approved the contract as written and every one of its "Proposed" items, P1–P13, all of them pending the
+owner's confirmation. The owner's own answers are the section "What the owner answered". Of the proposals, P3 (the
+text `body.regular` at every size, a departure from the owner's answer) and P12 (the 28 pt hit area at `s` on macOS)
+are substantive choices the agent made; I1–I3 were decided by the coordinator at implementation under the same
+delegation. This record keeps three things apart: what the owner answered, what the documents had already decided,
+and what the agent proposed on top of both.
 
 ## Context
 
@@ -68,7 +72,7 @@ mode, set by the `density` modifier with #33 (spec/conventions.md, "Modes: theme
 - **Chosen: (a).** An inline field is part of a text, the card's title or its notes, so it is set in that text's role.
 - **What "as Button does" can mean.** Button binds `footnote.strong` at `s` and `subheadline.strong` at `m` and `l`,
   never `body`; so the owner's model is the shape (a role fixed by the variant, not by the context), not Button's
-  roles. Which role `framed` takes at each size is P3 below.
+  roles. Which role `framed` takes at each size is P3 below, which departs from this answer.
 
 ## Already decided by the documents
 
@@ -91,7 +95,7 @@ mode, set by the `density` modifier with #33 (spec/conventions.md, "Modes: theme
 |---|---|---|
 | P1 | Strategy `style-on-system-control`, `base: SwiftUI.TextField`; the same style serves `SecureField` | The system field keeps editing, input methods and the keyboard (decisions/0003) |
 | P2 | On Apple the style is a `TextFieldStyle`, whose only requirement is the underscored `_body(configuration:)`; the implementation probes it on iOS, macOS and watchOS and records what holds | `TextFieldStyle` has no public requirement in the Xcode 27.1 interface; if the probe fails on an OS, the contract records the difference first |
-| P3 | `framed` by size: the height `size.control.s/m/l` and the padding `space.100/150/200`; the text `typography.body.regular` at every size. The size changes the frame, not the text | Chapter 03:49 makes a field's text `body.regular`, and the pilot's row field, about `s`, draws body text: 17 pt in a 34 pt field on the phone, 13 pt in a 24 pt field on the Mac (inventory:385, :439). `footnote.regular` at `s`, Button's smaller role in the regular weight, would shrink it to 13 pt on iOS and 10 pt on the Mac. The trade-off: at `s` the field is tight, 17 pt text in a 32 pt field on iOS and 13 pt text in 24 pt on the Mac, and it grows past `s`'s height at the larger text sizes, as the height is a minimum. Text role at every size: decided by the agent under the owner's delegation of 2026-11-18, pending the owner's confirmation |
+| P3 | `framed` by size: the height `size.control.s/m/l` and the padding `space.100/150/200`; the text `typography.body.regular` at every size. The size changes the frame, not the text | Chapter 03:49 makes a field's text `body.regular`, and the pilot's row field, about `s`, draws body text: 17 pt in a 34 pt field on the phone, 13 pt in a 24 pt field on the Mac (inventory:385, :439). `footnote.regular` at `s`, Button's smaller role in the regular weight, would shrink it to 13 pt on iOS and 10 pt on the Mac. The trade-off: at `s` the field is tight, 17 pt text in a 32 pt field on iOS and 13 pt text in 24 pt on the Mac, and it grows past `s`'s height at the larger text sizes, as the height is a minimum. Text role at every size: a departure from the option the owner picked in the interview, whose text said `framed` "fixes its role by size as Button does"; the agent chose `body.regular` at every size because chapter 03:49 makes a field's text body, and Button's sizes take `footnote` and `subheadline`, never body. Decided by the agent under the owner's delegation of 2026-11-18, pending the owner's confirmation |
 | P4 | `framed`'s outline is `stroke.thin` | Chapter 04 names the outline's color, not its width; `stroke.thin` is the width of Button's `secondary` outline |
 | P5 | The focus ring is drawn on both variants, on iOS and macOS | Focus must always be visible (08:123); an inline field would otherwise show focus only by its caret. The owner may prefer the caret alone for `inline` |
 | P6 | States `focus` and `disabled`; no `hover` | A field shows nothing on hover in the documents or the pilot; the pointer's I-beam is the system's |
@@ -156,7 +160,7 @@ not a decision.
 | # | Point | Options considered | Decided (by the coordinator, pending the owner) | Measured |
 |---|---|---|---|---|
 | I1 | The placeholder's color, bound to `color.text.placeholder` | (a) on Apple the prompt is the system's placeholder color, recorded as a difference; (b) the product colors its prompt, `prompt: Text("Untitled").foregroundStyle(.text.placeholder)`; (c) westron draws its own prompt, which needs the field's text and so is not a `TextFieldStyle`: an API change; (d) reflection or introspection of the private field, fragile | (a), with (b) documented for iOS. (c) stays open for the owner. This misses chapter 08's contrast target for the placeholder on Apple. The binding stays for the platforms that can apply it (web, GTK) | A `TextFieldStyle` cannot set the prompt's color: neither `foregroundStyle` at any level nor `tint` reaches it, and `ShapeStyle.placeholder` only reads the system's color. A color the product sets on its prompt reaches it on iOS and is ignored on macOS 26. The system's placeholder against `background.canvas`: 1.72:1 on iOS in light, 2.42:1 in dark, about 3.9:1 on macOS in light; `color.text.placeholder` gives 5.27:1 and 6.22:1 |
-| I2 | The accessible label, `label: required` | (a) the product names the field with `.accessibilityLabel(…)`; (b) accept the system's behavior | (a): the contract's example shows it, and the catalog labels every sample field so | On iOS 26.3, and on macOS 26.7 outside a `Form`, `TextField("List name", text:, prompt:)` exposes no accessibility label from its title, with westron's style or without it (an unstyled field measured beside the styled one); the prompt is only its placeholder value. The reviewer's probe of the macOS accessibility tree: outside a `Form` the field has no AXDescription and no AXTitle, and `TextField("Title only", text:)` has its title only as its placeholder; inside a `Form` the title becomes a static text and the field's title element, so VoiceOver reads it there. The advice stays: name the field with `.accessibilityLabel(…)` |
+| I2 | The accessible label, `label: required` | (a) the product names the field with `.accessibilityLabel(…)`; (b) accept the system's behavior | (a): the contract's example shows it, and the catalog labels every sample field so | On iOS 26.3, and on macOS 26.7 outside a `Form`, `TextField("List name", text:, prompt:)` exposes no accessibility label from its title, with westron's style or without it (an unstyled field measured beside the styled one); the prompt is only its placeholder value. The reviewer's probe of the macOS accessibility tree: outside a `Form` the field has no AXDescription and no AXTitle, and `TextField("Title only", text:)` has its title only as its placeholder; inside a `Form` the title becomes a static text and the field's title element, the field's name in the tree there (VoiceOver itself was not run). The advice stays: name the field with `.accessibilityLabel(…)` |
 | I3 | Disabled on macOS: the whole field at `opacity.disabled`, "with no colors of its own" | (a) record that the system field applies its own disabled text color under westron's opacity; (b) on macOS apply the opacity only to what westron draws | (a), no code change | Disabled text (57, 60, 66) against `background.canvas` (17, 19, 24) in dark, where `text.primary` at `opacity.disabled` alone gives (96, 101, 108); the outline is at `opacity.disabled` alone. On iOS disabled text is exactly `text.primary` at `opacity.disabled`, (162, 166, 171) in light |
 
 ## What the tools need before an approved TextField is generated

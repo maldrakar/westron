@@ -1,11 +1,15 @@
 # 0001. The Checkbox contract: the round task check
 
-Date: 2026-11-18. Status: accepted. The owner answered the interview and set the scope of #31 on 2026-11-18 and
-delegated the approval of the contract; it was approved as written under that delegation on 2026-11-18 (#31), P1–P14
-as proposed. P9, decided by the agent under the delegation, and P15–P19, decided by the implementation on Apple under
-it, still wait for the owner's confirmation. This record keeps four things apart: what the owner answered, what the
-documents had already decided, what the agent proposed on top of both, and what the implementation on Apple decided
-where the contract left it to it (P15–P19).
+Date: 2026-11-18. Status: approved on 2026-11-18 under the owner's delegation of 2026-11-18 (#31), pending the
+owner's confirmation. The owner answered the interview and set the scope of #31 on 2026-11-18 and delegated the
+approval: the coordinator, not the owner, approved the contract as written and every one of its "Proposed" items,
+P1–P14, all of them pending the owner's confirmation. The owner's own answers are the sections "The scope of #31, set
+by the owner" and "What the owner answered". Of the proposals, P9 (the system's focus ring on Apple) is the
+substantive choice the agent made where the owner and the documents were silent; the control tokens that meet the
+owner's 3:1 are option B of decisions/0012's revision, chosen under the delegation too ("Checked", below); and
+P15–P19 were decided by the implementation on Apple under the same delegation. This record keeps four things apart:
+what the owner answered, what the documents had already decided, what the agent proposed on top of both, and what the
+implementation on Apple decided where the contract left it to it (P15–P19).
 
 ## Context
 
@@ -48,11 +52,14 @@ draws it as a button (`CheckButton.swift`) whose label names the action. Issue #
 
 - Considered: (a) a disc filled with the list's color, which must meet 3:1 non-text contrast on canvas, surface and
   sunken; (b) a neutral ring around the disc; (c) leaving contrast to the mark alone.
-- **Chosen: (a).** The tokens for it are in `tokens/` (decisions/0012, revision of 2026-11-18):
-  `color.category.<name>.control`, the disc, and `color.category.<name>.on-control`, its mark, for each of the twelve
-  list colors, and a non-text declaration of `color.background.accent` on canvas, surface and sunken. The contract
-  binds the default case, the accent: `color.background.accent` for the disc and `color.text.on-accent` for the mark,
-  and its description is the contract for a list's color, which comes from the context, not from an option.
+- **Chosen: (a).** The owner's answer is that the checked fill meets 3:1, with no ring. How it meets it is not the
+  owner's answer: separate control tokens rather than darker shared list fills is option B of decisions/0012's
+  revision of 2026-11-18, chosen under the owner's delegation of 2026-11-18 and pending the owner's confirmation.
+  The tokens are in `tokens/`: `color.category.<name>.control`, the disc, and `color.category.<name>.on-control`, its
+  mark, for each of the twelve list colors, and a non-text declaration of `color.background.accent` on canvas,
+  surface and sunken. The contract binds the default case, the accent: `color.background.accent` for the disc and
+  `color.text.on-accent` for the mark, and its description is the contract for a list's color, which comes from the
+  context, not from an option.
 
 ### Size
 
@@ -104,7 +111,7 @@ Each of these is decided by the agent under the owner's delegation of 2026-11-18
 | P16 | The circle's diameter is 1.2 times the line height of the text that reaches the style, measured on a hidden line of the environment's font, so a product sets the role on the toggle: `Toggle(…).toggleStyle(.check).textRole(.body.regular)`. With no role set, the system's body text sizes it. The mark is 0.55 of the diameter | The pilot's task check is 24 pt beside 17 pt body text on the phone, whose line is about 20.3 pt, and 18 pt beside 13 pt on the Mac, a line of about 15.5 pt: both about 1.2 lines. The pilot's subtask check, 18 pt beside 15 pt, is smaller still; one ratio keeps the circle following the role, and a subtask's `subheadline.regular` draws it at about 21 pt. A line height rather than a point size, since a hidden line measures it in any font and at any Dynamic Type size with no table of sizes. The registry's check glyph fills most of its frame, so 0.55 of the diameter draws it near the pilot's 15 pt mark in 24 pt. Both numbers are proportions of the contract, written under the raw-values lint's exception, as Button's 98 % is |
 | P17 | The hit area is a square of at least `size.control.m` with the circle centered in it: 44 pt on iOS and watchOS, 32 pt on macOS, above the recommended 28; where the circle grows past it with the text, the square grows with it. The label beside it is part of the hit area too, as it is of a system checkbox on macOS and of a `<label>` on the web | `size.control.m` is the platform's control height and, on touch, the recommended target (chapter 08, tokens/platform), so no new number is needed. The square is laid out, not only hit-tested, so the check never overlaps a neighbor's target: on macOS Button found that a hit area grown past the laid-out frame hands clicks to the later sibling (Button's decisions/0001, #75) |
 | P18 | The space between the hit area and the label is `space.50`, scaled with the text (`@ScaledMetric`) | The contract binds no gap. The hit area's own margin around the circle is most of the space at the default sizes (10 pt on iOS, about 7 pt on macOS, near the pilot's 12 and 11 pt), and `space.50` keeps the label off the circle at the accessibility sizes, where the circle fills the square. A binding `container.gap: space.50` would record it in the contract; the owner may move it there |
-| P19 | The press, and what assistive technology meets. The style's body is a system `Button` that toggles the value, drawn by a `ButtonStyle`, which sees `isPressed`; for assistive technology the body is replaced by the system's own `Toggle` on the same value and label (`accessibilityRepresentation`, in the system's automatic style) | `ToggleStyleConfiguration` has no `isPressed` (P5). A gesture of the style's own would lose the system button's activation, and its keyboard focus, which on macOS is unverified (Open points). Without the representation, assistive technology would meet a button. Measured in the catalog's UI tests (`CheckboxBehaviorTests`) on iOS 26.3 and macOS 26 only; iOS 17, macOS 14 and watchOS run the same code, not measured: iOS reads a switch, macOS a checkbox, each with its label and its on or off value, and no button with the same identifier; the disabled check reads as not enabled |
+| P19 | The press, and what assistive technology meets. The style's body is a system `Button` that toggles the value, drawn by a `ButtonStyle`, which sees `isPressed`; for assistive technology the body is replaced by the system's own `Toggle` on the same value and label (`accessibilityRepresentation`, in the system's automatic style) | `ToggleStyleConfiguration` has no `isPressed` (P5). A gesture of the style's own would lose the system button's activation, and its keyboard focus, which on macOS is unverified (Open points). Without the representation, assistive technology would meet a button. Measured in the catalog's UI tests (`CheckboxBehaviorTests`) on iOS 26.3 and macOS 26 only, in the accessibility hierarchy as XCUITest reads it, not with VoiceOver itself; iOS 17, macOS 14 and watchOS run the same code, not measured: the hierarchy holds a switch on iOS and a checkbox on macOS, each with its label and its on or off value, and no button with the same identifier; the disabled check is not enabled in it |
 
 ## Open points
 
@@ -141,7 +148,8 @@ Each of these is decided by the agent under the owner's delegation of 2026-11-18
     such checks in a `List` beside separate titles, and `CheckboxBehaviorTests.testCheckInAListRow` presses the check
     and then the title and attaches a screenshot. Measured on iOS 26.3 and macOS 26: a press on the check toggles it,
     a press on the title does not, and the screenshots after it show no row highlighted. On iOS the List gives the
-    toggle's accessibility element the whole row (370 × 74 pt), so VoiceOver reads the row as the switch; on macOS
+    toggle's accessibility element the whole row (370 × 74 pt), so the row is the switch's element in the
+    accessibility hierarchy (VoiceOver itself was not run); on macOS
     the element is the check's 32 pt square. What a product's own row action (a tap that opens the task) does beside
     the check is not measured.
   - The check's hit area makes a Mac row with a check at least 32 pt tall (`size.control.m`). The pilot's wide task
@@ -151,7 +159,10 @@ Each of these is decided by the agent under the owner's delegation of 2026-11-18
 
 ## The control tokens
 
-The control tokens of the parallel work are in `tokens/`: `color.category.<name>.control` for the disc and
+Separate control tokens, rather than darkening the shared list fills, are option B of decisions/0012's revision of
+2026-11-18, chosen under the owner's delegation of 2026-11-18 and pending the owner's confirmation; the owner's answer
+was only that the checked fill meets 3:1, with no ring. The control tokens of the parallel work are in `tokens/`:
+`color.category.<name>.control` for the disc and
 `color.category.<name>.on-control` for the mark, for the twelve list colors, and a non-text declaration of
 `color.background.accent` on canvas, surface and sunken, so the contrast check proves the checked disc's 3:1;
 `color.text.on-accent` already declares text contrast on the accent fills. No binding names the category tokens per
