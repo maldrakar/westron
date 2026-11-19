@@ -73,7 +73,7 @@ accessibility:
     The platform's own toggle role, announced as on or off, checked or unchecked, in the platform's words, with the
     label as its name: the task's title. The label is required also where it is not shown beside the circle, as in
     a row whose title is a separate text: such a check draws no label, takes no room for one, and is given the label
-    as its accessible name alone, where it is created, so the name cannot be left out (hiddenLabel; decisions/0002).
+    as its accessible name alone, where it is created, as a required argument (hiddenLabel; decisions/0002).
     The separate title is then hidden from assistive technology, so the name is read once. In disabled, the check is
     announced as unavailable.
 

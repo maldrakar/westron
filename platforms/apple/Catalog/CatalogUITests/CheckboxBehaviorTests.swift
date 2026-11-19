@@ -93,7 +93,6 @@ final class CheckboxBehaviorTests: XCTestCase {
         // The check with no drawn label is the circle's square alone, on every OS (iOS 17 included, where
         // `.labelsHidden()` would leave the label drawn), and its name is read once: the separate title is hidden.
         let row = check(ID.row)
-        print("checkbox row: \(row.debugDescription)")
         XCTAssertEqual(row.frame.width, row.frame.height, accuracy: 0.5, "a label is drawn beside the circle")
         let named = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Call the plumber"))
         XCTAssertEqual(named.count, 1, "the row's name is read more than once")

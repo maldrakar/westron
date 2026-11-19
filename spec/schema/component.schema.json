@@ -264,7 +264,7 @@
           "enum": ["required", "optional"]
         },
         "hiddenLabel": {
-          "description": "true: an instance may draw no label, its label then given as its accessible name alone where the instance is created, so that it cannot be left out, as a check beside a separate title. It needs `label: required` and the slot `label`. On Apple the conventions derive the initializer of the base control that takes no label view and requires the name (spec/conventions.md, \"A label that is not drawn\"). Absent or false: a label that is shown is the only way to give it.",
+          "description": "true: an instance may draw no label, its label then given as its accessible name alone where the instance is created, as a required argument, as a check beside a separate title (an empty name still compiles, as an empty label does). It needs `label: required` and the slot `label`. On Apple the conventions derive the initializer of the base control that takes no label view and requires the name (spec/conventions.md, \"A label that is not drawn\"). Absent or false: a label that is shown is the only way to give it.",
           "type": "boolean"
         },
         "states": {

@@ -21,7 +21,8 @@ extension Toggle where Label == ModifiedContent<EmptyView, AccessibilityAttachme
     ///     }
     ///
     /// The separate title is hidden from assistive technology, so the name is read once. The same on every OS, unlike
-    /// `.labelsHidden()`, which a custom style sees only from iOS 18, macOS 15 and watchOS 11.
+    /// `.labelsHidden()`, which a custom style sees only from iOS 18, macOS 15 and watchOS 11. The name is a required
+    /// argument; an empty string still compiles and gives a toggle with no name, as `Toggle("", isOn:)` does.
     ///
     /// - Parameters:
     ///   - isOn: Whether the toggle is on.

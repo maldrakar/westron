@@ -354,8 +354,9 @@ name. The contract says so with `accessibility.hiddenLabel: true`, which needs `
   iOS 17.5 and 26.3, Checkbox's decisions/0002). westron adds no type for it.
 - **Not `.labelsHidden()` alone.** A custom style learns of it only through `labelsVisibility`, from iOS 18, macOS 15
   and watchOS 11, so on westron's minimum OS the label would be drawn. It keeps working where the OS tells the style,
-  and is the system's, not westron's. No westron modifier repeats it: a modifier is one more thing to remember, and an
-  initializer cannot be called without the name.
+  and is the system's, not westron's. No westron modifier repeats it: a modifier is one more thing to remember, while
+  the initializer takes the name as a required argument (an empty string still compiles, as `Toggle("", isOn:)`
+  does).
 - **The parity lint** derives the initializers from the contract (`AppleComponents.HiddenLabel`), as it derives an own
   component's view: missing, changed, without the `where` clause or not public, each is reported at the contract's
   `hiddenLabel` or the declaration. They are hand-written, since the body is the whole implementation. Another base
