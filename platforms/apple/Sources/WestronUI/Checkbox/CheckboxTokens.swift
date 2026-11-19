@@ -68,6 +68,7 @@ struct CheckboxMotion: Equatable {
 
     /// The scale of a pressed control, 98 % (`motion.press`). Chapter 05 ("Shapes belong to components") fixes this
     /// one shape for every control, and puts a motion's shape in the component, not in the motion tokens.
+    /// `ButtonTokens.pressScale` repeats it: change both.
     static let pressScale: CGFloat = 0.98  // westron-lint: allow a motion's shape, fixed by chapter 05, is not a token
 
     /// The scale a check pops in from, 80 % (the contract's description, P14): a shape of the contract, not a token.

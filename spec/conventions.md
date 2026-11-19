@@ -2,7 +2,11 @@
 
 Date: 2026-11-16. Status: draft for the owner's approval (#19). The owner decided five of its open questions in the
 Button work (#22): the size and `controlSize`, the name of a state modifier, an unsupported value, the variant's
-default and the shape of a bool option. They are rules now, and the remaining questions are renumbered.
+default and the shape of a bool option. They are rules now, and the remaining questions are renumbered. Phase 3
+added, under the owner's delegation of 2026-11-18 and pending the owner's confirmation with the phase's pull request:
+the options whose values are tokens or icons, `extension-on-system-control` ("Extensions of a system view"),
+`platforms.apple.form` and system options on own components ("Own components"), the accessibility role `none`, and
+"Context a style reads" with `.category(_:)`.
 
 A component contract (`spec/components/<id>/<id>.spec.yaml`) is neutral: options, states, slots, constraints, token
 bindings, accessibility and a `platforms` block. This document is the one rule for how each of those concepts becomes
@@ -350,7 +354,7 @@ contract says so with `strategy: extension-on-system-control` and the view as it
   forward to a hand-written one, two declarations for one. Instead the API parity lint expects, from the contract,
   `public func textRole(_: Westron.TextRole) -> some View` in `extension View` and, on a base of
   `SystemStyles.returningBase`, `public func textRole(_: Westron.TextRole) -> Text` in `extension Text`, and reports
-  either missing, changed or doubled (a twin still being written, in `APIParity.pendingTwins`, only when changed). `Font.init(_: Westron.TextRole)` stays a reviewed adapter: it turns a token
+  either missing, changed or doubled. `Font.init(_: Westron.TextRole)` stays a reviewed adapter: it turns a token
   into a SwiftUI value, as `Color.init(_: Westron.Color)` does, and adds no modifier.
 - **The snapshot matrix** draws an extension as it draws a style: its axis is the group's tokens in token order (the
   seventeen roles), its cell the hand-written `TextMatrixCell` with the real `.textRole(_:)`.
@@ -358,7 +362,10 @@ contract says so with `strategy: extension-on-system-control` and the view as it
 ### Own components, when no system control exists
 
 When the platform has no control for the job (Surface, Rule, Badge, EmptyState), westron builds its own component,
-named as in the contract, with no prefix (decisions/0003, point 2). Its API takes one of two shapes, which the
+named as in the contract, with no prefix (decisions/0003, point 2). Phase 3 has two exceptions to "a system control
+beats our own", recorded in their component decisions and noted in decisions/0003 (2026-11-19): `Rule` beside
+`SwiftUI.Divider`, and `Icon` beside `SwiftUI.Image` (below, "An icon's view"); Surface has no system counterpart on
+every Apple OS. Its API takes one of two shapes, which the
 contract names in `platforms.apple.form`, a field the schema requires of an `own-component` on Apple and forbids on a
 style or an extension, so that the generator and the API parity lint read the shape from the contract, not from its
 prose (settled for these two shapes with Surface and Rule, #29; question 2 keeps the rest):
@@ -468,7 +475,8 @@ left open, and the last one what the size question left open.
    table). Should the contract require every bool option to default to `false`? An HTML boolean attribute can only
    express that default.
 2. **Options of an own component.** Settled for a modifier and for a view without slots or a variant, with Surface
-   and Rule (#29, "Own components"): the options are the modifier's arguments or the initializer's parameters. Still
+   and Rule (#29, "Own components"): the options are the modifier's arguments or the initializer's parameters. Settled
+   under the owner's delegation of 2026-11-18, and waiting for the owner's confirmation. Still
    open for a view with slots or a variant: (a) initializer parameters, `Badge("3", variant: .info)`: the report's
    parity-first shape; (b) a style modifier on the component, `Badge("3").badgeStyle(.info)`, cascading through the
    environment: the same call shape as a system control, and a later system control could replace the own component

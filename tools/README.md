@@ -69,9 +69,13 @@ public struct named after the component that conforms to `View` alone, with one 
 are the options, labeled with their defaults, and `public var body: some View` (Rule: `public init(axis: RuleAxis =
 .horizontal)`; `APIParity.checkViews`). Any other public member of the view's type is component API no contract gives.
 The generator writes only the enums; the modifier or the view is hand-written (`spec/conventions.md`, "Own
-components"). A shape the conventions do not derive yet (states, a `size` option, an option of tokens or icons,
-system options, a restriction, several slots of a modifier, slots or a variant of a view) is reported, as generation
-reports it.
+components"). An icon's view is derived too (Icon, #28): its option whose values are icons is the first, unlabeled
+parameter, `Westron.Icon`, its one slot `label` gives the decorative initializer (unless the label is required) and
+the two labeled ones (`AppleOwnComponents.swift`, `labelInitializers`), and its system options
+(`platforms.apple.systemOptions`, Icon's `scale`) are the system's own modifiers, no parameter. A shape the
+conventions do not derive yet (states, a `size` option, an option of tokens, icons on a modifier or a second icons
+option, a restriction, several slots of a modifier, a variant of a view or slots of one other than an icon's `label`)
+is reported, as generation reports it.
 
 **Constraints and attributes.** An extension's attributes, modifiers and `where` clause count as its members' own, so
 `extension View where Self: Equatable { … buttonStyle … }` differs from the expected API. Expected API takes no

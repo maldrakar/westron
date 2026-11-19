@@ -15,6 +15,10 @@ import SwiftUI
 ///     Icon(.chevron).foregroundStyle(.icon.tertiary).imageScale(.small)
 ///     Icon(.sun, label: "Today")
 ///
+/// Not inside a system `Menu`: there a `Label` whose icon is an `Icon` becomes an item assistive technology cannot
+/// reach (spec/components/icon, decisions/0001; `IconAccessibilityTests.testMenuItemsBuiltFromLabels`), so a menu
+/// item is `Label("Rename", icon: .pen)`.
+///
 /// Without a label it is decorative and hidden from assistive technology: beside its own words it would only repeat
 /// them, and the system's name for a symbol says what it draws ("Increase Brightness" for the sun), not what it means
 /// here. A standalone icon that means something takes a label, and is announced as an image with it; a modifier such

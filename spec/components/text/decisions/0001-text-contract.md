@@ -2,8 +2,9 @@
 
 Date: 2026-11-18. Status: accepted. The owner answered the interview and, on 2026-11-18, approved the contract (#27):
 P1–P6 as proposed, Geist Mono Bold for `code.strong` under Bold Text, and the Bold Text weights as a rule of the Apple
-adapter rather than tokens. Whether the `Text` twin follows Dynamic Type and Bold Text is left to the implementation
-to show (below, "Open points").
+adapter rather than tokens. Whether the `Text` twin follows Dynamic Type and Bold Text was left to the implementation
+to show; the twin's shape and limits were then decided under the owner's delegation of 2026-11-18, pending the owner's
+confirmation (below, "P2 at implementation").
 
 ## Context
 
@@ -148,10 +149,10 @@ confirmed P1–P6 as proposed on 2026-11-18, when approving the contract.
 
 - **P2 and the environment.** A function that returns `Text` cannot read the environment, so `Text.textRole(_:)`
   cannot see the Dynamic Type size or the Bold Text setting by itself: `Font.custom(_:size:relativeTo:)` still scales
-  the font, but the tracking in points and the heavier instance are chosen when the `Text` is built. The
-  implementation must show, in the catalog at accessibility5 and with Bold Text on, whether the `Text` twin follows
-  both. The contract was approved before it showed it, so if the twin does not follow both, the contract is changed
-  first, as decisions/0005 asks: it records the difference in `platforms.apple`, or P2 is dropped.
+  the font, but the tracking in points and the heavier instance are chosen when the `Text` is built. Settled at
+  implementation (below, "P2 at implementation"): the twin follows Dynamic Type's size but not the tracking of the
+  drawn size, nor Bold Text in Onest or Geist Mono; the contract records the limits in `platforms.apple`, and the
+  twin's shape and limits were decided under the owner's delegation of 2026-11-18, pending the owner's confirmation.
 - **Tabular digits** stay open (chapter 03, question 3).
 - **Headings on GNOME** stay open for phase 7 (design-language/09, question 4): whether a heading role keeps or
   replaces libadwaita's title classes.
@@ -212,8 +213,8 @@ share `subheadline.regular`. The pilot uses neither code role.
 - At implementation, decisions/0011 is revised for the two new font instances, Onest ExtraBold and Geist Mono Bold,
   and `.textRole(_:)` computes the tracking from the drawn size and picks the heavier instance under Bold Text.
 - The parity lint expects `.textRole(_:)` from the contract, no longer as a reviewed adapter; `Font.init(_:)` stays
-  one, since it turns a token into a font and adds no modifier. The `Text` twin is checked once it is declared, and
-  required once it is in WestronUI (`APIParity.pendingTwins`).
+  one, since it turns a token into a font and adds no modifier. The `Text` twin is in WestronUI, and the lint
+  requires it like the rest of the API.
 
 ## P2 at implementation (2026-11-18)
 

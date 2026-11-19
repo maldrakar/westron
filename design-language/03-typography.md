@@ -22,8 +22,9 @@ and `tokens/primitive/font.tokens.json`.
 - **Code, logs and identifiers are Geist Mono.** `font.family.mono` has Cyrillic and box-drawing characters, which logs
   and text trees need. Its ligatures are off by default, so `->` and `!=` stay as typed in data. Its x-height matches
   Onest's, so the two faces sit well on one screen (`research_notes/type-and-icons.md`, 2.2 and 2.3).
-- **westron ships its two fonts.** It ships static instances of the weights its roles use: Onest SemiBold and Bold,
-  Geist Mono Regular and SemiBold, each with its license. On Apple they are registered the first time a role needs
+- **westron ships its two fonts.** It ships static instances of the weights its roles use, the heavier ones under
+  Bold Text included: Onest SemiBold, Bold and ExtraBold, Geist Mono Regular, SemiBold and Bold, each with its license
+  (decisions/0011's revision). On Apple they are registered the first time a role needs
   one, so a product sets up nothing (decisions/0011).
 - **The watch draws every role in the system font.** On its small screen the platform's face reads best
   (`research_notes/type-and-icons.md`, 3.1), so on watchOS a role keeps its text style, its weight and its tracking

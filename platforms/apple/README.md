@@ -8,7 +8,7 @@ A SwiftUI library for iOS, iPadOS, macOS and watchOS. The package manifest lives
 | `Sources/WestronUI/` | Styles, components and the SwiftUI accessors of the tokens: what products import |
 | `Sources/WestronCatalog/` | Catalog entries, their host and launch arguments |
 | `Tests/` | Package tests (Swift Testing) |
-| `Catalog/` | Catalog app for iOS and macOS and its UI tests: screenshots, the snapshot matrix and the accessibility audit |
+| `Catalog/` | Catalog app for iOS and macOS and its UI tests: screenshots, the snapshot matrix, the accessibility audit and behaviour |
 
 ## Adding the package
 
@@ -33,9 +33,8 @@ import WestronUI   // re-exports WestronTokens
 Text(list.name)
     .textRole(.heading.small)                     // typography.heading.small: Onest SemiBold in the headline style
     .foregroundStyle(list.color.text)             // color.category.<name>.text, by the name the store keeps
-    .padding(.horizontal, .space200)              // space.200: 16 pt
-    .background(.background.surface, in: RoundedRectangle(cornerRadius: .radius.card))
-    .shadow(.raised)                              // shadow.raised
+    .padding(.space.card)                         // space.card: a card's padding, the rhythm's role (16 pt)
+    .surface(.raised)                             // a card: background.surface, radius.card, shadow.raised
 withAnimation(.move) { reorder(task) }            // motion.move: its spring
 
 let color = Westron.Category(rawValue: stored) ?? .blue   // shared code: WestronTokens alone
@@ -80,6 +79,9 @@ Button("Add", systemImage: Westron.Icon.plus.systemName) { add() }   // any call
 
 `Icon` is the component (spec/components/icon): an `Image` of an SF Symbol always carries the system's spoken name of
 the symbol, which SwiftUI cannot hide or replace on an `Image`, so a standalone icon is `Icon`, not `Image`.
+A label built by hand, `Label { Text(list.title) } icon: { Icon(.folder) }`, must not go inside a system `Menu`: there
+the item becomes a cell assistive technology cannot reach (spec/components/icon, decisions/0001; held by
+`IconAccessibilityTests.testMenuItemsBuiltFromLabels`), so a menu item is `Label("Rename", icon: .pen)`.
 
 ## Package tests
 
@@ -140,15 +142,18 @@ rest and each state alone, the combinations a constraint of severity `error` lea
 differently (`platforms.apple`), and the sheets. A sheet fixes every option but the variant (or, without one, the first
 option that is not a bool): its values are the columns, rest and the states the rows, at most 3 × 6, so it fits an
 iPhone 17 in portrait and the macOS window. Text, with no states, has six sheets of one row: five of three roles each, and the last of two.
-Surface has two sheets of one row, the three kinds with `outlined` false and true; Rule one, both axes.
+Surface has two sheets of one row, the three kinds with `outlined` false and true; Rule one, both axes. Icon, with no
+states and an option whose values are icons, runs the registry's glyphs down the rows, six to a sheet, and its
+`scale` across: six sheets (spec/conventions.md, "Own components").
 The hand-written `<Component>MatrixCell` (Button's is in `Components/ButtonPages.swift`, Text's in
 `Components/TextPages.swift`) draws one cell with the real component: Button's with hover, focus and pressed forced
 as on the `button-states` pages, disabled and loading with the real modifiers; Text's with `.textRole(_:)`; Surface's
 (`Components/SurfacePages.swift`) with `.surface(_:outlined:)` around sample content, a plain surface on the canvas
 and an outlined one on a fill (a raised or dragged one in a sunken well, a sunken one in a raised card); Rule's
-(`Components/RulePages.swift`) between two lines or two words. The rows of a state the OS never enters are left
-out, as on those pages; a value the OS does not offer is drawn with its fallback and marked, and a combination a
-`warning` constraint advises against is drawn with a caption. A state no token binding names in a case looks as rest,
+(`Components/RulePages.swift`) between two lines or two words; Icon's, Checkbox's and Text field's in
+`Components/IconPages.swift`, `CheckboxPages.swift` and `TextFieldPages.swift`. The rows of a state the OS never
+enters are left out, as on those pages; a value the OS does not offer is drawn with its fallback and marked, and a
+combination a `warning` constraint advises against is drawn with a caption. A state no token binding names in a case looks as rest,
 and the sheet and the review page say so: Button's focus, whose ring the system draws. The sheets are not catalog
 entries, so the accessibility audit does not walk them; `-WestronMatrixSheet <component>.<sheet>` shows one.
 
@@ -168,13 +173,24 @@ still drives every generated sheet and combination:
 - **Supplementary sheets** show what no contract option sets. A component's catalog code adds a
   `ComponentMatrix.Supplement` to `Supplement.all`: the option values it keeps and a cell of its own. Its sheets are
   the generated sheets that keep those values, with their axes, states and rows, so nothing the contract lists is
-  listed again by hand. Each sheet and its section of the review page are marked "Not a contract option". Button has
-  one, `label-without-icon`: its generated cells have an icon and a label or are icon-only, so a label without an
-  icon, which while loading has the indicator before the label and widens the button (P13), is shown on the sheets
-  with iconOnly false: every variant, size and role, at rest and in each state, 108 combinations on 6 sheets. Surface
-  has one, `nesting`, on the sheet with outlined true: for raised and dragged, two outlined cards of the kind in a
-  sunken column; for sunken, an outlined well in a raised card. Like the
-  matrix, supplements are not catalog entries, so the accessibility audit does not walk them.
+  listed again by hand. Each sheet and its section of the review page are marked "Not a contract option". Over a
+  matrix whose rows are icons, a supplement keeps a few of them (`rows`), on one sheet. Where its cell is taller than
+  a generated one, `rowsPerPicture` caps the rows of one picture at a text size that splits sheets
+  (`accessibility5`). There are ten (`SnapshotMatrix/Supplements.swift`, `Supplement.all`):
+  - Button, `label-without-icon`: its generated cells have an icon and a label or are icon-only, so a label without an
+    icon, which while loading has the indicator before the label and widens the button (P13), is shown on the sheets
+    with iconOnly false: every variant, size and role, at rest and in each state, 108 combinations on 6 sheets.
+  - Icon, `beside-text`: three glyphs, each beside text in four roles (one row to a picture at `accessibility5`); and
+    `color-roles`: six glyphs in the color roles of design-language/07 (three rows to a picture there).
+  - Surface, `nesting`, on the sheet with outlined true: for raised and dragged, two outlined cards of the kind in a
+    sunken column; for sunken, an outlined well in a raised card.
+  - Checkbox, `list-colors`: the twelve list colors through `.category(_:)` (three rows to a picture at
+    `accessibility5`); and `text-roles`: a task's check and a subtask's beside labels of their roles.
+  - Text field, at size m: `card-notes`, a card's title and multiline notes (two rows to a picture at
+    `accessibility5`); `secure-field`, the style on `SecureField`; `on-surface` and `on-sunken`, a field on those
+    grounds.
+
+  Like the matrix, supplements are not catalog entries, so the accessibility audit does not walk them.
 
 ```sh
 tools/apple/snapshot-matrix.sh ios                       # or macos; --component button,rule for some components
@@ -227,6 +243,21 @@ captures its components in one run (`--component a,b`) and uploads `snapshot-mat
 `snapshot-matrix-pages` puts each platform's legs together with `merge --expect` and uploads one page per platform,
 `snapshot-matrix-ios` and `snapshot-matrix-macos`, as before. A page whose component no leg brought names it at its top.
 With Text field, 365 iOS images go in three legs and 184 macOS images in one.
+
+### Behaviour UI tests
+
+`ButtonBehaviorTests`, `CheckboxBehaviorTests`, `TextFieldBehaviorTests` and `IconAccessibilityTests`, in
+`Catalog/CatalogUITests`, check on the catalog's entries what a unit test cannot reach: presses and hit areas, the
+accessibility hierarchy, the keyboard. No `tools/apple/check.sh` target runs them, and neither does CI; run one suite,
+or one test of it, by hand after a change to its component:
+
+```sh
+source tools/apple/xcode-env.sh
+xcodebuild -project platforms/apple/Catalog/Catalog.xcodeproj -scheme Catalog \
+  -destination "platform=iOS Simulator,name=iPhone 17" -derivedDataPath .build/xcode/catalog \
+  -only-testing:CatalogUITests/CheckboxBehaviorTests test    # …/CheckboxBehaviorTests/testPressToggles for one test
+# on macOS: -destination "platform=macOS,arch=$(uname -m)"
+```
 
 ### Accessibility audit
 

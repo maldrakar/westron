@@ -153,7 +153,11 @@ tokens.
 ## Revision of 2026-11-18
 
 In the interview for the phase 3 layout primitives (#29) the owner turned B's rhythm into tokens and answered two open
-questions of chapter 06.
+questions of chapter 06. The owner answered three things: five semantic roles for the rhythm, the page margin switching
+by horizontal size class, and westron's margins applying only to layout the product builds itself. Two parts below are
+not the owner's and wait for the owner's confirmation: the role names, which the implementing agent chose, and "no
+Swift helper for the page margin in this phase", which the coordinator decided under the owner's delegation of
+2026-11-18.
 
 - **The rhythm gets five semantic roles.** They alias the ladder, as `radius.card` aliases a radius step:
 
@@ -165,13 +169,17 @@ questions of chapter 06.
   | The page margin on a narrow window | `space.page.narrow` | `space.250`, 20 | `CGFloat.space.page.narrow` |
   | The page margin on a wide window | `space.page.wide` | `space.400`, 32 | `CGFloat.space.page.wide` |
 
+  The names `space.card`, `space.within-group`, `space.between-groups`, `space.page.narrow` and `space.page.wide` are
+  the implementing agent's, under the owner's delegation of 2026-11-18, pending the owner's confirmation.
+
   A role names where the space goes, so the compact density (#33) can point a role at another step, such as the gap
   inside a group one step down, without changing the ladder or the code that uses the role. The density's values
   still arrive with #33.
 - **Narrow and wide follow the horizontal size class on Apple.** Compact takes `space.page.narrow`, regular takes
   `space.page.wide`, and a Mac is always wide. On the web, GNOME and Android it is a breakpoint, decided in their
   phases. westron adds no Swift helper that picks the margin yet: new public API in WestronUI needs a contract or a
-  reviewed adapter, so a product reads the size class itself for now.
+  reviewed adapter, so a product reads the size class itself for now. This is the coordinator's decision under the
+  owner's delegation of 2026-11-18, pending the owner's confirmation.
 - **westron's margins apply only to layout the product builds itself:** a `ScrollView`, a stack, a grid. The system's
   `List`, `Form` and bars keep their own insets, as a system control keeps its own look (decisions/0003).
 - **Left for later.** Nesting guides and the labelled area line belong to a phase 4 component; the values of compact
