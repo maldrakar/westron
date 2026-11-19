@@ -2,14 +2,15 @@
 # The snapshot matrix (#24): every combination each component's contract declares, in the four themes and, on iOS,
 # at the smallest and the largest text size, with the catalog's supplementary sheets (#72), for review.
 #
-#   tools/apple/snapshot-matrix.sh <ios|macos> [--component ID] [--device "iPhone 17"] [--out DIR]
+#   tools/apple/snapshot-matrix.sh <ios|macos> [--component ID[,ID…]]… [--device "iPhone 17"] [--out DIR]
 #   tools/apple/snapshot-matrix.sh compare DIR_A DIR_B [--out DIR]
-#   tools/apple/snapshot-matrix.sh merge OUT DIR...
+#   tools/apple/snapshot-matrix.sh merge [--expect ID,ID…] OUT DIR...
 #
 # Capture: builds the catalog (incrementally), then runs the SnapshotMatrixTests UI test in one `xcodebuild test`
 # invocation, which walks every sheet of every matrix (generated from the contracts into WestronCatalog/Generated/)
 # and of its supplements in light, dark, light-hc and dark-hc at the default text size, and on iOS in light at xSmall
-# and accessibility5 (macOS has no Dynamic Type). The PNGs, named <component>.<sheet>.<theme>.png and
+# and accessibility5 (macOS has no Dynamic Type); with --component, of the components it names only (repeated or
+# comma-separated, still one run). The PNGs, named <component>.<sheet>.<theme>.png and
 # <component>.<sheet>[_part-<n>-of-<count>].light.<text size>.png, the manifest matrix.json and the review page
 # index.html go to DIR, by default .build/snapshot-matrix/<platform>/; the script prints the path of index.html and
 # fails when an expected image is missing or a sheet failed its checks. Log: .build/logs/.
@@ -18,13 +19,14 @@
 # picture there.
 # Compare: compares two capture directories image by image and writes a report page, by default to
 # .build/snapshot-matrix/compare/; prints its path; exits 0 when every image is the same and 1 when one differs.
-# Between two iOS captures it ignores the home indicator's box at the bottom of the screen, which the system draws or
-# not from launch to launch, and reports what differs there apart (platforms/apple/README.md, "Snapshot matrix").
-# Only captures from the same environment compare (decisions/0008). macOS needs Automation Mode
-# (platforms/apple/README.md) and the screen to itself.
+# Between two iOS captures it ignores the home indicator, which the system draws or not from launch to launch, where
+# the differing pixels fit its footprint at the bottom of the screen, and shows those images apart
+# (platforms/apple/README.md, "Snapshot matrix"). Only captures from the same environment compare (decisions/0008).
+# macOS needs Automation Mode (platforms/apple/README.md) and the screen to itself.
 # Merge: puts captures of one platform taken apart (--component, one CI job each) into OUT as one: their PNGs, one
-# manifest with their components in the order given, and one review page; prints its path; exits 1 when a capture has
-# no manifest (its component is missing from the page) or the page finds a problem.
+# manifest and one review page; prints its path. With --expect, the components go in that order and the page names
+# at its top every expected one that no capture holds. Exits 1 when a component or a capture's manifest is missing or
+# the page finds a problem.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -48,16 +50,22 @@ pages() {
 
 if [ "${1:-}" = merge ]; then
   shift
+  expect=""
+  if [ "${1:-}" = --expect ]; then
+    expect="$2"
+    shift 2
+  fi
   [ $# -ge 2 ] || usage
   out="$(absolute "$1")"
   shift
   mkdir -p "$out"
   rm -f -- "$out/matrix.json" "$out/index.html"
-  manifests=() status=0
+  manifests=() status=0 lost=()
   for capture in "$@"; do
     capture="$(absolute "$capture")"
     if [ ! -f "$capture/matrix.json" ]; then
-      echo "snapshot-matrix: merge: no manifest in $capture; its component is missing from the page" >&2
+      echo "snapshot-matrix: merge: no manifest in $capture; its components are missing from the page" >&2
+      lost+=("$capture")
       status=1
       continue
     fi
@@ -69,10 +77,27 @@ if [ "${1:-}" = merge ]; then
     echo "snapshot-matrix: merge: the captures are of different platforms" >&2
     exit 2
   fi
-  # The first manifest's environment, the components of all in the order given, and a scale from a capture that took
-  # an image (a capture that failed before its first image says 0).
-  jq -s '.[0] + {scale: (map(.scale) | max), components: (map(.components) | add)}' "${manifests[@]}" \
-    > "$out/matrix.json"
+  # The first manifest's environment, the components of all, and a scale from a capture that took an image (a capture
+  # that failed before its first image says 0). With --expect, the components go in its order, and every expected one
+  # that no manifest holds is named in `missing`, which the page shows at its top; without it, a capture with no
+  # manifest is named by its directory.
+  jq -s --arg expect "$expect" --arg lost "$(printf '%s\n' ${lost[@]+"${lost[@]}"})" '
+    ($expect | split(",") | map(select(. != ""))) as $expected
+    | (map(.components) | add) as $components
+    | ($components | map(.component)) as $present
+    | .[0] + {
+        scale: (map(.scale) | max),
+        components: (if ($expected | length) > 0
+          then $components | sort_by(.component as $id | $expected | index($id) // length)
+          else $components end),
+        missing: (if ($expected | length) > 0
+          then $expected - $present
+          else $lost | split("\n") | map(select(. != "") | "the capture in " + .) end)
+      }' "${manifests[@]}" > "$out/matrix.json"
+  if [ "$(jq '.missing | length' "$out/matrix.json")" != 0 ]; then
+    echo "snapshot-matrix: merge: missing: $(jq -r '.missing | join(", ")' "$out/matrix.json")" >&2
+    status=1
+  fi
   pages index "$out" || status=1
   echo "$out/index.html"
   exit "$status"
@@ -105,14 +130,16 @@ shift
 component="" device="${WESTRON_SIM_DEVICE:-iPhone 17}" out=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    --component) component="$2"; shift 2 ;;
+    # Repeated or comma-separated: one list, in one test run.
+    --component) component="${component:+$component,}$2"; shift 2 ;;
     --device) device="$2"; shift 2 ;;
     --out) out="$2"; shift 2 ;;
     *) usage ;;
   esac
 done
 out="$(absolute "${out:-.build/snapshot-matrix/$platform}")"
-name="snapshot-matrix-$platform${component:+-$component}"
+# The log and the result bundle name the components, joined with "+": snapshot-matrix-ios-rule+surface.log.
+name="snapshot-matrix-$platform${component:+-${component//,/+}}"
 log=".build/logs/$name.log"
 mkdir -p "$out" .build/logs .build/xcode/results
 # Only a capture's own files are removed, so --out can name a directory that holds other files: the images the previous

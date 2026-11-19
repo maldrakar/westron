@@ -50,9 +50,12 @@ tools/apple/catalog-screenshot.sh macos --entry environment                     
 
 tools/apple/snapshot-matrix.sh ios [--component button]   # every combination of every contract in four themes, and
                                                           # light at xSmall and accessibility5, with the supplements;
-                                                          # one xcodebuild test run; prints the path to index.html
+                                                          # one xcodebuild test run; prints the path to index.html;
+                                                          # --component rule,surface (or repeated): those, one run
 tools/apple/snapshot-matrix.sh macos                      # the same on macOS
 tools/apple/snapshot-matrix.sh compare <dirA> <dirB>      # pixel diff of two captures; exit 1 when one differs
+tools/apple/snapshot-matrix.sh merge --expect <ids> <out> <dir>…  # captures of one platform taken apart, one page;
+                                                          # names on it any expected component none of them holds
 
 tools/check.sh                    # build and test tools/, then the checks below (CI runs it on Linux)
 tools/westron lint raw-values     # no raw values in WestronUI
