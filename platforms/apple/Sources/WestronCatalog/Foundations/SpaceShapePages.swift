@@ -27,16 +27,11 @@ private struct SpacePage: View {
             summary: "space.<step>: steps on a ladder where 100 is the base unit of 8 pt. space.<role>: direction B's "
                 + "rhythm, each role a step of the ladder. Each bar is as long as its token."
         ) {
-            // The ladder beside the rhythm where the window is wide enough, above it otherwise.
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: .space400) {
-                    ladder
-                    rhythm
-                }
-                VStack(alignment: .leading, spacing: .space300) {
-                    ladder
-                    rhythm
-                }
+            // The ladder beside the rhythm where the window is wide enough, above it otherwise. Both start with a
+            // section title in the same role, so their first baselines line up their tops.
+            SideBySideOrStacked(spacing: .space400, stackedSpacing: .space300) {
+                ladder
+                rhythm
             }
         }
     }

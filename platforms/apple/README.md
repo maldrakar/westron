@@ -359,7 +359,8 @@ added (a contrast leg at about 31 entries) gets another shard, so that a retry s
 - It does the same with the text of a `ViewThatFits` whose choice the enlarged text changes: the new branch's views
   take the place of the old one's, and the audit reports the old one's text, which scales, as not following Dynamic
   Type (`typography-in-text`, whose rows swapped from a row to a column, 2026-11-19). A layout that arranges the same
-  views either way keeps them: that page's `SideBySideOrStacked`, a row where it fits and a column otherwise.
+  views either way keeps them: `SideBySideOrStacked` (`WestronCatalog/Foundations`), a row where it fits and a column
+  otherwise, which the space page uses too.
 - An issue that is not the entry's fault, or that the catalog cannot fix, is suppressed one by one, with its reason,
   in `CatalogAccessibilityAuditTests.suppressions`; an audit type is never turned off as a whole.
 - `WESTRON_ENTRY=<id>[,<id>…] tools/apple/check.sh a11y` audits those entries only: one while its issues are being
