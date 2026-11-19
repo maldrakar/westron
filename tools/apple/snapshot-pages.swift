@@ -5,7 +5,7 @@
 //
 // index exits 1 when an image the manifest expects is missing or a sheet failed its checks; compare exits 0 when every
 // image is the same, 1 when one changed, was added or was removed; between two iOS captures it ignores the home
-// indicator's box (`homeIndicatorBox`) and reports what differs there apart. Both exit 2 on bad input. The pages are
+// indicator (`HomeIndicator`) and shows what it ignored apart. Both exit 2 on bad input. The pages are
 // self-contained: inline styles, relative image links, nothing from the network. Apple-only (ImageIO, CoreGraphics),
 // so it lives in tools/apple/ and not in the tools package, which builds on Linux (decisions/0009).
 
@@ -27,6 +27,8 @@ struct Manifest: Codable {
     /// Why the OS is captured at fewer text sizes; nil when it takes them all.
     var textSizeNote: String?
     var components: [Component]
+    /// On a merged page (`snapshot-matrix.sh merge`): what was expected but no capture holds; nil otherwise.
+    var missing: [String]?
 }
 
 struct Capture: Codable {
@@ -240,6 +242,14 @@ func index(_ directory: URL) -> Int32 {
         body =
             "<p class=\"bad\">Problems: " + problems.map(html).joined(separator: "; ") + "</p>\n" + body
     }
+    // A merged page (`snapshot-matrix.sh merge`) names what no capture brought, above everything else.
+    let missing = manifest.missing ?? []
+    if !missing.isEmpty {
+        body =
+            "<p class=\"bad\">Missing from this page: " + missing.map(html).joined(separator: ", ")
+            + ". No capture brought a manifest for them; see the log of their job.</p>\n" + body
+        problems += missing.map { "missing from the page: \($0)" }
+    }
     let out = directory.appendingPathComponent("index.html")
     do {
         try Data(page(title: "Snapshot matrix · \(platformName)", body: body).utf8).write(to: out)
@@ -395,7 +405,7 @@ struct Change {
     let size: String
     /// The changed area in pixels, `x, y, w × h`.
     let area: String
-    /// The pixels that differ in the ignored box (`homeIndicatorBox`), not counted in `pixels`.
+    /// The pixels that differ where the home indicator is drawn (`HomeIndicator`), ignored: not counted in `pixels`.
     var ignored = 0
 }
 
@@ -409,18 +419,42 @@ struct Box {
     func contains(x: Int, y: Int) -> Bool { x >= minX && x < maxX && y >= minY && y < maxY }
 }
 
-/// The home indicator's box on an iOS capture, whose picture is the whole screen. The system draws the indicator over
-/// the app at the bottom centre, and from launch to launch draws it or not, or at another opacity: on iPhone 17, iOS
-/// 26.3, 3×, every pixel that differed between two captures of the same commit lay in x 387–819, y 2583–2598 of
-/// 1206 × 2622, that is about 144 × 5 pt with its soft edges, its bottom 8 pt above the screen's. The box is that with
-/// a margin: 160 pt wide around the centre, from 16 to 4 pt above the bottom, in the screen's bottom safe-area inset
-/// (34 pt on iPhone 17), under which a sheet that fits draws only its canvas. nil when the image is too small for it.
-func homeIndicatorBox(width: Int, height: Int, scale: Double) -> Box? {
-    guard scale > 0 else { return nil }
-    let point = { (value: Double) in Int((value * scale).rounded()) }
-    let box = Box(
-        minX: width / 2 - point(80), minY: height - point(16), maxX: width / 2 + point(80), maxY: height - point(4))
-    return box.minX >= 0 && box.minY >= 0 ? box : nil
+/// The home indicator on an iOS capture, whose picture is the whole screen. The system draws the indicator over the
+/// app at the bottom centre, and from launch to launch draws it or not, or at another opacity: on iPhone 17, iOS 26.3,
+/// 3×, every pixel that differed between two captures of the same commit lay in x 387–819, y 2583–2598 of 1206 × 2622,
+/// a capsule of 144 × 5 pt with its soft edges, centred 10.3 pt above the bottom of the screen.
+///
+/// `footprint` is that capsule with a tolerance of 1.5 pt all round; `box`, 160 × 12 pt around it (from 16 to 4 pt
+/// above the bottom), is where a difference outside the footprint shows that something else changed. Both lie in the
+/// screen's bottom safe-area inset (34 pt on iPhone 17), under which a sheet that fits draws only its canvas.
+struct HomeIndicator {
+    let box: Box
+    let centreX: Double
+    let centreY: Double
+    /// Half the length of the capsule's straight part, and its radius with the tolerance, in pixels.
+    let halfStraight: Double
+    let reach: Double
+
+    /// nil when the image is too small for it.
+    init?(width: Int, height: Int, scale: Double) {
+        guard scale > 0 else { return nil }
+        let point = { (value: Double) in Int((value * scale).rounded()) }
+        box = Box(
+            minX: width / 2 - point(80), minY: height - point(16), maxX: width / 2 + point(80),
+            maxY: height - point(4))
+        guard box.minX >= 0, box.minY >= 0 else { return nil }
+        centreX = Double(width) / 2
+        centreY = Double(height) - 10.3 * scale
+        halfStraight = (72 - 2.5) * scale
+        reach = (2.5 + 1.5) * scale
+    }
+
+    /// Whether the pixel at `x`, `y` lies on the indicator's footprint.
+    func covers(x: Int, y: Int) -> Bool {
+        let dx = max(abs(Double(x) + 0.5 - centreX) - halfStraight, 0)
+        let dy = abs(Double(y) + 0.5 - centreY)
+        return dx * dx + dy * dy <= reach * reach
+    }
 }
 
 /// Whether a sheet's content stays clear of the home indicator's box in `bitmap`: the band around the box, every
@@ -440,9 +474,20 @@ func clearOfContent(_ bitmap: Bitmap, around box: Box, scale: Double) -> Bool {
     return true
 }
 
-/// The number of pixels that differ and a picture of them: the new image faded, the changed pixels in red. Those in
-/// the box `ignoring` are counted apart, as `ignored`, and drawn in amber.
-func difference(_ before: Bitmap, _ after: Bitmap, ignoring box: Box?) -> (
+/// Whether every pixel that differs between `before` and `after` in the indicator's box lies on its footprint.
+func onlyOnFootprint(_ before: Bitmap, _ after: Bitmap, _ indicator: HomeIndicator) -> Bool {
+    for y in indicator.box.minY..<min(indicator.box.maxY, after.height) {
+        for x in indicator.box.minX..<min(indicator.box.maxX, after.width) where !indicator.covers(x: x, y: y) {
+            let offset = (y * after.width + x) * 4
+            if !before.bytes[offset..<offset + 4].elementsEqual(after.bytes[offset..<offset + 4]) { return false }
+        }
+    }
+    return true
+}
+
+/// The number of pixels that differ and a picture of them: the new image faded, the changed pixels in red. Those on
+/// the footprint of `ignoring` are counted apart, as `ignored`, and drawn in amber.
+func difference(_ before: Bitmap, _ after: Bitmap, ignoring indicator: HomeIndicator?) -> (
     pixels: Int, ignored: Int, area: String, picture: Bitmap
 ) {
     var picture = after
@@ -461,7 +506,7 @@ func difference(_ before: Bitmap, _ after: Bitmap, ignoring box: Box?) -> (
                     picture.bytes[offset + channel] = UInt8((Int(after.bytes[offset + channel]) + 3 * 255) / 4)
                 }
                 picture.bytes[offset + 3] = 255
-            } else if box?.contains(x: x, y: y) == true {
+            } else if indicator?.covers(x: x, y: y) == true {
                 ignored += 1
                 picture.bytes[offset] = 240
                 picture.bytes[offset + 1] = 160
@@ -526,14 +571,14 @@ func compare(_ before: URL, _ after: URL, out: URL) -> Int32 {
     }
     let removed = beforeNames.filter { !afterNames.contains($0) }
     let added = afterNames.filter { !beforeNames.contains($0) }
-    // The home indicator's box is ignored only between two iOS captures at one scale, as both manifests say.
+    // The home indicator is ignored only between two iOS captures at one scale, as both manifests say.
     let environments = (environment(before), environment(after))
     let iOSScale: Double? =
         environments.0?.platform == "ios" && environments.1?.platform == "ios"
             && environments.0?.scale == environments.1?.scale ? environments.0?.scale : nil
     var changed: [Change] = []
     var unchanged: [String] = []
-    /// The unchanged images that differ in the home indicator's box alone, with the number of pixels there.
+    /// The unchanged images that differ on the home indicator alone, with the number of pixels there.
     var ignoredOnly: [String: Int] = [:]
     for name in beforeNames where afterNames.contains(name) {
         let a = before.appendingPathComponent(name)
@@ -549,20 +594,27 @@ func compare(_ before: URL, _ after: URL, out: URL) -> Int32 {
                     name: name, pixels: nil, size: "\(left.width) × \(left.height) → \(right.width) × \(right.height)",
                     area: ""))
         } else {
-            // Only where the content stays clear of the box in both pictures.
-            let box = iOSScale.flatMap { scale in
-                homeIndicatorBox(width: right.width, height: right.height, scale: scale).flatMap {
-                    clearOfContent(left, around: $0, scale: scale) && clearOfContent(right, around: $0, scale: scale)
+            // Only where the content stays clear of the box in both pictures, and nothing in the box differs off the
+            // indicator's footprint.
+            let indicator = iOSScale.flatMap { scale in
+                HomeIndicator(width: right.width, height: right.height, scale: scale).flatMap {
+                    clearOfContent(left, around: $0.box, scale: scale)
+                        && clearOfContent(right, around: $0.box, scale: scale) && onlyOnFootprint(left, right, $0)
                         ? $0 : nil
                 }
             }
-            let result = difference(left, right, ignoring: box)
-            if result.pixels == 0 {
+            let result = difference(left, right, ignoring: indicator)
+            if result.pixels == 0 && result.ignored == 0 {
                 unchanged.append(name)
-                if result.ignored > 0 { ignoredOnly[name] = result.ignored }
                 continue
             }
             writePNG(result.picture, to: out.appendingPathComponent("diff").appendingPathComponent(name))
+            if result.pixels == 0 {
+                // The home indicator alone: unchanged, yet shown on a list of its own with its diff.
+                unchanged.append(name)
+                ignoredOnly[name] = result.ignored
+                continue
+            }
             changed.append(
                 Change(
                     name: name, pixels: result.pixels, size: "\(right.width) × \(right.height)", area: result.area,
@@ -585,18 +637,19 @@ func compare(_ before: URL, _ after: URL, out: URL) -> Int32 {
         + "diff the changed pixels are red over the new image, faded.</p>\n"
     if iOSScale != nil {
         body +=
-            "<p>iOS: the home indicator's box, 160 × 12 pt at the bottom centre of the screen, is ignored where the "
-            + "sheet's content stays clear of it in both pictures (the band around it is the canvas alone): the system "
-            + "draws the indicator there or not, or at another opacity, from launch to launch. Its differing pixels "
-            + "are amber in a diff and counted apart; an image that differs there alone counts as unchanged, and the "
-            + "list of unchanged images says so.</p>\n"
+            "<p>iOS: the system draws the home indicator at the bottom centre of the screen or not, or at another "
+            + "opacity, from launch to launch, so its pixels are ignored: those on its footprint (a capsule of "
+            + "144 × 5 pt, 10.3 pt above the bottom, with 1.5 pt of tolerance), only where the sheet's content stays "
+            + "clear of the 160 × 12 pt box around it in both pictures and nothing else in the box differs. They are "
+            + "amber in a diff and counted apart; an image that differs there alone counts as unchanged and is shown "
+            + "under its own heading below.</p>\n"
     }
     body += "<h2>Changed (\(changed.count))</h2>\n"
     for change in changed {
         let what =
             change.pixels.map {
                 "\($0) pixels differ, in \(change.area) of \(change.size)"
-                    + (change.ignored > 0 ? "; \(change.ignored) more in the home indicator's box, ignored" : "")
+                    + (change.ignored > 0 ? "; \(change.ignored) more on the home indicator, ignored" : "")
             } ?? "the size changed: \(change.size)"
         body += "<h3>\(html(change.name))</h3><p class=\"bad\">\(html(what))</p><div class=\"pair\">"
         body += figure("before/" + change.name, caption: "before")
@@ -608,10 +661,20 @@ func compare(_ before: URL, _ after: URL, out: URL) -> Int32 {
     body += added.map { figure("after/" + $0, caption: $0) }.joined() + "</div>\n"
     body += "<h2>Removed (\(removed.count))</h2>\n<div class=\"pair\">"
     body += removed.map { figure("before/" + $0, caption: $0) }.joined() + "</div>\n"
+    if !ignoredOnly.isEmpty {
+        // Not collapsed: a glance shows that what was ignored is the indicator and nothing else.
+        body += "<h2>Unchanged but for the home indicator (\(ignoredOnly.count))</h2>\n"
+        for name in ignoredOnly.keys.sorted() {
+            body +=
+                "<h3>\(html(name))</h3><p class=\"meta\">\(ignoredOnly[name] ?? 0) pixels differ on the home "
+                + "indicator, ignored</p><div class=\"pair\">" + figure("diff/" + name, caption: "difference")
+                + "</div>\n"
+        }
+    }
     body += "<h2>Unchanged (\(unchanged.count))</h2>\n<details><summary>List</summary><ul>"
     body +=
         unchanged.map { name in
-            let ignored = ignoredOnly[name].map { " · \($0) pixels differ in the home indicator's box, ignored" }
+            let ignored = ignoredOnly[name].map { " · \($0) pixels differ on the home indicator, ignored" }
             return "<li><code>\(html(name))</code>\(ignored ?? "")</li>"
         }.joined() + "</ul></details>\n"
     let page = page(title: "Snapshot diff", body: body)
@@ -629,7 +692,7 @@ func compare(_ before: URL, _ after: URL, out: URL) -> Int32 {
         "snapshot-matrix compare: \(changed.count) changed, \(added.count) added, \(removed.count) removed, "
             + "\(unchanged.count) unchanged"
             + (ignoredOnly.isEmpty
-                ? "" : " (\(ignoredOnly.count) of them differ in the home indicator's box alone, ignored on iOS)"))
+                ? "" : " (\(ignoredOnly.count) of them differ on the home indicator alone, ignored on iOS)"))
     return changed.isEmpty && added.isEmpty && removed.isEmpty ? 0 : 1
 }
 

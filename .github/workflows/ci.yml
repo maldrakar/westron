@@ -10,6 +10,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Capacity (2026-11-19, phase 3 with Text field: 28 catalog entries, 365 iOS and 184 macOS snapshot images). Every
+  # job below but the three on Linux (tools, audit-scope, snapshot-components) runs on a Mac (`xcode-27`), and at most
+  # 5 run at once on this repository (runs 44339047592, 44360219942, 44364265656 and 44386153527). So a run's
+  # wall-clock is at best its Mac runner-minutes over 5; measured, about 1.2 times that (run 44386153527: 12 Mac jobs,
+  # 256 runner-minutes, 62 min). Per run, estimated from the times in the job comments (apple about 25 min,
+  # catalog-screenshots about 20, a page merge about 3):
+  #   before: 35 Mac jobs (audit 17 legs, snapshot 14 + 2 pages), about 10.1 runner-hours: 2 h at best, about 2.4 h
+  #           expected;
+  #   now:    17 Mac jobs (audit 10 legs, snapshot 4 + 1 pages), about 7.7 runner-hours: 1.5 h at best, about
+  #           1.6–1.9 h expected (the two iOS snapshot legs of about 48 min may start late, behind the audit's ten).
+  # What is left is mostly the audit's own tests (2.6 h) and the captures (1.9 h); each Mac job's build and setup
+  # costs 5–17 min more.
   tools:
     name: Tools (Swift on Linux)
     runs-on: ubuntu-24.04
@@ -89,9 +101,8 @@ jobs:
   accessibility-audit:
     name: >-
       Accessibility audit — ${{ matrix.test }}${{ matrix.shard && format(' ({0}/{1})', matrix.shard, matrix.shards) || '' }}
-    # Seventeen parallel jobs, each with its own catalog build, about six runner-hours in all: on every push to main,
-    # and on a pull request only when audit-scope finds a changed path the audit depends on; otherwise they show as
-    # skipped.
+    # Ten parallel jobs, each with its own catalog build, about 4.3 runner-hours in all: on every push to main, and on a
+    # pull request only when audit-scope finds a changed path the audit depends on; otherwise they show as skipped.
     # If audit-scope fails, they run (fail open): only its "audit=false" skips them. When this `if:` is false, GitHub
     # reports one skipped check under the unexpanded matrix name, so the legs must never be required checks: a pull
     # request that skips them would wait for them forever.
@@ -104,58 +115,44 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     strategy:
       fail-fast: false
-      # Each configuration of CatalogAccessibilityAuditTests split into shards of the catalog's entries
+      # Each configuration of CatalogAccessibilityAuditTests, the slow two split into shards of the catalog's entries
       # (WESTRON_ENTRY_SHARD=<i>/<n>, every n-th entry from the i-th). With the Button entries (PR #66, head 1c62267),
       # the runner took over 36.6 min for testAccessibilityDynamicType (killed by the timeout) and 32.4 min for
       # testDefaultSettings, and 16–19 min for each of the other three, about 3 times a local Mac (627 s, 476 s and
-      # 194–196 s on 2026-11-17); then three shards and two, and testDefaultSettings 1/2 (9 of 17 entries) still took
-      # up to 29.5 min. Phase 3 grows the catalog from 17 entries (ded3d5c) to 23 (text, surface, rule, checkbox,
-      # checkbox-in-list, typography-in-text) and, with Text field (4) and Icon (up to 2), to 29: the shards below are
-      # sized for 29. Per entry on CI, with a margin (tools/apple/check.sh, a11y_retry_estimate): testDefaultSettings
-      # 90 s, testAccessibilityDynamicType 130 s, the other three 38 s; before the first entry the step spends 6.5–17.1
-      # min, mean 10.4 (the build, the simulator, the runner). A leg is to stay under about 22 min, 10.4 + 12 of
-      # tests, leaving the retry room within the timeout:
-      #   testDefaultSettings           29 × 90 s = 43.5 min → 5 shards of at most 6 entries:  9.0 + 10.4 = 19.4 min
-      #   testAccessibilityDynamicType  29 × 130 s = 62.8 min → 6 shards of at most 5 entries: 10.8 + 10.4 = 21.2 min
-      #   each of the other three       29 × 38 s = 18.4 min → 2 shards of at most 15 entries:  9.5 + 10.4 = 19.9 min
-      # (4 shards of testDefaultSettings would be 8 entries, 12.0 + 10.4 = 22.4 min, as long as the 1/2 leg of 9 that
-      # took 29.5.) Seventeen legs; a leg that nears 22 min as pages are added gets another shard.
+      # 194–196 s on 2026-11-17). Phase 3 grows the catalog from 17 entries (ded3d5c) to 28 with Text field's four.
+      # Per entry on CI, with a margin (tools/apple/check.sh, a11y_retry_estimate): testDefaultSettings 90 s,
+      # testAccessibilityDynamicType 130 s, the other three 38 s; before the first entry the step spends 6.5–17.1 min,
+      # mean 10.4 (the build, the simulator, the runner), paid once per leg. So fewer, longer legs, under 45 min each
+      # with a retry budget of 40 (tools/apple/check.sh):
+      #   testDefaultSettings           28 × 90 s = 42.0 min → 3 shards of at most 10 entries: 15.0 + 10.4 = 25.4 min
+      #   testAccessibilityDynamicType  28 × 130 s = 60.7 min → 4 shards of at most 7 entries: 15.2 + 10.4 = 25.6 min
+      #   each of the other three       28 × 38 s = 17.7 min → 1 leg of 28 entries:           17.7 + 10.4 = 28.1 min
+      # The worst usual retry, a stall (3 min) in the first entry of a leg after the mean 10.4 min, retries all its
+      # entries (90 s to start, then each): a contrast leg ends at 10.4 + 3 + 1.5 + 17.7 = 32.6 min, within the budget
+      # of 40, which takes it after up to 17.8 min before the first entry (17.1 seen); testAccessibilityDynamicType
+      # 30.1, testDefaultSettings 29.9. Without a retry the slowest leg ends by 17.1 + 17.7 = 34.8 min. With 17 legs
+      # of 35 min the same retry fitted only after up to 14.7 min. A leg past about 30 min as pages are added (a
+      # contrast leg at about 31 entries) gets another shard.
       matrix:
-        test: [testDefaultSettings, testAccessibilityDynamicType, testIncreasedContrast, testDarkAppearance,
-          testDarkIncreasedContrast]
-        shard: [1, 2, 3, 4, 5, 6]
-        exclude:
-          # testDefaultSettings in 5 shards, testAccessibilityDynamicType in 6, the other three in 2.
-          - {test: testDefaultSettings, shard: 6}
-          - {test: testIncreasedContrast, shard: 3}
-          - {test: testIncreasedContrast, shard: 4}
-          - {test: testIncreasedContrast, shard: 5}
-          - {test: testIncreasedContrast, shard: 6}
-          - {test: testDarkAppearance, shard: 3}
-          - {test: testDarkAppearance, shard: 4}
-          - {test: testDarkAppearance, shard: 5}
-          - {test: testDarkAppearance, shard: 6}
-          - {test: testDarkIncreasedContrast, shard: 3}
-          - {test: testDarkIncreasedContrast, shard: 4}
-          - {test: testDarkIncreasedContrast, shard: 5}
-          - {test: testDarkIncreasedContrast, shard: 6}
         include:
-          # The shard count of each test, added to its legs.
-          - {test: testDefaultSettings, shards: 5}
-          - {test: testAccessibilityDynamicType, shards: 6}
-          - {test: testIncreasedContrast, shards: 2}
-          - {test: testDarkAppearance, shards: 2}
-          - {test: testDarkIncreasedContrast, shards: 2}
-    # The slowest leg, about 21 min, with room for one retry: the retry's budget in tools/apple/check.sh is 30 of these
-    # 35 min. The worst usual retry, a stall in the first entry of a testAccessibilityDynamicType shard after the mean
-    # 10.4 min, ends at 10.4 + 3 + 1.5 + 5 × 130 s = 25.7 min.
-    timeout-minutes: 35
+          - {test: testDefaultSettings, shard: 1, shards: 3}
+          - {test: testDefaultSettings, shard: 2, shards: 3}
+          - {test: testDefaultSettings, shard: 3, shards: 3}
+          - {test: testAccessibilityDynamicType, shard: 1, shards: 4}
+          - {test: testAccessibilityDynamicType, shard: 2, shards: 4}
+          - {test: testAccessibilityDynamicType, shard: 3, shards: 4}
+          - {test: testAccessibilityDynamicType, shard: 4, shards: 4}
+          - {test: testIncreasedContrast}
+          - {test: testDarkAppearance}
+          - {test: testDarkIncreasedContrast}
+    # The retry's budget in tools/apple/check.sh is 40 of these 45 min: a leg the timeout kills uploads no logs.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       - name: Audit (iOS)
         # check.sh audits once more, in a second xcodebuild run, the entries a stalled simulator failed or kept from
         # being audited, and never a run with a finding (#74); each retry shows as a warning on the run. Only the
-        # entries left are retried, and only within a time budget of 30 of the job's 35 minutes; the whole shard only
+        # entries left are retried, and only within a time budget of 40 of the job's 45 minutes; the whole shard only
         # when the test runner failed to start.
         env:
           WESTRON_ENTRY_SHARD: ${{ matrix.shard && format('{0}/{1}', matrix.shard, matrix.shards) || '' }}
@@ -209,39 +206,80 @@ jobs:
           if-no-files-found: warn
 
   snapshot-components:
-    name: Snapshot matrix — components
-    # The components the snapshot matrix captures, one job each below: the members of the generated registry
-    # `ComponentMatrix.all` (WestronCatalog/Generated/ComponentMatrix+All.swift), which `tools/westron generate` writes
-    # for every contract that gives API on Apple and the tools job holds to the contracts (`generate --check`). Its
-    # members are the contracts' ids in lowerCamelCase (`textField` for `text-field`). A new component needs nothing
-    # here; one with more than about 100 iOS images joins button in the list in `snapshot-matrix`'s timeout-minutes.
+    name: Snapshot matrix — legs
+    # The components the snapshot matrix captures and the legs that capture them. The components are the members of the
+    # generated registry `ComponentMatrix.all` (WestronCatalog/Generated/ComponentMatrix+All.swift), which
+    # `tools/westron generate` writes for every contract that gives API on Apple and the tools job holds to the
+    # contracts (`generate --check`); its members are the contracts' ids in lowerCamelCase (`textField` for
+    # `text-field`).
+    #
+    # The legs pack the components by their images, so that each platform takes few jobs, each with its own build:
+    # first fit, the largest first, into legs of at most 40 min of capture on the runner, at 15 s an iOS image and 8 s a
+    # macOS one (on CI, Button's 144 iOS images took 30–42 min and its 72 macOS ones 10–11, builds included: runs
+    # 44360219942 and 44386153527). The number of images per component is not cheap to compute from the sources (the
+    # supplements and the parts at accessibility5 are the catalog's Swift), so IMAGES below holds it, counted from the
+    # captures' manifests (`jq '[.components[] | {(.component): ([.groups[].sheets[].images[][]] | length)}] | add'
+    # matrix.json`); `snapshot-matrix-pages` warns when a capture's count differs from it. A component missing from
+    # IMAGES gets 150 iOS and 150 macOS images, about a leg of its own, and a warning: add its counts then.
+    # Each leg's timeout: 20 min for the build and the simulator (6.5–17.1 min on CI) and its capture time with a
+    # third more.
     runs-on: ubuntu-24.04
     outputs:
-      components: ${{ steps.list.outputs.components }}
+      components: ${{ steps.legs.outputs.components }}
+      legs: ${{ steps.legs.outputs.legs }}
+      images: ${{ steps.legs.outputs.images }}
+    env:
+      IMAGES: >-
+        {"button": {"ios": 144, "macos": 72}, "checkbox": {"ios": 19, "macos": 12}, "icon": {"ios": 73, "macos": 32},
+        "rule": {"ios": 7, "macos": 4}, "surface": {"ios": 24, "macos": 12}, "text": {"ios": 47, "macos": 24},
+        "text-field": {"ios": 51, "macos": 28}}
     steps:
       - uses: actions/checkout@v7
-      - name: Components with a snapshot matrix
-        id: list
+      - name: Components and legs
+        id: legs
         run: |
           set -euo pipefail
           registry=platforms/apple/Sources/WestronCatalog/Generated/ComponentMatrix+All.swift
-          components="$(sed -n '/static let all: \[ComponentMatrix\]/,$p' "$registry" | grep -oE '\.[A-Za-z0-9]+' \
-            | sed 's/^\.//' | perl -pe 's/([A-Z])/-\l$1/g' | jq -R . | jq -cs .)"
-          if [ "$components" = "[]" ]; then
+          # grep finds nothing in an empty registry; `|| true` keeps pipefail from ending the step before it says so.
+          members="$(sed -n '/static let all: \[ComponentMatrix\]/,$p' "$registry" \
+            | { grep -oE '\.[A-Za-z0-9]+' || true; })"
+          if [ -z "$members" ]; then
             echo "No component in $registry" >&2
             exit 1
           fi
+          components="$(sed 's/^\.//' <<< "$members" | perl -pe 's/([A-Z])/-\l$1/g' | jq -R . | jq -cs .)"
+          for id in $(jq -r --argjson images "$IMAGES" '.[] | select($images[.] == null)' <<< "$components"); do
+            echo "::warning title=Snapshot matrix legs::No image count for $id in IMAGES" \
+              "(.github/workflows/ci.yml); it is packed as 150 images."
+          done
+          legs="$(jq -c --argjson images "$IMAGES" '
+            . as $ids
+            | [ ("ios", "macos") as $platform
+              | {ios: 15, macos: 8}[$platform] as $per
+              | [ $ids[] | {id: ., images: ($images[.][$platform] // 150)} | .seconds = .images * $per ]
+              | sort_by(-.seconds)
+              | reduce .[] as $c ([];
+                  (map(.seconds + $c.seconds <= 2400) | index(true)) as $i
+                  | if $i == null then . + [{ids: [$c.id], images: $c.images, seconds: $c.seconds}]
+                    else .[$i].ids += [$c.id] | .[$i].images += $c.images | .[$i].seconds += $c.seconds end)
+              | .[]
+              | (.ids | sort_by(. as $id | $ids | index($id))) as $ordered
+              | {platform: $platform, components: ($ordered | join(",")), name: ($ordered | join("+")),
+                 images: .images, timeout: (20 + (.seconds * 4 / 3 / 60 | ceil))} ]' <<< "$components")"
           echo "components=$components" | tee -a "$GITHUB_OUTPUT"
+          echo "legs=$legs" | tee -a "$GITHUB_OUTPUT"
+          echo "images=$(jq -c . <<< "$IMAGES")" >> "$GITHUB_OUTPUT"
+          jq -r '.[] | "\(.platform): \(.name), \(.images) images, \(.timeout) min"' <<< "$legs"
 
   snapshot-matrix:
-    name: Snapshot matrix (${{ matrix.platform }}, ${{ matrix.component }})
+    name: Snapshot matrix (${{ matrix.platform }}, ${{ matrix.name }})
     # The owner's review surface for the second approval gate (#24, #72): every combination of every contract in the
     # four themes, on iOS also at the smallest and the largest text size, with the catalog's supplementary sheets. One
-    # job per platform and component (`--component`), side by side, each uploaded as
-    # `snapshot-matrix-<platform>-<component>`; `snapshot-matrix-pages` below puts them into one page per platform.
-    # Informational: it must never be a required check. It runs when the accessibility audit does (audit-scope), in
-    # parallel with the other jobs. Its pages compare only with another CI artifact from the same runner image
-    # (decisions/0008): download two and run `tools/apple/snapshot-matrix.sh compare`.
+    # job per leg of `snapshot-components` (its components in one `xcodebuild test`, `--component a,b`), side by side,
+    # each uploaded as `snapshot-matrix-<platform>-<components joined with +>`; `snapshot-matrix-pages` below puts them
+    # into one page per platform. Informational: it must never be a required check. It runs when the accessibility
+    # audit does (audit-scope), in parallel with the other jobs. Its pages compare only with another CI artifact from
+    # the same runner image (decisions/0008): download two and run `tools/apple/snapshot-matrix.sh compare`.
     needs: [audit-scope, snapshot-components]
     if: >-
       !cancelled() && needs.snapshot-components.result == 'success' && (github.event_name == 'push'
@@ -249,56 +287,39 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Locally, with Button (2026-11-18), the UI test takes 711 s for iOS's 144 images and 315 s for macOS's 72,
-        # about 5 and 4.4 s an image; the runner is 2.2–3 times slower, so up to 15 and 13 s, and spends 6.5–17.1
-        # min, mean 10.4, on its clean build and the simulator (the accessibility audit's legs). One job per platform
-        # took 35–50 min for iOS with Button alone; phase 3 brings the images to 240 on iOS and 124 on macOS (Button
-        # 144 and 72, Text 47 and 24, Surface 24 and 12, Checkbox 18 and 12, Rule 7 and 4) and, with Text field (49 and
-        # 28) and Icon (about 48 and 24), to about 337 and 176: 84 + 10 min on iOS in one job, past any timeout. So one
-        # job per component, with these timeouts (timeout-minutes below):
-        #   button  iOS 144 × 15 s = 36 min + 10.4 = 46 (at most 53): 75; macOS 72 × 13 s = 16 + 10.4 = 26: 45
-        #   others  iOS ≤ 49 × 15 s = 12 min + 10.4 = 23 (at most 30): 45; macOS ≤ 28 × 13 s = 6 + 10.4 = 17: 35
-        # 45 min hold about 100 iOS images (45 − 17 − 3 = 25 min at 4 a minute): a component with more joins button in
-        # the list in timeout-minutes. Each job builds the catalog anew: about 14 jobs and 4 runner-hours with Text
-        # field and Icon, against about 1.2 for Button's two.
-        platform: [ios, macos]
-        component: ${{ fromJSON(needs.snapshot-components.outputs.components) }}
-        include:
-          - {platform: ios, timeout: 45, large_timeout: 75}
-          - {platform: macos, timeout: 35, large_timeout: 45}
+        include: ${{ fromJSON(needs.snapshot-components.outputs.legs) }}
     runs-on: xcode-27
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
-    timeout-minutes: >-
-      ${{ contains(fromJSON('["button"]'), matrix.component) && matrix.large_timeout || matrix.timeout }}
+    timeout-minutes: ${{ matrix.timeout }}
     steps:
       - uses: actions/checkout@v7
       - name: Capture
-        run: tools/apple/snapshot-matrix.sh ${{ matrix.platform }} --component ${{ matrix.component }}
+        run: tools/apple/snapshot-matrix.sh ${{ matrix.platform }} --component ${{ matrix.components }}
       - uses: actions/upload-artifact@v7
         # Also after a failed capture: the page shows what went wrong.
         if: ${{ !cancelled() }}
         with:
-          name: snapshot-matrix-${{ matrix.platform }}-${{ matrix.component }}
+          name: snapshot-matrix-${{ matrix.platform }}-${{ matrix.name }}
           path: |
             .build/snapshot-matrix/${{ matrix.platform }}/
-            .build/logs/snapshot-matrix-${{ matrix.platform }}-${{ matrix.component }}.log
+            .build/logs/snapshot-matrix-${{ matrix.platform }}-${{ matrix.name }}.log
           if-no-files-found: warn
+          # A rerun of a failed leg replaces its artifact.
+          overwrite: true
 
   snapshot-matrix-pages:
-    name: Snapshot matrix (${{ matrix.platform }})
-    # One review page per platform over the components' captures, uploaded as `snapshot-matrix-<platform>` as before
-    # the split (open index.html in it): `tools/apple/snapshot-matrix.sh merge` copies their images, joins their
-    # manifests in the registry's order and builds the page. It fails when a component's capture is missing (the
-    # step's output names it) or failed (the page lists its problems); the component's own artifact keeps its page and
-    # log. Informational: never a required check.
+    name: Snapshot matrix — pages
+    # One review page per platform over the legs' captures, uploaded as `snapshot-matrix-ios` and
+    # `snapshot-matrix-macos` as before the split (open index.html in it): `tools/apple/snapshot-matrix.sh merge
+    # --expect` copies their images, joins their manifests in the registry's order and builds the page, which names at
+    # its top any component no capture brought. It fails then, or when a capture failed (the page lists its problems);
+    # each leg's own artifact keeps its page and log. It warns when a component's number of images differs from
+    # IMAGES in `snapshot-components`. Both platforms in one job: one runner, one checkout. Informational: never a
+    # required check.
     needs: [snapshot-components, snapshot-matrix]
     if: >-
       !cancelled() && needs.snapshot-components.result == 'success' && needs.snapshot-matrix.result != 'skipped'
-    strategy:
-      fail-fast: false
-      matrix:
-        platform: [ios, macos]
     # The page builder is Swift with CoreGraphics, so a Mac with the pinned Xcode; a few minutes.
     runs-on: xcode-27
     env:
@@ -308,23 +329,49 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v7
         with:
-          # Each artifact into a directory of its own name.
-          pattern: snapshot-matrix-${{ matrix.platform }}-*
+          # Each leg's artifact into a directory of its own name.
+          pattern: snapshot-matrix-*
           path: ${{ runner.temp }}/captures
-      - name: One page
+      - name: One page per platform
         env:
           COMPONENTS: ${{ needs.snapshot-components.outputs.components }}
-          PLATFORM: ${{ matrix.platform }}
+          LEGS: ${{ needs.snapshot-components.outputs.legs }}
+          IMAGES: ${{ needs.snapshot-components.outputs.images }}
         run: |
           set -euo pipefail
-          captures=()
-          for component in $(jq -r '.[]' <<< "$COMPONENTS"); do
-            captures+=("$RUNNER_TEMP/captures/snapshot-matrix-$PLATFORM-$component/snapshot-matrix/$PLATFORM")
+          status=0
+          for platform in ios macos; do
+            captures=()
+            names="$(jq -r --arg platform "$platform" '.[] | select(.platform == $platform) | .name' <<< "$LEGS")"
+            for name in $names; do
+              captures+=("$RUNNER_TEMP/captures/snapshot-matrix-$platform-$name/snapshot-matrix/$platform")
+            done
+            out=".build/snapshot-matrix/$platform"
+            tools/apple/snapshot-matrix.sh merge --expect "$(jq -r 'join(",")' <<< "$COMPONENTS")" "$out" \
+              "${captures[@]}" || status=1
+            # The images each component's manifest expects, against IMAGES, which packs the legs.
+            [ -f "$out/matrix.json" ] || continue
+            jq -r --arg platform "$platform" --argjson images "$IMAGES" '
+              .components[]
+              | {id: .component, count: ([.groups[].sheets[].images[][]] | length)}
+              | select(.count != $images[.id][$platform])
+              | "::warning title=Snapshot matrix legs::\(.id) has \(.count) \($platform) images, IMAGES in"
+                + " .github/workflows/ci.yml says \($images[.id][$platform] // "nothing"); correct it there."
+              ' "$out/matrix.json"
           done
-          tools/apple/snapshot-matrix.sh merge ".build/snapshot-matrix/$PLATFORM" "${captures[@]}"
+          exit "$status"
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
-          name: snapshot-matrix-${{ matrix.platform }}
-          path: .build/snapshot-matrix/${{ matrix.platform }}/
+          name: snapshot-matrix-ios
+          path: .build/snapshot-matrix/ios/
           if-no-files-found: warn
+          # A rerun of this job replaces its page.
+          overwrite: true
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: snapshot-matrix-macos
+          path: .build/snapshot-matrix/macos/
+          if-no-files-found: warn
+          overwrite: true
