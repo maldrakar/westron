@@ -483,9 +483,9 @@ extension Image {
 extension Label where Title == Text, Icon == Image {
     /// A label with an icon, as `Label(_:systemImage:)` makes one: `Label("Rename", icon: .pen)`.
     ///
-    /// Its icon is the system's `Image`, which keeps the symbol's spoken name: in a control the control's name is the
-    /// title, but a label on its own is read as the image and then the title. Hiding the icon here hides a menu item
-    /// built from the label as a whole (spec/components/icon, decisions/0001), so the icon stays as the system makes it.
+    /// Its icon is the system's `Image`, which keeps the symbol's spoken name, and the system decides whether to read
+    /// it beside the title: in a control the title names it. Hiding the icon here hides a menu item built from the
+    /// label as a whole (spec/components/icon, decisions/0001), so the icon stays as the system makes it.
     public init(_ titleKey: LocalizedStringKey, icon: Westron.Icon) {
         self.init(titleKey, systemImage: icon.systemName)
     }

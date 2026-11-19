@@ -1,7 +1,7 @@
 import XCTest
 
 /// What assistive technology gets of Icon (spec/components/icon), on the catalog's `icon` entry: a decorative icon is
-/// no element at all, a labeled one is an image with its label. `Label(_:icon:)` stays the system's, an image and its
+/// no element at all, a labeled one is an image with its label. `Label(_:icon:)` stays the system's, with its
 /// title (the contract's `platforms.apple`). A unit test cannot reach the accessibility hierarchy; the snapshot here is
 /// what VoiceOver walks.
 final class IconAccessibilityTests: XCTestCase {
@@ -29,9 +29,12 @@ final class IconAccessibilityTests: XCTestCase {
         XCTAssertTrue(labeled.exists, "Icon(.sun, label: \"Today\") is not an image")
         XCTAssertEqual(labeled.label, "Today")
 
-        // Label("Rename", icon: .pen): the system's, its title and its symbol's image.
+        // Label("Rename", icon: .pen) is the system's: its title is there, and whether its symbol's image is an element
+        // of its own is the system's choice (the contract's platforms.apple), so it is not held here.
         let label = entry.descendants(matching: .any).matching(identifier: ID.label)
-        let kinds = label.allElementsBoundByIndex.map(\.elementType)
-        XCTAssertEqual(Set(kinds), [.staticText, .image], "\(kinds)")
+        let texts = label.allElementsBoundByIndex.filter { $0.elementType == .staticText }
+        XCTAssertEqual(
+            texts.map { $0.label.isEmpty ? $0.value as? String ?? "" : $0.label }, ["Rename"],
+            "\(label.allElementsBoundByIndex.map { "\($0.elementType.rawValue) \($0.label)" })")
     }
 }

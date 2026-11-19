@@ -129,8 +129,9 @@ inside, as a style holds the system's control, and adds only what the `Image` ca
   `Text` interpolation; its documentation says it keeps the system's name.
 - **`Label(_:icon:)` stays as the system makes it** (tried and left, under the coordinator's instruction to hide its
   icon only if that was contained). design-language/07:101–102 and 08:92–93 say a decorative icon beside its own
-  label is hidden, and on its own a `Label` is read as the symbol's system name and then its title (the snapshot
-  above). Making the adapter's icon a hidden `Image` (`Icon == ModifiedContent<Image,
+  label is hidden. On its own a system `Label` was read as the symbol's system name and then its title in one stack
+  (the snapshot above), and as its title alone on the catalog's `icon` entry (`IconAccessibilityTests`): the system
+  decides. Making the adapter's icon a hidden `Image` (`Icon == ModifiedContent<Image,
   AccessibilityAttachmentModifier>`) compiled, kept every call site and drew the icon in a `Menu`, but the
   accessibility hierarchy of that menu on iOS 26.3 lost the items built from it: "Rename" and "Delete" were cells
   with no button, where the same menu's `Label("Plain", systemImage: "pencil")` kept its button. The pilot's Rename

@@ -71,7 +71,7 @@ Icon(icon)                                        // its SF Symbol, which takes 
     .foregroundStyle(list.color.icon)             // color.category.<name>.icon (design-language/07)
 Icon(.sun, label: "Today")                        // a meaningful standalone icon: an image labeled Today
 Icon(.chevron).imageScale(.small)                 // the system's relative scale
-Label("Rename", icon: .pen)                       // as Label(_:systemImage:); alone, read as image then title
+Label("Rename", icon: .pen)                       // as Label(_:systemImage:): the system reads it as it decides
 Button { add() } label: { Icon(.plus, label: "Add task") }   // an icon-only control: the label names it
 Text("\(Image(.flag)) Yesterday")                 // an Image where only an Image fits; it keeps the system's name,
     .accessibilityLabel("Flagged, yesterday")     // so the text says what the line means

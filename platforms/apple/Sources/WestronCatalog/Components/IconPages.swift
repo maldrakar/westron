@@ -183,7 +183,7 @@ private struct IconPage: View {
                     HStack(spacing: .space150) {
                         Label("Rename", icon: .pen)
                             .accessibilityIdentifier(IconPageID.label)
-                        TokenDetail("Label: the system's, image then title")
+                        TokenDetail("Label: as the system reads it")
                     }
                     .textRole(.body.regular)
                     .foregroundStyle(.text.primary)
