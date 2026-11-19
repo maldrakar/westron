@@ -145,11 +145,12 @@ extension ComponentMatrix.Supplement {
     }
 
     /// A field on the surface ground, for the outline's contrast; the generated sheets show it on the canvas. The ground
-    /// is the bare fill, not `.surface(_:)`: the sheet is about the outline against a colour, and a raised surface's
-    /// shadow and high-contrast line would be more than that.
+    /// is the bare fill, not `.surface(_:)`: the sheet is about the outline against a colour, and `.surface(.raised)`
+    /// would add its shadow and, in high contrast, its line.
     static let textFieldOnSurface = grounded(.background.surface, name: "surface")
 
-    /// A field on the sunken ground, for the outline's contrast.
+    /// A field on the sunken ground, for the outline's contrast. `.surface(.sunken)` would draw this ground the same,
+    /// with no shadow or line; it stays on `grounded(_:name:)` so the two sheets are drawn alike.
     static let textFieldOnSunken = grounded(.background.sunken, name: "sunken")
 
     private static func grounded(_ ground: Westron.Color, name: String) -> Self {
