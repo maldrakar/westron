@@ -757,6 +757,7 @@ struct ContractRules {
                     path.key("keyboardIntents"), "\(why) has nothing to do with it; remove them, or give it its role")
             }
         }
+        checkHiddenLabel()
         let declared = states ?? []
         for member in document["accessibility"]?["states"]?.members ?? [] where !declared.contains(member.key) {
             report(
@@ -764,6 +765,32 @@ struct ContractRules {
                 declared.isEmpty
                     ? "\"\(member.key)\": the contract declares no states"
                     : "\"\(member.key)\" is not one of the states: \(declared.joined(separator: ", "))")
+        }
+    }
+
+    /// A label that is not drawn (`accessibility.hiddenLabel`) is still the accessible name, so it is required, and it
+    /// is the contract's `label` slot. On Apple the conventions derive its initializer only for a style on a base
+    /// whose parameters `SystemStyles.Base.hiddenLabelParameters` gives (spec/conventions.md, "A label that is not
+    /// drawn").
+    mutating func checkHiddenLabel() {
+        let path = DocumentPath.root.key("accessibility").key("hiddenLabel")
+        guard document["accessibility"]?["hiddenLabel"] == .bool(true) else { return }
+        if document["accessibility"]?["label"]?.string != "required" {
+            report(
+                path,
+                "a label that is not drawn is still the component's accessible name, so every instance has one: make "
+                    + "accessibility.label required")
+        }
+        if !(document["slots"]?.elements?.compactMap(\.string).contains("label") ?? false) {
+            report(path, "a label that is not drawn is the contract's label slot, and it has none: add label to slots")
+        }
+        let apple = DocumentPath.root.key("platforms").key("apple")
+        guard let strategy = value(at: apple.key("strategy"))?.string else { return }
+        let base = value(at: apple.key("base"))?.string
+        if strategy != AppleComponents.strategy
+            || base.flatMap({ SystemStyles.byBase[$0]?.hiddenLabelParameters }) == nil
+        {
+            report(path, AppleComponents.HiddenLabel.notDerived(strategy: strategy, base: base))
         }
     }
 

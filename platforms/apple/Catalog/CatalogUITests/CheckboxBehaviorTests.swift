@@ -81,7 +81,7 @@ final class CheckboxBehaviorTests: XCTestCase {
         for (id, label, on) in [
             (ID.task, "Write the report", false), (ID.subtask, "Outline the sections", true),
             (ID.listColor, "Water the plants", false),
-            // Its label hidden, beside a separate title: the label is still its name.
+            // No drawn label, beside a separate title: `Toggle(isOn:accessibilityLabel:)` names it.
             (ID.row, "Call the plumber", false),
         ] {
             let toggle = check(id)
@@ -90,6 +90,13 @@ final class CheckboxBehaviorTests: XCTestCase {
             XCTAssertTrue(toggle.isEnabled)
             XCTAssertFalse(app.buttons[id].exists, "\(label) is also a button")
         }
+        // The check with no drawn label is the circle's square alone, on every OS (iOS 17 included, where
+        // `.labelsHidden()` would leave the label drawn), and its name is read once: the separate title is hidden.
+        let row = check(ID.row)
+        print("checkbox row: \(row.debugDescription)")
+        XCTAssertEqual(row.frame.width, row.frame.height, accuracy: 0.5, "a label is drawn beside the circle")
+        let named = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Call the plumber"))
+        XCTAssertEqual(named.count, 1, "the row's name is read more than once")
         // The disabled sample is announced as unavailable.
         #if os(macOS)
             let disabled = app.checkBoxes["disabled"]
@@ -134,7 +141,7 @@ final class CheckboxBehaviorTests: XCTestCase {
         XCTAssertEqual(summary, "on: task, subtask", "a press in the hit area's corner did not toggle")
     }
 
-    /// In a system `List` row, as the pilot's task rows are, a check whose label is hidden beside a separate title.
+    /// In a system `List` row, as the pilot's task rows are, a check with no drawn label beside a separate title.
     /// On iOS the List gives the toggle's accessibility element the whole row (measured on iOS 26.3: 370 × 74 pt on a
     /// 402 pt screen), on macOS the check's own 32 pt square (macOS 26), so the check is pressed in the middle of the
     /// element's leading square, where the circle is drawn on both. A press on the check

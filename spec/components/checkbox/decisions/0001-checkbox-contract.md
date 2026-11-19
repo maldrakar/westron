@@ -136,11 +136,16 @@ Each of these is decided by the agent under the owner's delegation of 2026-11-18
   - The mark is the check glyph at the bold weight, as the pilot draws its glyphs.
   - On macOS the system's focus ring goes around the whole toggle, the label included; westron sets no focus shape.
   - On iOS 17, macOS 14 and watchOS 10 a custom style cannot see `.labelsHidden()`, so a row with a separate title
-    shows the title twice there; from iOS 18, macOS 15 and watchOS 11 the label is hidden and stays the name. A row
-    could pass an empty label and its title as `.accessibilityLabel(_:)` on the older systems; not measured.
+    shows the title twice there; from iOS 18, macOS 15 and watchOS 11 the label is hidden and stays the name.
+    **Settled on 2026-11-19 by decisions/0002 (#86)**, with the owner's choice of the form: such a row writes
+    `Toggle(isOn: $task.isDone, accessibilityLabel: task.title)`, an initializer that takes no label view and
+    requires the name, the same on every OS, measured on iOS 17.5 and 26.3. The empty-label workaround noted here was
+    measured there too, and left a gap where the label would be.
   - The accessibility audit measures a check whose label is hidden as if its name were drawn in the circle's square,
-    and reports its ring as text that "nearly passed" and its name as clipped; the catalog suppresses both, with the
-    reason, on its live row. A product's own audit of such a row will report the same.
+    and reports its ring as text that "nearly passed" and its name as clipped; the catalog suppressed both, with the
+    reason, on its live row. A product's own audit of such a row will report the same. Written with the initializer of
+    decisions/0002 instead, the row draws no label view, and the audit reports neither (iOS 26.3, 2026-11-19): the
+    catalog's suppressions are removed.
 
 - **Questions for the owner from the review of the Apple implementation:**
   - A check whose body is a `Button` with a custom `ButtonStyle`, inside a real SwiftUI `List` row, as the pilot's

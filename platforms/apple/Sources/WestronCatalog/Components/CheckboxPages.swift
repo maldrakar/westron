@@ -20,7 +20,7 @@ extension CatalogEntry {
     }
 }
 
-/// Two task rows in a system `List`, each a check whose label is hidden beside a separate title, and a row that says
+/// Two task rows in a system `List`, each a check with no drawn label beside a separate title, and a row that says
 /// which are on: what a tap on a title does, and whether the row highlights, are the List's.
 private struct CheckboxListPage: View {
     @State private var first = false
@@ -42,9 +42,8 @@ private struct CheckboxListPage: View {
 
     private func row(_ title: LocalizedStringKey, isOn: Binding<Bool>, id: String) -> some View {
         HStack(spacing: .space50) {
-            Toggle(title, isOn: isOn)
+            Toggle(isOn: isOn, accessibilityLabel: title)
                 .toggleStyle(.check)
-                .labelsHidden()
                 .accessibilityIdentifier(id)
             Text(title)
                 .foregroundStyle(.text.primary)
@@ -63,7 +62,7 @@ enum CheckboxCatalogID {
     static let subtask = "checkbox.live.subtask"
     /// A task's check in the list color green, unchecked at launch.
     static let listColor = "checkbox.live.list-color"
-    /// A task's check with its label hidden, beside a separate title, as in a row; unchecked at launch.
+    /// A task's check with no drawn label, beside a separate title, as in a row; unchecked at launch.
     static let row = "checkbox.live.row"
     /// The checks of the two rows of `checkbox-in-list`, and the row that says which are on: "on: second".
     static let listFirst = "checkbox.list.first"
@@ -117,12 +116,11 @@ private struct CheckboxPage: View {
                     .textRole(CheckboxSampleRole.task)
                     .category(.green)
                     .accessibilityIdentifier(CheckboxCatalogID.listColor)
-                // A row whose title is a separate text: the toggle hides its label, which stays its name, and the
-                // title is not read a second time.
+                // A row whose title is a separate text: the toggle draws no label and takes its name from
+                // `accessibilityLabel:`, on every OS, and the title is not read a second time.
                 HStack(spacing: .space50) {
-                    Toggle("Call the plumber", isOn: $row)
+                    Toggle(isOn: $row, accessibilityLabel: "Call the plumber")
                         .toggleStyle(.check)
-                        .labelsHidden()
                         .accessibilityIdentifier(CheckboxCatalogID.row)
                     Text("Call the plumber")
                         .accessibilityHidden(true)
@@ -170,7 +168,9 @@ private struct CheckboxPage: View {
 
 /// The twelve list colors, each a check in that color through `.category(_:)`, in two text roles: the first six with
 /// a task's, the last six with a subtask's. With `labelsShown`, each check's label is its color's name; without, the
-/// name is its accessibility label alone.
+/// label is hidden with `.labelsHidden()` and stays the name. This is the catalog's one use of `.labelsHidden()`, on
+/// the snapshot matrix's list-colors sheet, captured on iOS 26.3 and macOS 26, where a custom style sees it; a row
+/// that must also draw no label on iOS 17, macOS 14 and watchOS 10 writes `Toggle(isOn:accessibilityLabel:)`.
 struct CheckboxColors: View {
     let isChecked: Bool
     let labelsShown: Bool

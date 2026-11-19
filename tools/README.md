@@ -77,6 +77,15 @@ conventions do not derive yet (states, a `size` option, an option of tokens, ico
 option, a restriction, several slots of a modifier, a variant of a view or slots of one other than an icon's `label`)
 is reported, as generation reports it.
 
+**A label that is not drawn.** From each such contract with `accessibility.hiddenLabel: true` (`AppleComponents.HiddenLabel`,
+Checkbox, #86): two initializers of the base control in an extension with the `where` clause
+`where Label == ModifiedContent<EmptyView, AccessibilityAttachmentModifier>`, the base's own parameters before its
+label (`SystemStyles.Base.hiddenLabelParameters`) and then the required name, `accessibilityLabel: LocalizedStringKey`,
+and `@_disfavoredOverload` `accessibilityLabel: S` with `<S: StringProtocol>`. Toggle:
+`public init(isOn: Binding<Bool>, accessibilityLabel: LocalizedStringKey)`. Each is reported missing, changed (another
+`where` clause or extras), or not public (`APIParity.checkHiddenLabels`); they are hand-written, and a base with no
+parameters in `SystemStyles` fails `spec check` as not derived yet (`spec/conventions.md`, "A label that is not drawn").
+
 **Constraints and attributes.** An extension's attributes, modifiers and `where` clause count as its members' own, so
 `extension View where Self: Equatable { … buttonStyle … }` differs from the expected API. Expected API takes no
 generics, effects or `where` clause, and only the attributes that change nothing about where or how a product calls
