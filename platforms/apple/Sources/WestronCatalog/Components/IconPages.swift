@@ -194,31 +194,43 @@ private struct IconPage: View {
                     .textRole(.body.regular)
                     .foregroundStyle(.text.primary)
                 }
-                section("in a menu: Label(_:icon:), and a Label with Icon") {
-                    // A system menu builds its items from the labels: IconAccessibilityTests opens it and reads
-                    // what each item is (decisions/0001, "The Apple view").
-                    Menu {
-                        Button {
-                        } label: {
-                            Label("Rename", icon: .pen)
-                        }
-                        Button(role: .destructive) {
-                        } label: {
-                            Label {
-                                Text("Delete")
-                            } icon: {
-                                Icon(.trash)
-                            }
-                        }
-                    } label: {
-                        Text("Actions")
-                            .textRole(.body.regular)
-                    }
-                    .accessibilityIdentifier(IconPageID.menu)
-                }
+                #if !os(watchOS)
+                    menuSection
+                #endif
             }
         }
     }
+
+    #if !os(watchOS)
+        /// A system menu built from labels; watchOS has no `Menu`.
+        private var menuSection: some View {
+            section("in a menu: Label(_:icon:), and a Label with Icon") {
+                // A system menu builds its items from the labels: IconAccessibilityTests opens it and reads
+                // what each item is (decisions/0001, "The Apple view").
+                Menu {
+                    Button {
+                    } label: {
+                        Label("Rename", icon: .pen)
+                    }
+                    Button(role: .destructive) {
+                    } label: {
+                        Label {
+                            Text("Delete")
+                        } icon: {
+                            Icon(.trash)
+                        }
+                    }
+                } label: {
+                    Text("Actions")
+                        .textRole(.body.strong)
+                }
+                // The system tints a menu's label with the accent, a text color westron does not pair with the
+                // canvas at body size; text.primary passes in every theme.
+                .tint(.text.primary)
+                .accessibilityIdentifier(IconPageID.menu)
+            }
+        }
+    #endif
 
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: .space75) {
