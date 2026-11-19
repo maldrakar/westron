@@ -14,8 +14,10 @@ A new contract starts with the `/new-component` skill. The first contract is But
 option whose values are tokens and with an extension of a system view. Surface and Rule
 ([`surface/`](surface/surface.spec.yaml), [`rule/`](rule/rule.spec.yaml), #29), approved on 2026-11-18 under the
 owner's delegation, are the first own components, one a modifier and one a view, and the first with no role of their
-own. The drafts of phase 3 are Icon ([`icon/`](icon/icon.spec.yaml), #28), the first with an option whose values are
-the icon registry's names; and TextField ([`text-field/`](text-field/text-field.spec.yaml), #30). Checkbox
+own. The draft of phase 3 is Icon ([`icon/`](icon/icon.spec.yaml), #28), the first with an option whose values are
+the icon registry's names. TextField ([`text-field/`](text-field/text-field.spec.yaml), #30), approved on 2026-11-18
+under the owner's delegation, is the first style on the system's text field and the first that draws its own focus
+ring, on iOS and macOS, by the owner's decision. Checkbox
 ([`checkbox/`](checkbox/checkbox.spec.yaml), #31), approved on 2026-11-18 under the owner's delegation, is the first
 whose control has a value that is on or off and the first that takes a value from its context (the list's color).
 

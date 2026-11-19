@@ -466,13 +466,16 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         var enabled: Bool? = nil
         /// Text the issue's `detailedDescription` must contain, if any, such as the class of a system view.
         var detail: String? = nil
+        /// Whether the element must reach below the top of the system keyboard, which must be up: an element the
+        /// keyboard covers is measured on the keyboard's pixels.
+        var underKeyboard = false
         /// Tells the issue by its element's label; `nil` when the audit names no element.
         let label: @Sendable (String?) -> Bool
 
         init(
             _ scope: Scope, type: XCUIAccessibilityAuditType, reason: String, description: String? = nil,
             appearance: Configuration.Appearance? = nil, value: String? = nil, enabled: Bool? = nil,
-            detail: String? = nil, label: @escaping @Sendable (String?) -> Bool
+            detail: String? = nil, underKeyboard: Bool = false, label: @escaping @Sendable (String?) -> Bool
         ) {
             self.scope = scope
             self.type = type
@@ -482,6 +485,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             self.value = value
             self.enabled = enabled
             self.detail = detail
+            self.underKeyboard = underKeyboard
             self.label = label
         }
 
@@ -498,6 +502,12 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             if let value, issue.element?.value.map({ "\($0)" }) != value { return false }
             if let enabled, issue.element?.isEnabled != enabled { return false }
             if let detail, !issue.detailedDescription.contains(detail) { return false }
+            if underKeyboard {
+                let keyboard = XCUIApplication().keyboards.firstMatch
+                guard keyboard.exists, let frame = issue.element?.frame, !frame.isEmpty,
+                    frame.maxY > keyboard.frame.minY
+                else { return false }
+            }
             return label(issue.element?.label)
         }
     }
@@ -582,13 +592,18 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             // accessibility text sizes the keyboard covers the page's last line, its "Focused: …" text and its
             // "Clear focus" button, so the audit measures them on the keyboard's pixels. Neither is the entry's: the
             // fields are audited above the keyboard, and the same lines with no keyboard on `text-field-behavior`.
+            // The contrast suppression holds only while the keyboard is up and the line reaches below its top; the
+            // same line above the keyboard, in any theme or text size, is audited as usual.
             for entryID in ["text-field-focus-framed", "text-field-focus-inline"] {
                 suppressions += [
                     Suppression(
                         .entry(entryID), type: .sufficientElementDescription,
                         reason: "the system keyboard's prediction cell", detail: "TUIPredictionViewCell"
                     ) { $0 == nil || $0 == "" },
-                    Suppression(.entry(entryID), type: .contrast, reason: "a line under the system keyboard") {
+                    Suppression(
+                        .entry(entryID), type: .contrast, reason: "a line under the system keyboard",
+                        underKeyboard: true
+                    ) {
                         ($0?.hasPrefix("Focused: ") ?? false) || $0 == "Clear focus"
                     },
                 ]

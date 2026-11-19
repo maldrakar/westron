@@ -54,6 +54,28 @@ package struct TextFieldCatalogState: Hashable, Sendable {
     }
 }
 
+extension TextFieldVariant {
+    /// How far the focus ring of a field of this variant reaches outside its laid out frame, on each side: what a
+    /// layout around a focused field keeps clear (the contract's `platforms.apple`). Catalog only: the matrix cells
+    /// keep it, so that forced rings neither touch each other nor the picture's edge. On watchOS, which draws no ring,
+    /// none.
+    package var focusRingClearance: EdgeInsets {
+        #if os(watchOS)
+            EdgeInsets()
+        #else
+            switch offered {
+            case .framed:
+                let outset = CGFloat(TextFieldMetrics.framedRingGap) + CGFloat(Westron.Dimension.stroke.thick)
+                return EdgeInsets(top: outset, leading: outset, bottom: outset, trailing: outset)
+            case .inline:
+                let across = CGFloat(TextFieldMetrics.inlineRingOutsetHorizontal)
+                let upDown = CGFloat(TextFieldMetrics.inlineRingOutsetVertical)
+                return EdgeInsets(top: upDown, leading: across, bottom: upDown, trailing: across)
+            }
+        #endif
+    }
+}
+
 extension View {
     /// Draws the westron text fields in this view as if they were also in `states`. Catalog only: it forces how a
     /// state looks, for a screenshot, and changes nothing a field does; the field takes no keyboard focus.

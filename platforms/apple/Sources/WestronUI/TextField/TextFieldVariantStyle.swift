@@ -151,9 +151,9 @@ private struct TextFieldBody: View {
         /// CatalogUITests/TextFieldBehaviorTests:
         /// - macOS: a click lands only where a view is, so a field at s, drawn 24 pt high, reaches 2 pt past each edge,
         ///   28 pt in all, and no farther. The contract takes the overlap with a neighbor closer than 2 pt (P12).
-        /// - iOS: the system's touch tolerance already reaches about 16 pt past the drawn edge of a field at s, drawn
-        ///   32 pt high (measured with no reach of westron's own), beyond the 44 pt target, so westron adds none, as
-        ///   for Button: it would only take more taps meant for a neighbor.
+        /// - iOS: the touch tolerance of the style's tap gesture (`TextFieldHitArea`) already takes a tap 6 pt past the
+        ///   drawn edge of a field at s, drawn 32 pt high, at the 44 pt target (a one-off probe found it ending between
+        ///   16 and 18 pt), so westron grows no frame, as for Button: it would only take more taps meant for a neighbor.
         private var hitAreaExtra: CGFloat {
             #if os(macOS)
                 guard metrics.height != nil else { return .zero }
@@ -181,7 +181,8 @@ private struct TextFieldBody: View {
     /// The field takes a touch or a click anywhere in what it draws, its padding included, and `extra` above and below
     /// it: the area is grown inside and the layout given back outside, so the field keeps its drawn and laid out size,
     /// as Button measured on macOS (its ButtonVariantStyle). A touch or a click there focuses the field; inside its
-    /// text, the system field takes it itself, and places the caret.
+    /// text, the system field takes it itself, and places the caret. On iOS this tap gesture is also what takes a tap
+    /// on the padding and past the drawn edge: without it, both missed (CatalogUITests/TextFieldBehaviorTests, #30).
     private struct TextFieldHitArea: ViewModifier {
         let extra: CGFloat
         let isFocused: FocusState<Bool>.Binding

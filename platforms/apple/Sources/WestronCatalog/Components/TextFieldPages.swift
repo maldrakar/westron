@@ -95,6 +95,9 @@ struct TextFieldMatrixCell: View {
             TextFieldSample(variant: variant, size: size, filled: false)
             TextFieldSample(variant: variant, size: size, filled: true)
         }
+        // Room for the ring, which is drawn outside the field's frame: forced, it touches neither the next cell nor
+        // the picture's edge (the contract's platforms.apple).
+        .padding(variant.focusRingClearance)
         .forcingTextFieldState(state)
         .matrixCellContainer()
     }
@@ -167,7 +170,8 @@ private struct TextFieldCardSample: View {
 
     var body: some View {
         let (variant, size, stateName) = values.fields
-        VStack(alignment: .leading, spacing: .space100) {
+        // Apart by more than two forced rings reach outside their fields, so they do not touch.
+        VStack(alignment: .leading, spacing: .space150) {
             TextField("Title", text: $title, prompt: Text("Untitled"))
                 .textFieldStyle(variant, size: size)
                 .accessibilityLabel("Title")
@@ -177,6 +181,10 @@ private struct TextFieldCardSample: View {
                 .textFieldStyle(variant, size: size)
                 .accessibilityLabel("Notes")
                 .lineLimit(1...4)
+                // A matrix sheet is laid out in the screen's height with no scroll view, and a field with a vertical
+                // axis is the only view in it that can shrink: at the largest text sizes it took the missing height
+                // and cut its second line. It keeps its height.
+                .fixedSize(horizontal: false, vertical: true)
                 .textRole(.subheadline.regular)
                 .foregroundStyle(.text.secondary)
         }
@@ -195,7 +203,7 @@ private struct TextFieldSecureSample: View {
 
     var body: some View {
         let (variant, size, stateName) = values.fields
-        VStack(alignment: .leading, spacing: .space100) {
+        VStack(alignment: .leading, spacing: .space150) {
             SecureField("Password", text: $empty, prompt: Text("Required"))
                 .textFieldStyle(variant, size: size)
                 .accessibilityLabel("Password")
@@ -203,6 +211,7 @@ private struct TextFieldSecureSample: View {
                 .textFieldStyle(variant, size: size)
                 .accessibilityLabel("Password")
         }
+        .padding(variant.focusRingClearance)
         .textRole(.body.regular)
         .foregroundStyle(.text.primary)
         .forcingTextFieldState(stateName.flatMap(TextFieldCatalogState.init(named:)))

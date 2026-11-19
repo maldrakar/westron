@@ -102,9 +102,10 @@ platforms:
       .focused(_:) on the field keeps working beside it. A tap or a click on a framed field's padding focuses it. A call
       without size: takes it from controlSize (spec/conventions.md). The placeholder is the system field's own prompt,
       and so is a multiline field, TextField(_:text:axis:) with .vertical, such as a card's notes. The label: on iOS
-      26.3 and macOS 26.7 the system field with a prompt exposes no accessibility label from its title, with westron's
-      style or without it, and the prompt is only its placeholder value (measured in #30), so the product gives the
-      field its name itself: TextField("List name", text: $name, prompt: Text("Untitled")).accessibilityLabel("List
+      26.3, and on macOS 26.7 outside a Form, the system field with a prompt exposes no accessibility label from its
+      title, with westron's style or without it, and the prompt is only its placeholder value (measured in #30; inside
+      a macOS Form the title becomes a static text and the field's title element, which VoiceOver reads), so the
+      product gives the field its name itself: TextField("List name", text: $name, prompt: Text("Untitled")).accessibilityLabel("List
       name"). The placeholder's color differs from the contract on Apple: a TextFieldStyle cannot set the prompt's
       color (neither foregroundStyle at any level nor tint reaches it), so the prompt is drawn in the system's
       placeholder color, not color.text.placeholder, which stays bound for the platforms that can apply it. Against
@@ -112,13 +113,19 @@ platforms:
       where color.text.placeholder gives 5.27:1 and 6.22:1: on Apple the placeholder misses chapter 08's contrast
       target for text. Decided on 2026-11-19 under the owner's delegation of 2026-11-18, pending the owner's
       confirmation, as is the label above; westron
-      drawing its own prompt, an API change, stays open for the owner (decisions/0001). Corners are continuous.
+      drawing its own prompt, an API change, stays open for the owner (decisions/0001). westron's focus ring is drawn
+      outside the field's laid out frame, so a focused field needs room around it that no clipping parent and no
+      close neighbor takes: on framed space.25 plus stroke.thick beyond the outline on every side, on inline space.100
+      across and space.50 up and down beyond the field (a proposal of the implementation, decisions/0001, I4).
+      Corners are continuous.
     ios:
       description: >-
         Focus is the field being edited, with the keyboard up. There is no pointer to hover with on an iPhone, and
-        the field shows nothing on hover on an iPad either. At s, drawn 32 pt high, the system's touch tolerance takes
-        touches about 16 pt past the drawn edge, beyond the 44 pt target, so the style adds no reach of its own, as
-        for Button (measured in the catalog's TextFieldBehaviorTests). A product reaches color.text.placeholder by
+        the field shows nothing on hover on an iPad either. At s, drawn 32 pt high, a tap 6 pt past the drawn edge,
+        at the 44 pt target, focuses the field, and one 24 pt past it does not (the catalog's TextFieldBehaviorTests);
+        a one-off probe of #30 found the reach ending between 16 and 18 pt. The style's tap gesture, which focuses a
+        field from its padding, is what takes these touches: with it removed, a tap on the padding and one at the
+        target missed. The style grows no frame of its own on iOS. A product reaches color.text.placeholder by
         coloring its prompt itself: prompt: Text("Untitled").foregroundStyle(.text.placeholder).
     macos:
       description: >-

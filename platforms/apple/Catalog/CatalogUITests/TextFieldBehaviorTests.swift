@@ -129,18 +129,51 @@ final class TextFieldBehaviorTests: XCTestCase {
         // How far the target reaches past the drawn edge: 6 pt on iOS, 2 pt on macOS.
         let reach = (target - drawnHeight) / 2
         let x = drawn.midX
-        XCTAssertEqual(press(at: CGPoint(x: x, y: drawn.minY - reach + 1)), "Focused: small", "within the target above")
-        XCTAssertEqual(press(at: CGPoint(x: x, y: drawn.maxY + reach - 1)), "Focused: small", "within the target below")
         #if os(macOS)
-            // A click lands only where a view is: no farther than the target.
+            // Inside the 28 pt target, 1 pt short of its edge; a click lands only where a view is, so no farther.
+            XCTAssertEqual(
+                press(at: CGPoint(x: x, y: drawn.minY - reach + 1)), "Focused: small", "within the target above")
+            XCTAssertEqual(
+                press(at: CGPoint(x: x, y: drawn.maxY + reach - 1)), "Focused: small", "within the target below")
             XCTAssertEqual(
                 press(at: CGPoint(x: x, y: drawn.minY - reach - 3)), "Focused: none", "past the target above")
         #else
-            // The system's touch tolerance reaches about 16 pt past the drawn edge (measured without westron's own
-            // reach, which iOS therefore does not add), and gives up well before 24 pt.
+            // At the edge of the 44 pt target, 6 pt past the drawn edge, above and below; the touch tolerance gives
+            // up well before 24 pt. A one-off probe of #30 found it reaching 16 pt and not 18 pt.
+            XCTAssertEqual(press(at: CGPoint(x: x, y: drawn.minY - reach)), "Focused: small", "the target's top edge")
+            XCTAssertEqual(
+                press(at: CGPoint(x: x, y: drawn.maxY + reach)), "Focused: small", "the target's bottom edge")
             XCTAssertEqual(press(at: CGPoint(x: x, y: drawn.minY - 24)), "Focused: none", "24 pt above the field")
         #endif
     }
+
+    #if os(iOS)
+        /// The system field's own touches through the style: a double tap selects a word, with the selection's handles
+        /// and the edit menu. A long press should show the edit menu too, and on a styled field it does not: an
+        /// expected failure, an open point of the contract's decision (#30). Measured on iOS 26.3: an unstyled field
+        /// with the same text and a product focus binding shows the menu after a long press, focused or not; the styled
+        /// field shows none, focused or not, and still none with the style's tap gesture removed. The cause is not
+        /// found. The menu is found by its items' type, not their labels, which follow the simulator's language.
+        @MainActor
+        func testTheFieldKeepsItsOwnTouches() {
+            let notes = field(ID.notes)
+            notes.doubleTap()
+            let selection = app.otherElements["_UITextSelectionRangeAdjustmentContainerView"]
+            XCTAssertTrue(selection.waitForExistence(timeout: 5), "a double tap selected no word")
+            XCTAssertTrue(app.menuItems.firstMatch.waitForExistence(timeout: 5), "a double tap showed no edit menu")
+
+            // Taking the focus away dismisses the menu and the selection.
+            app.buttons[ID.clearFocus].tap()
+            XCTAssertTrue(app.menuItems.firstMatch.waitForNonExistence(timeout: 5), "the edit menu stayed")
+            notes.tap()
+            XCTAssertEqual(focusedName, "Focused: notes")
+            notes.press(forDuration: 1.2)
+            XCTExpectFailure("A long press on a styled field shows no edit menu (#30, an open point)") {
+                XCTAssertTrue(
+                    app.menuItems.firstMatch.waitForExistence(timeout: 5), "a long press showed no edit menu")
+            }
+        }
+    #endif
 
     @MainActor
     func testMultilineAndSecureFieldsEdit() {
