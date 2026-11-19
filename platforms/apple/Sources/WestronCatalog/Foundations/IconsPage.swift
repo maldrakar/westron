@@ -39,7 +39,7 @@ private struct IconsPage: View {
                             icon == .fallback ? Westron.Color.border.focus : .border.default, lineWidth: .stroke.thin)
                 }
                 .overlay {
-                    Image(icon)
+                    Icon(icon)
                         .textRole(.body.regular)
                         .foregroundStyle(.text.primary)
                 }

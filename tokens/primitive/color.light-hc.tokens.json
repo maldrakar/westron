@@ -10,7 +10,8 @@
       "10": {"$value": {"colorSpace": "oklch", "components": [0.4249, 0.01052, 248.08], "hex": "#4A4F54"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.4151, 0.01127, 258.36], "hex": "#484C52"}},
       "12": {"$value": {"colorSpace": "oklch", "components": [0.2331, 0.01137, 254.06], "hex": "#1A1E23"}},
-      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.3852, 0.01149, 258.37], "hex": "#40444A"}}
+      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.3852, 0.01149, 258.37], "hex": "#40444A"}},
+      "control": {"$value": {"colorSpace": "oklch", "components": [0.4629, 0.01242, 261.76], "hex": "#555960"}}
     },
     "blue": {
       "6": {"$value": {"colorSpace": "oklch", "components": [0.6414, 0.0604, 262.57], "hex": "#798DB2"}},
@@ -20,7 +21,8 @@
       "10": {"$value": {"colorSpace": "oklch", "components": [0.4336, 0.18901, 261.99], "hex": "#0844B6"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.4257, 0.18066, 262.1], "hex": "#0C43AF"}},
       "12": {"$value": {"colorSpace": "oklch", "components": [0.2368, 0.08545, 262.09], "hex": "#061B46"}},
-      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.3926, 0.18259, 262.07], "hex": "#0038A5"}}
+      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.3926, 0.18259, 262.07], "hex": "#0038A5"}},
+      "control": {"$value": {"colorSpace": "oklch", "components": [0.4734, 0.18818, 261.86], "hex": "#1651C3"}}
     },
     "sky": {
       "6": {"$value": {"colorSpace": "oklch", "components": [0.6371, 0.04153, 234.01], "hex": "#7390A1"}},
@@ -30,7 +32,8 @@
       "10": {"$value": {"colorSpace": "oklch", "components": [0.4188, 0.08542, 231.98], "hex": "#005473"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.4123, 0.08467, 232.53], "hex": "#005271"}},
       "12": {"$value": {"colorSpace": "oklch", "components": [0.229, 0.04718, 232.79], "hex": "#00202F"}},
-      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.3777, 0.07778, 232.75], "hex": "#004864"}}
+      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.3777, 0.07778, 232.75], "hex": "#004864"}},
+      "control": {"$value": {"colorSpace": "oklch", "components": [0.4589, 0.09291, 231.37], "hex": "#006082"}}
     },
     "teal": {
       "6": {"$value": {"colorSpace": "oklch", "components": [0.6364, 0.03474, 196.31], "hex": "#739292"}},
@@ -40,7 +43,8 @@
       "10": {"$value": {"colorSpace": "oklch", "components": [0.4136, 0.0706, 194.77], "hex": "#005757"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.4074, 0.06941, 196.16], "hex": "#005556"}},
       "12": {"$value": {"colorSpace": "oklch", "components": [0.2286, 0.03889, 197.63], "hex": "#002223"}},
-      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.3738, 0.0638, 194.77], "hex": "#004B4B"}}
+      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.3738, 0.0638, 194.77], "hex": "#004B4B"}},
+      "control": {"$value": {"colorSpace": "oklch", "components": [0.4528, 0.07716, 195.98], "hex": "#006364"}}
     },
     "emerald": {
       "6": {"$value": {"colorSpace": "oklch", "components": [0.6357, 0.03469, 168.54], "hex": "#779287"}},
@@ -50,7 +54,8 @@
       "10": {"$value": {"colorSpace": "oklch", "components": [0.412, 0.08352, 167.92], "hex": "#005942"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.4058, 0.08175, 168.44], "hex": "#005741"}},
       "12": {"$value": {"colorSpace": "oklch", "components": [0.2275, 0.04616, 167.81], "hex": "#002318"}},
-      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.373, 0.07624, 167.21], "hex": "#004D38"}}
+      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.373, 0.07624, 167.21], "hex": "#004D38"}},
+      "control": {"$value": {"colorSpace": "oklch", "components": [0.4502, 0.09065, 168.48], "hex": "#00654C"}}
     },
     "green": {
       "6": {"$value": {"colorSpace": "oklch", "components": [0.6365, 0.04652, 145], "hex": "#7A937A"}},
@@ -60,21 +65,26 @@
       "10": {"$value": {"colorSpace": "oklch", "components": [0.4095, 0.12879, 145], "hex": "#005B14"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.4032, 0.12705, 144.94], "hex": "#005913"}},
       "12": {"$value": {"colorSpace": "oklch", "components": [0.2253, 0.06275, 145.05], "hex": "#042307"}},
-      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.3716, 0.11695, 144.98], "hex": "#004F10"}}
+      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.3716, 0.11695, 144.98], "hex": "#004F10"}},
+      "control": {"$value": {"colorSpace": "oklch", "components": [0.4502, 0.13964, 145.1], "hex": "#03681A"}}
     },
     "olive": {
       "6": {"$value": {"colorSpace": "oklch", "components": [0.6378, 0.03749, 111.03], "hex": "#8C8E74"}},
       "7": {"$value": {"colorSpace": "oklch", "components": [0.5388, 0.05954, 111.78], "hex": "#6F7249"}},
       "8": {"$value": {"colorSpace": "oklch", "components": [0.5159, 0.09599, 112.28], "hex": "#696D23"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.4119, 0.09082, 111.45], "hex": "#4D4F00"}},
-      "12": {"$value": {"colorSpace": "oklch", "components": [0.2305, 0.05084, 111.5], "hex": "#1E1F00"}}
+      "12": {"$value": {"colorSpace": "oklch", "components": [0.2305, 0.05084, 111.5], "hex": "#1E1F00"}},
+      "control": {"$value": {"colorSpace": "oklch", "components": [0.4592, 0.10215, 112.66], "hex": "#595D00"}},
+      "control-contrast": {"$value": {"colorSpace": "oklch", "components": [1, 0, "none"], "hex": "#FFFFFF"}}
     },
     "amber": {
       "6": {"$value": {"colorSpace": "oklch", "components": [0.6423, 0.05058, 80.54], "hex": "#9D8A6A"}},
       "7": {"$value": {"colorSpace": "oklch", "components": [0.5428, 0.07938, 79.56], "hex": "#886A36"}},
       "8": {"$value": {"colorSpace": "oklch", "components": [0.5221, 0.10823, 79.73], "hex": "#8A6100"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.42, 0.08675, 80.95], "hex": "#654700"}},
-      "12": {"$value": {"colorSpace": "oklch", "components": [0.2337, 0.04818, 81.83], "hex": "#291B00"}}
+      "12": {"$value": {"colorSpace": "oklch", "components": [0.2337, 0.04818, 81.83], "hex": "#291B00"}},
+      "control": {"$value": {"colorSpace": "oklch", "components": [0.4656, 0.09662, 79.31], "hex": "#765200"}},
+      "control-contrast": {"$value": {"colorSpace": "oklch", "components": [1, 0, "none"], "hex": "#FFFFFF"}}
     },
     "orange": {
       "6": {"$value": {"colorSpace": "oklch", "components": [0.6448, 0.05124, 49.93], "hex": "#A88572"}},
@@ -84,7 +94,8 @@
       "10": {"$value": {"colorSpace": "oklch", "components": [0.434, 0.11541, 49.6], "hex": "#813900"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.4275, 0.11309, 49.96], "hex": "#7E3800"}},
       "12": {"$value": {"colorSpace": "oklch", "components": [0.2381, 0.06228, 50.76], "hex": "#351400"}},
-      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.3946, 0.10501, 49.55], "hex": "#713100"}}
+      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.3946, 0.10501, 49.55], "hex": "#713100"}},
+      "control": {"$value": {"colorSpace": "oklch", "components": [0.4742, 0.12484, 50.29], "hex": "#914200"}}
     },
     "red": {
       "6": {"$value": {"colorSpace": "oklch", "components": [0.647, 0.05403, 26.22], "hex": "#AD827D"}},
@@ -101,7 +112,8 @@
       "10": {"$value": {"colorSpace": "oklch", "components": [0.4451, 0.16011, 350.07], "hex": "#8F1E60"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.4376, 0.15144, 350.25], "hex": "#8A215D"}},
       "12": {"$value": {"colorSpace": "oklch", "components": [0.2421, 0.0717, 349.08], "hex": "#370E25"}},
-      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.4059, 0.15986, 350.08], "hex": "#820D55"}}
+      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.4059, 0.15986, 350.08], "hex": "#820D55"}},
+      "control": {"$value": {"colorSpace": "oklch", "components": [0.4846, 0.16037, 349.63], "hex": "#9C2C6C"}}
     },
     "violet": {
       "6": {"$value": {"colorSpace": "oklch", "components": [0.6457, 0.05436, 298.86], "hex": "#9287AB"}},
@@ -111,7 +123,8 @@
       "10": {"$value": {"colorSpace": "oklch", "components": [0.444, 0.16916, 299.93], "hex": "#6433A1"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.4359, 0.16165, 300.02], "hex": "#61339B"}},
       "12": {"$value": {"colorSpace": "oklch", "components": [0.2411, 0.07762, 300.43], "hex": "#26143E"}},
-      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.4049, 0.17006, 299.6], "hex": "#592695"}}
+      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.4049, 0.17006, 299.6], "hex": "#592695"}},
+      "control": {"$value": {"colorSpace": "oklch", "components": [0.483, 0.16985, 299.95], "hex": "#6F3FAE"}}
     },
     "indigo": {
       "6": {"$value": {"colorSpace": "oklch", "components": [0.6435, 0.0523, 280.98], "hex": "#878AAD"}},
@@ -121,7 +134,8 @@
       "10": {"$value": {"colorSpace": "oklch", "components": [0.4367, 0.16016, 280.05], "hex": "#453FA6"}},
       "11": {"$value": {"colorSpace": "oklch", "components": [0.4294, 0.15095, 279.79], "hex": "#433F9F"}},
       "12": {"$value": {"colorSpace": "oklch", "components": [0.2388, 0.07235, 279.41], "hex": "#191940"}},
-      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.3977, 0.15968, 280.24], "hex": "#3C3399"}}
+      "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.3977, 0.15968, 280.24], "hex": "#3C3399"}},
+      "control": {"$value": {"colorSpace": "oklch", "components": [0.4762, 0.16018, 280.13], "hex": "#4F4BB3"}}
     }
   }
 }

@@ -108,6 +108,9 @@ a11y_interrupted() {
   exit "$status"
 }
 
+# xcodebuild's lines for a test runner that did not start (a11y_plan), printed with a run's output.
+a11y_runner_failures="Failed to install or launch the test runner|Early unexpected exit"
+
 # Runs xcodebuild <action> for the audit into <log> and <results> on <destination>, with the -only-testing arguments
 # after them; prints what the run reported and returns xcodebuild's status. Without -collect-test-diagnostics never, a
 # failed run waits minutes for a sysdiagnose of the simulator. xcodebuild runs in the background and the script waits
@@ -128,8 +131,10 @@ a11y_run() {
   trap - INT TERM
   stop_test_daemon "$udid"
   # The issues the audit found, suppressed and deferred, each failure with its kind, then the test cases and the
-  # totals. The test's lines of which entry starts and finishes are for a11y_plan alone.
-  grep -E "^a11y: |: error: |Test Case .*(passed|failed)|Executed [0-9]+ test" "$log" | grep -v "\[MT\]" \
+  # totals, and why a test runner did not start (a11y_plan). The test's lines of which entry starts and finishes are
+  # for a11y_plan alone.
+  grep -E "^a11y: |: error: |Test Case .*(passed|failed)|Executed [0-9]+ test|$a11y_runner_failures" "$log" \
+    | grep -v "\[MT\]" \
     | grep -vE "^a11y: test[A-Za-z]+: (entries|started|finished) " || true
   return "$status"
 }
@@ -140,8 +145,13 @@ a11y_run() {
 #                   alone. Only after a run whose test started (it printed its `entries` line) and whose every failure
 #                   the test classified: XCTest's own `error: -[… <test>]` lines are counted against the test's
 #                   `failure …` lines, so a lost line cannot turn a finding into an unfinished entry;
-#   retry *         all of the test's entries: the test runner failed to install or launch, so nothing was audited
-#                   (seen once on CI, "Mach error -308 - (ipc/mig) server died");
+#   retry *         all of the test's entries: the test runner failed to start, so nothing was audited. Told by
+#                   xcodebuild's message, with no failure of the test and no `entries` line: "Failed to install or
+#                   launch the test runner" (seen once on CI, "Mach error -308 - (ipc/mig) server died"), or "Early
+#                   unexpected exit, operation never finished bootstrapping" (CI run 44444325775,
+#                   testAccessibilityDynamicType 2/4: "The test runner crashed while preparing to run tests:
+#                   CatalogUITests-Runner at -[XCTWaiter(StallHandling) handleStalledWait:]", 3.5 minutes after
+#                   "Running tests...", with no test case started);
 #   fail <reason>   anything else: a finding, a failure outside an entry, an unclassified failure, a test that did
 #                   not start (a build failure among them), a failure nothing explains.
 # An entry with a finding is never retried, and nor is any entry of a test with one.
@@ -152,7 +162,8 @@ a11y_plan() {
     BEGIN { p = "a11y: " test ": "; c = "-[CatalogUITests.CatalogAccessibilityAuditTests " test "]" }
     index($0, "Test Case " q c q " passed") { passed = 1 }
     index($0, ": error: " c " : ") { errors++ }
-    index($0, "Failed to install or launch the test runner") { install = 1 }
+    index($0, "Failed to install or launch the test runner") { runner = 1 }
+    index($0, "Early unexpected exit, operation never finished bootstrapping") { runner = 1 }
     index($0, p "entries ") == 1 { count = split(after(p "entries "), entries, ",") }
     index($0, p "finished ") == 1 { finished[after(p "finished ")] = 1 }
     index($0, p "failure in ") == 1 {
@@ -167,7 +178,7 @@ a11y_plan() {
       if (passed) { print "pass"; exit }
       if (outside) { print "fail a failure outside an entry"; exit }
       if (count == 0) {
-        if (install && classified == 0 && errors == 0) print "retry *"
+        if (runner && classified == 0 && errors == 0) print "retry *"
         else print "fail the test did not start"
         exit
       }
@@ -184,15 +195,16 @@ a11y_plan() {
 }
 
 # The retry's time budget, in minutes from the start of `check.sh a11y`, its build included (#74). A CI leg times out
-# at 35 minutes, and a leg killed by the timeout uploads no logs; before the step come about 10 s of setup and
-# checkout, after it 15–65 s of output and upload, so 30 minutes leave about 3–4 of margin. On CI (runs 44315755921
+# at 45 minutes, and a leg killed by the timeout uploads no logs; before the step come about 10 s of setup and
+# checkout, after it 15–65 s of output and upload, so 40 minutes leave about 3–4 of margin. On CI (runs 44315755921
 # and 44339047592, 2026-11-18, 17 legs) the step spends 6.5–17.1 minutes, median 10.0 and mean 10.4, before the
 # first entry (finding the simulator, the build, starting the test runner; the end of the first test run less the
 # test's own time), and a stall fails its entry 2–3 minutes in. The worst usual case, a stall in the first entry of
-# the slowest leg (`testDefaultSettings` 1/2, 9 entries) after the mean 10.4 minutes, fits: 10.4 + 3 + 90 s +
-# 9 × 90 s = 28.4 minutes (a11y_retry_estimate below). When the step needed more than 12 minutes before the first
-# entry it does not, and the leg fails rather than run into the timeout.
-a11y_retry_budget=$((${WESTRON_A11Y_RETRY_BUDGET:-30} * 60))
+# the slowest leg after the mean 10.4 minutes, fits: with the legs of phase 3 (.github/workflows/ci.yml, 28 entries),
+# a contrast test's single leg, 10.4 + 3 + 90 s + 28 × 38 s = 32.6 minutes (a11y_retry_estimate below). When the
+# step needed more than about 17.8 minutes before the first entry it does not, and the leg fails rather than run into
+# the timeout. (Before phase 3: legs of 35 minutes, a budget of 30, `testDefaultSettings` 1/2 with 9 entries, 28.4.)
+a11y_retry_budget=$((${WESTRON_A11Y_RETRY_BUDGET:-40} * 60))
 
 # How long, in seconds, a retry of <count> entries of <test> would take, judged from the first run in <log>: 90 s to
 # start xcodebuild and the test runner on the booted simulator (a retry on CI took 38 s, 2026-11-18), then for each
@@ -308,7 +320,8 @@ a11y() {
     elapsed=$((SECONDS - a11y_started))
     if [ "$entries" = "*" ]; then
       # Nothing was audited, so nothing tells how long the test takes: a whole test is retried only in the first half
-      # of the budget. On CI the runner failed at install 7 minutes into the leg; a whole shard takes 13–19 minutes.
+      # of the budget, 20 minutes. On CI the runner failed at install 7 minutes into the leg, and crashed while
+      # bootstrapping 12 (run 44444325775); a whole leg of phase 3 takes 15–18 minutes of tests.
       estimate=$((a11y_retry_budget / 2))
     else
       estimate="$(a11y_retry_estimate "$log" "$test" "$(tr ',' '\n' <<< "$entries" | wc -l | tr -d ' ')")"

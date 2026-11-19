@@ -16,6 +16,18 @@ import Foundation
 /// - for each state that the base control does not carry itself (`SystemStyles.Base.states`), the one shared state
 ///   modifier named as the state in `extension View`: `public func loading(_: Bool) -> some View`.
 ///
+/// From each contract that is approved or later and extends an Apple system view (`extension-on-system-control`), the
+/// hand-written modifier `AppleComponents.Extension` derives: `public func textRole(_: Westron.TextRole) -> some View`
+/// in `extension View`, and, on a base whose own modifiers return it (`SystemStyles.returningBase`), the twin
+/// `public func textRole(_: Westron.TextRole) -> Text` in `extension Text`, which may be `@_disfavoredOverload`
+/// (`twinExtras`).
+///
+/// From each contract that is approved or later and is an Apple own component (`own-component`) with its
+/// `platforms.apple.form`, what `AppleComponents.Own` derives: the enums of its enum options, as above, and either its
+/// modifier in `extension View`, `public func surface(_: SurfaceVariant, outlined: Bool = false) -> some View`, or its
+/// view, `public struct Rule: View` with `public init(axis: RuleAxis = .horizontal)` and `public var body: some View`
+/// (`checkViews`).
+///
 /// **What it reports**, as `file:line: message`:
 /// - expected API that is missing, or differs in access, signature, values, order, default or constraints;
 /// - component API that no contract gives: a type named after a component (`ButtonShape`, a public `ButtonVariantStyle`
@@ -55,10 +67,12 @@ public enum APIParity {
     /// The adapters `adaptersFile` may declare: by extended type, the names of its public initializers and instance
     /// methods. Each one also takes a `Westron.*` value, or extends a `Westron.*` type. It is the list of what the file
     /// declared when the lint was written (#21); a new adapter is added here in the same pull request, where review
-    /// sees it.
+    /// sees it. `View.textRole(_:)` left it when the Text contract was approved (#27): the contract gives it now, as it
+    /// gives the twin on `Text`. `Font.init(_: Westron.TextRole)` stays: it adapts a token to a SwiftUI value, as
+    /// `Color.init(_: Westron.Color)` does, and adds no modifier.
     public static let adapters: [String: Set<String>] = [
         "Color": ["init"],
-        "View": ["foregroundStyle", "background", "tint", "textRole", "shadow"],
+        "View": ["foregroundStyle", "background", "tint", "shadow"],
         "Text": ["foregroundStyle"],
         "Shape": ["fill", "stroke"],
         "InsettableShape": ["strokeBorder"],
@@ -70,6 +84,19 @@ public enum APIParity {
         "Label": ["init"],
         "Westron.Theme": ["init"],
     ]
+
+    /// The reviewed adapters outside `adaptersFile`, by file relative to `defaultSources`, then as `adapters` lists
+    /// them, held to the same rule: each takes a `Westron.*` value. `Category.swift` (#31) declares
+    /// `View.category(_: Westron.Category?)`, the list color of a subtree, which a westron style reads where its
+    /// contract takes the list's color from the context, as the checked Checkbox does. It is to westron's controls what
+    /// `View.tint(_: Westron.Color)` is to the system's, and no contract option can give it: the color is the
+    /// context's, not one control's (spec/conventions.md, "Context a style reads").
+    public static let otherAdapters: [String: [String: Set<String>]] = ["Category.swift": ["View": ["category"]]]
+
+    /// The one attribute a twin on the base may carry beyond `harmlessExtras`: `@_disfavoredOverload`, so that on the
+    /// base itself the call takes the modifier on `View`, which reads the environment, and the twin only where nothing
+    /// but the base fits, as inside `Text` interpolation (spec/components/text, P2).
+    public static let twinExtras: Set<String> = ["@_disfavoredOverload"]
 
     /// Attributes and modifiers on expected API that change nothing about where or how a product calls it.
     /// Everything else is a difference: `@available` and `@backDeployed` narrow where it can be called, `@_spi` who can
@@ -136,8 +163,9 @@ public enum APIParity {
         /// `button`, `listRow`: how a function named after the component starts.
         var lowerComponent: String { component.prefix(1).lowercased() + component.dropFirst() }
 
-        /// Whether the conventions give it API on Apple: as the generator decides (spec/conventions.md).
-        var hasAPI: Bool { AppleComponents.generates(contract) }
+        /// Whether the conventions give it API on Apple: a style on a system control or an extension of a system
+        /// view, approved (spec/conventions.md).
+        var hasAPI: Bool { AppleComponents.givesAPI(contract) }
 
         /// The base control's entry in `SystemStyles`, nil when it has none.
         var base: SystemStyles.Base? { contract.apple?.base.flatMap { SystemStyles.byBase[$0] } }
@@ -156,7 +184,11 @@ public enum APIParity {
             guard let apple = contract.apple else {
                 return "its contract (\(source)) plans Apple, so it has no API there yet"
             }
-            if apple.strategy != AppleComponents.strategy {
+            if apple.strategy == AppleComponents.ownStrategy {
+                return "its contract (\(source)) is an \(apple.strategy) that names no form (modifier or view) in "
+                    + "platforms.apple.form, so the conventions give it no API"
+            }
+            if apple.strategy != AppleComponents.strategy, apple.strategy != SystemStyles.extensionStrategy {
                 return "its contract (\(source)) is an \(apple.strategy), whose API the conventions leave open (Q2)"
             }
             return "its contract (\(source)) names no base control"
@@ -191,15 +223,35 @@ public enum APIParity {
         /// The component types its parameters name, to tell a changed overload from another one.
         let types: Set<String>
         let line: (source: String, line: Int)
+        /// The type its extension extends, `View` or a base such as `Text`, and what it returns.
+        var extends = "View"
+        var result = "some View"
+        /// Attributes it may carry beyond `harmlessExtras` (`twinExtras` for a twin).
+        var allowedExtras: Set<String> = []
+        /// Whether `tools/westron generate` writes it, so that generating again fixes a difference: a style overload.
+        /// A hand-written modifier (an own component's, an extension's) is fixed in its source.
+        var generated = false
 
         var signature: String {
-            "\(name)(" + parameters.map(\.description).joined(separator: ", ") + ") -> some View"
+            "\(name)(" + parameters.map(\.description).joined(separator: ", ") + ") -> \(result)"
         }
+
+        /// The containers a declaration of it may have.
+        var containers: Set<String> { extends == "View" ? viewTypes : [extends, "SwiftUI." + extends] }
+    }
+
+    /// An own component's view (`AppleComponents.Own`, form `view`): the type, its initializers and its body.
+    struct ExpectedView {
+        let contract: Contract
+        /// `Rule`.
+        let type: String
+        let initializers: [AppleComponents.Own.Initializer]
     }
 
     struct Expected {
         var enums: [ExpectedEnum] = []
         var functions: [ExpectedFunction] = []
+        var views: [ExpectedView] = []
         /// Contracts the lint cannot derive API from.
         var problems: [Problem] = []
     }
@@ -209,7 +261,40 @@ public enum APIParity {
         var expected = Expected()
         var stateOwners: [(state: String, contracts: [Contract])] = []
         for item in contracts where item.hasAPI {
+            if item.contract.apple?.strategy == AppleComponents.ownStrategy {
+                expectOwn(item, into: &expected)
+                continue
+            }
             guard let apple = item.contract.apple, let baseName = apple.base else { continue }
+            if apple.strategy == SystemStyles.extensionStrategy {
+                let api: AppleComponents.Extension
+                do {
+                    api = try AppleComponents.Extension(item.contract, source: item.source)
+                } catch {
+                    expected.problems.append(
+                        Problem(
+                            file: item.source, line: item.line(of: "options"),
+                            "the lint cannot derive \(item.component)'s API: \(error.message); generate reports it too")
+                    )
+                    continue
+                }
+                let parameters = [
+                    SwiftDeclarations.Parameter(label: "_", type: api.argumentType, defaultValue: api.defaultValue)
+                ]
+                let line = (item.source, item.line(of: "base"))
+                expected.functions.append(
+                    ExpectedFunction(
+                        what: "\(item.component)'s modifier", contracts: [item], name: api.modifier,
+                        parameters: parameters, types: [], line: line))
+                if api.onBase {
+                    expected.functions.append(
+                        ExpectedFunction(
+                            what: "\(item.component)'s modifier on \(api.control)", contracts: [item],
+                            name: api.modifier, parameters: parameters, types: [], line: line, extends: api.control,
+                            result: api.control, allowedExtras: twinExtras))
+                }
+                continue
+            }
             guard let base = item.base else {
                 expected.problems.append(
                     Problem(
@@ -223,6 +308,8 @@ public enum APIParity {
             var types: Set<String> = []
             for option in item.contract.options where apple.systemOptions[option.name] == nil {
                 switch option.kind {
+                case .tokenGroup, .icons:
+                    continue  // The generator gives a style no such option yet, and fails on it.
                 case .bool(let value):
                     rest.append(.init(label: option.name, type: "Bool", defaultValue: "\(value)"))
                 case .enumeration(let values, let defaultValue):
@@ -241,7 +328,8 @@ public enum APIParity {
             expected.functions.append(
                 ExpectedFunction(
                     what: "\(item.component)'s style overload", contracts: [item], name: base.modifier,
-                    parameters: first + rest, types: types, line: (item.source, item.line(of: "base"))))
+                    parameters: first + rest, types: types, line: (item.source, item.line(of: "base")),
+                    generated: true))
             for state in item.contract.states where !base.states.contains(state) {
                 if let index = stateOwners.firstIndex(where: { $0.state == state }) {
                     stateOwners[index].contracts.append(item)
@@ -264,9 +352,9 @@ public enum APIParity {
 
     /// Compares the declarations of `files` with the contracts. `sourceRoot` is the directory the files are in, as it
     /// prefixes their paths; the token files are relative to it.
-    public static func check(contracts: [Contract], files: [(path: String, text: String)], sourceRoot: String)
-        -> Report
-    {
+    public static func check(
+        contracts: [Contract], files: [(path: String, text: String)], sourceRoot: String
+    ) -> Report {
         let declarations = SwiftDeclarations(files: files).declarations
         let expected = expected(contracts)
         var problems = expected.problems
@@ -277,8 +365,8 @@ public enum APIParity {
             problems.append(Problem(file: d.file, line: d.line, message))
         }
         /// Extras that change where or how a product calls an expected declaration.
-        func reportExtras(_ d: SwiftDeclarations.Declaration, _ what: String) {
-            let changing = d.extras.filter { !harmlessExtras.contains($0) }
+        func reportExtras(_ d: SwiftDeclarations.Declaration, _ what: String, allowing allowed: Set<String> = []) {
+            let changing = d.extras.filter { !harmlessExtras.contains($0) && !allowed.contains($0) }
             guard !changing.isEmpty else { return }
             problem(
                 d,
@@ -354,17 +442,16 @@ public enum APIParity {
             }
         }
 
-        // The style overloads and the state modifiers.
+        // The style overloads, the state modifiers and the modifiers of extensions.
         let candidates = declarations.indices.filter {
-            declarations[$0].kind == .func && viewTypes.contains(declarations[$0].container)
-                && declarations[$0].inExtension
+            declarations[$0].kind == .func && declarations[$0].inExtension
         }
         var unmatched: [ExpectedFunction] = []
         for item in expected.functions {
             let exact = candidates.first { index in
                 let d = declarations[index]
-                return !accounted.contains(index) && d.name == item.name && d.parameters == item.parameters
-                    && d.resultType == "some View" && !d.isStatic
+                return !accounted.contains(index) && item.containers.contains(d.container) && d.name == item.name
+                    && d.parameters == item.parameters && d.resultType == item.result && !d.isStatic
             }
             guard let index = exact else {
                 unmatched.append(item)
@@ -376,13 +463,15 @@ public enum APIParity {
             if !d.access.isPublic {
                 problem(d, "\(item.what), \(d.signature), is \(d.access); the conventions make it public")
             }
-            reportExtras(d, item.what)
+            reportExtras(d, item.what, allowing: item.allowedExtras)
         }
         for item in unmatched {
             // A changed overload: same name, and it names the component's types or has the same first parameter.
             let near = candidates.first { index in
                 let d = declarations[index]
-                guard !accounted.contains(index), d.name == item.name else { return false }
+                guard !accounted.contains(index), item.containers.contains(d.container), d.name == item.name else {
+                    return false
+                }
                 if item.types.isEmpty { return true }
                 return d.parameters.contains { p in item.types.contains { p.type.contains($0) } }
             }
@@ -392,14 +481,18 @@ public enum APIParity {
                     declarations[near],
                     "\(item.what) differs from the contract: expected `\(item.signature)`, found "
                         + "`\(declarations[near].signature)`"
-                        + (item.types.isEmpty ? "" : "; run tools/westron generate"))
+                        + (item.generated ? "; run tools/westron generate" : ""))
             } else {
                 problems.append(
                     Problem(
                         file: item.line.source, line: item.line.line,
-                        "missing: \(item.what), `public func \(item.signature)` in extension View"))
+                        "missing: \(item.what), `public func \(item.signature)` in extension \(item.extends)"))
             }
         }
+
+        // The views of own components.
+        problems += checkViews(
+            expected.views, declarations: declarations, accounted: &accounted, expectedCount: &expectedCount)
 
         // Public API that no contract accounts for.
         let components = contracts.sorted { $0.component.count > $1.component.count }
@@ -494,10 +587,11 @@ public enum APIParity {
 
         let root = sourceRoot.hasSuffix("/") ? sourceRoot : sourceRoot + "/"
         func relative(_ file: String) -> String { file.hasPrefix(root) ? String(file.dropFirst(root.count)) : file }
-        /// One of the reviewed adapters in `adaptersFile`.
+        /// One of the reviewed adapters in `adaptersFile` or `otherAdapters`.
         func isAdapter(_ d: SwiftDeclarations.Declaration) -> Bool {
-            guard relative(d.file) == adaptersFile, d.inExtension, !d.isStatic,
-                d.kind == .func || d.kind == .initializer, adapters[d.container]?.contains(d.name) == true
+            let file = relative(d.file)
+            guard let listed = file == adaptersFile ? adapters : otherAdapters[file], d.inExtension, !d.isStatic,
+                d.kind == .func || d.kind == .initializer, listed[d.container]?.contains(d.name) == true
             else { return false }
             return d.container.hasPrefix("Westron.") || d.parameters.contains { $0.type.hasPrefix("Westron.") }
         }
@@ -532,7 +626,8 @@ public enum APIParity {
                 problem(
                     d,
                     "\(what): a public modifier on View that no contract gives: one is a component's style overload, "
-                        + "a state modifier, or a reviewed adapter in \(adaptersFile) (APIParity.adapters); \(allow)")
+                        + "a state modifier, or a reviewed adapter in \(adaptersFile) (APIParity.adapters) or in "
+                        + "\(otherAdapters.keys.sorted().joined(separator: ", ")) (APIParity.otherAdapters); \(allow)")
             } else if generatedTokenFiles.contains(file) {
                 guard (d.kind.isType || d.kind == .typealias) && d.container.isEmpty else { continue }
                 problem(

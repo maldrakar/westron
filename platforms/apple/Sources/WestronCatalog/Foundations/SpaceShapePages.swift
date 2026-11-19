@@ -2,7 +2,7 @@ import SwiftUI
 import WestronUI
 
 extension CatalogEntry {
-    /// The space ladder as bars of their true length.
+    /// The space ladder and the roles of the rhythm, as bars of their true length.
     static let space = CatalogEntry(id: "space", title: "Space", section: .foundations) {
         SpacePage()
     }
@@ -14,27 +14,77 @@ extension CatalogEntry {
 }
 
 private struct SpacePage: View {
-    private var steps: [Westron.Dimension] {
-        Westron.Dimension.all.filter { $0.name.hasPrefix("space.") }
+    /// The ladder's steps, then the roles of direction B's rhythm, which alias steps.
+    private var space: (ladder: [Westron.Dimension], roles: [Westron.Dimension]) {
+        let all = Westron.Dimension.all.filter { $0.name.hasPrefix("space.") }
+        let isStep = { (space: Westron.Dimension) in space.name.dropFirst("space.".count).allSatisfy(\.isNumber) }
+        return (all.filter(isStep), all.filter { !isStep($0) })
     }
 
     var body: some View {
         TokenPage(
             title: "Space",
-            summary: "space.*: steps on a ladder where 100 is the base unit of 8 pt. Each bar is as long as its step."
+            summary: "space.<step>: steps on a ladder where 100 is the base unit of 8 pt. space.<role>: direction B's "
+                + "rhythm, each role a step of the ladder. Each bar is as long as its token."
         ) {
-            Grid(alignment: .leading, horizontalSpacing: .space150, verticalSpacing: .space75) {
-                ForEach(steps, id: \.name) { step in
-                    GridRow {
-                        TokenName(step.name)
-                        TokenDetail(Points(step.value).text)
-                            .gridColumnAlignment(.trailing)
-                        RoundedRectangle(cornerRadius: .stroke.thin)
-                            .fill(.background.accent)
-                            .frame(width: CGFloat(step), height: .space150)
-                    }
+            // The ladder beside the rhythm where the window is wide enough, above it otherwise.
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: .space400) {
+                    ladder
+                    rhythm
+                }
+                VStack(alignment: .leading, spacing: .space300) {
+                    ladder
+                    rhythm
                 }
             }
+        }
+    }
+
+    private var ladder: some View {
+        section("Ladder · space.<step>") {
+            ForEach(space.ladder, id: \.name) { row(TokenName($0.name), $0) }
+        }
+    }
+
+    private var rhythm: some View {
+        section("Rhythm · space.<role>") {
+            ForEach(space.roles, id: \.name) { role in
+                row(
+                    VStack(alignment: .leading, spacing: 0) {
+                        TokenName(role.name)
+                        if let step = step(of: role) { TokenDetail(step.name) }
+                    },
+                    role
+                )
+            }
+        }
+    }
+
+    /// The ladder's step a role aliases. Each step has its own value, so the value names the step.
+    private func step(of role: Westron.Dimension) -> Westron.Dimension? {
+        space.ladder.first { $0.value == role.value }
+    }
+
+    private func section(_ title: String, @ViewBuilder rows: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: .space100) {
+            Text(title)
+                .textRole(.subheadline.strong)
+                .foregroundStyle(.text.primary)
+            Grid(alignment: .leading, horizontalSpacing: .space150, verticalSpacing: .space75) {
+                rows()
+            }
+        }
+    }
+
+    private func row(_ name: some View, _ length: Westron.Dimension) -> some View {
+        GridRow {
+            name
+            TokenDetail(Points(length.value).text)
+                .gridColumnAlignment(.trailing)
+            RoundedRectangle(cornerRadius: .stroke.thin)
+                .fill(.background.accent)
+                .frame(width: CGFloat(length), height: .space150)
         }
     }
 }

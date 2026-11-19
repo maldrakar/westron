@@ -8,8 +8,9 @@ import WestronUI
 #endif
 
 /// One sheet of a component's snapshot matrix: a title with the values the sheet fixes, the column option's values
-/// across, and a row per state, rest first. Each cell is the real component drawn by its `<Component>MatrixCell`, or,
-/// on a supplement's sheet, by the supplement's cell; such a sheet is marked "Not a contract option".
+/// across, and a row per state, rest first, or per value of the row option (`ComponentMatrix.rowOption`). Each cell is
+/// the real component drawn by its `<Component>MatrixCell`, or, on a supplement's sheet, by the supplement's cell; such
+/// a sheet is marked "Not a contract option".
 ///
 /// The sheet is laid out to fit one screenshot with nothing cut off: on macOS the state names are a column of their
 /// own, in the catalog's wide window; on an iPhone in portrait each state name is a line above its row, so the cells
@@ -84,10 +85,10 @@ struct MatrixSheetView: View {
             } else {
                 note(
                     matrix.supplement == nil
-                        ? "Snapshot matrix from the contract: columns are \(matrix.columnName), rows are rest and "
-                            + "each state alone."
+                        ? "Snapshot matrix from the contract: columns are \(matrix.columnName), rows are "
+                            + "\(matrix.rowsName)."
                         : "Hand-written in the catalog on the contract's axes: columns are \(matrix.columnName), "
-                            + "rows are rest and each state alone.")
+                            + "rows are \(matrix.rowsName).")
                 if let supplement = matrix.supplement {
                     note(supplement.note)
                 }

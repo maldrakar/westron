@@ -34,8 +34,9 @@ This chapter says why. The values are in decisions/0013 and in `tokens/semantic/
 - **Nested corners share a center.** A shape that sits within its container's corner, closer to the edge than the
   container's radius, takes `max(outer − inset, 4)`, so the two corners stay concentric and the inner one never turns
   square. Further in, a shape keeps its own role's radius: a row highlight inside a card with 16 px of padding stays
-  `radius.row`. Apple describes its concentric shapes the same way
-  ([WWDC25 356](https://developer.apple.com/videos/play/wwdc2025/356/)). On Apple 26 and later, `ConcentricRectangle`
+  `radius.row`. So a surface draws its role's radius, and the concentric rule applies only within the corner zone,
+  where the product applies it; no nested pair is computed or stored (the Surface contract, #29, 2026-11-18). Apple
+  describes its concentric shapes the same way ([WWDC25 356](https://developer.apple.com/videos/play/wwdc2025/356/)). On Apple 26 and later, `ConcentricRectangle`
   applies the rule where westron content meets the edge of the device or the window. Older systems use the radius
   computed from the tokens ([decisions/0008](../decisions/0008-apple-toolchain-and-catalog.md)).
 - **Corners are continuous on Apple and circular elsewhere.** Apple's controls and glass have continuous corners, and
@@ -82,7 +83,8 @@ is flat: a row, a field or a tag casts no shadow.
   ([decisions/0010](../decisions/0010-token-structure-and-modes.md)). On Apple, `.shadow(_:)` picks the layers of the
   environment's theme.
 - **In high contrast, every raised surface gets an outline.** The high-contrast themes keep the shadows and outline
-  every raised surface in `color.border.default`, because a shadow alone does not mark an edge. On the web, forced
+  every raised surface in `color.border.default` at `stroke.thin` (decisions/0013), because a shadow alone does not
+  mark an edge. On the web, forced
   colors remove shadows altogether ([CSS Color Adjust](https://www.w3.org/TR/css-color-adjust-1/)). For the same
   reason a focus ring is always a line, never a shadow.
 - **System surfaces bring their own shadow.** Sheets, popovers, menus and Liquid Glass cast the system's shadow, and
@@ -92,14 +94,12 @@ is flat: a row, a field or a tag casts no shadow.
 
 ## Open questions
 
-1. **A role or the nesting rule.** A row highlight inside a card meets both `radius.row` and the nesting rule, and the
-   two can differ: in a card with an 8 px inset, the rule gives 4 px where the role gives 8. Which wins? Apple's advice
-   is a concentric shape with a fallback radius for when the shape stands alone. And should the generator compute each
-   nested pair and store it, so that every platform draws the same number?
+The Surface contract (#29) answered questions 1 and 3 on 2026-11-18: nested corners ("Nested corners share a center")
+and the width of the high-contrast outline, `stroke.thin` ("In high contrast, every raised surface gets an outline").
+Questions 2 and 4 keep their numbers.
+
 2. **The control's corner in compact.** Compact makes controls one 8 px step shorter (chapter 06). Should
    `radius.control` follow, to stay about a quarter of the height? It would be the first radius set by density (#33).
-3. **The outline in high contrast.** decisions/0013 names its color, `color.border.default`, but not its width. Is it
-   `stroke.hairline` or `stroke.thin`?
 4. **Cards on GNOME.** libadwaita's `.card` class draws a native card with its own shadow, dark variant and
    high-contrast outline. Should a raised surface on GNOME use that class and record the difference, or draw westron's
    tokens (phase 7)?

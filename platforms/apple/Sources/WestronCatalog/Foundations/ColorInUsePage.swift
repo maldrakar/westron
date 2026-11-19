@@ -38,23 +38,16 @@ private struct ColorInUsePage: View {
     }
 }
 
-/// A raised card: background.surface with a soft shadow, and in high contrast a border.default outline, as every
-/// raised surface gets one there.
+/// A raised card: westron's `.surface(.raised)`, background.surface with a soft shadow, and in high contrast a
+/// border.default outline. The content is clipped to the card's corner, since the table's header reaches its edge:
+/// the surface draws a ground and lays nothing out, so the product clips what it lets reach the corner.
 private struct Card<Content: View>: View {
-    @Environment(\.colorSchemeContrast) private var contrast
     @ViewBuilder let content: Content
 
     var body: some View {
         content
-            .background(.background.surface, in: RoundedRectangle(cornerRadius: .radius.card))
-            .clipShape(RoundedRectangle(cornerRadius: .radius.card))
-            .shadow(.raised)
-            .overlay {
-                if contrast == .increased {
-                    RoundedRectangle(cornerRadius: .radius.card)
-                        .strokeBorder(.border.default, lineWidth: .stroke.thin)
-                }
-            }
+            .clipShape(RoundedRectangle(cornerRadius: .radius.card, style: .continuous))
+            .surface(.raised)
     }
 }
 
@@ -152,7 +145,7 @@ private struct Check: View {
             if done {
                 Circle()
                     .fill(.background.accent)
-                Image(Westron.Icon.check)
+                Icon(.check, label: "Done")
                     .font(Font(.caption.medium).weight(.bold))
                     .foregroundStyle(.text.onAccent)
             } else {
@@ -176,15 +169,6 @@ private struct Tag: View {
             .padding(.horizontal, .space75)
             .frame(minHeight: Metrics.tag)
             .background(category.background, in: Capsule())
-    }
-}
-
-/// A separator in border.default.
-private struct Rule: View {
-    var body: some View {
-        Rectangle()
-            .fill(.border.default)
-            .frame(height: .stroke.thin)
     }
 }
 
@@ -307,7 +291,7 @@ private struct Notice: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: .space100) {
-            Image(status.icon)
+            Icon(status.icon)
                 .foregroundStyle(status.iconColor)
             VStack(alignment: .leading, spacing: 0) {
                 Text(title)
@@ -333,7 +317,7 @@ private struct FilledButton: View {
 
     var body: some View {
         HStack(spacing: .space50) {
-            if let icon { Image(icon) }
+            if let icon { Icon(icon) }
             Text(title)
         }
         .textRole(.footnote.strong)

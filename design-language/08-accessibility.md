@@ -120,7 +120,10 @@ A component's contract may record an exception: on macOS, Button's size s takes 
 - On macOS, iPadOS with a keyboard, GNOME and the web, every action is reachable from the keyboard. GNOME puts it
   plainly: "every action should also be possible with the keyboard"
   ([GNOME HIG](https://developer.gnome.org/hig/guidelines/keyboard.html)).
-- Focus is always visible, and the platform draws it. A custom component shows focus the way the platform does.
+- Focus is always visible, and the platform draws it, except where a component's contract says westron draws it:
+  today the text field on iOS and macOS, by the owner's decision of 2026-11-18 (spec/components/text-field,
+  decisions/0001). Button and the checkbox keep the system's ring. A custom component shows focus the way the
+  platform does.
 - Focus order follows reading order. Escape closes what is open. Shortcuts use the platform's modifier (chapter 09).
 - On watchOS, the Digital Crown scrolls and adjusts values.
 

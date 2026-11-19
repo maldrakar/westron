@@ -8,6 +8,8 @@ import SwiftUI
 /// -WestronAppearance light|dark      appearance
 /// -WestronContrast standard|high     contrast: high is the system's increased contrast, the -hc themes
 /// -WestronDynamicType <size>         xSmall … xxxLarge, accessibility1 … accessibility5
+/// -WestronLegibilityWeight regular|bold
+///                                    the weight of text: bold is the system's Bold Text
 /// -WestronScrollAnchor <0…1>         the point of the entry's scroll content held in view, 0 top, 1 bottom
 /// -WestronMatrixSheet <key>          show one sheet of a snapshot matrix instead of an entry (#24), by its key,
 ///                                    `button.size-s_role-default_iconOnly-false`
@@ -37,6 +39,17 @@ public struct CatalogLaunchOptions: Equatable, Sendable {
         }
     }
 
+    public enum LegibilityWeight: String, CaseIterable, Sendable {
+        case regular, bold
+
+        public var legibilityWeight: SwiftUI.LegibilityWeight {
+            switch self {
+            case .regular: .regular
+            case .bold: .bold
+            }
+        }
+    }
+
     public enum ParseError: Error, Equatable, CustomStringConvertible {
         case missingValue(flag: String)
         case invalidValue(flag: String, value: String, allowed: [String])
@@ -55,6 +68,8 @@ public struct CatalogLaunchOptions: Equatable, Sendable {
     public var appearance: Appearance?
     public var contrast: Contrast?
     public var dynamicTypeSize: DynamicTypeSize?
+    /// The weight of text, as the system's Bold Text sets it: SwiftUI's `legibilityWeight` for the whole tree.
+    public var legibilityWeight: LegibilityWeight?
     /// The point of the entry's scroll content, from 0 at the top to 1 at the bottom, that the scroll view shows
     /// first and holds in place when the content grows. The accessibility audit (#25) enlarges the text of the page:
     /// a scroll view without an anchor goes back to the top, and the audit would measure only the top of the page.
@@ -64,12 +79,14 @@ public struct CatalogLaunchOptions: Equatable, Sendable {
 
     public init(
         entryID: String? = nil, appearance: Appearance? = nil, contrast: Contrast? = nil,
-        dynamicTypeSize: DynamicTypeSize? = nil, scrollAnchor: Double? = nil, matrixSheet: String? = nil
+        dynamicTypeSize: DynamicTypeSize? = nil, legibilityWeight: LegibilityWeight? = nil,
+        scrollAnchor: Double? = nil, matrixSheet: String? = nil
     ) {
         self.entryID = entryID
         self.appearance = appearance
         self.contrast = contrast
         self.dynamicTypeSize = dynamicTypeSize
+        self.legibilityWeight = legibilityWeight
         self.scrollAnchor = scrollAnchor
         self.matrixSheet = matrixSheet
     }
@@ -107,6 +124,11 @@ public struct CatalogLaunchOptions: Equatable, Sendable {
                     throw .invalidValue(flag: flag, value: value, allowed: Self.dynamicTypeSizes.map(\.name))
                 }
                 dynamicTypeSize = parsed
+            case "-WestronLegibilityWeight":
+                guard let parsed = LegibilityWeight(rawValue: value) else {
+                    throw .invalidValue(flag: flag, value: value, allowed: LegibilityWeight.allCases.map(\.rawValue))
+                }
+                legibilityWeight = parsed
             case "-WestronScrollAnchor":
                 guard let parsed = Double(value), parsed >= 0, parsed <= 1 else {
                     throw .invalidValue(flag: flag, value: value, allowed: ["a number from 0 to 1"])
@@ -129,8 +151,8 @@ public struct CatalogLaunchOptions: Equatable, Sendable {
     }
 
     static let flags: Set<String> = [
-        "-WestronEntry", "-WestronAppearance", "-WestronContrast", "-WestronDynamicType", "-WestronScrollAnchor",
-        "-WestronMatrixSheet",
+        "-WestronEntry", "-WestronAppearance", "-WestronContrast", "-WestronDynamicType", "-WestronLegibilityWeight",
+        "-WestronScrollAnchor", "-WestronMatrixSheet",
     ]
 
     /// The size names match the names of the `DynamicTypeSize` cases.

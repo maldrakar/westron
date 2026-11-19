@@ -42,19 +42,38 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
 
     /// Starts the messages of this test's own infrastructure failures: an entry that did not render, an audit that did
     /// not complete twice, the `WESTRON_A11Y_FAIL_ONCE` hook. XCTest puts "failed - " before an `XCTFail` message.
+    /// `tools/apple/snapshot-matrix.sh` (`matrix_plan`) knows XCTest's messages below too, for its retry.
     static let infrastructurePrefix = "infrastructure: "
 
     /// Whether a failure is the machinery's, told by how its message starts, never by text further in, where a page's
-    /// own labels can appear: XCTest's messages for a terminate and a launch seen on the CI runner (#74), its timeouts
-    /// of a request to the simulator, "Failed to <request>: Timed out while …" (a UI query on the CI runner; a UI
-    /// query, a drag and a screenshot when the local simulator's `testmanagerd` was stopped for minutes), and this
-    /// test's own (`infrastructurePrefix`). Every other failure is a finding. A message joins only with evidence that
-    /// it is the machinery's.
+    /// own labels can appear. Each message is XCTest's for a request to the simulator, which no audit issue and no
+    /// assertion of this test produces (those are `describe(_:)`'s issue texts and this file's `XCTFail` messages):
+    /// - this test's own (`infrastructurePrefix`): an entry that did not render, an audit that did not complete twice;
+    /// - "Failed to terminate dev.westron.catalog:<pid>: …", a terminate: the CI runner (#74; again in run
+    ///   44444325775, `testDarkIncreasedContrast`, which passed on its retry);
+    /// - "Application 'dev.westron.catalog' does not have a process ID", a launch: the CI runner (#74);
+    /// - "Failed to <request>: Timed out while …", a request that timed out: a UI query on the CI runner (#74); a UI
+    ///   query, a drag and a screenshot when the local simulator's `testmanagerd` was stopped for minutes;
+    /// - "Failed to get background assertion for target app with pid <pid>: Timed out while acquiring background
+    ///   assertion.", a launch (`app.launch()` in `launch(_:_:)`) on a stalled simulator: the CI runner, run
+    ///   44444325775, `testDefaultSettings` 2/3, in the shard's first entry;
+    /// - "Failed to launch <XCUIApplicationImpl: 0x… dev.westron.catalog at …> via Xcode: Timed out while launching
+    ///   application via Xcode.", a launch that timed out: the CI runner, run 44444325775, in the snapshot matrix's
+    ///   first `app.launch()` (`SnapshotMatrixTests`), the same call as here; between the angle brackets is XCTest's
+    ///   description of the app, its address and path. A launch that fails otherwise, an app that crashes on an entry,
+    ///   stays a finding.
+    /// Every other failure is a finding. A message joins only with evidence that it is the machinery's.
     static func isInfrastructure(_ description: String) -> Bool {
         description.hasPrefix(infrastructurePrefix) || description.hasPrefix("failed - " + infrastructurePrefix)
             || description.hasPrefix("Failed to terminate dev.westron.catalog:")
             || description.hasPrefix("Application 'dev.westron.catalog' does not have a process ID")
             || description.prefixMatch(of: #/Failed to [a-z ]+: Timed out while /#) != nil
+            || description.prefixMatch(
+                of: #/Failed to get background assertion for target app with pid [0-9]+: Timed out while acquiring /#)
+                != nil
+            || description.prefixMatch(
+                of: #/Failed to launch <XCUIApplicationImpl: [^>]+> via Xcode: Timed out while launching application/#)
+                != nil
     }
 
     /// The test method and the entry being audited, for `record(_:)`.
@@ -335,6 +354,14 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                     "a11y: suppressed in \(entryID): \(Self.describe(issue)) (off the screen or under the status bar)")
                 return true
             }
+            // A suppressed issue is not the entry's wherever it is, so it is not deferred to a screenful that may
+            // never come (the text field's focus pages, whose last line the keyboard covers).
+            if let suppression = Self.suppressions.first(where: {
+                $0.matches(issue, entryID: entryID, configuration: configuration)
+            }) {
+                print("a11y: suppressed in \(entryID): \(Self.describe(issue)) (\(suppression.reason))")
+                return true
+            }
             // The same at the bottom: an element the bottom of the screen cuts is measured on the strip that shows,
             // under the home indicator, whose color changes with the page beneath it. On the CI runner "Report not
             // sent" on color-in-use, 18 pt of it on screen, failed contrast once and passed on the rerun (#74). It is
@@ -348,12 +375,6 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                     "a11y: deferred in \(entryID), screen \(screen): \(description) (cut by the bottom of the screen; "
                         + "the next screenful shows it whole)")
                 deferred.append(description)
-                return true
-            }
-            if let suppression = Self.suppressions.first(where: {
-                $0.matches(issue, entryID: entryID, configuration: configuration)
-            }) {
-                print("a11y: suppressed in \(entryID): \(Self.describe(issue)) (\(suppression.reason))")
                 return true
             }
             print("a11y: issue in \(entryID), screen \(screen): \(Self.describe(issue))")
@@ -462,13 +483,18 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         var value: String? = nil
         /// Whether the element must be enabled, if that matters: `false` for a disabled control's.
         var enabled: Bool? = nil
+        /// Text the issue's `detailedDescription` must contain, if any, such as the class of a system view.
+        var detail: String? = nil
+        /// Whether the element must reach below the top of the system keyboard, which must be up: an element the
+        /// keyboard covers is measured on the keyboard's pixels.
+        var underKeyboard = false
         /// Tells the issue by its element's label; `nil` when the audit names no element.
         let label: @Sendable (String?) -> Bool
 
         init(
             _ scope: Scope, type: XCUIAccessibilityAuditType, reason: String, description: String? = nil,
             appearance: Configuration.Appearance? = nil, value: String? = nil, enabled: Bool? = nil,
-            label: @escaping @Sendable (String?) -> Bool
+            detail: String? = nil, underKeyboard: Bool = false, label: @escaping @Sendable (String?) -> Bool
         ) {
             self.scope = scope
             self.type = type
@@ -477,6 +503,8 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             self.appearance = appearance
             self.value = value
             self.enabled = enabled
+            self.detail = detail
+            self.underKeyboard = underKeyboard
             self.label = label
         }
 
@@ -489,8 +517,16 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             guard issue.auditType == type else { return false }
             if let description, issue.compactDescription != description { return false }
             if let appearance, configuration.appearance != appearance { return false }
-            if let value, issue.element?.value as? String != value { return false }
+            // A value as text: iOS gives a switch's as a string, macOS a checkbox's as a number.
+            if let value, issue.element?.value.map({ "\($0)" }) != value { return false }
             if let enabled, issue.element?.isEnabled != enabled { return false }
+            if let detail, !issue.detailedDescription.contains(detail) { return false }
+            if underKeyboard {
+                let keyboard = XCUIApplication().keyboards.firstMatch
+                guard keyboard.exists, let frame = issue.element?.frame, !frame.isEmpty,
+                    frame.maxY > keyboard.frame.minY
+                else { return false }
+            }
             return label(issue.element?.label)
         }
     }
@@ -536,8 +572,72 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                 ["Save", "Delete"].contains($0 ?? "")
             }
         }
+        suppressions += [
+            // Contrast on the disabled Checkbox sample, drawn whole at opacity.disabled by the contract: WCAG exempts
+            // an inactive control (design-language chapter 08). Only an element that is not enabled matches.
+            Suppression(.entry("checkbox"), type: .contrast, reason: "an inactive control", enabled: false) {
+                ["disabled", "disabled, checked"].contains($0 ?? "")
+            },
+            // "Contrast nearly passed" on a checked check: the audit measures its disc against the canvas and holds
+            // it to text's 4.5:1, while the disc is a graphic, held to the non-text 3:1 (4.5:1 in high contrast,
+            // where the audit passes it) by the non-text declarations of color.background.accent and
+            // color.category.<name>.control, which `tools/westron tokens contrast` checks in every theme (WCAG
+            // 1.4.11; decisions/0012). Only an enabled check that is on, with one of the page's checked labels,
+            // matches, and only "nearly passed", which is at least 3:1; the same text.primary labels are audited
+            // unsuppressed on the page's unchecked rows.
+            Suppression(
+                .entry("checkbox"), type: .contrast, reason: "a checked disc, a non-text graphic at 3:1",
+                description: "Contrast nearly passed", value: "1", enabled: true
+            ) { label in
+                [
+                    "checked", "pressed, checked", "focus, checked", "Outline the sections", "blue", "sky", "teal",
+                    "emerald", "green", "olive", "amber",
+                    "orange", "red", "pink", "violet", "indigo",
+                ].contains(label ?? "")
+            },
+            // The live row's check, whose label is hidden (`.labelsHidden()`) beside a separate title, as in the
+            // pilot's task row. Its element is the circle's 44 pt square named by the hidden label, and the audit
+            // measures it as if that name were drawn there: the ring, a graphic at border.strong's non-text 3:1, as
+            // text ("Contrast nearly passed"), and the name as text that may be clipped. Nothing is drawn but the
+            // circle, so neither applies; the title beside it is hidden from assistive technology and drawn whole.
+            Suppression(
+                .entry("checkbox"), type: .contrast, reason: "a hidden label: the ring, a non-text graphic at 3:1",
+                description: "Contrast nearly passed"
+            ) { $0 == "Call the plumber" },
+        ]
         #if os(iOS)
+            // The TextField focus pages focus a field for real, so the system keyboard is up while they are audited
+            // (spec/components/text-field). The keyboard's own prediction cells have no description, and at the
+            // accessibility text sizes the keyboard covers the page's last line, its "Focused: …" text and its
+            // "Clear focus" button, so the audit measures them on the keyboard's pixels. Neither is the entry's: the
+            // fields are audited above the keyboard, and the same lines with no keyboard on `text-field-behavior`.
+            // The contrast suppression holds only while the keyboard is up and the line reaches below its top; the
+            // same line above the keyboard, in any theme or text size, is audited as usual.
+            for entryID in ["text-field-focus-framed", "text-field-focus-inline"] {
+                suppressions += [
+                    Suppression(
+                        .entry(entryID), type: .sufficientElementDescription,
+                        reason: "the system keyboard's prediction cell", detail: "TUIPredictionViewCell"
+                    ) { $0 == nil || $0 == "" },
+                    Suppression(
+                        .entry(entryID), type: .contrast, reason: "a line under the system keyboard",
+                        underKeyboard: true
+                    ) {
+                        ($0?.hasPrefix("Focused: ") ?? false) || $0 == "Clear focus"
+                    },
+                ]
+            }
             suppressions += [
+                // The same row's hidden label, which the text clipped audit (iOS only) measures as drawn text.
+                Suppression(.entry("checkbox"), type: .textClipped, reason: "a hidden label, not drawn") {
+                    $0 == "Call the plumber"
+                },
+                // The same on the List rows of `checkbox-in-list`, whose checks hide their labels beside separate
+                // titles: the List gives each toggle's element the whole row, and the title drawn in it is hidden
+                // from assistive technology, so the audit measures the hidden label as if it were drawn there.
+                Suppression(.entry("checkbox-in-list"), type: .textClipped, reason: "a hidden label, not drawn") {
+                    ["Call the plumber", "Pay the rent"].contains($0 ?? "")
+                },
                 // "Text clipped" with no element on the background colors. It appeared when the page got its
                 // layout for accessibility sizes, which puts a name on a line above its cells. The audit names no
                 // element, so there is nothing to fix by; the same page at accessibility5 passes the text clipped
@@ -545,7 +645,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                 // accessibility3 shows every label whole.
                 Suppression(.entry("color-backgrounds"), type: .textClipped, reason: "an issue with no element") {
                     $0 == nil
-                }
+                },
             ]
         #endif
         return suppressions

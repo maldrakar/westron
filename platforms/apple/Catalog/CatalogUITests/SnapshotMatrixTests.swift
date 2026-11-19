@@ -12,7 +12,7 @@ import XCTest
 /// OS (`ComponentMatrix.Capture.all`: the four themes at the default text size and, on iOS, the light theme at the
 /// smallest and the largest text size), for the owner's review. It runs from `tools/apple/snapshot-matrix.sh`, which
 /// sets `TEST_RUNNER_WESTRON_MATRIX=1` (without it the test is skipped, so a plain test run does not take it) and, to
-/// take one component, `TEST_RUNNER_WESTRON_MATRIX_COMPONENT=<id>`.
+/// take some components only, `TEST_RUNNER_WESTRON_MATRIX_COMPONENT=<id>[,<id>…]`.
 ///
 /// One launch of the catalog per picture: a sheet, or a part of a sheet at a text size where the whole does not fit
 /// (`ComponentMatrix.pictures(of:at:)`), in one capture. The capture pins what it can: the theme, the contrast, the text
@@ -57,6 +57,8 @@ final class SnapshotMatrixTests: XCTestCase {
     struct Component: Codable {
         var component: String
         var columns: String
+        /// The option down the rows in place of the states (Icon's glyphs); nil for rest and each state.
+        var rows: String?
         var notes: [String]
         /// The matrix generated from the contract first, then each supplement.
         var groups: [Group] = []
@@ -109,10 +111,14 @@ final class SnapshotMatrixTests: XCTestCase {
         }
         continueAfterFailure = true
         var matrices = ComponentMatrix.all
-        if let component = environment["WESTRON_MATRIX_COMPONENT"], !component.isEmpty {
-            matrices = matrices.filter { $0.component == component }
-            let known = ComponentMatrix.all.map(\.component).joined(separator: ", ")
-            XCTAssertFalse(matrices.isEmpty, "no snapshot matrix \"\(component)\"; the matrices: \(known)")
+        // One component or several, comma-separated; the matrices stay in the registry's order.
+        if let list = environment["WESTRON_MATRIX_COMPONENT"], !list.isEmpty {
+            let wanted = Set(list.split(separator: ",").map(String.init))
+            matrices = matrices.filter { wanted.contains($0.component) }
+            let known = ComponentMatrix.all.map(\.component)
+            for component in wanted.subtracting(known).sorted() {
+                XCTFail("no snapshot matrix \"\(component)\"; the matrices: \(known.joined(separator: ", "))")
+            }
         }
         // By component: its generated matrix, then its supplements.
         let components = matrices.map { [$0] + $0.supplements }
@@ -139,7 +145,8 @@ final class SnapshotMatrixTests: XCTestCase {
             textSizeNote: ComponentMatrix.TextSize.notCapturedNote)
         manifest.components = components.map { groups in
             Component(
-                component: groups[0].component, columns: groups[0].columnName, notes: groups[0].notes,
+                component: groups[0].component, columns: groups[0].columnName, rows: groups[0].rowOption,
+                notes: groups[0].notes,
                 groups: groups.map { matrix in
                     Group(
                         id: matrix.supplement?.id ?? "contract",

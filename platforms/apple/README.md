@@ -8,7 +8,7 @@ A SwiftUI library for iOS, iPadOS, macOS and watchOS. The package manifest lives
 | `Sources/WestronUI/` | Styles, components and the SwiftUI accessors of the tokens: what products import |
 | `Sources/WestronCatalog/` | Catalog entries, their host and launch arguments |
 | `Tests/` | Package tests (Swift Testing) |
-| `Catalog/` | Catalog app for iOS and macOS and its UI tests: screenshots, the snapshot matrix and the accessibility audit |
+| `Catalog/` | Catalog app for iOS and macOS and its UI tests: screenshots, the snapshot matrix, the accessibility audit and behaviour |
 
 ## Adding the package
 
@@ -33,9 +33,8 @@ import WestronUI   // re-exports WestronTokens
 Text(list.name)
     .textRole(.heading.small)                     // typography.heading.small: Onest SemiBold in the headline style
     .foregroundStyle(list.color.text)             // color.category.<name>.text, by the name the store keeps
-    .padding(.horizontal, .space200)              // space.200: 16 pt
-    .background(.background.surface, in: RoundedRectangle(cornerRadius: .radius.card))
-    .shadow(.raised)                              // shadow.raised
+    .padding(.space.card)                         // space.card: a card's padding, the rhythm's role (16 pt)
+    .surface(.raised)                             // a card: background.surface, radius.card, shadow.raised
 withAnimation(.move) { reorder(task) }            // motion.move: its spring
 
 let color = Westron.Category(rawValue: stored) ?? .blue   // shared code: WestronTokens alone
@@ -49,7 +48,12 @@ let ink = Westron.Color.text.primary.dark                 // Westron.RGB(hex: 0x
   `tint`, which WestronUI overloads for it; any other call takes `Color(.text.primary)`.
 - Text roles are taken with `.textRole(_:)` or `Font(_:)`, in the role's text style, so they follow Dynamic Type:
   Onest and Geist Mono through `Font.custom(_:size:relativeTo:)`, the rest `Font.system` (decisions/0011). `Font` has
-  no westron statics, so SwiftUI's `Font.body` stays as it is.
+  no westron statics, so SwiftUI's `Font.body` stays as it is. `.textRole(_:)` on a view also tracks by the role's
+  share of the drawn size and takes the heavier Onest or Geist Mono under Bold Text; its `Text` twin, for a part inside
+  interpolation or `Text + Text`, cannot read the environment, so it keeps the default size's tracking and the role's
+  own weight. Inside interpolation, type a part whose role is a variable as `Text` first
+  (`let part: Text = Text(count).textRole(role)`): otherwise it takes the View modifier and prints a debug description,
+  and the compiler warns that `appendInterpolation` is deprecated (spec/components/text).
 - Motions with a spring are `.spring(duration:bounce:)`; the others are `.timingCurve`, and `.delay` when they wait.
 - The adapters from WestronTokens values to SwiftUI values are hand-written in `Sources/WestronUI/TokenAdapters.swift`.
 
@@ -61,12 +65,23 @@ let ink = Westron.Color.text.primary.dark                 // Westron.RGB(hex: 0x
 ```swift
 let icon = Westron.Icon(rawValue: list.icon) ?? .fallback   // by the name the store keeps; bullets when unknown
 
-Image(icon)                                       // its SF Symbol, which takes the font of the text it goes with
-    .textRole(.body.regular)
-    .foregroundStyle(list.color.text)
-Label("Rename", icon: .pen)                       // as Label(_:systemImage:)
+Icon(icon)                                        // its SF Symbol, which takes the font of the text it goes with;
+    .textRole(.body.regular)                      // decorative: hidden from assistive technology
+    .foregroundStyle(list.color.icon)             // color.category.<name>.icon (design-language/07)
+Icon(.sun, label: "Today")                        // a meaningful standalone icon: an image labeled Today
+Icon(.chevron).imageScale(.small)                 // the system's relative scale
+Label("Rename", icon: .pen)                       // as Label(_:systemImage:): the system reads it as it decides
+Button { add() } label: { Icon(.plus, label: "Add task") }   // an icon-only control: the label names it
+Text("\(Image(.flag)) Yesterday")                 // an Image where only an Image fits; it keeps the system's name,
+    .accessibilityLabel("Flagged, yesterday")     // so the text says what the line means
 Button("Add", systemImage: Westron.Icon.plus.systemName) { add() }   // any call that takes systemImage:
 ```
+
+`Icon` is the component (spec/components/icon): an `Image` of an SF Symbol always carries the system's spoken name of
+the symbol, which SwiftUI cannot hide or replace on an `Image`, so a standalone icon is `Icon`, not `Image`.
+A label built by hand, `Label { Text(list.title) } icon: { Icon(.folder) }`, must not go inside a system `Menu`: there
+the item becomes a cell assistive technology cannot reach (spec/components/icon, decisions/0001; held by
+`IconAccessibilityTests.testMenuItemsBuiltFromLabels`), so a menu item is `Label("Rename", icon: .pen)`.
 
 ## Package tests
 
@@ -91,14 +106,25 @@ same command that stops a macOS one. Only the accessibility audit, half an hour 
 Open in Xcode 27.1: `platforms/apple/Catalog/Catalog.xcodeproj`. Without arguments, the catalog shows navigation
 across all entries. With `-WestronEntry <id>`, it shows one entry full screen; this is how
 `tools/apple/catalog-screenshot.sh` captures it. `-WestronAppearance light|dark`, `-WestronContrast standard|high` and
-`-WestronDynamicType <size>` set the conditions; `-WestronScrollAnchor <0…1>` holds a point of the entry's scroll
-content in view (the accessibility audit uses it).
+`-WestronDynamicType <size>` set the conditions, and `-WestronLegibilityWeight regular|bold` the system's Bold Text;
+`-WestronScrollAnchor <0…1>` holds a point of the entry's scroll content in view (the accessibility audit uses it).
+`catalog-screenshot.sh` has no option for the last two: the screenshot test reads them from
+`TEST_RUNNER_WESTRON_LEGIBILITY_WEIGHT` and `TEST_RUNNER_WESTRON_SCROLL_ANCHOR`, set before the script, with `--out`,
+since the file name does not show them. The test runner inherits them from the environment: set them on the command
+only, as below; an exported value silently applies to every later capture, and nothing in its file name says so.
+
+```sh
+TEST_RUNNER_WESTRON_LEGIBILITY_WEIGHT=bold tools/apple/catalog-screenshot.sh ios --entry typography-in-text \
+  --out .build/screenshots/ios-typography-in-text-bold.png
+```
 
 The Foundations section holds the token samples, each fitting one screenshot on an iPhone 17 and in the macOS window:
 `color-backgrounds` and `color-foregrounds` draw every color in the four themes side by side, each cell under its own
 color scheme and contrast; `color-categories` draws the list colors and `color-status` the statuses and the chart
 series in the catalog's theme; `color-in-use` draws a task list, a table of deployments, notices and buttons with the
-semantic colors, the page the owner approves the palette on; `typography`,
+semantic colors, the page the owner approves the palette on; `typography` draws the text roles, and
+`typography-in-text` each role in Onest or Geist Mono through `.textRole(_:)` beside its `Text` twin inside
+interpolation, with the width each takes, so that accessibility5 and Bold Text show what the twin does not follow;
 `space`, `shape` and `motion` show the rest, and `icons` draws every icon with its name at the size of body text. To
 review the colors in every mode:
 
@@ -111,16 +137,25 @@ tools/apple/catalog-screenshot.sh ios --entry color-in-use --appearance dark --c
 The owner approves a component's look from its snapshot matrix (decisions/0005, the second gate; #24). `tools/westron
 generate` writes it from each approved contract into `Sources/WestronCatalog/Generated/<Component>+Matrix.swift`:
 every option's values (a bool as `false` and `true`, an option that is the system's own API such as Button's `role`
-included), rest and each state alone, the combinations a constraint of severity `error` leaves out, what each Apple OS
-draws differently (`platforms.apple`), and the sheets. A sheet fixes every option but the variant: the variants are
-its columns, rest and the states its rows, at most 3 × 6, so it fits an iPhone 17 in portrait and the macOS window.
-The hand-written `<Component>MatrixCell` (Button's is in `Components/ButtonPages.swift`) draws one cell with the real
-component: hover, focus and pressed forced as on the `button-states` pages, disabled and loading with the real
-modifiers. The rows of a state the OS never enters are left out, as on those pages; a value the OS does not offer is
-drawn with its fallback and marked, and a combination a `warning` constraint advises against is drawn with a caption.
-A state no token binding names in a case looks as rest, and the sheet and the review page say so: Button's focus,
-whose ring the system draws. The sheets are not catalog entries, so the accessibility audit does not walk them;
-`-WestronMatrixSheet <component>.<sheet>` shows one.
+included, and for an option whose values are tokens the group's tokens in token order, Text's seventeen roles),
+rest and each state alone, the combinations a constraint of severity `error` leaves out, what each Apple OS draws
+differently (`platforms.apple`), and the sheets. A sheet fixes every option but the variant (or, without one, the first
+option that is not a bool): its values are the columns, rest and the states the rows, at most 3 × 6, so it fits an
+iPhone 17 in portrait and the macOS window. Text, with no states, has six sheets of one row: five of three roles each, and the last of two.
+Surface has two sheets of one row, the three kinds with `outlined` false and true; Rule one, both axes. Icon, with no
+states and an option whose values are icons, runs the registry's glyphs down the rows, six to a sheet, and its
+`scale` across: six sheets (spec/conventions.md, "Own components").
+The hand-written `<Component>MatrixCell` (Button's is in `Components/ButtonPages.swift`, Text's in
+`Components/TextPages.swift`) draws one cell with the real component: Button's with hover, focus and pressed forced
+as on the `button-states` pages, disabled and loading with the real modifiers; Text's with `.textRole(_:)`; Surface's
+(`Components/SurfacePages.swift`) with `.surface(_:outlined:)` around sample content, a plain surface on the canvas
+and an outlined one on a fill (a raised or dragged one in a sunken well, a sunken one in a raised card); Rule's
+(`Components/RulePages.swift`) between two lines or two words; Icon's, Checkbox's and Text field's in
+`Components/IconPages.swift`, `CheckboxPages.swift` and `TextFieldPages.swift`. The rows of a state the OS never
+enters are left out, as on those pages; a value the OS does not offer is drawn with its fallback and marked, and a
+combination a `warning` constraint advises against is drawn with a caption. A state no token binding names in a case looks as rest,
+and the sheet and the review page say so: Button's focus, whose ring the system draws. The sheets are not catalog
+entries, so the accessibility audit does not walk them; `-WestronMatrixSheet <component>.<sheet>` shows one.
 
 Two additions are the catalog's, hand-written, and the generator knows nothing of them (#72), so the contract alone
 still drives every generated sheet and combination:
@@ -138,15 +173,29 @@ still drives every generated sheet and combination:
 - **Supplementary sheets** show what no contract option sets. A component's catalog code adds a
   `ComponentMatrix.Supplement` to `Supplement.all`: the option values it keeps and a cell of its own. Its sheets are
   the generated sheets that keep those values, with their axes, states and rows, so nothing the contract lists is
-  listed again by hand. Each sheet and its section of the review page are marked "Not a contract option". Button has
-  one, `label-without-icon`: its generated cells have an icon and a label or are icon-only, so a label without an
-  icon, which while loading has the indicator before the label and widens the button (P13), is shown on the sheets
-  with iconOnly false: every variant, size and role, at rest and in each state, 108 combinations on 6 sheets. Like the
-  matrix, supplements are not catalog entries, so the accessibility audit does not walk them.
+  listed again by hand. Each sheet and its section of the review page are marked "Not a contract option". Over a
+  matrix whose rows are icons, a supplement keeps a few of them (`rows`), on one sheet. Where its cell is taller than
+  a generated one, `rowsPerPicture` caps the rows of one picture at a text size that splits sheets
+  (`accessibility5`). There are ten (`SnapshotMatrix/Supplements.swift`, `Supplement.all`):
+  - Button, `label-without-icon`: its generated cells have an icon and a label or are icon-only, so a label without an
+    icon, which while loading has the indicator before the label and widens the button (P13), is shown on the sheets
+    with iconOnly false: every variant, size and role, at rest and in each state, 108 combinations on 6 sheets.
+  - Icon, `beside-text`: three glyphs, each beside text in four roles (one row to a picture at `accessibility5`); and
+    `color-roles`: six glyphs in the color roles of design-language/07 (three rows to a picture there).
+  - Surface, `nesting`, on the sheet with outlined true: for raised and dragged, two outlined cards of the kind in a
+    sunken column; for sunken, an outlined well in a raised card.
+  - Checkbox, `list-colors`: the twelve list colors through `.category(_:)` (three rows to a picture at
+    `accessibility5`); and `text-roles`: a task's check and a subtask's beside labels of their roles.
+  - Text field, at size m: `card-notes`, a card's title and multiline notes (two rows to a picture at
+    `accessibility5`); `secure-field`, the style on `SecureField`; `on-surface` and `on-sunken`, a field on those
+    grounds.
+
+  Like the matrix, supplements are not catalog entries, so the accessibility audit does not walk them.
 
 ```sh
-tools/apple/snapshot-matrix.sh ios                       # or macos; --component button for one component
+tools/apple/snapshot-matrix.sh ios                       # or macos; --component button,rule for some components
 tools/apple/snapshot-matrix.sh compare <before> <after>  # exit 0 when every image is the same, 1 otherwise
+tools/apple/snapshot-matrix.sh merge --expect button,rule <out> <capture>…  # captures taken apart, one page
 ```
 
 The capture runs the UI test `SnapshotMatrixTests` once (one `xcodebuild test`), which launches the catalog for every
@@ -164,8 +213,64 @@ device and scale, and each picture's size) and prints its path; it fails when an
 check. The
 comparison writes `before/`, `after/`, `diff/` and its `index.html` to `.build/snapshot-matrix/compare/` (`--out` to
 change it). Compare only captures from the same environment: two local runs, or two CI artifacts (decisions/0008).
-CI's `snapshot-matrix` job runs one job per platform, side by side, and uploads each platform's page as its own
-artifact, `snapshot-matrix-ios` and `snapshot-matrix-macos`.
+Between two iOS captures (both manifests say `ios`, at one scale) the comparison ignores the home indicator
+(`HomeIndicator` in `tools/apple/snapshot-pages.swift`): the system draws it over the app, and from launch to launch
+draws it or not, or at another opacity, so two captures of the same commit differed there and nowhere else (iPhone 17,
+iOS 26.3: every differing pixel in x 387–819, y 2583–2598 of 1206 × 2622, a capsule of 144 × 5 pt centred 10.3 pt above
+the bottom). A pixel is ignored only on that footprint, with 1.5 pt of tolerance, and only when three things hold in
+the image:
+- the content stays clear of the box around the indicator (160 × 12 pt, from 16 to 4 pt above the bottom of the
+  screen) in both pictures: the band from 4 pt above the box down to its bottom, across the whole width, is one color
+  (`clearOfContent`). The box lies in the bottom safe-area inset (34 pt on iPhone 17), under which a sheet that fits
+  draws only its canvas; a sheet that does not fit reaches into the band and is compared whole. Scanned on iOS
+  captures of 2026-11-19, every sheet of Button, Icon, Text, Surface, Rule and Text field ends 39 pt or more above
+  the bottom of the screen, and Checkbox's 22 pt or more but for its twelve list colors at `accessibility5`, which
+  then overflowed the screen at both ends (13 pt above the bottom). Since e76d2d3 that sheet is taken in two
+  pictures of three rows there, which fit under the status bar with nothing at the bottom (the Icon follow-up's
+  capture; not scanned here);
+- nothing in the box differs off the footprint (`onlyOnFootprint`): a block, a dot or a line elsewhere in the box, or
+  wider or taller than the indicator, is reported, together with whatever differs on the footprint;
+- both captures are iOS at one scale.
+
+What is ignored stays visible: a diff draws it in amber, a changed image's line counts it apart, and every image that
+differs on the indicator alone counts as unchanged but gets its diff picture under a heading of its own, "Unchanged but
+for the home indicator", not collapsed, and in the summary line.
+
+CI's `snapshot-matrix` job packs the components of the generated registry `ComponentMatrix.all` into legs by their
+number of images (first fit, the largest first, at most 40 minutes of capture on the runner, 15 s an iOS image and 8 s
+a macOS one; the counts are in the workflow's `IMAGES`, and the page job warns when a capture's count differs). Each leg
+captures its components in one run (`--component a,b`) and uploads `snapshot-matrix-<platform>-<a+b>`; then
+`snapshot-matrix-pages` puts each platform's legs together with `merge --expect` and uploads one page per platform,
+`snapshot-matrix-ios` and `snapshot-matrix-macos`, as before. A page whose component no leg brought names it at its top.
+With Text field, 365 iOS images go in three legs and 184 macOS images in one.
+
+A capture that the machinery failed, not a sheet, is run once more, as the audit's retry is (#74): when the test wrote
+no manifest and either the test runner did not start ("Failed to install or launch the test runner", "Early unexpected
+exit, operation never finished bootstrapping") or every failure XCTest reported is one of its messages for a request
+to a stalled simulator, the ones the audit counts as infrastructure (a launch that timed out, "Failed to launch
+<XCUIApplicationImpl: …> via Xcode: Timed out while launching application", seen on CI in run 44444325775; a
+background assertion, a terminate, a UI query that timed out). A failure of the test's own (a cell count, a cell
+outside the window, a sheet that did not render or showed a problem, an unknown component), alone or among others, is
+never retried, and nor is a capture that wrote its manifest. The script says `snapshot-matrix: retrying the capture:
+…` and, on GitHub Actions, warns on the run; the first run's log stays as `snapshot-matrix-<platform>[-<a+b>].log`
+and the retry's is `…-retry.log`, both in the leg's artifact. The retry captures everything again, so it starts only
+within 25 minutes of the script's start (`WESTRON_MATRIX_RETRY_BY`); a leg's timeout is 30 minutes and its capture
+time with a third more, so a retry that starts by then ends about 2 minutes before it (`.github/workflows/ci.yml`).
+
+### Behaviour UI tests
+
+`ButtonBehaviorTests`, `CheckboxBehaviorTests`, `TextFieldBehaviorTests` and `IconAccessibilityTests`, in
+`Catalog/CatalogUITests`, check on the catalog's entries what a unit test cannot reach: presses and hit areas, the
+accessibility hierarchy, the keyboard. No `tools/apple/check.sh` target runs them, and neither does CI; run one suite,
+or one test of it, by hand after a change to its component:
+
+```sh
+source tools/apple/xcode-env.sh
+xcodebuild -project platforms/apple/Catalog/Catalog.xcodeproj -scheme Catalog \
+  -destination "platform=iOS Simulator,name=iPhone 17" -derivedDataPath .build/xcode/catalog \
+  -only-testing:CatalogUITests/CheckboxBehaviorTests test    # …/CheckboxBehaviorTests/testPressToggles for one test
+# on macOS: -destination "platform=macOS,arch=$(uname -m)"
+```
 
 ### Accessibility audit
 
@@ -183,17 +288,19 @@ WESTRON_ENTRY=controls,icons tools/apple/check.sh a11y     # those entries only
 WESTRON_ENTRY_SHARD=2/3 tools/apple/check.sh a11y          # every third entry, from the second (after WESTRON_ENTRY)
 ```
 
-CI runs the audit in its own job, `accessibility-audit`, side by side (`fail-fast: false`, 35 minutes each): one job
-for each of the three contrast tests, and the two slow tests split by entries, `testAccessibilityDynamicType` into three
-shards and `testDefaultSettings` into two (`WESTRON_ENTRY_SHARD`). The runner is about 3 times slower than a local Mac:
-with the Button entries (PR #66, 2026-11-17) it took over 36.6 minutes for `testAccessibilityDynamicType`, past the
-timeout, 32.4 minutes for `testDefaultSettings`, and 16–19 minutes for each of the others, against 627 s, 476 s and
-194–196 s locally. The cost is eight parallel jobs, each with its own catalog build, about two runner-hours per run, so
-the audit runs on every push to `main` and on a pull request only when it changes a path the audit depends on:
+CI runs the audit in its own job, `accessibility-audit`, side by side (`fail-fast: false`, 45 minutes each): ten legs
+for the 28 entries of phase 3, `testDefaultSettings` in three shards (`WESTRON_ENTRY_SHARD`),
+`testAccessibilityDynamicType` in four, and each of the three contrast tests in one leg, about 25–28 minutes each, its
+build included (the arithmetic is in `.github/workflows/ci.yml`). Each leg pays about 10 minutes of build and setup
+before its first entry, and at most 5 Mac jobs run at once, so fewer, longer legs finish the run sooner. The runner is
+about 3 times slower than a local Mac: with the Button entries (PR #66, 2026-11-17) it took over 36.6 minutes for
+`testAccessibilityDynamicType`, past the timeout, 32.4 minutes for `testDefaultSettings`, and 16–19 minutes for each of
+the others, against 627 s, 476 s and 194–196 s locally. The cost is ten parallel jobs, about 4.3 runner-hours per run,
+so the audit runs on every push to `main` and on a pull request only when it changes a path the audit depends on:
 `platforms/apple/`, `tokens/`, `spec/`, `tools/apple/`, `Package.swift`, `Package.resolved`, `.xcode-version` or
 `.github/workflows/ci.yml`. The job `audit-scope` decides, from the pull request's merge commit; otherwise the audit's
-jobs show as skipped. If `audit-scope` itself fails, the audit runs. A job that nears its 35 minutes as pages are added
-gets another shard.
+jobs show as skipped. If `audit-scope` itself fails, the audit runs. A leg that passes about 30 minutes as pages are
+added (a contrast leg at about 31 entries) gets another shard, so that a retry still fits its 45.
 
 | Test | Launch arguments | Audit types on iOS |
 |---|---|---|
@@ -233,6 +340,10 @@ gets another shard.
   size, and reports their text as not following Dynamic Type. A catalog page lays its content out eagerly: the
   sample grids with `AdaptiveGrid`, the same columns as an adaptive `LazyVGrid`, and the environment page with
   stacks in a scroll view rather than a `Form`.
+- It does the same with the text of a `ViewThatFits` whose choice the enlarged text changes: the new branch's views
+  take the place of the old one's, and the audit reports the old one's text, which scales, as not following Dynamic
+  Type (`typography-in-text`, whose rows swapped from a row to a column, 2026-11-19). A layout that arranges the same
+  views either way keeps them: that page's `SideBySideOrStacked`, a row where it fits and a column otherwise.
 - An issue that is not the entry's fault, or that the catalog cannot fix, is suppressed one by one, with its reason,
   in `CatalogAccessibilityAuditTests.suppressions`; an audit type is never turned off as a whole.
 - `WESTRON_ENTRY=<id>[,<id>…] tools/apple/check.sh a11y` audits those entries only: one while its issues are being
@@ -245,7 +356,11 @@ gets another shard.
 - A failed run is retried once, narrowly, when the machinery failed rather than a page (#74). On the CI runner the
   simulator now and then stalls for a minute or more, and whatever the test asks of it then fails: terminating the
   catalog ("Failed to terminate dev.westron.catalog:<pid>: Failed to terminate dev.westron.catalog:0", the same
-  message a simulator whose `testmanagerd` is stopped gives), launching it ("does not have a process ID"), a UI
+  message a simulator whose `testmanagerd` is stopped gives), launching it ("does not have a process ID"; in run
+  44444325775, in the first entry of a shard, "Failed to get background assertion for target app with pid <pid>:
+  Timed out while acquiring background assertion.", and in the snapshot matrix's first launch "Failed to launch
+  <XCUIApplicationImpl: …> via Xcode: Timed out while launching application via Xcode."; a launch that fails
+  otherwise stays a finding), a UI
   query ("Failed to get matching snapshot: Timed out while evaluating UI query"; in the same local experiment also
   a drag and a screenshot, "Timed out while synthesizing event", "… requesting screenshot"), the audit ("Audit
   failed to complete in time", -56, which the test retries once on the spot) or the entry not rendering within
@@ -260,22 +375,24 @@ gets another shard.
     uploads the logs of a leg that retried as the `a11y-retried-…` artifact, even when the retry passed.
   - Not retried, so the leg fails: a test with a finding (no entry is audited twice after a finding, so a finding
     that shows once in two runs still fails), a failure outside an entry, a test that did not start (but for the
-    test runner failing to install or launch, the one case where the whole test is run again), a run where
-    XCTest reports more failures than the test classified, and a run where `xcodebuild` exits non-zero although
+    test runner failing to start, the one case where the whole test is run again: "Failed to install or launch the
+    test runner", or "Early unexpected exit, operation never finished bootstrapping" when it crashed while preparing
+    to run tests, run 44444325775), a run where XCTest reports more failures than the test classified, and a run
+    where `xcodebuild` exits non-zero although
     every test passed (the runner died, or the result bundle was not written, after the last test), with
     `a11y: xcodebuild exited with status <n> although every test passed` in its output. A retry that fails again
     fails the leg.
-  - A retry must fit a time budget, 30 minutes from the start of `check.sh a11y`, its build included
-    (`WESTRON_A11Y_RETRY_BUDGET`): a CI leg times out at 35, and a leg the timeout kills uploads no logs. A retry
+  - A retry must fit a time budget, 40 minutes from the start of `check.sh a11y`, its build included
+    (`WESTRON_A11Y_RETRY_BUDGET`): a CI leg times out at 45, and a leg the timeout kills uploads no logs. A retry
     is estimated at 90 s plus, for each entry to retry, the mean time of the entries the first run finished
     without a failure and without an audit the test retried on the spot (-56), from XCTest's `t = <s>s` activity
     times in the log; a stalled entry's time is never used. When there are none, as with a stall in the first
     entry, each entry counts at a time measured on CI with a margin: 90 s for `testDefaultSettings`, 130 s for
     `testAccessibilityDynamicType`, 38 s for the other three. A whole test is retried only in the first half of
     the budget. Past it, the leg fails with a line that says so. On CI the step spends 6.5–17.1 minutes, median
-    10.0 and mean 10.4, before its first entry, so a stall in the first entry of the slowest leg is retried after a
-    build of usual length (about 28.4 minutes in all), and not after a slow one (`tools/apple/check.sh` has the
-    numbers).
+    10.0 and mean 10.4, before its first entry, so a stall in the first entry of the slowest leg, a contrast test's
+    28 entries, is retried after a build of usual length (about 32.6 minutes in all) and after one of up to about
+    17.8 minutes (`tools/apple/check.sh` has the numbers).
   - What the retry can hide: a catalog page that hangs the app only sometimes, since a hung app also times out UI
     queries.
   - `WESTRON_A11Y_FAIL_ONCE=<id>` is a test hook that fails that entry for infrastructure in the first run only, to

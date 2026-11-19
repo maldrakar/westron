@@ -186,6 +186,59 @@ extension CGFloat {
         CGFloat(Westron.Dimension.space800)
     }
 
+    /// The lengths `space.*` in points.
+    public enum space {
+        /// A card's padding: the inset between a card's or a panel's edge and its content. 16 px in the comfortable
+        /// density.
+        ///
+        /// Use for: card padding, panel padding, inset of a grouped block the product draws. Avoid: A system List, Form
+        /// or bar, which keeps its own insets. A gap between elements: use space.within-group or space.between-groups.
+        public static var card: CGFloat {
+            CGFloat(Westron.Dimension.space.card)
+        }
+
+        /// The gap between the elements of one group: the fields of a form section, the cards of a column, the lines of
+        /// a block. 12 px in the comfortable density, half the gap between groups, so the grouping shows through space.
+        ///
+        /// Use for: stack spacing inside a group, gap between cards in a column, gap between a heading and its content.
+        /// Avoid: The gap between two groups: use space.between-groups. A component's own internal gap, which its
+        /// contract gives.
+        public static var withinGroup: CGFloat {
+            CGFloat(Westron.Dimension.space.withinGroup)
+        }
+
+        /// The gap between two groups or sections of a screen. 24 px, twice the gap within a group; a density keeps it.
+        ///
+        /// Use for: stack spacing between sections, gap between groups of a form, gap between blocks of a page. Avoid:
+        /// The gap inside a group: use space.within-group. A separator line where the space already shows the grouping.
+        public static var betweenGroups: CGFloat {
+            CGFloat(Westron.Dimension.space.betweenGroups)
+        }
+
+        /// The lengths `space.page.*` in points.
+        public enum page {
+            /// The page margin on a narrow window: on Apple, the horizontal size class compact. 20 px; a density keeps
+            /// it. It applies to layout the product builds itself, such as a ScrollView or a stack; the system's List,
+            /// Form and bars keep their own insets.
+            ///
+            /// Use for: horizontal margin of a scrolling page on a phone, margin of a stack laid out by the product.
+            /// Avoid: A system List, Form or bar, which keeps its own insets. A wide window: use space.page.wide.
+            public static var narrow: CGFloat {
+                CGFloat(Westron.Dimension.space.page.narrow)
+            }
+
+            /// The page margin on a wide window: on Apple, the horizontal size class regular, and always on a Mac. 32
+            /// px; a density keeps it. It applies to layout the product builds itself, such as a ScrollView or a stack;
+            /// the system's List, Form and bars keep their own insets.
+            ///
+            /// Use for: horizontal margin of a page on an iPad or a Mac, margin of a stack laid out by the product.
+            /// Avoid: A system List, Form or bar, which keeps its own insets. A narrow window: use space.page.narrow.
+            public static var wide: CGFloat {
+                CGFloat(Westron.Dimension.space.page.wide)
+            }
+        }
+    }
+
     /// The lengths `stroke.*` in points.
     public enum stroke {
         /// The edge of glass and of a card on a fill.

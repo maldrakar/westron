@@ -94,7 +94,8 @@ extension Westron.Color {
             light: Westron.RGB(hex: 0x2863D7),
             dark: Westron.RGB(hex: 0x2863D7),
             lightHighContrast: Westron.RGB(hex: 0x1651C3),
-            darkHighContrast: Westron.RGB(hex: 0x6A9EFF))
+            darkHighContrast: Westron.RGB(hex: 0x6A9EFF),
+            backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
 
         /// The accent fill under the pointer.
         public static let accentHover = Westron.Color(
@@ -777,72 +778,96 @@ extension Westron.Color {
         Westron.Category.blue.text,
         Westron.Category.blue.fill,
         Westron.Category.blue.onFill,
+        Westron.Category.blue.control,
+        Westron.Category.blue.onControl,
         Westron.Category.sky.background,
         Westron.Category.sky.border,
         Westron.Category.sky.icon,
         Westron.Category.sky.text,
         Westron.Category.sky.fill,
         Westron.Category.sky.onFill,
+        Westron.Category.sky.control,
+        Westron.Category.sky.onControl,
         Westron.Category.teal.background,
         Westron.Category.teal.border,
         Westron.Category.teal.icon,
         Westron.Category.teal.text,
         Westron.Category.teal.fill,
         Westron.Category.teal.onFill,
+        Westron.Category.teal.control,
+        Westron.Category.teal.onControl,
         Westron.Category.emerald.background,
         Westron.Category.emerald.border,
         Westron.Category.emerald.icon,
         Westron.Category.emerald.text,
         Westron.Category.emerald.fill,
         Westron.Category.emerald.onFill,
+        Westron.Category.emerald.control,
+        Westron.Category.emerald.onControl,
         Westron.Category.green.background,
         Westron.Category.green.border,
         Westron.Category.green.icon,
         Westron.Category.green.text,
         Westron.Category.green.fill,
         Westron.Category.green.onFill,
+        Westron.Category.green.control,
+        Westron.Category.green.onControl,
         Westron.Category.olive.background,
         Westron.Category.olive.border,
         Westron.Category.olive.icon,
         Westron.Category.olive.text,
         Westron.Category.olive.fill,
         Westron.Category.olive.onFill,
+        Westron.Category.olive.control,
+        Westron.Category.olive.onControl,
         Westron.Category.amber.background,
         Westron.Category.amber.border,
         Westron.Category.amber.icon,
         Westron.Category.amber.text,
         Westron.Category.amber.fill,
         Westron.Category.amber.onFill,
+        Westron.Category.amber.control,
+        Westron.Category.amber.onControl,
         Westron.Category.orange.background,
         Westron.Category.orange.border,
         Westron.Category.orange.icon,
         Westron.Category.orange.text,
         Westron.Category.orange.fill,
         Westron.Category.orange.onFill,
+        Westron.Category.orange.control,
+        Westron.Category.orange.onControl,
         Westron.Category.red.background,
         Westron.Category.red.border,
         Westron.Category.red.icon,
         Westron.Category.red.text,
         Westron.Category.red.fill,
         Westron.Category.red.onFill,
+        Westron.Category.red.control,
+        Westron.Category.red.onControl,
         Westron.Category.pink.background,
         Westron.Category.pink.border,
         Westron.Category.pink.icon,
         Westron.Category.pink.text,
         Westron.Category.pink.fill,
         Westron.Category.pink.onFill,
+        Westron.Category.pink.control,
+        Westron.Category.pink.onControl,
         Westron.Category.violet.background,
         Westron.Category.violet.border,
         Westron.Category.violet.icon,
         Westron.Category.violet.text,
         Westron.Category.violet.fill,
         Westron.Category.violet.onFill,
+        Westron.Category.violet.control,
+        Westron.Category.violet.onControl,
         Westron.Category.indigo.background,
         Westron.Category.indigo.border,
         Westron.Category.indigo.icon,
         Westron.Category.indigo.text,
         Westron.Category.indigo.fill,
         Westron.Category.indigo.onFill,
+        Westron.Category.indigo.control,
+        Westron.Category.indigo.onControl,
         chart1,
         chart2,
         chart3,
@@ -979,8 +1004,51 @@ extension Westron {
             }
         }
 
+        /// The fill of a checked control in the list color, such as the task check: the solid fill, darkened or
+        /// lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of
+        /// 2026-11-18).
+        ///
+        /// Use for: checked task check, checked control in a list color. Avoid: Tags, tiles and statuses: they keep
+        /// fill, which is not held to the non-text contrast on the ground.
+        public var control: Westron.Color {
+            switch self {
+            case .blue: Self.blueControl
+            case .sky: Self.skyControl
+            case .teal: Self.tealControl
+            case .emerald: Self.emeraldControl
+            case .green: Self.greenControl
+            case .olive: Self.oliveControl
+            case .amber: Self.amberControl
+            case .orange: Self.orangeControl
+            case .red: Self.redControl
+            case .pink: Self.pinkControl
+            case .violet: Self.violetControl
+            case .indigo: Self.indigoControl
+            }
+        }
+
+        /// The mark and any glyph on the control fill of the list color.
+        ///
+        /// Use for: check mark on a checked task check. Avoid: Text on a lit tag: use on-fill.
+        public var onControl: Westron.Color {
+            switch self {
+            case .blue: Self.blueOnControl
+            case .sky: Self.skyOnControl
+            case .teal: Self.tealOnControl
+            case .emerald: Self.emeraldOnControl
+            case .green: Self.greenOnControl
+            case .olive: Self.oliveOnControl
+            case .amber: Self.amberOnControl
+            case .orange: Self.orangeOnControl
+            case .red: Self.redOnControl
+            case .pink: Self.pinkOnControl
+            case .violet: Self.violetOnControl
+            case .indigo: Self.indigoOnControl
+            }
+        }
+
         /// The colors of the category, one per role, in token order.
-        public var colors: [Westron.Color] { [background, border, icon, text, fill, onFill] }
+        public var colors: [Westron.Color] { [background, border, icon, text, fill, onFill, control, onControl] }
 
         /// The quiet ground of a tag or a row in the list color blue.
         private static let blueBackground = Westron.Color(
@@ -1046,6 +1114,31 @@ extension Westron {
             darkHighContrast: Westron.RGB(hex: 0x101318),
             backgrounds: [["color.category.blue.fill"]])
 
+        /// The fill of a checked control in the list color blue, such as the task check: the solid fill, darkened or
+        /// lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of
+        /// 2026-11-18).
+        ///
+        /// Use for: checked task check, checked control in a list color. Avoid: Tags, tiles and statuses: they keep
+        /// fill, which is not held to the non-text contrast on the ground.
+        private static let blueControl = Westron.Color(
+            name: "color.category.blue.control",
+            light: Westron.RGB(hex: 0x2863D7),
+            dark: Westron.RGB(hex: 0x2863D7),
+            lightHighContrast: Westron.RGB(hex: 0x1651C3),
+            darkHighContrast: Westron.RGB(hex: 0x6A9EFF),
+            backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
+
+        /// The mark and any glyph on the control fill of the list color blue.
+        ///
+        /// Use for: check mark on a checked task check. Avoid: Text on a lit tag: use on-fill.
+        private static let blueOnControl = Westron.Color(
+            name: "color.category.blue.on-control",
+            light: Westron.RGB(hex: 0xFFFFFF),
+            dark: Westron.RGB(hex: 0xFFFFFF),
+            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+            darkHighContrast: Westron.RGB(hex: 0x101318),
+            backgrounds: [["color.category.blue.control"]])
+
         /// The quiet ground of a tag or a row in the list color sky.
         private static let skyBackground = Westron.Color(
             name: "color.category.sky.background",
@@ -1097,6 +1190,31 @@ extension Westron {
             lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
             darkHighContrast: Westron.RGB(hex: 0x101318),
             backgrounds: [["color.category.sky.fill"]])
+
+        /// The fill of a checked control in the list color sky, such as the task check: the solid fill, darkened or
+        /// lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of
+        /// 2026-11-18).
+        ///
+        /// Use for: checked task check, checked control in a list color. Avoid: Tags, tiles and statuses: they keep
+        /// fill, which is not held to the non-text contrast on the ground.
+        private static let skyControl = Westron.Color(
+            name: "color.category.sky.control",
+            light: Westron.RGB(hex: 0x007FAC),
+            dark: Westron.RGB(hex: 0x007FAC),
+            lightHighContrast: Westron.RGB(hex: 0x006082),
+            darkHighContrast: Westron.RGB(hex: 0x2BAADF),
+            backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
+
+        /// The mark and any glyph on the control fill of the list color sky.
+        ///
+        /// Use for: check mark on a checked task check. Avoid: Text on a lit tag: use on-fill.
+        private static let skyOnControl = Westron.Color(
+            name: "color.category.sky.on-control",
+            light: Westron.RGB(hex: 0xFFFFFF),
+            dark: Westron.RGB(hex: 0xFFFFFF),
+            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+            darkHighContrast: Westron.RGB(hex: 0x101318),
+            backgrounds: [["color.category.sky.control"]])
 
         /// The quiet ground of a tag or a row in the list color teal.
         private static let tealBackground = Westron.Color(
@@ -1162,6 +1280,31 @@ extension Westron {
             darkHighContrast: Westron.RGB(hex: 0x101318),
             backgrounds: [["color.category.teal.fill"]])
 
+        /// The fill of a checked control in the list color teal, such as the task check: the solid fill, darkened or
+        /// lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of
+        /// 2026-11-18).
+        ///
+        /// Use for: checked task check, checked control in a list color. Avoid: Tags, tiles and statuses: they keep
+        /// fill, which is not held to the non-text contrast on the ground.
+        private static let tealControl = Westron.Color(
+            name: "color.category.teal.control",
+            light: Westron.RGB(hex: 0x008485),
+            dark: Westron.RGB(hex: 0x008485),
+            lightHighContrast: Westron.RGB(hex: 0x006364),
+            darkHighContrast: Westron.RGB(hex: 0x26B0B0),
+            backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
+
+        /// The mark and any glyph on the control fill of the list color teal.
+        ///
+        /// Use for: check mark on a checked task check. Avoid: Text on a lit tag: use on-fill.
+        private static let tealOnControl = Westron.Color(
+            name: "color.category.teal.on-control",
+            light: Westron.RGB(hex: 0xFFFFFF),
+            dark: Westron.RGB(hex: 0xFFFFFF),
+            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+            darkHighContrast: Westron.RGB(hex: 0x101318),
+            backgrounds: [["color.category.teal.control"]])
+
         /// The quiet ground of a tag or a row in the list color emerald.
         private static let emeraldBackground = Westron.Color(
             name: "color.category.emerald.background",
@@ -1225,6 +1368,31 @@ extension Westron {
             lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
             darkHighContrast: Westron.RGB(hex: 0x101318),
             backgrounds: [["color.category.emerald.fill"]])
+
+        /// The fill of a checked control in the list color emerald, such as the task check: the solid fill, darkened or
+        /// lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of
+        /// 2026-11-18).
+        ///
+        /// Use for: checked task check, checked control in a list color. Avoid: Tags, tiles and statuses: they keep
+        /// fill, which is not held to the non-text contrast on the ground.
+        private static let emeraldControl = Westron.Color(
+            name: "color.category.emerald.control",
+            light: Westron.RGB(hex: 0x018766),
+            dark: Westron.RGB(hex: 0x018766),
+            lightHighContrast: Westron.RGB(hex: 0x00654C),
+            darkHighContrast: Westron.RGB(hex: 0x46B18D),
+            backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
+
+        /// The mark and any glyph on the control fill of the list color emerald.
+        ///
+        /// Use for: check mark on a checked task check. Avoid: Text on a lit tag: use on-fill.
+        private static let emeraldOnControl = Westron.Color(
+            name: "color.category.emerald.on-control",
+            light: Westron.RGB(hex: 0xFFFFFF),
+            dark: Westron.RGB(hex: 0xFFFFFF),
+            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+            darkHighContrast: Westron.RGB(hex: 0x101318),
+            backgrounds: [["color.category.emerald.control"]])
 
         /// The quiet ground of a tag or a row in the list color green.
         private static let greenBackground = Westron.Color(
@@ -1290,6 +1458,31 @@ extension Westron {
             darkHighContrast: Westron.RGB(hex: 0x101318),
             backgrounds: [["color.category.green.fill"]])
 
+        /// The fill of a checked control in the list color green, such as the task check: the solid fill, darkened or
+        /// lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of
+        /// 2026-11-18).
+        ///
+        /// Use for: checked task check, checked control in a list color. Avoid: Tags, tiles and statuses: they keep
+        /// fill, which is not held to the non-text contrast on the ground.
+        private static let greenControl = Westron.Color(
+            name: "color.category.green.control",
+            light: Westron.RGB(hex: 0x32873A),
+            dark: Westron.RGB(hex: 0x32873A),
+            lightHighContrast: Westron.RGB(hex: 0x03681A),
+            darkHighContrast: Westron.RGB(hex: 0x5DB161),
+            backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
+
+        /// The mark and any glyph on the control fill of the list color green.
+        ///
+        /// Use for: check mark on a checked task check. Avoid: Text on a lit tag: use on-fill.
+        private static let greenOnControl = Westron.Color(
+            name: "color.category.green.on-control",
+            light: Westron.RGB(hex: 0xFFFFFF),
+            dark: Westron.RGB(hex: 0xFFFFFF),
+            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+            darkHighContrast: Westron.RGB(hex: 0x101318),
+            backgrounds: [["color.category.green.control"]])
+
         /// The quiet ground of a tag or a row in the list color olive.
         private static let oliveBackground = Westron.Color(
             name: "color.category.olive.background",
@@ -1353,6 +1546,31 @@ extension Westron {
             lightHighContrast: Westron.RGB(hex: 0x161710),
             darkHighContrast: Westron.RGB(hex: 0x161710),
             backgrounds: [["color.category.olive.fill"]])
+
+        /// The fill of a checked control in the list color olive, such as the task check: the solid fill, darkened or
+        /// lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of
+        /// 2026-11-18).
+        ///
+        /// Use for: checked task check, checked control in a list color. Avoid: Tags, tiles and statuses: they keep
+        /// fill, which is not held to the non-text contrast on the ground.
+        private static let oliveControl = Westron.Color(
+            name: "color.category.olive.control",
+            light: Westron.RGB(hex: 0x8D9230),
+            dark: Westron.RGB(hex: 0xBFC566),
+            lightHighContrast: Westron.RGB(hex: 0x595D00),
+            darkHighContrast: Westron.RGB(hex: 0xBFC566),
+            backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
+
+        /// The mark and any glyph on the control fill of the list color olive.
+        ///
+        /// Use for: check mark on a checked task check. Avoid: Text on a lit tag: use on-fill.
+        private static let oliveOnControl = Westron.Color(
+            name: "color.category.olive.on-control",
+            light: Westron.RGB(hex: 0x161710),
+            dark: Westron.RGB(hex: 0x161710),
+            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+            darkHighContrast: Westron.RGB(hex: 0x161710),
+            backgrounds: [["color.category.olive.control"]])
 
         /// The quiet ground of a tag or a row in the list color amber.
         private static let amberBackground = Westron.Color(
@@ -1418,6 +1636,31 @@ extension Westron {
             darkHighContrast: Westron.RGB(hex: 0x191610),
             backgrounds: [["color.category.amber.fill"]])
 
+        /// The fill of a checked control in the list color amber, such as the task check: the solid fill, darkened or
+        /// lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of
+        /// 2026-11-18).
+        ///
+        /// Use for: checked task check, checked control in a list color. Avoid: Tags, tiles and statuses: they keep
+        /// fill, which is not held to the non-text contrast on the ground.
+        private static let amberControl = Westron.Color(
+            name: "color.category.amber.control",
+            light: Westron.RGB(hex: 0xB88300),
+            dark: Westron.RGB(hex: 0xF3B01D),
+            lightHighContrast: Westron.RGB(hex: 0x765200),
+            darkHighContrast: Westron.RGB(hex: 0xF3B01D),
+            backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
+
+        /// The mark and any glyph on the control fill of the list color amber.
+        ///
+        /// Use for: check mark on a checked task check. Avoid: Text on a lit tag: use on-fill.
+        private static let amberOnControl = Westron.Color(
+            name: "color.category.amber.on-control",
+            light: Westron.RGB(hex: 0x191610),
+            dark: Westron.RGB(hex: 0x191610),
+            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+            darkHighContrast: Westron.RGB(hex: 0x191610),
+            backgrounds: [["color.category.amber.control"]])
+
         /// The quiet ground of a tag or a row in the list color orange.
         private static let orangeBackground = Westron.Color(
             name: "color.category.orange.background",
@@ -1482,6 +1725,31 @@ extension Westron {
             darkHighContrast: Westron.RGB(hex: 0x101318),
             backgrounds: [["color.category.orange.fill"]])
 
+        /// The fill of a checked control in the list color orange, such as the task check: the solid fill, darkened or
+        /// lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of
+        /// 2026-11-18).
+        ///
+        /// Use for: checked task check, checked control in a list color. Avoid: Tags, tiles and statuses: they keep
+        /// fill, which is not held to the non-text contrast on the ground.
+        private static let orangeControl = Westron.Color(
+            name: "color.category.orange.control",
+            light: Westron.RGB(hex: 0xBF5900),
+            dark: Westron.RGB(hex: 0xBF5900),
+            lightHighContrast: Westron.RGB(hex: 0x914200),
+            darkHighContrast: Westron.RGB(hex: 0xF08139),
+            backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
+
+        /// The mark and any glyph on the control fill of the list color orange.
+        ///
+        /// Use for: check mark on a checked task check. Avoid: Text on a lit tag: use on-fill.
+        private static let orangeOnControl = Westron.Color(
+            name: "color.category.orange.on-control",
+            light: Westron.RGB(hex: 0xFFFFFF),
+            dark: Westron.RGB(hex: 0xFFFFFF),
+            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+            darkHighContrast: Westron.RGB(hex: 0x101318),
+            backgrounds: [["color.category.orange.control"]])
+
         /// The quiet ground of a tag or a row in the list color red.
         private static let redBackground = Westron.Color(
             name: "color.category.red.background",
@@ -1533,6 +1801,31 @@ extension Westron {
             lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
             darkHighContrast: Westron.RGB(hex: 0x101318),
             backgrounds: [["color.category.red.fill"]])
+
+        /// The fill of a checked control in the list color red, such as the task check: the solid fill, darkened or
+        /// lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of
+        /// 2026-11-18).
+        ///
+        /// Use for: checked task check, checked control in a list color. Avoid: Tags, tiles and statuses: they keep
+        /// fill, which is not held to the non-text contrast on the ground.
+        private static let redControl = Westron.Color(
+            name: "color.category.red.control",
+            light: Westron.RGB(hex: 0xA72120),
+            dark: Westron.RGB(hex: 0xBB3631),
+            lightHighContrast: Westron.RGB(hex: 0xA72120),
+            darkHighContrast: Westron.RGB(hex: 0xFE7469),
+            backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
+
+        /// The mark and any glyph on the control fill of the list color red.
+        ///
+        /// Use for: check mark on a checked task check. Avoid: Text on a lit tag: use on-fill.
+        private static let redOnControl = Westron.Color(
+            name: "color.category.red.on-control",
+            light: Westron.RGB(hex: 0xFFFFFF),
+            dark: Westron.RGB(hex: 0xFFFFFF),
+            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+            darkHighContrast: Westron.RGB(hex: 0x101318),
+            backgrounds: [["color.category.red.control"]])
 
         /// The quiet ground of a tag or a row in the list color pink.
         private static let pinkBackground = Westron.Color(
@@ -1598,6 +1891,31 @@ extension Westron {
             darkHighContrast: Westron.RGB(hex: 0x101318),
             backgrounds: [["color.category.pink.fill"]])
 
+        /// The fill of a checked control in the list color pink, such as the task check: the solid fill, darkened or
+        /// lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of
+        /// 2026-11-18).
+        ///
+        /// Use for: checked task check, checked control in a list color. Avoid: Tags, tiles and statuses: they keep
+        /// fill, which is not held to the non-text contrast on the ground.
+        private static let pinkControl = Westron.Color(
+            name: "color.category.pink.control",
+            light: Westron.RGB(hex: 0xB54481),
+            dark: Westron.RGB(hex: 0xB54481),
+            lightHighContrast: Westron.RGB(hex: 0x9C2C6C),
+            darkHighContrast: Westron.RGB(hex: 0xEE77B3),
+            backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
+
+        /// The mark and any glyph on the control fill of the list color pink.
+        ///
+        /// Use for: check mark on a checked task check. Avoid: Text on a lit tag: use on-fill.
+        private static let pinkOnControl = Westron.Color(
+            name: "color.category.pink.on-control",
+            light: Westron.RGB(hex: 0xFFFFFF),
+            dark: Westron.RGB(hex: 0xFFFFFF),
+            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+            darkHighContrast: Westron.RGB(hex: 0x101318),
+            backgrounds: [["color.category.pink.control"]])
+
         /// The quiet ground of a tag or a row in the list color violet.
         private static let violetBackground = Westron.Color(
             name: "color.category.violet.background",
@@ -1662,6 +1980,31 @@ extension Westron {
             darkHighContrast: Westron.RGB(hex: 0x101318),
             backgrounds: [["color.category.violet.fill"]])
 
+        /// The fill of a checked control in the list color violet, such as the task check: the solid fill, darkened or
+        /// lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of
+        /// 2026-11-18).
+        ///
+        /// Use for: checked task check, checked control in a list color. Avoid: Tags, tiles and statuses: they keep
+        /// fill, which is not held to the non-text contrast on the ground.
+        private static let violetControl = Westron.Color(
+            name: "color.category.violet.control",
+            light: Westron.RGB(hex: 0x7F51C1),
+            dark: Westron.RGB(hex: 0x7F51C1),
+            lightHighContrast: Westron.RGB(hex: 0x6F3FAE),
+            darkHighContrast: Westron.RGB(hex: 0xB588FD),
+            backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
+
+        /// The mark and any glyph on the control fill of the list color violet.
+        ///
+        /// Use for: check mark on a checked task check. Avoid: Text on a lit tag: use on-fill.
+        private static let violetOnControl = Westron.Color(
+            name: "color.category.violet.on-control",
+            light: Westron.RGB(hex: 0xFFFFFF),
+            dark: Westron.RGB(hex: 0xFFFFFF),
+            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+            darkHighContrast: Westron.RGB(hex: 0x101318),
+            backgrounds: [["color.category.violet.control"]])
+
         /// The quiet ground of a tag or a row in the list color indigo.
         private static let indigoBackground = Westron.Color(
             name: "color.category.indigo.background",
@@ -1725,6 +2068,31 @@ extension Westron {
             lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
             darkHighContrast: Westron.RGB(hex: 0x101318),
             backgrounds: [["color.category.indigo.fill"]])
+
+        /// The fill of a checked control in the list color indigo, such as the task check: the solid fill, darkened or
+        /// lightened where it would not stand out from the ground the control sits on (decisions/0012, revision of
+        /// 2026-11-18).
+        ///
+        /// Use for: checked task check, checked control in a list color. Avoid: Tags, tiles and statuses: they keep
+        /// fill, which is not held to the non-text contrast on the ground.
+        private static let indigoControl = Westron.Color(
+            name: "color.category.indigo.control",
+            light: Westron.RGB(hex: 0x5A58C2),
+            dark: Westron.RGB(hex: 0x5B5AC3),
+            lightHighContrast: Westron.RGB(hex: 0x4F4BB3),
+            darkHighContrast: Westron.RGB(hex: 0x9095FF),
+            backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
+
+        /// The mark and any glyph on the control fill of the list color indigo.
+        ///
+        /// Use for: check mark on a checked task check. Avoid: Text on a lit tag: use on-fill.
+        private static let indigoOnControl = Westron.Color(
+            name: "color.category.indigo.on-control",
+            light: Westron.RGB(hex: 0xFFFFFF),
+            dark: Westron.RGB(hex: 0xFFFFFF),
+            lightHighContrast: Westron.RGB(hex: 0xFFFFFF),
+            darkHighContrast: Westron.RGB(hex: 0x101318),
+            backgrounds: [["color.category.indigo.control"]])
     }
 }
 
@@ -2189,6 +2557,49 @@ extension Westron.Dimension {
     /// Step 800 of the space ladder: 64 px.
     public static let space800 = Westron.Dimension(name: "space.800", value: 64)
 
+    /// The lengths `space.*`.
+    public enum space {
+        /// A card's padding: the inset between a card's or a panel's edge and its content. 16 px in the comfortable
+        /// density.
+        ///
+        /// Use for: card padding, panel padding, inset of a grouped block the product draws. Avoid: A system List, Form
+        /// or bar, which keeps its own insets. A gap between elements: use space.within-group or space.between-groups.
+        public static let card = Westron.Dimension(name: "space.card", value: 16)
+
+        /// The gap between the elements of one group: the fields of a form section, the cards of a column, the lines of
+        /// a block. 12 px in the comfortable density, half the gap between groups, so the grouping shows through space.
+        ///
+        /// Use for: stack spacing inside a group, gap between cards in a column, gap between a heading and its content.
+        /// Avoid: The gap between two groups: use space.between-groups. A component's own internal gap, which its
+        /// contract gives.
+        public static let withinGroup = Westron.Dimension(name: "space.within-group", value: 12)
+
+        /// The gap between two groups or sections of a screen. 24 px, twice the gap within a group; a density keeps it.
+        ///
+        /// Use for: stack spacing between sections, gap between groups of a form, gap between blocks of a page. Avoid:
+        /// The gap inside a group: use space.within-group. A separator line where the space already shows the grouping.
+        public static let betweenGroups = Westron.Dimension(name: "space.between-groups", value: 24)
+
+        /// The lengths `space.page.*`.
+        public enum page {
+            /// The page margin on a narrow window: on Apple, the horizontal size class compact. 20 px; a density keeps
+            /// it. It applies to layout the product builds itself, such as a ScrollView or a stack; the system's List,
+            /// Form and bars keep their own insets.
+            ///
+            /// Use for: horizontal margin of a scrolling page on a phone, margin of a stack laid out by the product.
+            /// Avoid: A system List, Form or bar, which keeps its own insets. A wide window: use space.page.wide.
+            public static let narrow = Westron.Dimension(name: "space.page.narrow", value: 20)
+
+            /// The page margin on a wide window: on Apple, the horizontal size class regular, and always on a Mac. 32
+            /// px; a density keeps it. It applies to layout the product builds itself, such as a ScrollView or a stack;
+            /// the system's List, Form and bars keep their own insets.
+            ///
+            /// Use for: horizontal margin of a page on an iPad or a Mac, margin of a stack laid out by the product.
+            /// Avoid: A system List, Form or bar, which keeps its own insets. A narrow window: use space.page.narrow.
+            public static let wide = Westron.Dimension(name: "space.page.wide", value: 32)
+        }
+    }
+
     /// The lengths `stroke.*`.
     public enum stroke {
         /// The edge of glass and of a card on a fill.
@@ -2286,6 +2697,11 @@ extension Westron.Dimension {
         space500,
         space600,
         space800,
+        space.card,
+        space.withinGroup,
+        space.betweenGroups,
+        space.page.narrow,
+        space.page.wide,
         stroke.hairline,
         stroke.thin,
         stroke.regular,

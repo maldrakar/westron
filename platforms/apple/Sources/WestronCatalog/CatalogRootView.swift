@@ -33,6 +33,7 @@ public struct CatalogRootView: View {
                 .preferredColorScheme(options.appearance?.colorScheme)
                 .modifier(ContrastOverride(contrast: options.contrast?.colorSchemeContrast))
                 .modifier(DynamicTypeOverride(size: options.dynamicTypeSize))
+                .modifier(LegibilityWeightOverride(weight: options.legibilityWeight?.legibilityWeight))
         }
     }
 
@@ -98,6 +99,20 @@ private struct DynamicTypeOverride: ViewModifier {
     func body(content: Content) -> some View {
         if let size {
             content.dynamicTypeSize(size)
+        } else {
+            content
+        }
+    }
+}
+
+/// The system's Bold Text, as SwiftUI passes it down: the environment's `legibilityWeight`, which the system font and
+/// westron's text roles read.
+private struct LegibilityWeightOverride: ViewModifier {
+    let weight: LegibilityWeight?
+
+    func body(content: Content) -> some View {
+        if let weight {
+            content.environment(\.legibilityWeight, weight)
         } else {
             content
         }

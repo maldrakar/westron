@@ -1,7 +1,8 @@
 # 0013. Typography, space, shape and motion
 
 Date: 2026-11-15. Status: accepted. The owner chose direction B on the direction specimens. Its default density is
-comfortable. Revised 2026-11-16: control heights and the disabled opacity.
+comfortable. Revised 2026-11-16: control heights and the disabled opacity. Revised 2026-11-18: the roles of the
+spacing rhythm and where the page margin applies.
 
 ## Context
 
@@ -149,6 +150,41 @@ tokens.
   keep its label and its variant recognizable. One value serves every theme; WCAG exempts an inactive control from
   contrast (chapter 08).
 
+## Revision of 2026-11-18
+
+In the interview for the phase 3 layout primitives (#29) the owner turned B's rhythm into tokens and answered two open
+questions of chapter 06. The owner answered three things: five semantic roles for the rhythm, the page margin switching
+by horizontal size class, and westron's margins applying only to layout the product builds itself. Two parts below are
+not the owner's and wait for the owner's confirmation: the role names, which the implementing agent chose, and "no
+Swift helper for the page margin in this phase", which the coordinator decided under the owner's delegation of
+2026-11-18.
+
+- **The rhythm gets five semantic roles.** They alias the ladder, as `radius.card` aliases a radius step:
+
+  | Where | Token | Aliases | Apple |
+  |---|---|---|---|
+  | A card's padding | `space.card` | `space.200`, 16 | `CGFloat.space.card` |
+  | The gap inside a group | `space.within-group` | `space.150`, 12 | `CGFloat.space.withinGroup` |
+  | The gap between groups | `space.between-groups` | `space.300`, 24 | `CGFloat.space.betweenGroups` |
+  | The page margin on a narrow window | `space.page.narrow` | `space.250`, 20 | `CGFloat.space.page.narrow` |
+  | The page margin on a wide window | `space.page.wide` | `space.400`, 32 | `CGFloat.space.page.wide` |
+
+  The names `space.card`, `space.within-group`, `space.between-groups`, `space.page.narrow` and `space.page.wide` are
+  the implementing agent's, under the owner's delegation of 2026-11-18, pending the owner's confirmation.
+
+  A role names where the space goes, so the compact density (#33) can point a role at another step, such as the gap
+  inside a group one step down, without changing the ladder or the code that uses the role. The density's values
+  still arrive with #33.
+- **Narrow and wide follow the horizontal size class on Apple.** Compact takes `space.page.narrow`, regular takes
+  `space.page.wide`, and a Mac is always wide. On the web, GNOME and Android it is a breakpoint, decided in their
+  phases. westron adds no Swift helper that picks the margin yet: new public API in WestronUI needs a contract or a
+  reviewed adapter, so a product reads the size class itself for now. This is the coordinator's decision under the
+  owner's delegation of 2026-11-18, pending the owner's confirmation.
+- **westron's margins apply only to layout the product builds itself:** a `ScrollView`, a stack, a grid. The system's
+  `List`, `Form` and bars keep their own insets, as a system control keeps its own look (decisions/0003).
+- **Left for later.** Nesting guides and the labelled area line belong to a phase 4 component; the values of compact
+  come with #33.
+
 ## Why
 
 - **Text styles.** They keep Dynamic Type and each platform's own sizes. The brand lives in the heading face and
@@ -169,7 +205,8 @@ tokens.
 
 - **Motion.** The pilot's motions, such as a done row lingering 0.7 s before it leaves, become the product's
   behavior. They are built on these tokens.
-- **Density.** The size tokens for controls and rows, and the compact context, arrive with #33.
+- **Density.** The size tokens for controls and rows, and the compact context, arrive with #33. Compact points the
+  rhythm's roles at its own steps there.
 - **Reduce Motion.** The rule lives here until a component needs it in tokens. It can then become a westron
   extension, `dev.westron.reducedMotion`.
 - **Component contracts.** Contracts in phases 2–4 bind to these tokens. A value a component needs that is not on a

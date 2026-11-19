@@ -1,7 +1,8 @@
 # 0012. Color
 
 Date: 2026-11-15. Status: accepted. The owner chose direction B with the cobalt palette on the direction specimens.
-Revised 2026-11-16: pressed fills.
+Revised 2026-11-16: pressed fills. Revised 2026-11-18: the fill of a checked control in a list color, chosen by an
+agent on the owner's behalf and pending the owner's confirmation.
 
 ## Context
 
@@ -141,6 +142,93 @@ chose fills one step apart, solved by the palette like every other color (#56).
   and danger text on the hover and pressed fills: 260 pairs, none failed.
 - **Disabled is not a color.** A disabled control is drawn whole at `opacity.disabled` (decisions/0013), not in
   colors of its own; WCAG exempts it from contrast (chapter 08).
+
+## Revision of 2026-11-18
+
+**Status of this revision: chosen by an agent on the owner's behalf, pending the owner's confirmation.**
+
+Phase 3's checkbox is the round task check (#31). Unchecked it is a ring in `color.border.strong`. Checked it is a
+disc in the list's color, or in `background.accent` by default, with the mark on it. A checked disc is told from the
+ground only by its fill, so the fill is a non-text indicator in WCAG's sense. Before this revision no fill declared a
+contrast against a ground, and the pilot's amber disc measured 2.44:1 (`research_notes/pilot-inventory.md` §2.2, T14).
+In the interview the owner chose to require 3:1 from the fills rather than draw a ring around the checked disc,
+accepting that the light colors darken.
+
+**The measurement.** `tools/westron tokens contrast --all`, with `non-text` declared for every
+`color.category.<name>.fill` and for `background.accent` on `background.canvas`, `surface` and `sunken`. Those grounds
+are the ones a check sits on, including a board card in a sunken column. Sixteen pairs failed:
+
+| Fill | Theme | Hex | On canvas / surface / sunken | Target |
+|---|---|---|---|---|
+| olive | light | `#BFC566` | 1.76 / 1.84 / 1.65 | 3 |
+| amber | light | `#F3B01D` | 1.81 / 1.90 / 1.71 | 3 |
+| olive | light-hc | `#BFC566` | 1.76 / 1.84 / 1.65 | 4.5 |
+| amber | light-hc | `#F3B01D` | 1.81 / 1.90 / 1.71 | 4.5 |
+| red | dark | `#A72120` | 2.55 / 2.34 / 2.68 | 3 |
+| indigo | dark | `#5A58C2` | 3.19 / 2.94 / 3.36 | 3 |
+
+Everything else passed. The accent passed in every theme: light 4.89–5.44, dark 3.14–3.59, light-hc 6.29–7.00,
+dark-hc 6.47–7.41. The other fills passed at 4.04 or more in light, 3.13 in dark and 6.29 in light high contrast, and
+every fill passed in dark high contrast.
+
+Raising step 9 in place does more than the owner was told. `status.warning.fill` is amber 9. `status.danger.fill`,
+`fill-hover` and `fill-pressed` are red 9, 10 and `fill-pressed`, which Button's destructive variant uses. In light
+high contrast a fill at 4.5:1 to the light canvas under a dark label at 7:1 would need 31.5:1 between the canvas and
+the label, beyond the 21:1 that WCAG's ratio can reach. So there amber and olive need a white label, and with it they
+turn brown.
+
+**The options**, with the values the solver gives:
+
+- **A. Raise step 9 in place.**
+  - amber 9: light `#B88300` (dark label 5.40); light-hc `#765200` with a white label (7.05).
+  - olive 9: light `#8D9230` (5.40); light-hc `#595D00` with a white label (7.02).
+  - red 9 in dark: `#BB3631` (white 5.70), with hover `#AD2825` and pressed `#9F1618`.
+  - indigo 9 in dark: `#5B5AC3`.
+  - Side effects: the warning fill, the danger fill and its states move, and so does Button's destructive variant in
+    dark. Danger in dark loses the 7:1 that keeps it apart from success.
+- **B. A separate control fill used only by controls.** `color.category.<name>.control` and `on-control`, solved to
+  the same values as A. Tags, tiles, statuses and Button keep every value.
+- **C. A ring only around the failing discs.** It is drawn in `category.<name>.border`, step 8, which already meets
+  the target on every ground: amber `#AF7C04`, olive `#868A42`, red in dark `#BF564D`, indigo in dark `#6B6FC3`,
+  and in light-hc amber `#8A6100` and olive `#696D23`. No color moves, but the owner had decided against a ring.
+- **D. Exceptions per color.** The failing fills stay below the target, on the argument that the mark identifies the
+  checked state: `on-fill` is at 4.5:1, or 7:1 in high contrast, on its fill.
+- **E. A mix.** Fix indigo in place, which is one 8-bit step on a list color alone, and use B, C or D for the rest.
+
+**The choice: B.** The owner was away. The coordinator agent chose it on the owner's behalf, and the pull request
+lists it for the owner to confirm. B keeps the owner's decision for the check, 3:1 from the fill with no ring, and
+moves no other color.
+
+- **Each ramp gets `control` and `control-contrast`.** The palette generator solves them like `contrast` and
+  `fill-pressed`.
+  - Where step 9 already meets the non-text target on the canvas and the raised and sunken surfaces, `control` is
+    step 9 and `control-contrast` is `contrast`. The target is 3:1, or 4.5:1 in high contrast.
+  - Otherwise `control` moves away from the canvas the least lightness that meets the target.
+  - If step 9's label no longer reads there at 4.5:1 (7:1 in high contrast), the other label takes over: white for a
+    dark ink, the ink for white. `control` then moves on until both targets hold.
+  - Hue and chroma stay step 9's, within sRGB: where the moved lightness cannot hold that chroma, the gamut mapping
+    lowers it, as it lowers amber's. Nothing is added to `palette.json`: the targets are the non-text and text targets
+    above.
+- **New semantic colors.** `color.category.<name>.control` and `color.category.<name>.on-control`, for all twelve list
+  colors. `control` declares `non-text` on the three grounds, and `on-control` declares `text` on `control`.
+  `background.accent` declares `non-text` on the same grounds; its value does not change.
+- **The values that differ from the fill**, with their contrast on canvas / surface / sunken and their label's:
+
+  | Color | Theme | `fill` | `control` | On the grounds | `on-control` |
+  |---|---|---|---|---|---|
+  | olive | light | `#BFC566` | `#8D9230` | 3.19 / 3.34 / 3.00 | dark `#161710`, 5.40 |
+  | amber | light | `#F3B01D` | `#B88300` | 3.19 / 3.34 / 3.00 | dark `#191610`, 5.40 |
+  | olive | light-hc | `#BFC566` | `#595D00` | 6.71 / 7.02 / 6.31 | white, 7.02 |
+  | amber | light-hc | `#F3B01D` | `#765200` | 6.74 / 7.05 / 6.34 | white, 7.05 |
+  | red | dark | `#A72120` | `#BB3631` | 3.26 / 3.00 / 3.43 | white, 5.69 |
+  | indigo | dark | `#5A58C2` | `#5B5AC3` | 3.27 / 3.01 / 3.44 | white, 5.68 |
+
+  Every other list color's `control` is its `fill`, in every theme.
+- **No other value changes.** The 260 pairs declared before keep their ratios in all four themes. With the 51 new
+  ones, `tools/westron tokens contrast` measured 311 declared pairs in each theme, and none failed.
+- **Visibly**, a checked amber or olive check is an ochre or a darker olive in light. In light high contrast it is a
+  brown or a deep olive with a white mark. A checked red check is a little brighter in dark. A lit tag keeps the bright
+  fill.
 
 ## Why
 

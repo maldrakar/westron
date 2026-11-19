@@ -88,6 +88,35 @@ Date: 2026-11-14. Status: accepted.
   (one failed, one passed after a retry). The step spends 6.5–17.1 minutes, median 10.0 and mean 10.4, before its
   first entry; so a stall in the first entry of the slowest leg is retried within the budget after a usual build
   (10.4 + 3 + 15 = 28.4 minutes), and the budget of 30 and the leg's 35 minutes stay as they are.
+  2026-11-19 (phase 3): the catalog grows from 17 entries to 28 (Text, Surface, Rule, Checkbox, Icon, Text field),
+  and the whole phase reaches `main` in one pull request, so its first run must already fit. Seventeen legs of 35
+  minutes would fit, but each pays the mean 10.4 minutes before its first entry, and at most 5 Mac jobs run at once
+  on this repository (measured: runs 44339047592, 44360219942, 44364265656 and 44386153527 never ran more), while
+  other branches' required `apple` job waits behind them (24 minutes in run 44364265656, behind a run on `main`). A
+  run of 35 Mac jobs, about 10.1 runner-hours, would take an estimated 2 hours at best and about 2.4 as measured runs
+  go (1.2 times the floor of runner-minutes over 5; run 44386153527: 256 minutes of Mac jobs, 62 minutes). So ten
+  legs of 45 minutes with a retry budget of 40, from the times per entry above (90, 130 and 38 s):
+  `testDefaultSettings` in three shards (10 entries, about 25.4 minutes), `testAccessibilityDynamicType` in four
+  (7 entries, about 25.6) and each contrast test in one leg (28 entries, about 28.1); about 4.3 runner-hours. A stall
+  in the first entry of the slowest leg is retried by 32.6 minutes, and still after up to 17.8 minutes before the
+  first entry (17.1 seen), against 14.7 with the seventeen legs; a leg without a retry ends by 34.8 minutes. With
+  the snapshot legs below, a run has 17 Mac jobs, about 7.7 runner-hours: an estimated 1.5 hours at best and about
+  1.6–1.9 expected. Decided by the coordinator under the owner's delegation of 2026-11-18, pending the owner's
+  confirmation.
+  2026-11-19 (run 44444325775, phase 3's first run): three legs of 20 failed for the machinery and were not
+  retried, each at the first launch of its first test run on the runner. The audit's retry rule stays as it is; it
+  now knows two more of XCTest's messages. A test runner that crashed while preparing to run tests ("Early
+  unexpected exit, operation never finished bootstrapping") did not start, like one that failed to install, and its
+  whole test is run again within the first half of the budget. A launch that timed out on a stalled simulator
+  ("Failed to get background assertion … Timed out while acquiring background assertion", "Failed to launch … via
+  Xcode: Timed out while launching application") is infrastructure; any other launch failure stays a finding, and
+  a run with a finding is still never retried. The snapshot matrix, which had no retry, gets one on the same
+  grounds: a capture that wrote no manifest and whose every failure is one of those messages, or whose runner did
+  not start, is captured once more, never one whose test reported a failure of a sheet. The retry is the whole
+  capture, so it starts only within 25 minutes of the script's start, and a snapshot leg's timeout grows from 20 to
+  30 minutes plus its capture time with a third more, so that such a retry ends inside it (before, it fitted only
+  when it started by 15 minutes, less than the setup alone has taken). Decided by the coordinator under the owner's
+  delegation of 2026-11-18, pending the owner's confirmation.
 
 ## Consequences
 
@@ -116,6 +145,20 @@ Date: 2026-11-14. Status: accepted.
     `tools/apple/snapshot-matrix.sh compare <before> <after>` compares two captures pixel by pixel; its report names
     both environments, so a comparison across them is visible as such. The review page of each capture
     (`index.html`) names its OS version, device and scale, and the size of each picture.
+    2026-11-19: on iOS the picture is the whole screen, and the system draws the home indicator over it, from launch
+    to launch or not, or at another opacity: two captures of Button on the same commit differed in 54, 83 or 84 of
+    its 144 images, every pixel in the indicator's place. The comparison of two iOS captures ignores the pixels on
+    the indicator's footprint (a capsule of 144 × 5 pt at the bottom centre, in the bottom safe-area inset, with
+    1.5 pt of tolerance), but only in an image whose content stays clear of the box around it in both pictures and
+    where nothing else in that box differs; a sheet that overflows the screen is compared whole, and a block or dot in
+    the box off the footprint is reported. Every image that differs on the indicator alone is still shown, with its
+    diff, under a heading of its own. What a capture is does not change. Rejected: hiding the indicator in the catalog
+    (`.persistentSystemOverlays(.hidden)`, UIKit's `prefersHomeIndicatorAutoHidden`), which only allows the system to hide it on its own schedule, after a
+    few seconds without touches, so whether it shows still depends on timing, and which would change the catalog for
+    one tool; it could not be shown to be deterministic cheaply either, since unchanged one capture showed the
+    indicator in none of Button's 144 images and the next in 54. And cropping the bottom inset out of every picture,
+    which would change what a capture is and hide from review whatever a sheet draws there. Decided by the
+    coordinator under the owner's delegation of 2026-11-18, pending the owner's confirmation.
   - **The capture sets what it can itself:** the theme and the contrast for each image, the text size (`large`, the
     default), the language and the locale (`en`, `en_US`), on macOS the window's size (720 × 540, whatever size the
     system restores) and the picture of the sheet alone, without the title bar and the desktop at the window's
@@ -145,3 +188,12 @@ Date: 2026-11-14. Status: accepted.
     for iOS (711 s, iPhone 17 simulator, iOS 26.3.1) and 5 for macOS (315 s), plus the builds. One CI job for both
     took 32–40 of its 50 minutes before; it would now need well over an hour, so the job `snapshot-matrix` runs one job
     per platform side by side, with 75 and 45 minutes, and uploads `snapshot-matrix-ios` and `snapshot-matrix-macos`.
+  - 2026-11-19 (phase 3): with Text, Surface, Rule, Checkbox, Icon and Text field, 365 images on iOS and 184 on
+    macOS: about 91 minutes of capture on iOS on the runner, past any one job. One job per component (fourteen, each
+    with its own build) was too many for 5 concurrent Mac runners, so the components go into legs packed by their
+    number of images (first fit, the largest first, at most 40 minutes of capture each, from a table of counts in the
+    workflow that the page job checks against each capture), one `xcodebuild test` per leg (`--component a,b`): three
+    legs for iOS and one for macOS, each with a timeout from its images. A job `snapshot-matrix-pages` merges each
+    platform's legs into one page (`snapshot-matrix.sh merge --expect`), which names any component no leg brought, so
+    the owner still opens `snapshot-matrix-ios` and `snapshot-matrix-macos`. Decided by the coordinator under the
+    owner's delegation of 2026-11-18, pending the owner's confirmation.

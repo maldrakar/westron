@@ -23,4 +23,5 @@ Hooks (`.claude/settings.json`) run on their own:
 
 Per-platform rules live in `.claude/rules/` and load when the work is in the matching paths.
 
-Commits and pushes only when the human asks. Work happens in a branch, with one pull request per issue.
+Commits and pushes only when the human asks. Work happens in a branch, with one pull request per issue, unless the
+owner ships a phase as one pull request (decisions/0005, revision of 2026-11-18).

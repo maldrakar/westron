@@ -1,9 +1,9 @@
 import Foundation
 
-/// The snapshot matrix generator (#24): from every contract the Swift API generator generates from (approved or later,
-/// styled on an Apple system control, `AppleComponents.generates`), it writes the component's `SnapshotMatrix` into the
-/// catalog, `WestronCatalog/Generated/<Component>+Matrix.swift`, and the registry of every matrix,
-/// `ComponentMatrix+All.swift`:
+/// The snapshot matrix generator (#24): from every contract that gives API on Apple (approved or later, styled on a
+/// system control, extending a system view or an own component with its form, `AppleComponents.givesAPI`), it writes
+/// the component's `SnapshotMatrix` into the catalog, `WestronCatalog/Generated/<Component>+Matrix.swift`, and the
+/// registry of every matrix, `ComponentMatrix+All.swift`:
 ///
 /// - `ComponentMatrix.<component>`: the axes, the states and those no token binding names, every combination, what a
 ///   constraint excludes or advises against, what each Apple OS draws differently and the sheets, for the catalog to
@@ -11,7 +11,9 @@ import Foundation
 ///   `<Component>MatrixCell`, the way a style body is hand-written (decisions/0001), so a new contract fails the
 ///   catalog's build until its cell exists;
 /// - `<Component>MatrixValues`: one combination typed for that cell: the generated enum of each enum option, `Bool` for
-///   a bool option, and the contract's value of an option that is the system's own API. Its values are private and the
+///   a bool option, the contract's value of an option that is the system's own API, the token itself, as its
+///   accessor (`Westron.TextRole`), for an option whose values are tokens, and the icon (`Westron.Icon`) for one whose
+///   values are the icon registry's names. Its values are private and the
 ///   cell takes them through one tuple, `fields`, so an option added to an existing contract changes the tuple and
 ///   fails the cell's build where it destructures `fields`, until the cell draws the new option. A new value of an
 ///   existing option still builds; it reaches the cell through the generated enum.
@@ -25,14 +27,17 @@ public struct AppleSnapshotMatrix: Generator {
     public let directory: String
     public let schemaFile: String
     public let resolverFile: String
+    /// The icon registry, for an option whose values are its names.
+    public let registryFile: String
 
     public init(
         directory: String = ContractCheck.defaultDirectory, schemaFile: String = ContractSchema.defaultFile,
-        resolverFile: String = TokenCheck.defaultResolver
+        resolverFile: String = TokenCheck.defaultResolver, registryFile: String = IconRegistry.defaultFile
     ) {
         self.directory = directory
         self.schemaFile = schemaFile
         self.resolverFile = resolverFile
+        self.registryFile = registryFile
     }
 
     public static let outputDirectory = "platforms/apple/Sources/WestronCatalog/Generated"
@@ -41,22 +46,31 @@ public struct AppleSnapshotMatrix: Generator {
     public var ownedDirectories: [String] { [Self.outputDirectory] }
 
     public func run() throws -> [GeneratedFile] {
-        try Self.files(
-            for: AppleComponents.checkedContracts(
-                directory: directory, schemaFile: schemaFile, resolverFile: resolverFile))
+        let checked = try AppleComponents.checkedContracts(
+            directory: directory, schemaFile: schemaFile, resolverFile: resolverFile)
+        // The registry is read only when a contract that gives API takes its names.
+        let needsIcons = checked.contracts.contains { item in
+            AppleComponents.givesAPI(item.contract) && item.contract.options.contains { $0.kind == .icons }
+        }
+        let icons = needsIcons ? try IconRegistry.load(file: registryFile).icons.map(\.name) : nil
+        return try Self.files(for: checked.contracts, tokens: checked.tokens, icons: icons)
     }
 
-    /// The matrix files of the contracts that generate an API, then the registry.
-    public static func files(for contracts: [(contract: ComponentContract, source: String)]) throws -> [GeneratedFile] {
+    /// The matrix files of the contracts that give API on Apple, then the registry. `tokens` gives the values of an
+    /// option whose values are tokens, `icons` the icon registry's names, in its order.
+    public static func files(
+        for contracts: [(contract: ComponentContract, source: String)], tokens: ContractTokens? = nil,
+        icons: [String]? = nil
+    ) throws -> [GeneratedFile] {
         var files: [GeneratedFile] = []
         var registered: [String] = []
-        for (contract, source) in contracts where AppleComponents.generates(contract) {
-            let matrix = try SnapshotMatrix(contract, source: source)
+        for (contract, source) in contracts where AppleComponents.givesAPI(contract) {
+            let matrix = try SnapshotMatrix(contract, source: source, tokens: tokens, icons: icons)
             let component = AppleComponents.typeName(contract.id)
             files.append(
                 GeneratedFile(
                     path: "\(outputDirectory)/\(component)+Matrix.swift",
-                    contents: swift(matrix, component: component, source: source)))
+                    contents: try swift(matrix, component: component, source: source)))
             registered.append(memberName(contract.id))
         }
         files.append(GeneratedFile(path: registryFile, contents: registry(registered)))
@@ -98,7 +112,30 @@ public struct AppleSnapshotMatrix: Generator {
         return [pad + prefix + "["] + items.map { pad + "    " + $0 + "," } + [pad + "]" + comma]
     }
 
-    static func swift(_ matrix: SnapshotMatrix, component: String, source: String) -> String {
+    /// `label: [items]` on one line when it fits; otherwise the items packed into lines one level in, each line ending
+    /// with a comma, as swift format lays out a long array (Icon's rows of glyph names).
+    private static func packed(_ label: String, _ items: [String], indent: Int, comma: Bool) -> [String] {
+        let pad = String(repeating: "    ", count: indent)
+        let end = comma ? "," : ""
+        let line = pad + "\(label): " + list(items) + end
+        if line.count <= AppleTokensSwift.lineLength { return [line] }
+        var out = [pad + "\(label): ["]
+        var current = ""
+        for item in items {
+            let next = current.isEmpty ? item + "," : current + " " + item + ","
+            if (pad + "    " + next).count > AppleTokensSwift.lineLength, !current.isEmpty {
+                out.append(pad + "    " + current)
+                current = item + ","
+            } else {
+                current = next
+            }
+        }
+        if !current.isEmpty { out.append(pad + "    " + current) }
+        out.append(pad + "]" + end)
+        return out
+    }
+
+    static func swift(_ matrix: SnapshotMatrix, component: String, source: String) throws -> String {
         let member = memberName(matrix.component)
         let values = "\(component)MatrixValues"
         let cell = "\(component)MatrixCell"
@@ -110,9 +147,15 @@ public struct AppleSnapshotMatrix: Generator {
                 + "The hand-written `\(cell)` draws each cell.")
         out += ["", "import WestronUI", ""]
 
-        let sizes = matrix.axes.map { "\($0.values.count) \($0.name)" } + ["\(matrix.states.count + 1) states"]
+        let sizes =
+            matrix.axes.map { "\($0.values.count) \($0.name)" }
+            + (matrix.states.isEmpty ? [] : ["\(matrix.states.count + 1) states"])
+        let rows =
+            matrix.states.isEmpty
+            ? " at rest (the contract has no states" + (matrix.rowAxis.map { "; \($0) runs down the rows" } ?? "") + ")"
+            : " (rest and each state alone)"
         var summary =
-            "\(component)'s matrix: " + sizes.joined(separator: " × ") + " (rest and each state alone) = "
+            "\(component)'s matrix: " + sizes.joined(separator: " × ") + rows + " = "
             + "\(matrix.optionCombinations * (matrix.states.count + 1)) combinations"
         if matrix.excluded.isEmpty {
             summary += ", none forbidden by a constraint"
@@ -121,20 +164,38 @@ public struct AppleSnapshotMatrix: Generator {
                 "; constraints forbid \(matrix.excluded.count * (matrix.states.count + 1)) of them, so the matrix "
                 + "has \(matrix.combinations.count)"
         }
-        summary += ", on \(matrix.sheets.count) sheets."
+        summary += ", on \(matrix.sheets.count) sheet\(matrix.sheets.count == 1 ? "" : "s")."
         out += ["extension ComponentMatrix {"]
         out += doc([summary], indent: 1)
         out += ["    static let \(member) = ComponentMatrix("]
         out += ["        component: \(literal(matrix.component)),"]
-        out += argument(
-            "options",
-            matrix.axes.map { axis in
+        let options = matrix.axes.map { axis in
+            let system = axis.systemType.map { ", system: \(literal($0))" } ?? ""
+            return "Option(\(literal(axis.name)), values: \(list(axis.values.map(literal)))\(system))"
+        }
+        if options.allSatisfy({ $0.count + 13 <= AppleTokensSwift.lineLength }) {
+            out += argument("options", options, indent: 2)
+        } else {
+            // An option with more values than a line holds, such as the seventeen text roles: its values one per line.
+            out += ["        options: ["]
+            for (axis, line) in zip(matrix.axes, options) {
+                if line.count + 13 <= AppleTokensSwift.lineLength {
+                    out.append("            \(line),")
+                    continue
+                }
                 let system = axis.systemType.map { ", system: \(literal($0))" } ?? ""
-                return "Option(\(literal(axis.name)), values: \(list(axis.values.map(literal)))\(system))"
-            }, indent: 2)
+                out += ["            Option(", "                \(literal(axis.name)),", "                values: ["]
+                out += axis.values.map { "                    \(literal($0))," }
+                // swift format takes the comma off a lone element that spans lines.
+                out += ["                ]\(system)", "            )" + (matrix.axes.count == 1 ? "" : ",")]
+            }
+            out += ["        ],"]
+        }
         out += argument("states", matrix.states.map(literal), indent: 2)
         out += argument("unbound", matrix.unboundStates.map(literal), indent: 2)
         out += ["        columns: \(literal(matrix.columnAxis)),"]
+        // Only a matrix with a row axis names it, so every other matrix's file stays as it was.
+        if let rowAxis = matrix.rowAxis { out += ["        rows: \(literal(rowAxis)),"] }
         let platforms = matrix.platforms.map { platform in
             let drawn =
                 platform.drawn.isEmpty
@@ -176,14 +237,12 @@ public struct AppleSnapshotMatrix: Generator {
         out += ["        ],"]
         out += ["        sheets: ["]
         for sheet in matrix.sheets {
-            out += [
-                "            Sheet(",
-                "                \(literal(sheet.id)),",
-                "                fixed: \(list(sheet.fixed.map(literal))),",
-                "                columns: \(list(sheet.columns.map(literal))),",
-                "                rows: \(list(sheet.rows.map(literal)))",
-                "            ),",
-            ]
+            out += ["            Sheet(", "                \(literal(sheet.id)),"]
+            out += packed("fixed", sheet.fixed.map(literal), indent: 4, comma: true)
+            out += packed("columns", sheet.columns.map(literal), indent: 4, comma: true)
+            out += packed("rows", sheet.rows.map(literal), indent: 4, comma: false)
+            // swift format takes the comma off a lone element that spans lines.
+            out += ["            )" + (matrix.sheets.count == 1 ? "" : ",")]
         }
         out += ["        ]"]
         out += ["    ) { \(cell)(\(values)($0)) }", "}", ""]
@@ -195,7 +254,15 @@ public struct AppleSnapshotMatrix: Generator {
                     + "system's own API.",
                 "The values are private: a cell takes them all at once from `fields`, so an option added to the "
                     + "contract changes the tuple and fails the cell's build until it draws the option too.",
-            ], indent: 0)
+            ]
+                + (matrix.axes.contains { $0.tokenGroup != nil }
+                    ? [
+                        "An option whose values are tokens is the token itself, as its accessor: the cell applies it "
+                            + "as a product does."
+                    ] : [])
+                + (matrix.axes.contains(where: \.isIcons)
+                    ? ["An option whose values are icons is the icon itself, as `\(AppleIcons.iconType)`."] : []),
+            indent: 0)
         out += ["struct \(values) {"]
         var elements: [String] = []
         for axis in matrix.axes {
@@ -204,6 +271,8 @@ public struct AppleSnapshotMatrix: Generator {
             if let system = axis.systemType {
                 out += doc(["The contract's value of `\(axis.name)`, which is the system's `\(system)`."], indent: 1)
                 type = "String"
+            } else if let accessor = axis.accessor {
+                type = accessor
             } else if axis.isBool {
                 type = "Bool"
             } else {
@@ -234,6 +303,10 @@ public struct AppleSnapshotMatrix: Generator {
             let name = "self.\(axis.name)"
             if axis.systemType != nil {
                 out += ["        \(name) = \(value)"]
+            } else if axis.isIcons, let accessor = axis.accessor {
+                out += ["        \(name) = \(accessor)(rawValue: \(value))!"]
+            } else if axis.accessor != nil {
+                out += ["        \(name) = Self.\(axis.name)Tokens[\(value)]!"]
             } else if axis.isBool {
                 out += ["        \(name) = \(value) == \"true\""]
             } else {
@@ -241,7 +314,18 @@ public struct AppleSnapshotMatrix: Generator {
                 out += ["        \(name) = \(type)(rawValue: \(value))!"]
             }
         }
-        out += ["        self.state = combination.state", "    }", "}"]
+        out += ["        self.state = combination.state", "    }"]
+        for axis in matrix.axes {
+            guard let accessor = axis.accessor, let group = axis.tokenGroup else { continue }
+            out += [""]
+            out += doc(["The token of each value of `\(axis.name)`, by its path after `\(group)`."], indent: 1)
+            out += ["    private static let \(axis.name)Tokens: [String: \(accessor)] = ["]
+            for value in axis.values {
+                out.append("        \(literal(value)): .\(try AppleComponents.member(value, of: group)),")
+            }
+            out += ["    ]"]
+        }
+        out += ["}"]
         return out.joined(separator: "\n") + "\n"
     }
 

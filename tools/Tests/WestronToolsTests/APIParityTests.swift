@@ -285,6 +285,8 @@ struct APIParityTests {
                     of: "_ variant: ButtonVariant,", with: "_ variant: ButtonVariant = .primary,")))
         #expect(variantDefault.count == 1)
         #expect(variantDefault[0].contains("differs from the contract"))
+        // The overload is generated, so generating again fixes it.
+        #expect(variantDefault[0].hasSuffix("; run tools/westron generate"))
 
         let internalOverload = try problems(
             files(
@@ -327,6 +329,7 @@ struct APIParityTests {
         )
         #expect(defaulted.count == 1)
         #expect(defaulted[0].contains("the state modifier of loading differs from the contract"))
+        #expect(!defaulted[0].contains("tools/westron generate"))
 
         let second = try problems(
             files(
@@ -458,7 +461,11 @@ struct APIParityTests {
         let own = try problems(
             [try contract(contractYAML()), banner], files(extra: ["Banner.swift": "public struct Banner {}\n"]))
         #expect(own.count == 1)
-        #expect(own[0].contains("is an own-component, whose API the conventions leave open (Q2)"))
+        // An own component that names no form (which the schema requires) has no API the lint could derive.
+        #expect(
+            own[0].contains(
+                "is an own-component that names no form (modifier or view) in platforms.apple.form, so the "
+                    + "conventions give it no API"))
 
         // In the token area too: a name that marks component API is never a token accessor.
         let absent = try problems(files(tokens: tokensSwift + "\npublic enum BadgeVariant { case info }\n"))
@@ -525,6 +532,42 @@ struct APIParityTests {
         let generated = try problems(files(generatedTokens: generatedTokensSwift + "\npublic enum Spacing {}\n"))
         #expect(generated.count == 1)
         #expect(generated[0].contains("public enum Spacing: a new public top-level type in a generated token file"))
+    }
+
+    @Test("a reviewed adapter outside the adapters file is accepted in its own file only, with its own names")
+    func otherAdapters() throws {
+        let category = """
+            extension View {
+                public func category(_ category: Westron.Category?) -> some View { self }
+            }
+
+            """
+        #expect(try problems(files(extra: ["Category.swift": category])) == [])
+
+        // Anywhere else it is a modifier no contract gives.
+        let elsewhere = try problems(files(extra: ["Context.swift": category]))
+        #expect(elsewhere.count == 1)
+        #expect(elsewhere[0].contains("public func View.category: a public modifier on View that no contract gives"))
+        // The message names every place a reviewed adapter may live.
+        #expect(
+            elsewhere[0].contains(
+                "a reviewed adapter in TokenAdapters.swift (APIParity.adapters) or in Category.swift "
+                    + "(APIParity.otherAdapters)"))
+
+        // The file holds only the names listed for it, each taking a westron value.
+        let unlisted = try problems(
+            files(extra: [
+                "Category.swift": category
+                    + "extension View {\n    public func listTint(_ c: Westron.Category?) -> some View { self }\n}\n"
+            ]))
+        #expect(unlisted.count == 1)
+        #expect(unlisted[0].contains("public func View.listTint: a public modifier on View that no contract gives"))
+        let notWestron = try problems(
+            files(extra: [
+                "Category.swift": "extension View {\n    public func category(_ c: String?) -> some View { self }\n}\n"
+            ]))
+        #expect(notWestron.count == 1)
+        #expect(notWestron[0].contains("public func View.category: a public modifier on View that no contract gives"))
     }
 
     @Test("the token files let no component API through: style protocols, View modifiers, style overloads, new types")
@@ -733,16 +776,16 @@ struct APIParityTests {
     func systemStatesPerBase() throws {
         #expect(SystemStyles.byBase["SwiftUI.Button"]?.states == ["pressed", "hover", "focus", "disabled"])
 
-        let toggle = try contract(
+        let picker = try contract(
             contractYAML(
-                id: "switch", states: "[pressed, selected]",
-                apple: "        strategy: style-on-system-control\n        base: SwiftUI.Toggle"), id: "switch")
-        let found = problems([try contract(contractYAML()), toggle], try files())
+                id: "segments", states: "[pressed, selected]",
+                apple: "        strategy: style-on-system-control\n        base: SwiftUI.Picker"), id: "segments")
+        let found = problems([try contract(contractYAML()), picker], try files())
         #expect(found.count == 1)
         #expect(
             found[0].hasPrefix(
-                "spec/components/switch/switch.spec.yaml:14: no style modifier and no system states are known for "
-                    + "SwiftUI.Toggle (SystemStyles.byBase)"))
+                "spec/components/segments/segments.spec.yaml:14: no style modifier and no system states are known for "
+                    + "SwiftUI.Picker (SystemStyles.byBase)"))
     }
 
     // MARK: Reading

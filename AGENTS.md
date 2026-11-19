@@ -5,11 +5,11 @@ contracts, design language) and a native library on each platform. Its look is i
 The pilot platform is Apple (SwiftUI), the pilot product is [todo-app](https://github.com/maldrakar/todo-app)
 (decisions/0006): its screens decide which components come first, and it is the first to adopt westron's look.
 
-Phases 1 and 2 are done, phase 3 "Primitives and forms (Apple)" is next; phases are GitHub milestones, tasks are
-issues. Order matters more than speed: tokens (phase 1), then the contract schema, API generation, the parity lint,
-the snapshot matrix and the end-to-end Button slice on Apple (phase 2). A second component waits until API generation
-and the parity lint work on Button, or drift would appear before the mechanism that catches it; that condition is now
-met (`reports/`, section "Work plan").
+Phases 1 and 2 are done; phases are GitHub milestones, tasks are issues. Phase 3 "Primitives and forms (Apple)" has
+its six components implemented (Text, Icon, Surface, Rule, TextField, Checkbox), and they wait for the owner's review
+of their snapshot matrices (decisions/0005, the second gate); phase 4 is next after that. Order matters more than
+speed: tokens (phase 1), then the contract schema, API generation, the parity lint, the snapshot matrix and the
+end-to-end Button slice on Apple (phase 2), before a second component (`reports/`, section "Work plan").
 
 ## Where things are
 
@@ -24,7 +24,7 @@ met (`reports/`, section "Work plan").
 | `platforms/apple/Sources/WestronTokens/` | Token values as plain Swift with no imports, generated (decisions/0010) |
 | `platforms/apple/Sources/WestronUI/` | SwiftUI styles, components and token accessors: what products import |
 | `platforms/apple/Sources/WestronCatalog/` | Registry of catalog entries and its host, and the snapshot matrices generated from the contracts |
-| `platforms/apple/Catalog/` | Catalog app (iOS + macOS) and the screenshot UI test; the project is `project.xcproj` in Xcode 27 format, not `project.pbxproj` |
+| `platforms/apple/Catalog/` | Catalog app (iOS + macOS) and its UI tests: screenshots, the snapshot matrix, the accessibility audit, behaviour; the project is `project.xcproj` in Xcode 27 format, not `project.pbxproj` |
 | `tools/` | Generators and checks: a separate SwiftPM package with the `westron` executable, and scripts for Apple |
 | `Package.swift` | SwiftPM manifest; it sits at the root because SwiftPM requires it |
 
@@ -50,9 +50,12 @@ tools/apple/catalog-screenshot.sh macos --entry environment                     
 
 tools/apple/snapshot-matrix.sh ios [--component button]   # every combination of every contract in four themes, and
                                                           # light at xSmall and accessibility5, with the supplements;
-                                                          # one xcodebuild test run; prints the path to index.html
+                                                          # one xcodebuild test run; prints the path to index.html;
+                                                          # --component rule,surface (or repeated): those, one run
 tools/apple/snapshot-matrix.sh macos                      # the same on macOS
 tools/apple/snapshot-matrix.sh compare <dirA> <dirB>      # pixel diff of two captures; exit 1 when one differs
+tools/apple/snapshot-matrix.sh merge --expect <ids> <out> <dir>…  # captures of one platform taken apart, one page;
+                                                          # names on it any expected component none of them holds
 
 tools/check.sh                    # build and test tools/, then the checks below (CI runs it on Linux)
 tools/westron lint raw-values     # no raw values in WestronUI
@@ -69,7 +72,11 @@ A screenshot is how you see your work: open the PNG and look at it before you sa
 Parameters: `--entry <id>` (default `environment`), `--appearance light|dark`, `--contrast standard|high`,
 `--dynamic-type xSmall…accessibility5`, `--device "<simulator>"` (default `iPhone 17` or `$WESTRON_SIM_DEVICE`),
 `--out <file.png>`. Without `--out` the PNG goes to `.build/screenshots/<platform>-<id>[-<theme>][-hc][-<size>].png`,
-the log to `.build/logs/`. On macOS, screenshots need Automation Mode enabled once (`platforms/apple/README.md`).
+the log to `.build/logs/`. Bold Text and a scroll position have no option yet: set
+`TEST_RUNNER_WESTRON_LEGIBILITY_WEIGHT=bold` or `TEST_RUNNER_WESTRON_SCROLL_ANCHOR=<0…1>` before the command, with
+`--out`, since the file name does not show them. The test runner inherits them: set them on the command only, since an
+exported value silently applies to every later capture. On macOS, screenshots need Automation Mode enabled once
+(`platforms/apple/README.md`).
 The snapshot matrix (#24) is the second approval gate's review surface: `tools/westron generate` writes each
 component's matrix from its contract into `WestronCatalog/Generated/`, and the capture goes to
 `.build/snapshot-matrix/<platform>/` (`--out <dir>` elsewhere). The text sizes, the parts of a sheet that does not fit

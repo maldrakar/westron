@@ -15,8 +15,14 @@ import Foundation
 ///   fallbacks; the declared states, `<Component>State`, with whether the current OS enters each, `isEntered`.
 ///
 /// Draft contracts are skipped: an API appears once the contract is approved (decisions/0005), so a draft never breaks
-/// the build. Own components are skipped too: their API is a view, which conventions question Q2 still leaves open.
-/// No drawing is generated: style bodies are written natively (decisions/0001).
+/// the build. An own component (`own-component`) gets the enums of its options alone, in the same file: its modifier
+/// or view is hand-written, and the API parity lint holds its signature to the contract (`Own`; spec/conventions.md,
+/// "Own components"). No drawing is generated: style bodies are written natively (decisions/0001).
+///
+/// An extension of a system view (`extension-on-system-control`, Text) gets no file: its modifier is hand-written in
+/// WestronUI, its argument is the token accessor the token generator writes, and the API parity lint holds its
+/// signature to the contract (`Extension`; spec/conventions.md, "Extensions of a system view"). The generator checks
+/// that the contract has the one shape the conventions give such an API.
 public struct AppleComponents: Generator {
     public let name = "components-apple"
     /// The contracts' directory, relative to the repository root.
@@ -37,6 +43,11 @@ public struct AppleComponents: Generator {
     public static let outputDirectory = "platforms/apple/Sources/WestronUI/Generated"
     public static let strategy = "style-on-system-control"
 
+    /// The Swift accessor the token generator writes for the tokens of a root group, by the group (decisions/0010):
+    /// an option whose values are that group's tokens takes it as its type. Only the groups an option takes its values
+    /// from are here.
+    public static let tokenAccessors: [String: String] = [AppleTokenModel.textRoleGroup: AppleTokenModel.textRoleType]
+
     public var ownedDirectories: [String] { [Self.outputDirectory] }
 
     /// Every problem of a contract that cannot be generated from.
@@ -50,13 +61,15 @@ public struct AppleComponents: Generator {
     /// code from a contract the check rejects (#62).
     public func run() throws -> [GeneratedFile] {
         try Self.files(
-            for: Self.checkedContracts(directory: directory, schemaFile: schemaFile, resolverFile: resolverFile))
+            for: Self.checkedContracts(directory: directory, schemaFile: schemaFile, resolverFile: resolverFile)
+                .contracts)
     }
 
-    /// Every contract in `directory`, read, once `spec check`'s schema and rules pass on each.
+    /// Every contract in `directory`, read, once `spec check`'s schema and rules pass on each, and the tokens they
+    /// were checked against.
     /// - Throws: `Problems`, with every problem of every contract that fails the check.
     static func checkedContracts(directory: String, schemaFile: String, resolverFile: String) throws
-        -> [(contract: ComponentContract, source: String)]
+        -> (contracts: [(contract: ComponentContract, source: String)], tokens: ContractTokens)
     {
         let schema = try ContractSchema(file: schemaFile)
         let tokens = try ContractTokens(Resolution(resolverFile: resolverFile))
@@ -72,7 +85,7 @@ public struct AppleComponents: Generator {
             contracts.append((try ComponentContract(yaml: text, source: file), file))
         }
         guard invalid.isEmpty else { throw Problems(problems: invalid) }
-        return contracts
+        return (contracts, tokens)
     }
 
     /// The generated files for contracts that pass `spec check`, in their order, after the checks that span
@@ -82,19 +95,49 @@ public struct AppleComponents: Generator {
     public static func files(for contracts: [(contract: ComponentContract, source: String)]) throws -> [GeneratedFile] {
         var apis: [API] = []
         var problems: [ContractProblem] = []
+        var extensions: [(api: Extension, source: String)] = []
+        var owns: [(api: Own, source: String)] = []
+        var files: [GeneratedFile] = []
         for (contract, source) in contracts {
+            if givesAPI(contract), contract.apple?.strategy == ownStrategy {
+                do {
+                    let own = try Own(contract, source: source)
+                    owns.append((own, source))
+                    if let file = own.file(source: source) { files.append(file) }
+                } catch {
+                    problems.append(error)
+                }
+                continue
+            }
+            if givesAPI(contract), contract.apple?.strategy == SystemStyles.extensionStrategy {
+                do {
+                    let api = try Extension(contract, source: source)
+                    if let earlier = extensions.first(where: { $0.api.modifier == api.modifier }) {
+                        problems.append(
+                            ContractProblem(
+                                source: source, path: .root.key("options"),
+                                "\(api.component) and \(earlier.api.component) (\(earlier.source)) both add "
+                                    + ".\(api.modifier)(_:): two modifiers of one signature do not compile"))
+                    }
+                    extensions.append((api, source))
+                } catch {
+                    problems.append(error)
+                }
+                continue
+            }
             guard generates(contract), let apple = contract.apple, let base = apple.base else { continue }
             do {
-                apis.append(try API(contract, apple: apple, base: base, source: source))
+                let api = try API(contract, apple: apple, base: base, source: source)
+                apis.append(api)
+                files.append(
+                    GeneratedFile(path: "\(outputDirectory)/\(api.component)+Contract.swift", contents: api.swift()))
             } catch {
                 problems.append(error)
             }
         }
-        problems += collisions(apis) + ambiguities(apis)
+        problems += collisions(apis) + ambiguities(apis) + ownCollisions(owns, apis: apis)
         guard problems.isEmpty else { throw Problems(problems: problems) }
-        return apis.map {
-            GeneratedFile(path: "\(outputDirectory)/\($0.component)+Contract.swift", contents: $0.swift())
-        }
+        return files
     }
 
     /// A component's id as a Swift type name, in UpperCamelCase: `Button` for `button`, `ListRow` for `list-row`.
@@ -107,10 +150,107 @@ public struct AppleComponents: Generator {
         contract.status != "draft" && contract.apple?.strategy == strategy && contract.apple?.base != nil
     }
 
+    /// Whether a contract gives API on Apple: approved or later, styled on a system control or extending a system
+    /// view, with its base, or an own component with its form (`Own`). The API parity lint expects that API, and the
+    /// snapshot matrix draws it.
+    public static func givesAPI(_ contract: ComponentContract) -> Bool {
+        guard contract.status != "draft", let apple = contract.apple else { return false }
+        if apple.strategy == ownStrategy { return apple.form.flatMap(Own.Form.init(rawValue:)) != nil }
+        guard apple.base != nil else { return false }
+        return apple.strategy == strategy || apple.strategy == SystemStyles.extensionStrategy
+    }
+
+    /// The API of an extension of a system view (`extension-on-system-control`), as the conventions derive it from
+    /// the contract and the token accessors: `public func textRole(_ role: Westron.TextRole) -> some View` in
+    /// `extension View`, and the same on the base, returning the base, where its own modifiers return it
+    /// (`SystemStyles.returningBase`): `Text.textRole(_:) -> Text`. The modifier is named after what it sets, the
+    /// option's accessor in lowerCamelCase (`Westron.TextRole` → `textRole`), and its one unlabeled argument is that
+    /// accessor, so the names are the tokens'. It stays hand-written; the API parity lint holds it to this.
+    public struct Extension: Equatable, Sendable {
+        /// `Text` for `text`.
+        public let component: String
+        /// `SwiftUI.Text`.
+        public let base: String
+        /// `Text` for `SwiftUI.Text`.
+        public let control: String
+        /// `textRole`.
+        public let modifier: String
+        /// The contract's option, `role`.
+        public let option: String
+        /// The option's token accessor, `Westron.TextRole`.
+        public let argumentType: String
+        /// The contract's default as a Swift expression, `.body.regular`; nil when every call names a value.
+        public let defaultValue: String?
+        /// Whether the base gets the modifier too, returning the base.
+        public let onBase: Bool
+
+        /// - Throws: `ContractProblem` when the contract is not an approved extension with a base, or has another
+        ///   shape than the conventions give: one option, whose values are the tokens of a group with an accessor
+        ///   (`tokenAccessors`), and no states.
+        public init(_ contract: ComponentContract, source: String) throws(ContractProblem) {
+            func problem(_ path: DocumentPath, _ message: String) -> ContractProblem {
+                ContractProblem(source: source, path: path, message)
+            }
+            let applePath = DocumentPath.root.key("platforms").key("apple")
+            guard let apple = contract.apple, apple.strategy == SystemStyles.extensionStrategy, let base = apple.base
+            else {
+                throw problem(applePath, "not an \(SystemStyles.extensionStrategy) with a base")
+            }
+            // An extension whose option is the icon registry's names is not derived: no initializer of SwiftUI's Image
+            // can hide or name a symbol, so Icon (#28) is an own view (`Own`).
+            if let option = contract.options.first(where: { $0.kind == .icons }) {
+                throw problem(
+                    .root.key("options").key(option.name),
+                    "\(option.name) takes its values from the icon registry: the conventions give an "
+                        + "\(SystemStyles.extensionStrategy) no API for such an option yet, so the generator and the "
+                        + "API parity lint do not support it yet")
+            }
+            let shape =
+                "an \(SystemStyles.extensionStrategy) takes one option, whose values are tokens, as the argument of its "
+                + "modifier, and no states: the conventions give it no other API yet (spec/conventions.md, "
+                + "\"Extensions of a system view\")"
+            guard contract.options.count == 1, let option = contract.options.first,
+                case .tokenGroup(let group, let defaultValue) = option.kind
+            else { throw problem(.root.key("options"), shape) }
+            guard contract.states.isEmpty else { throw problem(.root.key("states"), shape) }
+            let optionPath = DocumentPath.root.key("options").key(option.name)
+            guard let accessor = AppleComponents.tokenAccessors[group] else {
+                let known = AppleComponents.tokenAccessors.sorted { $0.key < $1.key }.map { "\($0.key): \($0.value)" }
+                throw problem(
+                    optionPath.key("group"),
+                    "\(group) has no token accessor of its own on Apple (\(known.joined(separator: ", "))): the "
+                        + "modifier takes the accessor the token generator writes for a root group "
+                        + "(AppleComponents.tokenAccessors)")
+            }
+            let name = String(accessor.split(separator: ".").last ?? Substring(accessor))
+            component = AppleComponents.typeName(contract.id)
+            self.base = base
+            control = String(base.split(separator: ".").last ?? Substring(base))
+            modifier = name.prefix(1).lowercased() + name.dropFirst()
+            self.option = option.name
+            argumentType = accessor
+            do {
+                self.defaultValue = try defaultValue.map { "." + (try AppleComponents.member($0, of: group)) }
+            } catch {
+                throw problem(optionPath.key("default"), (error as? SwiftName.Problem)?.message ?? "\(error)")
+            }
+            onBase = SystemStyles.returningBase.contains(base)
+        }
+    }
+
+    /// A token option's value as a member of the group's accessor, `heading.large` of `typography` → `heading.large`,
+    /// `on-accent` → `onAccent`: the name the token generator gives it (`SwiftName.members`).
+    static func member(_ value: String, of group: String) throws -> String {
+        try SwiftName.members(TokenPath(group + "." + value), dropping: group).map(\.name).joined(separator: ".")
+    }
+
     /// The generated file for a contract, or nil when the generator skips it. `source` is the contract's path, which
     /// the header names.
     /// - Throws: `ContractProblem` when the contract cannot give the API the conventions prescribe.
     public static func file(for contract: ComponentContract, source: String) throws(ContractProblem) -> GeneratedFile? {
+        if givesAPI(contract), contract.apple?.strategy == ownStrategy {
+            return try Own(contract, source: source).file(source: source)
+        }
         guard generates(contract), let apple = contract.apple, let base = apple.base else { return nil }
         let api = try API(contract, apple: apple, base: base, source: source)
         return GeneratedFile(path: "\(outputDirectory)/\(api.component)+Contract.swift", contents: api.swift())
@@ -244,6 +384,20 @@ public struct AppleComponents: Generator {
                     "no style modifier is known for \(base) (SystemStyles.byBase), so there is no overload to generate")
             }
             self.modifier = modifier
+            for option in contract.options {
+                if case .tokenGroup(let group, _) = option.kind {
+                    throw problem(
+                        .root.key("options").key(option.name),
+                        "\(option.name) takes its values from the tokens of \(group): the generator does not give a "
+                            + "style such an option yet")
+                }
+                if case .icons = option.kind {
+                    throw problem(
+                        .root.key("options").key(option.name),
+                        "\(option.name) takes its values from the icon registry: the generator does not give a style "
+                            + "such an option yet")
+                }
+            }
             let optionNames = contract.options.map(\.name)
             for name in apple.systemOptions.keys.sorted() where !optionNames.contains(name) {
                 throw problem(applePath.key("systemOptions").key(name), "no option \(name)")
@@ -404,6 +558,8 @@ public struct AppleComponents: Generator {
                 switch option.kind {
                 case .bool(let value):
                     result.append((name, "\(option.name): Bool = \(value)", false))
+                case .tokenGroup, .icons:
+                    continue  // API's initializer rejects it.
                 case .enumeration:
                     guard let item = enums.first(where: { $0.option.name == option.name }) else { continue }
                     if option.name == "size" {
@@ -451,6 +607,8 @@ public struct AppleComponents: Generator {
                     let summary =
                         option.description.map(Self.firstSentence) ?? "The contract's option `\(option.name)`."
                     items.append("- \(option.name): \(summary) By default `\(value)`.")
+                case .tokenGroup, .icons:
+                    continue  // API's initializer rejects it.
                 case .enumeration:
                     guard let item else { continue }
                     if option.name == "size" {

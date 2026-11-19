@@ -34,6 +34,68 @@ struct SwiftUITypesTests {
             ])
     }
 
+    @Test("an interface's static styles, by protocol, unquoted; those unavailable on every westron OS left out")
+    func styleNames() {
+        let text = """
+            @available(iOS 13.0, macOS 10.15, tvOS 13.0, watchOS 6.0, *)
+            extension SwiftUI.PrimitiveButtonStyle where Self == SwiftUI.PlainButtonStyle {
+              @export(implementation) @_Concurrency.MainActor @preconcurrency public static var plain: SwiftUI.PlainButtonStyle {
+                get { .init() }
+              }
+            }
+            @available(watchOS, unavailable)
+            @available(visionOS, unavailable)
+            extension SwiftUI.ToggleStyle where Self == SwiftUI.CheckboxToggleStyle {
+              nonisolated public static var checkbox: SwiftUI.CheckboxToggleStyle {
+              }
+            }
+            @available(iOS 13.0, macOS 10.15, tvOS 18.0, watchOS 6.0, *)
+            extension SwiftUI.ToggleStyle where Self == SwiftUI.SwitchToggleStyle {
+              nonisolated public static var `switch`: SwiftUI.SwitchToggleStyle {
+              }
+            }
+            @available(iOS 26.0, macOS 26.0, tvOS 26.0, watchOS 26.0, *)
+            extension SwiftUICore.PrimitiveButtonStyle where Self == SwiftUI.GlassButtonStyle {
+              nonisolated public static func glass(_ glass: SwiftUICore.Glass) -> Self
+            }
+            @available(tvOS 14.0, *)
+            @available(iOS, unavailable)
+            @available(macOS, unavailable)
+            @available(watchOS, unavailable)
+            extension SwiftUI.PrimitiveButtonStyle where Self == SwiftUI.CardButtonStyle {
+              public static var card: SwiftUI.CardButtonStyle {
+              }
+            }
+            @available(*, unavailable)
+            extension SwiftUI.ToggleStyle where Self == SwiftUI.GoneToggleStyle {
+              public static var gone: SwiftUI.GoneToggleStyle { get }
+            }
+            extension SwiftUI.TextFieldStyle where Self == SwiftUI.PlainTextFieldStyle {
+              public static var plain: SwiftUI.PlainTextFieldStyle {
+              }
+            }
+            extension SwiftUI.ToggleStyle {
+              public static var notAStyle: Swift.Int { get }
+            }
+            """
+        #expect(
+            SwiftUIInterface.styleNames(of: ["ButtonStyle", "PrimitiveButtonStyle"], in: text) == ["plain", "glass"])
+        #expect(SwiftUIInterface.styleNames(of: ["ToggleStyle"], in: text) == ["checkbox", "switch"])
+        #expect(SwiftUIInterface.styleNames(of: ["TextFieldStyle"], in: text) == ["plain"])
+    }
+
+    @Test("SystemStyles: every base names its style protocols, and lists each style once")
+    func systemStylesEntries() {
+        for (base, entry) in SystemStyles.byBase {
+            #expect(!entry.protocols.isEmpty, "\(base)")
+            #expect(Set(entry.styles).count == entry.styles.count, "\(base)")
+            #expect(entry.modifier.hasSuffix("Style"), "\(base)")
+        }
+        #expect(SystemStyles.byBase["SwiftUI.TextField"]?.modifier == "textFieldStyle")
+        #expect(SystemStyles.byBase["SwiftUI.Toggle"]?.modifier == "toggleStyle")
+        #expect(SystemStyles.withoutStyle == ["SwiftUI.Image", "SwiftUI.Text"])
+    }
+
     @Test("the checked-in list has SwiftUI's types, and none of the names Button generates")
     func checkedIn() {
         for name in [
@@ -103,6 +165,22 @@ struct SwiftUITypesTests {
                         $0.contains("func \(entry.modifier)<") || $0.contains("func \(entry.modifier)(")
                     },
                     "\(base): SwiftUI declares no \(entry.modifier)")
+                // The styles a westron value would shadow: every static style of the protocols on iOS, macOS or
+                // watchOS, in any of the SDKs.
+                let declared = interfaces.reduce(into: Set<String>()) {
+                    $0.formUnion(SwiftUIInterface.styleNames(of: Set(entry.protocols), in: $1))
+                }
+                #expect(
+                    Set(entry.styles) == declared,
+                    "\(base): SystemStyles lists \(entry.styles.sorted()), SwiftUI declares \(declared.sorted())")
+            }
+            // A base without a style has no `<control>Style` modifier: SwiftUI.Text has no `textStyle`.
+            for base in SystemStyles.withoutStyle {
+                let control = base.split(separator: ".").last.map(String.init) ?? base
+                let modifier = control.prefix(1).lowercased() + control.dropFirst() + "Style"
+                #expect(
+                    !interfaces.contains { $0.contains("func \(modifier)<") || $0.contains("func \(modifier)(") },
+                    "\(base): SwiftUI declares \(modifier), so it takes a style: move it to SystemStyles.byBase")
             }
         }
     #endif

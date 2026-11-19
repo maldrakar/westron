@@ -1,7 +1,8 @@
 import Foundation
 import SwiftUI
 import Testing
-import WestronUI
+
+@testable import WestronUI
 
 #if canImport(AppKit)
     import AppKit
@@ -51,14 +52,35 @@ struct IconTests {
         #expect(Westron.Icon.newWindow.systemName == "macwindow.badge.plus")
     }
 
-    @Test("an icon's image is its SF Symbol; a label takes the icon")
+    @Test("an icon's image is its SF Symbol; a label takes the icon as the system's Image")
     @MainActor
     func adapters() {
         for icon in Westron.Icon.allCases {
             #expect(Image(icon) == Image(systemName: icon.systemName), "\(icon)")
         }
-        _ = Label("Rename", icon: .pen)
-        _ = Label(String("Work"), icon: .folder)
+        // The system's Label of an Image, as Label(_:systemImage:): a hidden icon would hide a menu item built from it
+        // (spec/components/icon, decisions/0001).
+        let localized: Label<Text, Image> = Label("Rename", icon: .pen)
+        let verbatim: Label<Text, Image> = Label(String("Work"), icon: .folder)
+        _ = (localized, verbatim)
+    }
+
+    @Test("Icon: without a label it is decorative; with one, the label is what it means")
+    @MainActor
+    func iconLabels() {
+        let decorative = Icon(.tray)
+        #expect(decorative.icon == .tray && decorative.label == nil)
+
+        let localized = Icon(.sun, label: "Today")
+        #expect(localized.icon == .sun && localized.label == Text("Today"))
+
+        // A name the person gave is not looked up as a key: the verbatim initializer takes a String.
+        let title = "Garden"
+        let verbatim = Icon(.folder, label: title)
+        #expect(verbatim.label == Text(verbatim: "Garden"))
+
+        // A stored name that this version does not know draws the fallback.
+        #expect(Icon(Westron.Icon(rawValue: "no-such-icon") ?? .fallback).icon == .bullets)
     }
 
     #if canImport(AppKit)

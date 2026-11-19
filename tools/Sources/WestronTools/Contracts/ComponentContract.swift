@@ -7,6 +7,12 @@ public struct ComponentContract: Equatable, Sendable {
             /// The values in the contract's order; `default` is nil when every use must name a value.
             case enumeration(values: [String], default: String?)
             case bool(default: Bool)
+            /// The tokens under a token group, `typography`, whose paths after it are the values; `default` is nil
+            /// when every use must name one. The values are in tokens/, not in the contract.
+            case tokenGroup(String, default: String?)
+            /// The names of the icon registry, `spec/icons/icons.yaml`, in its order: the values are in the registry,
+            /// not in the contract. There is no default: every use names its glyph.
+            case icons
         }
 
         public let name: String
@@ -43,10 +49,13 @@ public struct ComponentContract: Equatable, Sendable {
 
     /// The Apple entry of `platforms`, when it is not planned.
     public struct Apple: Equatable, Sendable {
-        /// `style-on-system-control` or `own-component`.
+        /// `style-on-system-control`, `extension-on-system-control` or `own-component`.
         public let strategy: String
-        /// The system control, such as `SwiftUI.Button`; nil for an own component.
+        /// The system control or view, such as `SwiftUI.Button`; nil for an own component.
         public let base: String?
+        /// The shape of an own component's API, `modifier` or `view` (spec/conventions.md, "Own components"); nil for
+        /// a style or an extension.
+        public let form: String?
         /// By option name, the system API that carries the option on Apple, such as `role: SwiftUI.ButtonRole`: no
         /// type is generated for it.
         public let systemOptions: [String: String]
@@ -56,11 +65,12 @@ public struct ComponentContract: Equatable, Sendable {
         public let targets: [String: Restriction]
 
         public init(
-            strategy: String, base: String?, systemOptions: [String: String] = [:],
+            strategy: String, base: String?, form: String? = nil, systemOptions: [String: String] = [:],
             restriction: Restriction = Restriction(), targets: [String: Restriction] = [:]
         ) {
             self.strategy = strategy
             self.base = base
+            self.form = form
             self.systemOptions = systemOptions
             self.restriction = restriction
             self.targets = targets
@@ -102,6 +112,8 @@ public struct ComponentContract: Equatable, Sendable {
     public let options: [Option]
     /// In the contract's order.
     public let states: [String]
+    /// In the contract's order.
+    public let slots: [String]
     /// nil when Apple is planned.
     public let apple: Apple?
     /// In the contract's order.
@@ -110,15 +122,20 @@ public struct ComponentContract: Equatable, Sendable {
     /// `states`. A state none names changes no token: it draws as rest, and only what the platform adds itself, such
     /// as the system's focus ring, tells it apart.
     public let boundStates: [String]
+    /// `accessibility.label`: `required` or `optional`; nil when the contract gives none.
+    public let accessibilityLabel: String?
 
     public init(
         id: String, status: String, options: [Option], states: [String], apple: Apple?,
-        constraints: [Constraint] = [], boundStates: [String]? = nil
+        constraints: [Constraint] = [], boundStates: [String]? = nil, slots: [String] = [],
+        accessibilityLabel: String? = nil
     ) {
+        self.accessibilityLabel = accessibilityLabel
         self.id = id
         self.status = status
         self.options = options
         self.states = states
+        self.slots = slots
         self.apple = apple
         self.constraints = constraints
         self.boundStates = boundStates ?? states
@@ -155,8 +172,18 @@ public struct ComponentContract: Equatable, Sendable {
                     throw problem(path.key("default"), "a bool option needs true or false as its default")
                 }
                 options.append(Option(name: member.key, kind: .bool(default: value), description: description))
+            case "tokens":
+                guard let group = member.value["group"]?.string else {
+                    throw problem(path.key("group"), "an option of type tokens needs its token group")
+                }
+                options.append(
+                    Option(
+                        name: member.key, kind: .tokenGroup(group, default: member.value["default"]?.string),
+                        description: description))
+            case "icons":
+                options.append(Option(name: member.key, kind: .icons, description: description))
             default:
-                throw problem(path.key("type"), "must be enum or bool")
+                throw problem(path.key("type"), "must be enum, bool, tokens or icons")
             }
         }
         let states = document["states"]?.elements?.compactMap(\.string) ?? []
@@ -178,7 +205,8 @@ public struct ComponentContract: Equatable, Sendable {
                 }
             }
             apple = Apple(
-                strategy: strategy, base: entry["base"]?.string, systemOptions: systemOptions,
+                strategy: strategy, base: entry["base"]?.string, form: entry["form"]?.string,
+                systemOptions: systemOptions,
                 restriction: try Self.restriction(entry, at: applePath, source: source), targets: targets)
         } else {
             apple = nil
@@ -205,7 +233,9 @@ public struct ComponentContract: Equatable, Sendable {
         }
         self.init(
             id: id, status: status, options: options, states: states, apple: apple, constraints: constraints,
-            boundStates: states.filter(named.contains))
+            boundStates: states.filter(named.contains),
+            slots: document["slots"]?.elements?.compactMap(\.string) ?? [],
+            accessibilityLabel: document["accessibility"]?["label"]?.string)
     }
 
     /// A constraint's `when` or `require`: by option name, a value, a list of values, or `true` or `false`.
