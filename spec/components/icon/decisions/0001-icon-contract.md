@@ -82,9 +82,13 @@ The answers and the documents left these points open. Each is the agent's propos
 `Image(.sun, label: "Today")` labeled, both initializers of `SwiftUI.Image`, cannot be built while the glyphs are SF
 Symbols:
 
-- **The SDK.** In SwiftUI's interface only `Image(_:bundle:label:)` and `Image(decorative:bundle:)` carry a label or
-  hide an image, and both look an image up by name in an asset catalog; `Image(systemName:)` takes no label. Every
-  `accessibilityLabel` and `accessibilityHidden` on an `Image` returns `ModifiedContent`, not an `Image`.
+- **The SDK.** In SwiftUI's interface `Image(_:bundle:label:)` and `Image(decorative:bundle:)` carry a label or hide
+  an image, and both look an image up by name in an asset catalog; `Image(systemName:)` takes no label. Every
+  `accessibilityLabel` and `accessibilityHidden` on an `Image` returns `ModifiedContent`, not an `Image`. Three more
+  initializers take a label or none: `Image(_ cgImage:scale:orientation:label:)`, `Image(decorative cgImage:…)` and
+  `Image(size:label:opaque:colorMode:renderer:)`, whose renderer can draw a resolved symbol and stays an `Image` with a
+  label. All three take a fixed size in pixels or points, so none follows the font of the text around it, which is the
+  owner's answer on size and weight.
 - **A probe on macOS.** A symbol's name given to the named initializers is not found: `Image(decorative: "tray",
   bundle: nil)` and `Image("tray", bundle: nil, label:)` draw nothing (0 × 0), and `NSImage(named: "tray")` is nil. A
   platform image of the symbol does not take the font: `Image(nsImage:)` of `tray` stays 18 × 13 pt at `.largeTitle`,
@@ -134,11 +138,17 @@ inside, as a style holds the system's control, and adds only what the `Image` ca
   decides. Making the adapter's icon a hidden `Image` (`Icon == ModifiedContent<Image,
   AccessibilityAttachmentModifier>`) compiled, kept every call site and drew the icon in a `Menu`, but the
   accessibility hierarchy of that menu on iOS 26.3 lost the items built from it: "Rename" and "Delete" were cells
-  with no button, where the same menu's `Label("Plain", systemImage: "pencil")` kept its button. The pilot's Rename
-  and Delete menus are built so, so the adapter keeps `Label(_:systemImage:)`, and the contract records the
-  difference. **For the owner:** a `Label` outside a control could take `Icon` for its icon by hand,
-  `Label { Text("Rename") } icon: { Icon(.pen) }`, which the menu case would need checking for too; or westron accepts
-  the system's reading of a lone label.
+  with no button, where the same menu's `Label("Plain", systemImage: "pencil")` kept its button (a probe run whose
+  test source was not kept). The pilot's Rename and Delete menus are built so, so the adapter keeps
+  `Label(_:systemImage:)`, and the contract records the difference.
+- **The menu, held by a kept test** (`IconAccessibilityTests.testMenuItemsBuiltFromLabels`, on a `Menu` of the
+  catalog's `icon` entry, iPhone 17, iOS 26.3). (a) `Label("Rename", icon: .pen)` as shipped: the item is a button
+  named "Rename", holding the system's image of the symbol, and the icon is drawn. (b) `Label { Text("Delete") } icon:
+  { Icon(.trash) }`, the alternative this record first offered the owner: the icon is drawn in the menu (the test's
+  screenshot), but the item is a cell with no button and no text, which VoiceOver cannot reach, as with the hidden
+  adapter. So a `Label` whose icon is hidden breaks a system menu; (b) is not an option for menus. **For the owner:**
+  westron accepts the system's reading of a lone `Label`, or a lone label outside menus takes `Icon` by hand, with
+  the menu case excluded.
 - **`scale`** (proposed by the agent, decided under the delegation): it stays a contract option and an Apple system
   option, `SwiftUI.Image.Scale`. On an own component a system option is the system's environment modifier, which the
   product writes on the component and the symbol inside reads: `Icon(.chevron).imageScale(.small)`. So `Icon` takes no
@@ -147,6 +157,14 @@ inside, as a style holds the system's control, and adds only what the `Image` ca
   would leave the snapshot matrix no scale axis.
 - **The snapshot matrix** (proposed by the agent, decided under the delegation): with no states, the registry's names
   run down the rows, six to a sheet, and `scale` across: six sheets, not thirty-six of three glyphs each.
+
+## The catalog
+
+- `ColorInUsePage`'s task check became `Icon(.check, label: "Done")`, labeled, not decorative: that foundation page
+  now says "Done" where it said the system's "checkmark", since the check is the only sign of a done task there.
+- The brief's sheet "labeled against decorative" is a section of the `icon` catalog entry, held by
+  `IconAccessibilityTests`, not a matrix supplement: a picture cannot show the difference, which only the
+  accessibility hierarchy holds.
 
 ## Open points
 
@@ -167,6 +185,13 @@ inside, as a style holds the system's control, and adds only what the `Image` ca
     `.fontWeight(<the role's Bold Text weight>)` for the symbols and keep the system's step from them, for example by
     setting `legibilityWeight` back to regular inside the role; that also reaches text nested in the role's subtree
     that takes its own role, so it needs the owner's call and a test of nested roles.
+- **An empty label.** `Icon(.sun, label: "")` is an image with an empty label, not hidden. Should an empty label,
+  such as a list's title the person left empty, mean decorative?
+- **The rendering mode.** `Icon` draws its symbol with `symbolRenderingMode(.monochrome)`, which design-language/07
+  ("One color", 07:94–100) backs: a product's outer `.symbolRenderingMode(…)` on an `Icon` is overridden by it. That
+  is the consequence of enforcing one color, for the owner to confirm.
+- **The menu evidence.** The first finding that a hidden icon hides a menu item rested on one probe run whose test
+  source was not kept; the kept test above now holds the same behaviour for a `Label` with `Icon`, on iOS 26.3 only.
 - **chapter 07's open question 1** (which names are domain icons) stays open; P6 keeps Apple's glyphs as they are.
 
 ## The schema

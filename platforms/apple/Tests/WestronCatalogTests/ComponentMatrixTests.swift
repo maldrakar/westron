@@ -116,6 +116,16 @@ struct ComponentMatrixTests {
         #endif
     }
 
+    #if !os(macOS)
+        @Test("Checkbox's list colors take three rows to a picture at accessibility5, so they fit an iPhone's screen")
+        func checkboxListColorsAtAccessibility5() throws {
+            let matrix = try #require(ComponentMatrix.all.first { $0.component == "checkbox" })
+            let colors = try #require(matrix.supplements.first { $0.supplement?.id == "list-colors" })
+            let pictures = colors.sheets.flatMap { colors.pictures(of: $0, at: .accessibility5) }
+            #expect(pictures.map { colors.rows(of: $0).count } == [3, 2])
+        }
+    #endif
+
     @Test("a state no token binding names draws as rest, and the sheet and the review page say so")
     func unboundStates() throws {
         let matrix = try #require(ComponentMatrix.all.first { $0.component == "button" })

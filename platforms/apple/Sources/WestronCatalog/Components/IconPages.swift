@@ -194,6 +194,28 @@ private struct IconPage: View {
                     .textRole(.body.regular)
                     .foregroundStyle(.text.primary)
                 }
+                section("in a menu: Label(_:icon:), and a Label with Icon") {
+                    // A system menu builds its items from the labels: IconAccessibilityTests opens it and reads
+                    // what each item is (decisions/0001, "The Apple view").
+                    Menu {
+                        Button {
+                        } label: {
+                            Label("Rename", icon: .pen)
+                        }
+                        Button(role: .destructive) {
+                        } label: {
+                            Label {
+                                Text("Delete")
+                            } icon: {
+                                Icon(.trash)
+                            }
+                        }
+                    } label: {
+                        Text("Actions")
+                            .textRole(.body.regular)
+                    }
+                    .accessibilityIdentifier(IconPageID.menu)
+                }
             }
         }
     }
@@ -213,4 +235,5 @@ private struct IconPage: View {
 enum IconPageID {
     static let labeled = "westron.catalog.icon.labeled"
     static let label = "westron.catalog.icon.label"
+    static let menu = "westron.catalog.icon.menu"
 }
