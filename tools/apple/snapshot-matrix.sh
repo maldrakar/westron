@@ -13,7 +13,9 @@
 # comma-separated, still one run). The PNGs, named <component>.<sheet>.<theme>.png and
 # <component>.<sheet>[_part-<n>-of-<count>].light.<text size>.png, the manifest matrix.json and the review page
 # index.html go to DIR, by default .build/snapshot-matrix/<platform>/; the script prints the path of index.html and
-# fails when an expected image is missing or a sheet failed its checks. Log: .build/logs/.
+# fails when an expected image is missing or a sheet failed its checks. Log: .build/logs/. A capture the machinery
+# failed (the app did not launch, the test runner did not start: a stalled simulator) is run once more, within
+# WESTRON_MATRIX_RETRY_BY minutes (default 25) of the start; never one whose test reported a failure of a sheet.
 # The sheets are laid out for the default device, iPhone 17 in portrait: at accessibility5 a part of one column and six
 # rows just fits it, so another --device, a shorter one above all, may fail the check that every cell is inside the
 # picture there.
@@ -160,21 +162,25 @@ for contract in spec/components/*/; do
 done
 rm -f -- "$out/matrix.json" "$out/index.html"
 
-udid=""
-if [ "$platform" = ios ]; then
-  # shellcheck source=tools/apple/simulator.sh
-  source tools/apple/simulator.sh
-  udid="$(westron_simulator_udid "$device")" || exit 1
-  # The same status bar on every screenshot.
-  xcrun simctl status_bar "$udid" override --time 9:41 --batteryState charged --batteryLevel 100 \
-    --wifiBars 3 --cellularMode active --cellularBars 4 --dataNetwork wifi
-  destination="id=$udid"
-else
-  destination="platform=macOS,arch=$(uname -m)"
-fi
-
-xcodebuild_args=(-project platforms/apple/Catalog/Catalog.xcodeproj -scheme Catalog -destination "$destination"
-  -derivedDataPath .build/xcode/catalog)
+# Finds the simulator, boots it if need be, and pins its status bar; on macOS, the Mac. Sets udid, destination and
+# xcodebuild_args.
+prepare_destination() {
+  udid=""
+  if [ "$platform" = ios ]; then
+    # shellcheck source=tools/apple/simulator.sh
+    source tools/apple/simulator.sh
+    udid="$(westron_simulator_udid "$device")" || exit 1
+    # The same status bar on every screenshot.
+    xcrun simctl status_bar "$udid" override --time 9:41 --batteryState charged --batteryLevel 100 \
+      --wifiBars 3 --cellularMode active --cellularBars 4 --dataNetwork wifi
+    destination="id=$udid"
+  else
+    destination="platform=macOS,arch=$(uname -m)"
+  fi
+  xcodebuild_args=(-project platforms/apple/Catalog/Catalog.xcodeproj -scheme Catalog -destination "$destination"
+    -derivedDataPath .build/xcode/catalog)
+}
+prepare_destination
 
 if ! xcodebuild "${xcodebuild_args[@]}" build-for-testing > "$log" 2>&1; then
   grep -E "error:|BUILD FAILED" "$log" | head -20 >&2 || true
@@ -182,43 +188,129 @@ if ! xcodebuild "${xcodebuild_args[@]}" build-for-testing > "$log" 2>&1; then
   exit 1
 fi
 
-results=".build/xcode/results/$name.xcresult"
-attachments=".build/xcode/results/$name-attachments"
-rm -rf "$results" "$attachments"
-
 export TEST_RUNNER_WESTRON_MATRIX=1
 [ -n "$component" ] && export TEST_RUNNER_WESTRON_MATRIX_COMPONENT="$component"
 
-# One test invocation for the whole matrix. Without -collect-test-diagnostics never, a failed run waits minutes for a
-# sysdiagnose of the simulator. A failed test still exports what it captured, so the page shows what went wrong.
-echo "== snapshot-matrix: $destination${component:+, $component}" >&2
-test_status=0
-xcodebuild "${xcodebuild_args[@]}" test-without-building -resultBundlePath "$results" \
-  -collect-test-diagnostics never \
-  -only-testing:CatalogUITests/SnapshotMatrixTests/testMatrix >> "$log" 2>&1 || test_status=$?
-grep -E "^matrix: |: error: " "$log" | grep -v "\[MT\]" >&2 || true
-if [ -n "$udid" ] && ! pgrep -f "xcodebuild.*-destination id=$udid" > /dev/null; then
-  # After UI tests the simulator's testmanagerd has been seen to spin for hours (tools/apple/check.sh, a11y).
-  xcrun simctl spawn "$udid" launchctl kill SIGKILL system/com.apple.testmanagerd > /dev/null 2>&1 || true
-fi
+# Runs the test once into <log> (appended) and <results>, and moves what it attached into $out: the PNGs and the
+# manifest. Sets test_status to xcodebuild's status. Without -collect-test-diagnostics never, a failed run waits minutes
+# for a sysdiagnose of the simulator. A failed test still exports what it captured, so the page shows what went wrong.
+capture() {
+  local log="$1" results="$2" attachments="${2%.xcresult}-attachments"
+  rm -rf "$results" "$attachments"
+  echo "== snapshot-matrix: $destination${component:+, $component}" >&2
+  test_status=0
+  xcodebuild "${xcodebuild_args[@]}" test-without-building -resultBundlePath "$results" \
+    -collect-test-diagnostics never \
+    -only-testing:CatalogUITests/SnapshotMatrixTests/testMatrix >> "$log" 2>&1 || test_status=$?
+  grep -E "^matrix: |: error: |Failed to install or launch the test runner|Early unexpected exit" "$log" \
+    | grep -v "\[MT\]" >&2 || true
+  if [ -n "$udid" ] && ! pgrep -f "xcodebuild.*-destination id=$udid" > /dev/null; then
+    # After UI tests the simulator's testmanagerd has been seen to spin for hours (tools/apple/check.sh, a11y).
+    xcrun simctl spawn "$udid" launchctl kill SIGKILL system/com.apple.testmanagerd > /dev/null 2>&1 || true
+  fi
+  # A runner that never started leaves no result bundle: no manifest then, and matrix_plan below decides.
+  if ! xcrun xcresulttool export attachments --path "$results" --output-path "$attachments" >> "$log" 2>&1; then
+    echo "snapshot-matrix: no attachments in $results, log: $log" >&2
+    return 0
+  fi
+  # The export names each file by its own id; its manifest.json maps them to the names the test gave the attachments,
+  # which xcresulttool suggests as `<name without .png>_<n>_<UUID>.png`.
+  jq -r '.[].attachments[] | [.exportedFileName, .suggestedHumanReadableName] | @tsv' \
+    "$attachments/manifest.json" | while IFS=$'\t' read -r file label; do
+    case "$label" in
+      westron-matrix-manifest*) target="matrix.json" ;;
+      westron-matrix-*.png)
+        target="$(sed -E 's/^westron-matrix-//; s/(\.png)?(_[0-9]+_[0-9A-Fa-f-]+)?\.png$//' <<< "$label").png" ;;
+      *) continue ;;
+    esac
+    mv "$attachments/$file" "$out/$target"
+  done
+  rm -rf "$attachments"
+}
 
-if ! xcrun xcresulttool export attachments --path "$results" --output-path "$attachments" >> "$log" 2>&1; then
-  echo "snapshot-matrix: no attachments in $results, log: $log" >&2
-  exit 1
-fi
-# The export names each file by its own id; its manifest.json maps them to the names the test gave the attachments,
-# which xcresulttool suggests as `<name without .png>_<n>_<UUID>.png`.
-jq -r '.[].attachments[] | [.exportedFileName, .suggestedHumanReadableName] | @tsv' \
-  "$attachments/manifest.json" | while IFS=$'\t' read -r file label; do
-  case "$label" in
-    westron-matrix-manifest*) target="matrix.json" ;;
-    westron-matrix-*.png)
-      target="$(sed -E 's/^westron-matrix-//; s/(\.png)?(_[0-9]+_[0-9A-Fa-f-]+)?\.png$//' <<< "$label").png" ;;
-    *) continue ;;
+# What a failed capture that wrote no manifest leaves to do, from its <log>. Prints one line:
+#   retry <reason>  the machinery failed, not the capture: the test runner did not start (xcodebuild's "Failed to
+#                   install or launch the test runner" or "Early unexpected exit, operation never finished
+#                   bootstrapping", with no test case started and no failure), or the test started and every failure
+#                   XCTest reported is one of its messages for a request to the simulator, below;
+#   fail <reason>   anything else: a failure of the test's own (a cell count that differs, a cell outside the window,
+#                   a sheet that did not render or showed a problem, an unknown component), such a failure among
+#                   others, a run with no failure that explains it (the runner died mid-run), a test that did not
+#                   start otherwise, a test that passed.
+# The machinery's messages, told by how they start, never by text further in: the XCTest messages that
+# CatalogAccessibilityAuditTests.isInfrastructure counts as infrastructure (the same XCUIApplication calls), not that
+# test's own failures:
+#   "Failed to launch <XCUIApplicationImpl: …> via Xcode: Timed out while launching application" (CI run 44444325775,
+#     the leg button+rule, at the first `app.launch()` of SnapshotMatrixTests);
+#   "Failed to get background assertion for target app with pid <pid>: Timed out while acquiring …" (the same run, the
+#     audit's testDefaultSettings 2/3, at its first `app.launch()`);
+#   "Failed to terminate dev.westron.catalog:" and "Application 'dev.westron.catalog' does not have a process ID"
+#     (the audit on CI, #74);
+#   "Failed to <request>: Timed out while …" (a UI query on CI, #74; a drag and a screenshot locally).
+matrix_plan() {
+  awk -v q="'" '
+    BEGIN { c = "-[CatalogUITests.SnapshotMatrixTests testMatrix]"; e = ": error: " c " : " }
+    index($0, "Test Case " q c q " started") { started = 1 }
+    index($0, "Test Case " q c q " passed") { passed = 1 }
+    index($0, "Failed to install or launch the test runner") { runner = 1 }
+    index($0, "Early unexpected exit, operation never finished bootstrapping") { runner = 1 }
+    index($0, e) {
+      errors++
+      m = substr($0, index($0, e) + length(e))
+      if (m ~ /^Failed to launch <XCUIApplicationImpl: [^>]+> via Xcode: Timed out while launching application/ \
+        || m ~ /^Failed to get background assertion for target app with pid [0-9]+: Timed out while acquiring / \
+        || index(m, "Failed to terminate dev.westron.catalog:") == 1 \
+        || index(m, "Application " q "dev.westron.catalog" q " does not have a process ID") == 1 \
+        || m ~ /^Failed to [a-z ]+: Timed out while /) machinery++
+      else if (other == "") other = m
+    }
+    END {
+      if (passed) { print "fail the test passed, yet wrote no manifest"; exit }
+      if (!started) {
+        if (runner && errors == 0) print "retry the test runner did not start"
+        else print "fail the test did not start"
+        exit
+      }
+      if (errors == 0) { print "fail no failure of the test explains it"; exit }
+      if (other != "") { print "fail a failure of the capture: " other; exit }
+      printf "retry the simulator failed the test (%d failure%s of the machinery)\n", errors, (errors == 1 ? "" : "s")
+    }' "$1"
+}
+
+# A retry starts only within this many minutes of the start of the script, its build included: it captures everything
+# again, so it needs a whole capture's time. CI's snapshot legs time out at 30 minutes plus their estimated capture
+# time with a third more (.github/workflows/ci.yml, `snapshot-components`): a retry that starts by 25 minutes, takes
+# about 3 to start the test runner (2.4 on the stalled CI runner, run 44444325775) and captures within the third more,
+# leaves about 2 minutes for the export, the page and the upload. A leg the timeout kills uploads no logs.
+retry_by=$((${WESTRON_MATRIX_RETRY_BY:-25} * 60))
+
+# One test invocation for the whole matrix, and one retry when the machinery failed it (above), with a warning on
+# GitHub Actions. The first run's log stays as $log, its build included; the retry's is <name>-retry.log.
+results=".build/xcode/results/$name.xcresult"
+capture "$log" "$results"
+if [ ! -f "$out/matrix.json" ] && [ "$test_status" -ne 0 ]; then
+  plan="$(matrix_plan "$log")"
+  case "$plan" in
+    retry*)
+      if [ "$SECONDS" -gt "$retry_by" ]; then
+        echo "snapshot-matrix: ${plan#retry }, not retried: $((SECONDS / 60)) min have gone, past the" \
+          "$((retry_by / 60)) min a retry must start by (WESTRON_MATRIX_RETRY_BY)" >&2
+      else
+        echo "snapshot-matrix: retrying the capture: ${plan#retry }; its failures are above (log: $log)" >&2
+        if [ -n "${GITHUB_ACTIONS:-}" ]; then
+          echo "::warning title=Snapshot matrix retried::${component:-every component} on $platform:" \
+            "${plan#retry }. The first run's failures are in this step's output; its log is in the leg's artifact."
+        fi
+        # The simulator may have died with the run; it is found, and booted again if need be.
+        prepare_destination
+        log=".build/logs/$name-retry.log" results=".build/xcode/results/$name-retry.xcresult"
+        : > "$log"
+        capture "$log" "$results"
+      fi
+      ;;
+    *) echo "snapshot-matrix: the capture failed, not retried: ${plan#fail }" >&2 ;;
   esac
-  mv "$attachments/$file" "$out/$target"
-done
-rm -rf "$attachments"
+fi
 
 if [ ! -f "$out/matrix.json" ]; then
   echo "snapshot-matrix: the test wrote no manifest (status $test_status), log: $log" >&2

@@ -42,19 +42,38 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
 
     /// Starts the messages of this test's own infrastructure failures: an entry that did not render, an audit that did
     /// not complete twice, the `WESTRON_A11Y_FAIL_ONCE` hook. XCTest puts "failed - " before an `XCTFail` message.
+    /// `tools/apple/snapshot-matrix.sh` (`matrix_plan`) knows XCTest's messages below too, for its retry.
     static let infrastructurePrefix = "infrastructure: "
 
     /// Whether a failure is the machinery's, told by how its message starts, never by text further in, where a page's
-    /// own labels can appear: XCTest's messages for a terminate and a launch seen on the CI runner (#74), its timeouts
-    /// of a request to the simulator, "Failed to <request>: Timed out while …" (a UI query on the CI runner; a UI
-    /// query, a drag and a screenshot when the local simulator's `testmanagerd` was stopped for minutes), and this
-    /// test's own (`infrastructurePrefix`). Every other failure is a finding. A message joins only with evidence that
-    /// it is the machinery's.
+    /// own labels can appear. Each message is XCTest's for a request to the simulator, which no audit issue and no
+    /// assertion of this test produces (those are `describe(_:)`'s issue texts and this file's `XCTFail` messages):
+    /// - this test's own (`infrastructurePrefix`): an entry that did not render, an audit that did not complete twice;
+    /// - "Failed to terminate dev.westron.catalog:<pid>: …", a terminate: the CI runner (#74; again in run
+    ///   44444325775, `testDarkIncreasedContrast`, which passed on its retry);
+    /// - "Application 'dev.westron.catalog' does not have a process ID", a launch: the CI runner (#74);
+    /// - "Failed to <request>: Timed out while …", a request that timed out: a UI query on the CI runner (#74); a UI
+    ///   query, a drag and a screenshot when the local simulator's `testmanagerd` was stopped for minutes;
+    /// - "Failed to get background assertion for target app with pid <pid>: Timed out while acquiring background
+    ///   assertion.", a launch (`app.launch()` in `launch(_:_:)`) on a stalled simulator: the CI runner, run
+    ///   44444325775, `testDefaultSettings` 2/3, in the shard's first entry;
+    /// - "Failed to launch <XCUIApplicationImpl: 0x… dev.westron.catalog at …> via Xcode: Timed out while launching
+    ///   application via Xcode.", a launch that timed out: the CI runner, run 44444325775, in the snapshot matrix's
+    ///   first `app.launch()` (`SnapshotMatrixTests`), the same call as here; between the angle brackets is XCTest's
+    ///   description of the app, its address and path. A launch that fails otherwise, an app that crashes on an entry,
+    ///   stays a finding.
+    /// Every other failure is a finding. A message joins only with evidence that it is the machinery's.
     static func isInfrastructure(_ description: String) -> Bool {
         description.hasPrefix(infrastructurePrefix) || description.hasPrefix("failed - " + infrastructurePrefix)
             || description.hasPrefix("Failed to terminate dev.westron.catalog:")
             || description.hasPrefix("Application 'dev.westron.catalog' does not have a process ID")
             || description.prefixMatch(of: #/Failed to [a-z ]+: Timed out while /#) != nil
+            || description.prefixMatch(
+                of: #/Failed to get background assertion for target app with pid [0-9]+: Timed out while acquiring /#)
+                != nil
+            || description.prefixMatch(
+                of: #/Failed to launch <XCUIApplicationImpl: [^>]+> via Xcode: Timed out while launching application/#)
+                != nil
     }
 
     /// The test method and the entry being audited, for `record(_:)`.
