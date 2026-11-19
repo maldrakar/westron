@@ -257,6 +257,17 @@ and the retry's is `…-retry.log`, both in the leg's artifact. The retry captur
 within 25 minutes of the script's start (`WESTRON_MATRIX_RETRY_BY`); a leg's timeout is 30 minutes and its capture
 time with a third more, so a retry that starts by then ends about 2 minutes before it (`.github/workflows/ci.yml`).
 
+A run that goes silent is stopped: when the log of the build or of a capture has not grown for 10 minutes
+(`WESTRON_MATRIX_STALL_SECONDS`, default 600), the script says `snapshot-matrix: stalled: xcodebuild wrote nothing
+for …`, stops that xcodebuild and its children, and writes the same line into the log. A stalled capture counts as the
+machinery's failure and is retried by the rules above, unless its test reported a failure of a sheet before the
+silence; a stalled build fails as a build does; a second stall fails the capture. In CI run 44461921450 the macOS leg
+printed the capture's header and nothing more for 62 minutes, until the job's timeout, and a leg the timeout kills
+uploads no logs. The capture's longest usual silences are the machinery's, 2.4–3.5 minutes (the runner starting, a
+launch timing out, the runner crashing while bootstrapping); between the test's own lines, at most 2.3 seconds. CI
+also sets `WESTRON_MATRIX_DEADLINE` to the leg's timeout less 2 minutes, in minutes from the script's start: an
+xcodebuild still running then is stopped, stalled or not, the capture fails without a retry, and the logs go up.
+
 ### Behaviour UI tests
 
 `ButtonBehaviorTests`, `CheckboxBehaviorTests`, `TextFieldBehaviorTests` and `IconAccessibilityTests`, in

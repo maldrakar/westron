@@ -117,6 +117,13 @@ Date: 2026-11-14. Status: accepted.
   30 minutes plus its capture time with a third more, so that such a retry ends inside it (before, it fitted only
   when it started by 15 minutes, less than the setup alone has taken). Decided by the coordinator under the owner's
   delegation of 2026-11-18, pending the owner's confirmation.
+  2026-11-19 (run 44461921450): a macOS snapshot leg printed the capture's header and then nothing for 62 minutes,
+  until the job's timeout killed it with no logs; a rerun of the same commit passed in 17. The snapshot matrix now
+  stops an xcodebuild whose log has not grown for 10 minutes, its children too, and a capture so stopped counts as
+  the machinery's failure, retried on the grounds above and never after a failure of a sheet; a second stall fails
+  the leg. A capture's longest usual silence is the machinery's, 3.5 minutes. CI also stops whatever still runs
+  2 minutes before a leg's timeout, so that the logs always upload. Decided by the coordinator under the owner's
+  delegation of 2026-11-18, pending the owner's confirmation.
 
 ## Consequences
 
