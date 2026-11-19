@@ -244,6 +244,19 @@ captures its components in one run (`--component a,b`) and uploads `snapshot-mat
 `snapshot-matrix-ios` and `snapshot-matrix-macos`, as before. A page whose component no leg brought names it at its top.
 With Text field, 365 iOS images go in three legs and 184 macOS images in one.
 
+A capture that the machinery failed, not a sheet, is run once more, as the audit's retry is (#74): when the test wrote
+no manifest and either the test runner did not start ("Failed to install or launch the test runner", "Early unexpected
+exit, operation never finished bootstrapping") or every failure XCTest reported is one of its messages for a request
+to a stalled simulator, the ones the audit counts as infrastructure (a launch that timed out, "Failed to launch
+<XCUIApplicationImpl: …> via Xcode: Timed out while launching application", seen on CI in run 44444325775; a
+background assertion, a terminate, a UI query that timed out). A failure of the test's own (a cell count, a cell
+outside the window, a sheet that did not render or showed a problem, an unknown component), alone or among others, is
+never retried, and nor is a capture that wrote its manifest. The script says `snapshot-matrix: retrying the capture:
+…` and, on GitHub Actions, warns on the run; the first run's log stays as `snapshot-matrix-<platform>[-<a+b>].log`
+and the retry's is `…-retry.log`, both in the leg's artifact. The retry captures everything again, so it starts only
+within 25 minutes of the script's start (`WESTRON_MATRIX_RETRY_BY`); a leg's timeout is 30 minutes and its capture
+time with a third more, so a retry that starts by then ends about 2 minutes before it (`.github/workflows/ci.yml`).
+
 ### Behaviour UI tests
 
 `ButtonBehaviorTests`, `CheckboxBehaviorTests`, `TextFieldBehaviorTests` and `IconAccessibilityTests`, in
@@ -339,7 +352,11 @@ added (a contrast leg at about 31 entries) gets another shard, so that a retry s
 - A failed run is retried once, narrowly, when the machinery failed rather than a page (#74). On the CI runner the
   simulator now and then stalls for a minute or more, and whatever the test asks of it then fails: terminating the
   catalog ("Failed to terminate dev.westron.catalog:<pid>: Failed to terminate dev.westron.catalog:0", the same
-  message a simulator whose `testmanagerd` is stopped gives), launching it ("does not have a process ID"), a UI
+  message a simulator whose `testmanagerd` is stopped gives), launching it ("does not have a process ID"; in run
+  44444325775, in the first entry of a shard, "Failed to get background assertion for target app with pid <pid>:
+  Timed out while acquiring background assertion.", and in the snapshot matrix's first launch "Failed to launch
+  <XCUIApplicationImpl: …> via Xcode: Timed out while launching application via Xcode."; a launch that fails
+  otherwise stays a finding), a UI
   query ("Failed to get matching snapshot: Timed out while evaluating UI query"; in the same local experiment also
   a drag and a screenshot, "Timed out while synthesizing event", "… requesting screenshot"), the audit ("Audit
   failed to complete in time", -56, which the test retries once on the spot) or the entry not rendering within
@@ -354,8 +371,10 @@ added (a contrast leg at about 31 entries) gets another shard, so that a retry s
     uploads the logs of a leg that retried as the `a11y-retried-…` artifact, even when the retry passed.
   - Not retried, so the leg fails: a test with a finding (no entry is audited twice after a finding, so a finding
     that shows once in two runs still fails), a failure outside an entry, a test that did not start (but for the
-    test runner failing to install or launch, the one case where the whole test is run again), a run where
-    XCTest reports more failures than the test classified, and a run where `xcodebuild` exits non-zero although
+    test runner failing to start, the one case where the whole test is run again: "Failed to install or launch the
+    test runner", or "Early unexpected exit, operation never finished bootstrapping" when it crashed while preparing
+    to run tests, run 44444325775), a run where XCTest reports more failures than the test classified, and a run
+    where `xcodebuild` exits non-zero although
     every test passed (the runner died, or the result bundle was not written, after the last test), with
     `a11y: xcodebuild exited with status <n> although every test passed` in its output. A retry that fails again
     fails the leg.

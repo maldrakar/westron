@@ -103,6 +103,20 @@ Date: 2026-11-14. Status: accepted.
   the snapshot legs below, a run has 17 Mac jobs, about 7.7 runner-hours: an estimated 1.5 hours at best and about
   1.6–1.9 expected. Decided by the coordinator under the owner's delegation of 2026-11-18, pending the owner's
   confirmation.
+  2026-11-19 (run 44444325775, phase 3's first run): three legs of 20 failed for the machinery and were not
+  retried, each at the first launch of its first test run on the runner. The audit's retry rule stays as it is; it
+  now knows two more of XCTest's messages. A test runner that crashed while preparing to run tests ("Early
+  unexpected exit, operation never finished bootstrapping") did not start, like one that failed to install, and its
+  whole test is run again within the first half of the budget. A launch that timed out on a stalled simulator
+  ("Failed to get background assertion … Timed out while acquiring background assertion", "Failed to launch … via
+  Xcode: Timed out while launching application") is infrastructure; any other launch failure stays a finding, and
+  a run with a finding is still never retried. The snapshot matrix, which had no retry, gets one on the same
+  grounds: a capture that wrote no manifest and whose every failure is one of those messages, or whose runner did
+  not start, is captured once more, never one whose test reported a failure of a sheet. The retry is the whole
+  capture, so it starts only within 25 minutes of the script's start, and a snapshot leg's timeout grows from 20 to
+  30 minutes plus its capture time with a third more, so that such a retry ends inside it (before, it fitted only
+  when it started by 15 minutes, less than the setup alone has taken). Decided by the coordinator under the owner's
+  delegation of 2026-11-18, pending the owner's confirmation.
 
 ## Consequences
 
