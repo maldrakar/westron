@@ -98,12 +98,13 @@ platforms:
     ios:
       description: >-
         VoiceOver meets the system Toggle of the representation: a switch with its label, its value on or off, and no
-        button (CatalogUITests/CheckboxBehaviorTests). No hover. The hit area is at least 44 pt, size.control.m.
+        button, measured on iOS 26.3 (CatalogUITests/CheckboxBehaviorTests); iOS 17 runs the same code, not
+        measured. No hover. The hit area is at least 44 pt, size.control.m.
     macos:
       description: >-
         The system's checkbox toggle is square; westron's check stays round, as on the other OSes. Assistive
-        technology meets a checkbox with its label and its value, and no button (CatalogUITests/CheckboxBehaviorTests).
-        The hit area is at least size.control.m, 32 pt, above the recommended 28. Keyboard focus, measured with the
+        technology meets a checkbox with its label and its value, and no button, measured on macOS 26
+        (CatalogUITests/CheckboxBehaviorTests); macOS 14 runs the same code, not measured. The hit area is at least size.control.m, 32 pt, above the recommended 28. Keyboard focus, measured with the
         Mac's keyboard navigation off: neither westron's check nor a system Toggle in checkbox style takes focus,
         from Tab or from code; with .focusable() added, both take focus and show the system's ring, and Space
         toggles neither. With keyboard navigation on, Tab and Space are unverified, pending the owner's run of
@@ -111,8 +112,9 @@ platforms:
     watchos:
       states: [checked, pressed, disabled]
       description: >-
-        No keyboard focus to draw. VoiceOver meets the system Toggle of the representation, as on iOS. The hit area is
-        at least 44 pt, size.control.m.
+        No keyboard focus to draw. The style is the same code as on iOS, the system Toggle of the representation
+        included, and it compiles for watchOS 10; nothing was measured on watchOS, VoiceOver included. The hit area
+        is at least 44 pt, size.control.m.
   web:
     strategy: style-on-system-control
     base: input

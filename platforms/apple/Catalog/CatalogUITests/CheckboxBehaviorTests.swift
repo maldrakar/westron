@@ -134,6 +134,41 @@ final class CheckboxBehaviorTests: XCTestCase {
         XCTAssertEqual(summary, "on: task, subtask", "a press in the hit area's corner did not toggle")
     }
 
+    /// In a system `List` row, as the pilot's task rows are, a check whose label is hidden beside a separate title.
+    /// On iOS the List gives the toggle's accessibility element the whole row (measured on iOS 26.3: 370 × 74 pt on a
+    /// 402 pt screen), on macOS the check's own 32 pt square (macOS 26), so the check is pressed in the middle of the
+    /// element's leading square, where the circle is drawn on both. A press on the check
+    /// toggles it; a press on the title, inside the same row, does not: the row does not take the check's press. The
+    /// screenshot attached after both shows the rows.
+    @MainActor
+    func testCheckInAListRow() {
+        app = XCUIApplication()
+        app.launchArguments = ["-WestronEntry", "checkbox-in-list"]
+        app.launch()
+        let summary = app.staticTexts["checkbox.list.summary"]
+        XCTAssertTrue(summary.waitForExistence(timeout: 30), "the entry did not render")
+        func text() -> String { summary.label.isEmpty ? (summary.value as? String ?? "") : summary.label }
+        XCTAssertEqual(text(), "on: second")
+        let first = check("checkbox.list.first")
+        XCTAssertEqual(first.label, "Call the plumber")
+        let row = first.frame
+        print("checkbox-in-list: the toggle's element \(row) in a window \(app.windows.firstMatch.frame)")
+        let origin = first.coordinate(withNormalizedOffset: .zero)
+        // The circle: the middle of the row's leading square.
+        press(origin.withOffset(CGVector(dx: row.height / 2, dy: row.height / 2)))
+        XCTAssertEqual(text(), "on: first, second", "a press on the check in a List row did not toggle it")
+        #if os(macOS)
+            Thread.sleep(forTimeInterval: NSEvent.doubleClickInterval)
+        #endif
+        // The title: 120 pt past the row's leading square, on the title's text.
+        press(origin.withOffset(CGVector(dx: row.height + 120, dy: row.height / 2)))
+        XCTAssertEqual(text(), "on: first, second", "a press on the row's title toggled the check")
+        let rows = XCTAttachment(screenshot: app.windows.firstMatch.screenshot())
+        rows.name = "checkbox-in-list"
+        rows.lifetime = .keepAlways
+        add(rows)
+    }
+
     /// macOS, with the system's keyboard navigation on (System Settings, Keyboard, "Keyboard navigation"): Tab moves the
     /// focus to the check, and Space toggles it. The screenshot attached shows the system's focus ring on it.
     ///
