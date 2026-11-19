@@ -10,6 +10,7 @@ final class IconAccessibilityTests: XCTestCase {
         static let entry = "westron.catalog.entry"
         static let labeled = "westron.catalog.icon.labeled"
         static let label = "westron.catalog.icon.label"
+        static let menu = "westron.catalog.icon.menu"
     }
 
     @MainActor
@@ -36,5 +37,36 @@ final class IconAccessibilityTests: XCTestCase {
         XCTAssertEqual(
             texts.map { $0.label.isEmpty ? $0.value as? String ?? "" : $0.label }, ["Rename"],
             "\(label.allElementsBoundByIndex.map { "\($0.elementType.rawValue) \($0.label)" })")
+    }
+
+    /// A system menu built from labels: `Label("Rename", icon: .pen)` as westron ships it, and
+    /// `Label { Text("Delete") } icon: { Icon(.trash) }`, the alternative decisions/0001 tested for the owner. Both
+    /// icons are drawn (the screenshot attached), but only the first item is a button: an item whose icon is hidden is
+    /// left without one on iOS 26.3, so VoiceOver cannot reach it. The test holds both, so that a system that changes
+    /// either is noticed.
+    @MainActor
+    func testMenuItemsBuiltFromLabels() throws {
+        #if os(iOS)
+            let app = XCUIApplication()
+            app.launchArguments = ["-WestronEntry", "icon"]
+            app.launch()
+            defer { app.terminate() }
+            let menu = app.descendants(matching: .any)[ID.menu]
+            XCTAssertTrue(menu.waitForExistence(timeout: 30), "no menu on the entry")
+            menu.tap()
+            let rename = app.buttons["Rename"]
+            XCTAssertTrue(rename.waitForExistence(timeout: 5), "the menu item Rename is not a button")
+            let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            shot.name = "icon-menu"
+            shot.lifetime = .keepAlways
+            add(shot)
+            // Rename's button holds the system's image of its symbol, with the symbol's own name.
+            XCTAssertEqual(rename.descendants(matching: .image).count, 1)
+            // Delete is drawn, but its item has no button and no text: assistive technology cannot reach it.
+            XCTAssertFalse(app.buttons["Delete"].exists, "the item with a hidden icon became a button")
+            XCTAssertFalse(app.staticTexts["Delete"].exists, "the item with a hidden icon became reachable")
+        #else
+            throw XCTSkip("the menu is checked on iOS, where SwiftUI builds a UIMenu")
+        #endif
     }
 }
