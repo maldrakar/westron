@@ -1,5 +1,9 @@
 import XCTest
 
+#if os(iOS)
+    import UIKit
+#endif
+
 /// TextField's behavior that a unit test cannot reach, on the catalog's `text-field-behavior` entry, in the real app,
 /// whose window holds the keyboard focus (a package test's window is never key, so SwiftUI moves no focus there): a
 /// framed field at size s takes a touch or a click on its padding and within the platform's recommended target around
@@ -147,33 +151,56 @@ final class TextFieldBehaviorTests: XCTestCase {
         #endif
     }
 
-    #if os(iOS)
-        /// The system field's own touches through the style: a double tap selects a word, with the selection's handles
-        /// and the edit menu. A long press should show the edit menu too, and on a styled field it does not: an
-        /// expected failure, an open point of the contract's decision (#30). Measured on iOS 26.3: an unstyled field
-        /// with the same text and a product focus binding shows the menu after a long press, focused or not; the styled
-        /// field shows none, focused or not, and still none with the style's tap gesture removed. The cause is not
-        /// found. The menu is found by its items' type, not their labels, which follow the simulator's language.
-        @MainActor
-        func testTheFieldKeepsItsOwnTouches() {
-            let notes = field(ID.notes)
-            notes.doubleTap()
+    /// The system field's own touches and clicks through the style. iOS: a double tap selects a word, with the
+    /// selection's handles and the edit menu; a long press on a focused field shows the edit menu; a long press on an
+    /// empty field shows it with Paste, how a person pastes into an empty field. macOS: a right click shows the field's
+    /// context menu. A bisect in #30 found the styled fields behaving as an unstyled field with the same modifiers in
+    /// every case, with each piece of the style removed in turn, and on macOS the same context menus for styled and
+    /// unstyled fields; a long press on an unfocused field with text shows no menu on either, the system's behavior.
+    /// A long press right after the tap that focuses a field, or after a selection was dismissed, also showed none;
+    /// the test waits a second between them and presses before it selects. Menus are found by their items' type, not
+    /// their labels, which follow the simulator's language.
+    @MainActor
+    func testTheFieldKeepsItsOwnTouches() {
+        #if os(iOS)
+            UIPasteboard.general.string = "pasted"
+            // Taking the focus away dismisses a menu and a selection.
+            func clearFocus() {
+                app.buttons[ID.clearFocus].tap()
+                _ = app.menuItems.firstMatch.waitForNonExistence(timeout: 5)
+            }
+            // An empty field, unfocused: Paste.
+            clearFocus()
+            field(ID.small).press(forDuration: 1.2)
+            XCTAssertTrue(
+                app.menuItems.firstMatch.waitForExistence(timeout: 5), "a long press on an empty field showed no menu")
+            for id in [ID.small, ID.secure, ID.notes] {
+                let field = field(id)
+                clearFocus()
+                field.tap()
+                sleep(1)
+                field.press(forDuration: 1.2)
+                XCTAssertTrue(
+                    app.menuItems.firstMatch.waitForExistence(timeout: 5), "\(id): a long press showed no edit menu")
+            }
+            clearFocus()
+            field(ID.notes).doubleTap()
             let selection = app.otherElements["_UITextSelectionRangeAdjustmentContainerView"]
             XCTAssertTrue(selection.waitForExistence(timeout: 5), "a double tap selected no word")
             XCTAssertTrue(app.menuItems.firstMatch.waitForExistence(timeout: 5), "a double tap showed no edit menu")
-
-            // Taking the focus away dismisses the menu and the selection.
-            app.buttons[ID.clearFocus].tap()
-            XCTAssertTrue(app.menuItems.firstMatch.waitForNonExistence(timeout: 5), "the edit menu stayed")
-            notes.tap()
-            XCTAssertEqual(focusedName, "Focused: notes")
-            notes.press(forDuration: 1.2)
-            XCTExpectFailure("A long press on a styled field shows no edit menu (#30, an open point)") {
-                XCTAssertTrue(
-                    app.menuItems.firstMatch.waitForExistence(timeout: 5), "a long press showed no edit menu")
-            }
-        }
-    #endif
+        #else
+            // The menu bar's items are menu items too, so a context menu shows as more of them. Only a multiline
+            // field's context menu reaches the accessibility tree: on a single-line field, styled or unstyled alike, a
+            // right click adds no items there (measured against unstyled fields in #30), so it is not asserted.
+            let menuBarItems = app.menuItems.count
+            field(ID.notes).rightClick()
+            let opened = NSPredicate { _, _ in self.app.menuItems.count > menuBarItems }
+            XCTAssertEqual(
+                XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: opened, object: nil)], timeout: 5),
+                .completed, "a right click showed no context menu")
+            app.typeKey(.escape, modifierFlags: [])
+        #endif
+    }
 
     @MainActor
     func testMultilineAndSecureFieldsEdit() {

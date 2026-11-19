@@ -136,10 +136,15 @@ mode, set by the `density` modifier with #33 (spec/conventions.md, "Modes: theme
     accessibility tree as XCUITest reads it, and on macOS the reviewer's probe of the accessibility tree;
   - on iOS the touch tolerance that takes a tap on a framed field's padding and past its drawn edge is the style's own
     tap gesture's (`TextFieldHitArea`): with it removed, a tap on the padding and one at the 44 pt target missed (#30).
-    A double tap still selects a word with its edit menu through the style (CatalogUITests/TextFieldBehaviorTests), but
-    a long press on a styled field shows no edit menu, focused or not, where an unstyled field with the same text and a
-    product focus binding shows it; removing the tap gesture did not bring it back, so the cause is not found (the
-    test records it as an expected failure). The loupe was not checked;
+    Whether that gesture interferes with the field's own touches was checked, not left open: through the style a
+    double tap selects a word with its edit menu, a long press on a focused field shows the edit menu, and a long
+    press on an empty field shows Paste (CatalogUITests/TextFieldBehaviorTests). A bisect on iOS 26.3, with each piece
+    of the style removed in turn and the bare configuration as the last, found the styled fields of both variants,
+    a SecureField among them, with text and empty, focused and not, behaving exactly as an unstyled field with the
+    same modifiers. A long press on an unfocused field with text shows no menu on either, the system's behavior; an
+    earlier "no menu" finding was the test's, which pressed right after the tap that focused the field. On macOS a
+    right click shows the same context menu on a styled multiline field as on an unstyled one. The loupe and a drag
+    of the caret were not checked: the accessibility tree shows neither;
 
 ## Decided at implementation (2026-11-19)
 
