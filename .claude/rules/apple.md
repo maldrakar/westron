@@ -46,7 +46,7 @@ paths:
     color's `control` and `onControl`) reads it from `.category(_:)`, set once around the row as `.tint(_:)` is
     (`WestronUI/Category.swift`, decisions/0012);
   - text: a text role in its text style, `.textRole(.heading.large)`, which applies the font, its tracking at the
-    drawn size and, under Bold Text, a role in Onest or Geist Mono one weight up (Onest ExtraBold, Geist Mono Bold);
+    drawn size and, under Bold Text, a role in Onest or Geist Mono a weight up (up to Onest ExtraBold, Geist Mono Bold);
     or `Font(.body.regular)` where only a font fits (`.font(Font(.caption.medium).monospaced())`), with neither.
     Inside `Text` interpolation, `Text(count).textRole(.footnote.medium)` takes the disfavoured `Text` twin, which
     reads no environment; a role in a variable needs the part typed first, `let part: Text = …` (the comment above
@@ -93,7 +93,8 @@ paths:
 - The entry renders the matrix of variants, sizes and states from the contract, with no navigation inside.
 - The snapshot matrix (#24) is generated from the contract into `WestronCatalog/Generated/<Component>+Matrix.swift`;
   the component adds the hand-written `<Component>MatrixCell` (in `WestronCatalog/Components/<Component>Pages.swift`),
-  which draws one combination with the real component, and what no option sets as a supplement
+  which draws one combination with the real component, and what no option sets as a supplement, defined in the same
+  file (`extension ComponentMatrix.Supplement`) and registered in `Supplement.all`
   (`SnapshotMatrix/Supplements.swift`). `tools/apple/snapshot-matrix.sh ios|macos [--component a,b]` captures every
   sheet, or those components', in four themes at `large` (on iOS also light at `xSmall` and `accessibility5`), with
   supplementary sheets marked "not a contract option", and prints the path to `index.html`; `compare` diffs two
