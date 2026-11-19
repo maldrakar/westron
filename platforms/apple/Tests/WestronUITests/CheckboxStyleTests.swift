@@ -181,7 +181,7 @@ struct CheckboxStyleTests {
 
         // A check with the smallest text and no label beside it still takes the whole target.
         let small = fittingSize(
-            Toggle("Done", isOn: .constant(false)).toggleStyle(.check).labelsHidden().textRole(.caption.medium))
+            Toggle(isOn: .constant(false), accessibilityLabel: "Done").toggleStyle(.check).textRole(.caption.medium))
         #expect(small.width >= CheckboxMetrics.minimumHitSide && small.height >= CheckboxMetrics.minimumHitSide)
     }
 
@@ -193,6 +193,30 @@ struct CheckboxStyleTests {
         let shown = fittingSize(toggle().textRole(.body.regular))
         #expect(abs(hidden.width - CheckboxMetrics.minimumHitSide) < 0.5, "\(hidden)")
         #expect(shown.width > hidden.width + 40)
+    }
+
+    @Test("a check with only an accessible name draws no label and leaves no gap, on every OS (decisions/0002)")
+    func accessibilityLabelOnly() throws {
+        let title = "Write the report"
+        let labelled = fittingSize(Toggle(title, isOn: .constant(false)).toggleStyle(.check).textRole(.body.regular))
+        let localized = fittingSize(
+            Toggle(isOn: .constant(false), accessibilityLabel: "Write the report").toggleStyle(.check)
+                .textRole(.body.regular))
+        let verbatim = fittingSize(
+            Toggle(isOn: .constant(true), accessibilityLabel: title).toggleStyle(.check).textRole(.body.regular))
+        // The circle's square alone: the hit area at body text, no label and no gap beside it.
+        let line = fittingSize(Text(verbatim: "X").textRole(.body.regular)).height
+        let side = CheckboxMetrics.hitSide(diameter: CheckboxMetrics.diameter(lineHeight: line))
+        for size in [localized, verbatim] {
+            #expect(abs(size.width - side) < 0.5 && abs(size.height - side) < 0.5, "\(size)")
+        }
+        #expect(labelled.width > localized.width + 40)
+        // The size .labelsHidden() gives where the OS tells a style of it.
+        if #available(iOS 18, macOS 15, watchOS 11, *) {
+            let hidden = fittingSize(
+                Toggle(title, isOn: .constant(false)).toggleStyle(.check).labelsHidden().textRole(.body.regular))
+            #expect(abs(hidden.width - localized.width) < 0.5 && abs(hidden.height - localized.height) < 0.5)
+        }
     }
 
     @Test(
@@ -207,10 +231,9 @@ struct CheckboxStyleTests {
 
     @Test("the real .toggleStyle(.check) measures the circle on the text role set on the toggle")
     func realStyleFollowsTheTextRole() throws {
-        // With its label hidden, the toggle is the circle's cell alone (labelsVisibility: iOS 18, macOS 15).
-        guard #available(iOS 18, macOS 15, watchOS 11, *) else { return }
+        // With no drawn label, the toggle is the circle's cell alone, on every OS.
         func check(_ role: Westron.TextRole) -> CGSize {
-            fittingSize(Toggle("Done", isOn: .constant(true)).toggleStyle(.check).labelsHidden().textRole(role))
+            fittingSize(Toggle(isOn: .constant(true), accessibilityLabel: "Done").toggleStyle(.check).textRole(role))
         }
         var sides: [CGFloat] = []
         for role in [Westron.TextRole.body.regular, .heading.large] {
@@ -227,11 +250,10 @@ struct CheckboxStyleTests {
     #if os(iOS)
         @Test("the real .toggleStyle(.check) grows with Dynamic Type in the ratio of the text's line")
         func realStyleFollowsDynamicType() throws {
-            guard #available(iOS 18, *) else { return }
             func measure(_ size: DynamicTypeSize) -> (line: CGFloat, side: CGFloat) {
                 let line = fittingSize(Text(verbatim: "X").textRole(.body.regular).dynamicTypeSize(size)).height
                 let side = fittingSize(
-                    Toggle("Done", isOn: .constant(false)).toggleStyle(.check).labelsHidden()
+                    Toggle(isOn: .constant(false), accessibilityLabel: "Done").toggleStyle(.check)
                         .textRole(.body.regular).dynamicTypeSize(size)
                 ).height
                 return (line, side)

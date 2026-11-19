@@ -595,15 +595,11 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                     "orange", "red", "pink", "violet", "indigo",
                 ].contains(label ?? "")
             },
-            // The live row's check, whose label is hidden (`.labelsHidden()`) beside a separate title, as in the
-            // pilot's task row. Its element is the circle's 44 pt square named by the hidden label, and the audit
-            // measures it as if that name were drawn there: the ring, a graphic at border.strong's non-text 3:1, as
-            // text ("Contrast nearly passed"), and the name as text that may be clipped. Nothing is drawn but the
-            // circle, so neither applies; the title beside it is hidden from assistive technology and drawn whole.
-            Suppression(
-                .entry("checkbox"), type: .contrast, reason: "a hidden label: the ring, a non-text graphic at 3:1",
-                description: "Contrast nearly passed"
-            ) { $0 == "Call the plumber" },
+            // No suppression for the checks with no drawn label beside separate titles (the live row here, the rows
+            // of `checkbox-in-list`): written with `Toggle(isOn:accessibilityLabel:)`, their label is an `EmptyView`
+            // carrying the name, and the audit reports neither contrast nor clipped text on them (measured on
+            // iOS 26.3, 2026-11-19, #86). Hidden with `.labelsHidden()` instead, the label was measured as if drawn in
+            // the circle's square, and needed three suppressions here.
         ]
         #if os(iOS)
             // The TextField focus pages focus a field for real, so the system keyboard is up while they are audited
@@ -628,16 +624,6 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                 ]
             }
             suppressions += [
-                // The same row's hidden label, which the text clipped audit (iOS only) measures as drawn text.
-                Suppression(.entry("checkbox"), type: .textClipped, reason: "a hidden label, not drawn") {
-                    $0 == "Call the plumber"
-                },
-                // The same on the List rows of `checkbox-in-list`, whose checks hide their labels beside separate
-                // titles: the List gives each toggle's element the whole row, and the title drawn in it is hidden
-                // from assistive technology, so the audit measures the hidden label as if it were drawn there.
-                Suppression(.entry("checkbox-in-list"), type: .textClipped, reason: "a hidden label, not drawn") {
-                    ["Call the plumber", "Pay the rent"].contains($0 ?? "")
-                },
                 // "Text clipped" with no element on the background colors. It appeared when the page got its
                 // layout for accessibility sizes, which puts a name on a line above its cells. The audit names no
                 // element, so there is nothing to fix by; the same page at accessibility5 passes the text clipped
@@ -645,7 +631,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                 // accessibility3 shows every label whole.
                 Suppression(.entry("color-backgrounds"), type: .textClipped, reason: "an issue with no element") {
                     $0 == nil
-                },
+                }
             ]
         #endif
         return suppressions

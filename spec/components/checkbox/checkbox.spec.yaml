@@ -1,7 +1,9 @@
 # westron's Checkbox contract (#31), the round check that completes a task, approved on 2026-11-18 under the owner's
 # delegation: decisions/0001-checkbox-contract.md records the owner's answers of 2026-11-18, the scope of #31, what the
 # documents already decide, what the agent proposed on top of them, and what the implementation on Apple decided under
-# the same delegation, pending the owner's confirmation.
+# the same delegation, pending the owner's confirmation. Revised on 2026-11-19 (#86): a check with no drawn label,
+# written with an initializer that requires its accessible name, on every OS (decisions/0002-a-check-without-a-label.md,
+# the form the owner's choice, the exact API name pending the owner's confirmation).
 id: checkbox
 status: approved
 description: >-
@@ -65,11 +67,15 @@ accessibility:
   intents: [toggle]
   keyboardIntents: [toggle]
   label: required
+  hiddenLabel: true
   states: { checked: checked, disabled: disabled }
   description: >-
     The platform's own toggle role, announced as on or off, checked or unchecked, in the platform's words, with the
     label as its name: the task's title. The label is required also where it is not shown beside the circle, as in
-    a row whose title is a separate text. In disabled, the check is announced as unavailable.
+    a row whose title is a separate text: such a check draws no label, takes no room for one, and is given the label
+    as its accessible name alone, where it is created, as a required argument (hiddenLabel; decisions/0002).
+    The separate title is then hidden from assistive technology, so the name is read once. In disabled, the check is
+    announced as unavailable.
 
 platforms:
   apple:
@@ -89,24 +95,33 @@ platforms:
       replaced by the system's own Toggle on the same value and label (accessibilityRepresentation), so assistive
       technology is meant to meet the toggle's role and value and no button. The circle's diameter is 1.2 times the line height of the text role that reaches the style, and its hit
       area is a square of at least size.control.m around it, the label beside it included (decisions/0001, P10, P16,
-      P17). A row whose title is a separate text hides the label with .labelsHidden(), and the label stays the
-      toggle's accessible name, so the separate title is hidden from assistive technology and not read twice
-      (the catalog's live row, CheckboxBehaviorTests); a custom style sees .labelsHidden() only from iOS 18,
-      macOS 15 and watchOS 11 (labelsVisibility), so on iOS 17, macOS 14 and watchOS 10 the label is still drawn
-      beside the circle. The focus ring is the system's, so the focusRing bindings do not apply, as for Button. The
+      P17). A row whose title is a separate text writes its check with no drawn label, through westron's
+      initializer of the system Toggle that takes no label view and requires the accessible name,
+      Toggle(isOn: $task.isDone, accessibilityLabel: task.title).toggleStyle(.check), with a localized twin for a
+      LocalizedStringKey; the separate title is hidden from assistive technology, so the name is read once (the
+      catalog's live row and checkbox-in-list, CheckboxBehaviorTests). Its label is an EmptyView that carries the
+      name (.accessibilityLabel(_:)), so the style draws the circle's hit area alone, with no gap, and the system
+      Toggle of the representation takes the name from it: the same on every OS, measured on iOS 17.5 and 26.3
+      (decisions/0002). .labelsHidden() also hides the label, and keeps it as the name, only from iOS 18, macOS 15
+      and watchOS 11, where a custom style sees it (labelsVisibility); on iOS 17, macOS 14 and watchOS 10 the style
+      draws the label beside the circle, so a row with a separate title writes the initializer, not
+      .labelsHidden(). The focus ring is the system's, so the focusRing bindings do not apply, as for Button. The
       mark is the registry's check glyph.
     ios:
       description: >-
         The accessibility hierarchy holds the system Toggle of the representation: a switch with its label, its value
         on or off, and no button, measured on iOS 26.3 as XCUITest reads the hierarchy
-        (CatalogUITests/CheckboxBehaviorTests), not with VoiceOver itself; iOS 17 runs the same code, not
-        measured. No hover. The hit area is at least 44 pt, size.control.m.
+        (CatalogUITests/CheckboxBehaviorTests), not with VoiceOver itself. On iOS 17.5 the check with no drawn
+        label was measured the same way, as on iOS 26.3: a switch named by its accessibility label, its value, a
+        44 pt square with nothing drawn beside the circle (decisions/0002); the rest of the style runs the same code
+        on iOS 17, not measured there. No hover. The hit area is at least 44 pt, size.control.m.
     macos:
       description: >-
         The system's checkbox toggle is square; westron's check stays round, as on the other OSes. The
         accessibility hierarchy holds a checkbox with its label and its value, and no button, measured on macOS 26 as
-        XCUITest reads the hierarchy (CatalogUITests/CheckboxBehaviorTests), not with VoiceOver itself; macOS 14 runs
-        the same code, not measured. The hit area is at least size.control.m, 32 pt, above the recommended 28. Keyboard focus, measured with the
+        XCUITest reads the hierarchy (CatalogUITests/CheckboxBehaviorTests), not with VoiceOver itself, the check
+        with no drawn label included, a checkbox named by its accessibility label in a 32 pt square
+        (decisions/0002); macOS 14 runs the same code, not measured. The hit area is at least size.control.m, 32 pt, above the recommended 28. Keyboard focus, measured with the
         Mac's keyboard navigation off: neither westron's check nor a system Toggle in checkbox style takes focus,
         from Tab or from code; with .focusable() added, both take focus and show the system's ring, and Space
         toggles neither. With keyboard navigation on, Tab and Space are unverified, pending the owner's run of
