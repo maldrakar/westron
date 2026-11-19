@@ -4,6 +4,7 @@
 #
 #   tools/apple/snapshot-matrix.sh <ios|macos> [--component ID] [--device "iPhone 17"] [--out DIR]
 #   tools/apple/snapshot-matrix.sh compare DIR_A DIR_B [--out DIR]
+#   tools/apple/snapshot-matrix.sh merge OUT DIR...
 #
 # Capture: builds the catalog (incrementally), then runs the SnapshotMatrixTests UI test in one `xcodebuild test`
 # invocation, which walks every sheet of every matrix (generated from the contracts into WestronCatalog/Generated/)
@@ -21,6 +22,9 @@
 # not from launch to launch, and reports what differs there apart (platforms/apple/README.md, "Snapshot matrix").
 # Only captures from the same environment compare (decisions/0008). macOS needs Automation Mode
 # (platforms/apple/README.md) and the screen to itself.
+# Merge: puts captures of one platform taken apart (--component, one CI job each) into OUT as one: their PNGs, one
+# manifest with their components in the order given, and one review page; prints its path; exits 1 when a capture has
+# no manifest (its component is missing from the page) or the page finds a problem.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -41,6 +45,38 @@ pages() {
   fi
   "$binary" "$@"
 }
+
+if [ "${1:-}" = merge ]; then
+  shift
+  [ $# -ge 2 ] || usage
+  out="$(absolute "$1")"
+  shift
+  mkdir -p "$out"
+  rm -f -- "$out/matrix.json" "$out/index.html"
+  manifests=() status=0
+  for capture in "$@"; do
+    capture="$(absolute "$capture")"
+    if [ ! -f "$capture/matrix.json" ]; then
+      echo "snapshot-matrix: merge: no manifest in $capture; its component is missing from the page" >&2
+      status=1
+      continue
+    fi
+    manifests+=("$capture/matrix.json")
+    find "$capture" -maxdepth 1 -name '*.png' -exec cp -- {} "$out/" \;
+  done
+  [ ${#manifests[@]} -gt 0 ] || { echo "snapshot-matrix: merge: no manifest to merge" >&2; exit 1; }
+  if [ "$(jq -s 'map(.platform) | unique | length' "${manifests[@]}")" != 1 ]; then
+    echo "snapshot-matrix: merge: the captures are of different platforms" >&2
+    exit 2
+  fi
+  # The first manifest's environment, the components of all in the order given, and a scale from a capture that took
+  # an image (a capture that failed before its first image says 0).
+  jq -s '.[0] + {scale: (map(.scale) | max), components: (map(.components) | add)}' "${manifests[@]}" \
+    > "$out/matrix.json"
+  pages index "$out" || status=1
+  echo "$out/index.html"
+  exit "$status"
+fi
 
 if [ "${1:-}" = compare ]; then
   shift

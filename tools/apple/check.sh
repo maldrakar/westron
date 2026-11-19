@@ -189,9 +189,11 @@ a11y_plan() {
 # and 44339047592, 2026-11-18, 17 legs) the step spends 6.5–17.1 minutes, median 10.0 and mean 10.4, before the
 # first entry (finding the simulator, the build, starting the test runner; the end of the first test run less the
 # test's own time), and a stall fails its entry 2–3 minutes in. The worst usual case, a stall in the first entry of
-# the slowest leg (`testDefaultSettings` 1/2, 9 entries) after the mean 10.4 minutes, fits: 10.4 + 3 + 90 s +
-# 9 × 90 s = 28.4 minutes (a11y_retry_estimate below). When the step needed more than 12 minutes before the first
-# entry it does not, and the leg fails rather than run into the timeout.
+# the slowest leg after the mean 10.4 minutes, fits: with the shards sized for 29 entries in phase 3
+# (.github/workflows/ci.yml), `testAccessibilityDynamicType` 1/6 with 5 entries, 10.4 + 3 + 90 s + 5 × 130 s =
+# 25.7 minutes (a11y_retry_estimate below); with the shards before, `testDefaultSettings` 1/2 with 9 entries, 28.4.
+# When the step needed more than about 14 minutes before the first entry it does not, and the leg fails rather than
+# run into the timeout.
 a11y_retry_budget=$((${WESTRON_A11Y_RETRY_BUDGET:-30} * 60))
 
 # How long, in seconds, a retry of <count> entries of <test> would take, judged from the first run in <log>: 90 s to
@@ -308,7 +310,8 @@ a11y() {
     elapsed=$((SECONDS - a11y_started))
     if [ "$entries" = "*" ]; then
       # Nothing was audited, so nothing tells how long the test takes: a whole test is retried only in the first half
-      # of the budget. On CI the runner failed at install 7 minutes into the leg; a whole shard takes 13–19 minutes.
+      # of the budget. On CI the runner failed at install 7 minutes into the leg; a whole shard takes 13–19 minutes
+      # with the shards before phase 3, and about 9–11 with those sized for it.
       estimate=$((a11y_retry_budget / 2))
     else
       estimate="$(a11y_retry_estimate "$log" "$test" "$(tr ',' '\n' <<< "$entries" | wc -l | tr -d ' ')")"

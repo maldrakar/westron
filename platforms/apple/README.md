@@ -201,8 +201,11 @@ changed image's line counts them apart, and an image that differs there alone is
 number, as is the summary line. Of the sheets of Button, Checkbox and Text field (2026-11-19), every one but Checkbox's
 twelve list colors at `accessibility5` ends 22 pt or more above the bottom of the screen; that one, which overflows the
 screen at both ends, ends 13 pt above it and is compared whole.
-CI's `snapshot-matrix` job runs one job per platform, side by side, and uploads each platform's page as its own
-artifact, `snapshot-matrix-ios` and `snapshot-matrix-macos`.
+CI's `snapshot-matrix` job runs one job per platform and component (`--component`), side by side, for the components
+of the generated registry `ComponentMatrix.all`, each uploaded as `snapshot-matrix-<platform>-<component>`; then
+`snapshot-matrix-pages` puts them together with `tools/apple/snapshot-matrix.sh merge <out> <capture>…` and uploads one
+page per platform, `snapshot-matrix-ios` and `snapshot-matrix-macos`, as before. One job for a platform no longer fits:
+phase 3 brings about 337 images on iOS and 176 on macOS.
 
 ### Accessibility audit
 
@@ -220,17 +223,19 @@ WESTRON_ENTRY=controls,icons tools/apple/check.sh a11y     # those entries only
 WESTRON_ENTRY_SHARD=2/3 tools/apple/check.sh a11y          # every third entry, from the second (after WESTRON_ENTRY)
 ```
 
-CI runs the audit in its own job, `accessibility-audit`, side by side (`fail-fast: false`, 35 minutes each): one job
-for each of the three contrast tests, and the two slow tests split by entries, `testAccessibilityDynamicType` into three
-shards and `testDefaultSettings` into two (`WESTRON_ENTRY_SHARD`). The runner is about 3 times slower than a local Mac:
-with the Button entries (PR #66, 2026-11-17) it took over 36.6 minutes for `testAccessibilityDynamicType`, past the
-timeout, 32.4 minutes for `testDefaultSettings`, and 16–19 minutes for each of the others, against 627 s, 476 s and
-194–196 s locally. The cost is eight parallel jobs, each with its own catalog build, about two runner-hours per run, so
-the audit runs on every push to `main` and on a pull request only when it changes a path the audit depends on:
+CI runs the audit in its own job, `accessibility-audit`, side by side (`fail-fast: false`, 35 minutes each), every test
+split by entries (`WESTRON_ENTRY_SHARD`): `testDefaultSettings` into five shards, `testAccessibilityDynamicType` into
+six, and each of the three contrast tests into two, seventeen legs sized for the 29 entries phase 3 brings (each leg
+about 19–21 minutes, its build included; the arithmetic is in `.github/workflows/ci.yml`). The runner is about 3 times
+slower than a local Mac: with the Button entries (PR #66, 2026-11-17) it took over 36.6 minutes for
+`testAccessibilityDynamicType`, past the timeout, 32.4 minutes for `testDefaultSettings`, and 16–19 minutes for each of
+the others, against 627 s, 476 s and 194–196 s locally. The cost is seventeen parallel jobs, each with its own catalog
+build, about six runner-hours per run, so the audit runs on every push to `main` and on a pull request only when it
+changes a path the audit depends on:
 `platforms/apple/`, `tokens/`, `spec/`, `tools/apple/`, `Package.swift`, `Package.resolved`, `.xcode-version` or
 `.github/workflows/ci.yml`. The job `audit-scope` decides, from the pull request's merge commit; otherwise the audit's
-jobs show as skipped. If `audit-scope` itself fails, the audit runs. A job that nears its 35 minutes as pages are added
-gets another shard.
+jobs show as skipped. If `audit-scope` itself fails, the audit runs. A leg that nears 22 minutes as pages are added
+gets another shard, so that a retry still fits its 35.
 
 | Test | Launch arguments | Audit types on iOS |
 |---|---|---|

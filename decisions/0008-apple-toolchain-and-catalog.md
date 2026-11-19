@@ -88,6 +88,13 @@ Date: 2026-11-14. Status: accepted.
   (one failed, one passed after a retry). The step spends 6.5–17.1 minutes, median 10.0 and mean 10.4, before its
   first entry; so a stall in the first entry of the slowest leg is retried within the budget after a usual build
   (10.4 + 3 + 15 = 28.4 minutes), and the budget of 30 and the leg's 35 minutes stay as they are.
+  2026-11-19 (phase 3): the catalog grows from 17 entries to 23 (Text, Surface, Rule, Checkbox) and, with Text field
+  and Icon, to about 29, and the whole phase reaches `main` in one pull request, so its first run must already fit.
+  From the times per entry on CI above (90, 130 and 38 s) and the mean 10.4 minutes before the first entry, a leg is
+  to stay under about 22 minutes: `testDefaultSettings` in five shards (6 entries, about 19 minutes),
+  `testAccessibilityDynamicType` in six (5 entries, about 21) and each contrast test in two (15 entries, about 20),
+  seventeen legs and about six runner-hours. A stall in the first entry of the slowest leg is retried by 25.7 minutes,
+  so the budget of 30 and the 35 minutes stay.
 
 ## Consequences
 
@@ -156,3 +163,9 @@ Date: 2026-11-14. Status: accepted.
     for iOS (711 s, iPhone 17 simulator, iOS 26.3.1) and 5 for macOS (315 s), plus the builds. One CI job for both
     took 32–40 of its 50 minutes before; it would now need well over an hour, so the job `snapshot-matrix` runs one job
     per platform side by side, with 75 and 45 minutes, and uploads `snapshot-matrix-ios` and `snapshot-matrix-macos`.
+  - 2026-11-19 (phase 3): with Text, Surface, Rule and Checkbox, 240 images on iOS and 124 on macOS, and with Text
+    field and Icon about 337 and 176: about 84 minutes of capture on iOS on the runner, past any one job. The job now
+    runs per platform and component (`--component`), over the generated registry `ComponentMatrix.all`, Button with
+    75 and 45 minutes and every other component with 45 and 35; a job `snapshot-matrix-pages` merges each platform's
+    captures into one page (`snapshot-matrix.sh merge`), so the owner still opens `snapshot-matrix-ios` and
+    `snapshot-matrix-macos`. Each job builds the catalog anew: about fourteen jobs and four runner-hours.
