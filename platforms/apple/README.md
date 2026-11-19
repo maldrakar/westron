@@ -257,6 +257,22 @@ and the retry's is `…-retry.log`, both in the leg's artifact. The retry captur
 within 25 minutes of the script's start (`WESTRON_MATRIX_RETRY_BY`); a leg's timeout is 30 minutes and its capture
 time with a third more, so a retry that starts by then ends about 2 minutes before it (`.github/workflows/ci.yml`).
 
+A run that goes silent is stopped: when the log of the build or of a capture has not grown for 10 minutes
+(`WESTRON_MATRIX_STALL_SECONDS`, default 600), the script says `snapshot-matrix: stalled: xcodebuild wrote nothing
+for …`, stops that xcodebuild and its children, and writes the same line into the log. A stalled capture counts as the
+machinery's failure and is retried by the rules above, unless its test reported a failure of a sheet before the
+silence; a stalled build fails as a build does; a second stall fails the capture. On macOS, stopping a run also stops
+any catalog app or test runner started from this checkout's build products (they belong to launchd, not to
+xcodebuild), so a concurrent macOS check in the same checkout would be stopped with it. In CI run 44461921450 the
+macOS leg printed the capture's header and nothing more for 62 minutes, until the job's timeout, and a leg the timeout
+kills uploads no logs. The capture's longest usual silences are the machinery's, 2.4–3.5 minutes (the runner
+starting, a launch timing out, the runner crashing while bootstrapping); between the test's own lines, at most 2.3
+seconds. CI also sets `WESTRON_MATRIX_DEADLINE` to the leg's timeout less 2 minutes, in minutes from the script's
+start: then the script stops whatever it still does (an xcodebuild, the export of the attachments, the page), says
+`snapshot-matrix: stopped at the deadline: … during <step>`, writes the same into the log, and exits 1 without a
+retry, so the step fails rather than being cancelled and the logs go up. The trade: a run that would have finished in
+the last 2 minutes or so before the timeout now fails, with its logs, instead of passing.
+
 ### Behaviour UI tests
 
 `ButtonBehaviorTests`, `CheckboxBehaviorTests`, `TextFieldBehaviorTests` and `IconAccessibilityTests`, in
