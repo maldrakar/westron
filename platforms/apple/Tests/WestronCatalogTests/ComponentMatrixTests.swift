@@ -83,7 +83,7 @@ struct ComponentMatrixTests {
         #expect(Catalog.entry(id: "icon")?.section == .components)
     }
 
-    @Test("Icon's supplements: one sheet each, of six glyphs, on the generated scales")
+    @Test("Icon's supplements: one sheet each, of a few glyphs, on the generated scales")
     func iconSupplements() throws {
         let matrix = try #require(ComponentMatrix.all.first { $0.component == "icon" })
         let supplements = matrix.supplements
@@ -91,15 +91,29 @@ struct ComponentMatrixTests {
         for supplement in supplements {
             #expect(supplement.sheets.count == 1)
             let sheet = try #require(supplement.sheets.first)
-            #expect(sheet.rows == ComponentMatrix.Supplement.iconSampleGlyphs)
+            let rows = supplement.supplement?.rows ?? []
+            #expect(
+                rows
+                    == (supplement.supplement?.id == "beside-text"
+                        ? ComponentMatrix.Supplement.iconBesideTextGlyphs : ComponentMatrix.Supplement.iconSampleGlyphs)
+            )
+            #expect(sheet.rows == rows)
             #expect(sheet.columns == ["small", "medium", "large"])
-            #expect(supplement.drawnCount(in: sheet) == 18 && supplement.drawnCombinations.count == 18)
+            #expect(
+                supplement.drawnCount(in: sheet) == rows.count * 3
+                    && supplement.drawnCombinations.count == rows.count * 3)
             #expect(sheet.id == "\(supplement.supplement?.id ?? "")_all")
             #expect(
                 ComponentMatrix.sheet(key: supplement.key(of: sheet))?.matrix.supplement?.id
                     == supplement.supplement?.id)
         }
         #expect(matrix.sheets.count == 6, "the generated matrix stays the contract's")
+        #if !os(macOS)
+            // At accessibility5 a supplement's taller cells take fewer rows to a picture: one beside text, three of
+            // the color roles, a column at a time.
+            let parts = supplements.map { s in s.sheets.flatMap { s.pictures(of: $0, at: .accessibility5) }.count }
+            #expect(parts == [9, 6])
+        #endif
     }
 
     @Test("a state no token binding names draws as rest, and the sheet and the review page say so")

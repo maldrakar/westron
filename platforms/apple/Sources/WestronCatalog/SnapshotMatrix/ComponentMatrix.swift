@@ -111,12 +111,17 @@ public struct ComponentMatrix: Sendable {
         /// For a matrix whose rows are an option (Icon's glyphs), the values of it the supplement keeps, so that it
         /// draws one sheet of a few rows rather than every generated sheet again; nil keeps every row.
         let rows: [String]?
+        /// The most rows of one picture at a text size that splits sheets (`TextSize.limit`), where its cells are
+        /// taller than a generated cell; nil takes the text size's own limit.
+        let rowsPerPicture: Int?
         let cell: @MainActor @Sendable (Combination) -> AnyView
 
         init<Content: View>(
             component: String, id: String, title: String, note: String, keeps: [String: String],
-            rows: [String]? = nil, @ViewBuilder cell: @escaping @MainActor @Sendable (Combination) -> Content
+            rows: [String]? = nil, rowsPerPicture: Int? = nil,
+            @ViewBuilder cell: @escaping @MainActor @Sendable (Combination) -> Content
         ) {
+            self.rowsPerPicture = rowsPerPicture
             self.component = component
             self.id = id
             self.title = title
@@ -362,8 +367,9 @@ public struct ComponentMatrix: Sendable {
     public func pictures(of sheet: Sheet, at size: TextSize) -> [Sheet] {
         guard let limit = size.limit else { return [sheet] }
         let rows = rows(of: sheet)
+        let rowLimit = min(limit.rows, supplement?.rowsPerPicture ?? limit.rows)
         let parts = Self.chunks(sheet.columns, of: limit.columns).flatMap { columns in
-            Self.chunks(rows, of: limit.rows).map { (columns: columns, rows: $0) }
+            Self.chunks(rows, of: rowLimit).map { (columns: columns, rows: $0) }
         }
         guard parts.count > 1 else { return [sheet] }
         return parts.enumerated().map { index, part in

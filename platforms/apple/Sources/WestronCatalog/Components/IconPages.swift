@@ -58,15 +58,20 @@ struct IconColorRoles: View {
     let icon: Westron.Icon
 
     var body: some View {
-        HStack(spacing: .space100) {
-            Icon(icon).foregroundStyle(.text.primary)
-            Icon(icon).foregroundStyle(.status.success.icon)
-            Icon(icon).foregroundStyle(Westron.Category.teal.icon)
-            Icon(icon).foregroundStyle(.icon.tertiary)
-            Icon(icon)
-                .foregroundStyle(.text.onAccent)
-                .padding(.space50)
-                .background(.background.accent, in: RoundedRectangle(cornerRadius: .radius100))
+        // Two lines, so that the five fit a third of an iPhone at the large scale.
+        VStack(alignment: .leading, spacing: .space50) {
+            HStack(spacing: .space75) {
+                Icon(icon).foregroundStyle(.text.primary)
+                Icon(icon).foregroundStyle(.status.success.icon)
+                Icon(icon).foregroundStyle(Westron.Category.teal.icon)
+            }
+            HStack(spacing: .space75) {
+                Icon(icon).foregroundStyle(.icon.tertiary)
+                Icon(icon)
+                    .foregroundStyle(.text.onAccent)
+                    .padding(.space25)
+                    .background(.background.accent, in: RoundedRectangle(cornerRadius: .radius100))
+            }
         }
         .textRole(.body.regular)
     }
@@ -97,20 +102,20 @@ struct IconMatrixCell: View {
 extension ComponentMatrix.Supplement {
     /// Six glyphs of the registry, the pilot's: a supplement draws them, not every glyph again.
     static let iconSampleGlyphs = ["tray", "sun", "pen", "check", "chevron", "flag"]
+    /// Three of them beside text, whose four roles make a tall cell.
+    static let iconBesideTextGlyphs = ["tray", "check", "chevron"]
 
     static let iconBesideText = ComponentMatrix.Supplement(
         component: "icon", id: "beside-text", title: "beside text",
         note:
-            "The role is not a contract option: the icon takes the font of the text it goes with. Each cell: the icon "
-            + "and a word in body.regular, body.strong, heading.large (Onest) and code.regular (Geist Mono), at the "
-            + "column's scale; the symbol takes each role's size and weight. Bold Text is not in these captures: the "
-            + "catalog's icon entry shows it (-WestronLegibilityWeight bold).",
-        keeps: [:], rows: iconSampleGlyphs
+            "The role is not a contract option: the icon takes the font of its text. Each cell, top down: body.regular, "
+            + "body.strong, heading.large (Onest), code.regular (Geist Mono). Bold Text: the icon entry.",
+        keeps: [:], rows: iconBesideTextGlyphs, rowsPerPicture: 1
     ) {
         let (glyph, scale, _) = IconMatrixValues($0).fields
         VStack(alignment: .leading, spacing: .space25) {
             ForEach(IconSampleRoles.all, id: \.name) { item in
-                IconBesideText(icon: glyph, role: item.role, word: item.word)
+                IconBesideText(icon: glyph, role: item.role, word: "Aa")
             }
         }
         .imageScale(Image.Scale(contract: scale))
@@ -119,10 +124,9 @@ extension ComponentMatrix.Supplement {
 
     static let iconColorRoles = ComponentMatrix.Supplement(
         component: "icon", id: "color-roles", title: "color roles",
-        note: "The color is not a contract option: the icon takes its context's foregroundStyle, one of the roles of "
-            + "design-language/07, in this order: " + IconSampleRoles.colorNames.joined(separator: ", ")
-            + " on background.accent.",
-        keeps: [:], rows: iconSampleGlyphs
+        note: "The color is not a contract option: the icon takes its context's foregroundStyle. Each cell: "
+            + IconSampleRoles.colorNames.joined(separator: ", ") + " on background.accent (design-language/07).",
+        keeps: [:], rows: iconSampleGlyphs, rowsPerPicture: 3
     ) {
         let (glyph, scale, _) = IconMatrixValues($0).fields
         IconColorRoles(icon: glyph)

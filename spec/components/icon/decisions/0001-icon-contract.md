@@ -212,5 +212,5 @@ and the existing `form` say the shape. The generator writes no file for Icon (no
 hand-written `Icon`, its three initializers and its `body` to the contract; `Image.init(_:)` and `Label.init(_:icon:)`
 stay in `APIParity.adapters`. The snapshot matrix reads the registry's names with `IconRegistry.load` and runs them
 down the rows (`SnapshotMatrix.rowAxis`); the catalog draws each cell with the hand-written `IconMatrixCell`, and two
-supplements, of six glyphs each, show the icon beside text in four roles and in the color roles. An extension or a
-style with an icons option, and an own modifier with one, are still reported as not derived.
+supplements, of three and of six glyphs on one sheet each, show the icon beside text in four roles and in the color
+roles. An extension or a style with an icons option, and an own modifier with one, are still reported as not derived.
