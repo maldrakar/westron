@@ -27,10 +27,10 @@ extension Image.Scale {
 /// the symbol takes at rest and, under Bold Text, steps past (the contract's `platforms.apple`).
 enum IconSampleRoles {
     static let all: [(name: String, role: Westron.TextRole, word: String)] = [
-        ("body.regular", .body.regular, "Inbox"),
-        ("body.strong", .body.strong, "Inbox"),
-        ("heading.large", .heading.large, "Inbox"),
-        ("code.regular", .code.regular, "inbox"),
+        ("body.regular", .body.regular, "Aa"),
+        ("body.strong", .body.strong, "Aa"),
+        ("heading.large", .heading.large, "Aa"),
+        ("code.regular", .code.regular, "Aa"),
     ]
 
     /// The color roles `IconColorRoles` draws, in its order.
@@ -50,6 +50,8 @@ struct IconBesideText: View {
         }
         .textRole(role)
         .foregroundStyle(.text.primary)
+        // The word stays on the icon's line: wrapped, it would no longer show the two side by side.
+        .fixedSize(horizontal: true, vertical: false)
     }
 }
 
