@@ -335,6 +335,14 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                     "a11y: suppressed in \(entryID): \(Self.describe(issue)) (off the screen or under the status bar)")
                 return true
             }
+            // A suppressed issue is not the entry's wherever it is, so it is not deferred to a screenful that may
+            // never come (the text field's focus pages, whose last line the keyboard covers).
+            if let suppression = Self.suppressions.first(where: {
+                $0.matches(issue, entryID: entryID, configuration: configuration)
+            }) {
+                print("a11y: suppressed in \(entryID): \(Self.describe(issue)) (\(suppression.reason))")
+                return true
+            }
             // The same at the bottom: an element the bottom of the screen cuts is measured on the strip that shows,
             // under the home indicator, whose color changes with the page beneath it. On the CI runner "Report not
             // sent" on color-in-use, 18 pt of it on screen, failed contrast once and passed on the rerun (#74). It is
@@ -348,12 +356,6 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                     "a11y: deferred in \(entryID), screen \(screen): \(description) (cut by the bottom of the screen; "
                         + "the next screenful shows it whole)")
                 deferred.append(description)
-                return true
-            }
-            if let suppression = Self.suppressions.first(where: {
-                $0.matches(issue, entryID: entryID, configuration: configuration)
-            }) {
-                print("a11y: suppressed in \(entryID): \(Self.describe(issue)) (\(suppression.reason))")
                 return true
             }
             print("a11y: issue in \(entryID), screen \(screen): \(Self.describe(issue))")
@@ -462,13 +464,18 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         var value: String? = nil
         /// Whether the element must be enabled, if that matters: `false` for a disabled control's.
         var enabled: Bool? = nil
+        /// Text the issue's `detailedDescription` must contain, if any, such as the class of a system view.
+        var detail: String? = nil
+        /// Whether the element must reach below the top of the system keyboard, which must be up: an element the
+        /// keyboard covers is measured on the keyboard's pixels.
+        var underKeyboard = false
         /// Tells the issue by its element's label; `nil` when the audit names no element.
         let label: @Sendable (String?) -> Bool
 
         init(
             _ scope: Scope, type: XCUIAccessibilityAuditType, reason: String, description: String? = nil,
             appearance: Configuration.Appearance? = nil, value: String? = nil, enabled: Bool? = nil,
-            label: @escaping @Sendable (String?) -> Bool
+            detail: String? = nil, underKeyboard: Bool = false, label: @escaping @Sendable (String?) -> Bool
         ) {
             self.scope = scope
             self.type = type
@@ -477,6 +484,8 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             self.appearance = appearance
             self.value = value
             self.enabled = enabled
+            self.detail = detail
+            self.underKeyboard = underKeyboard
             self.label = label
         }
 
@@ -492,6 +501,13 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             // A value as text: iOS gives a switch's as a string, macOS a checkbox's as a number.
             if let value, issue.element?.value.map({ "\($0)" }) != value { return false }
             if let enabled, issue.element?.isEnabled != enabled { return false }
+            if let detail, !issue.detailedDescription.contains(detail) { return false }
+            if underKeyboard {
+                let keyboard = XCUIApplication().keyboards.firstMatch
+                guard keyboard.exists, let frame = issue.element?.frame, !frame.isEmpty,
+                    frame.maxY > keyboard.frame.minY
+                else { return false }
+            }
             return label(issue.element?.label)
         }
     }
@@ -571,6 +587,27 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             ) { $0 == "Call the plumber" },
         ]
         #if os(iOS)
+            // The TextField focus pages focus a field for real, so the system keyboard is up while they are audited
+            // (spec/components/text-field). The keyboard's own prediction cells have no description, and at the
+            // accessibility text sizes the keyboard covers the page's last line, its "Focused: …" text and its
+            // "Clear focus" button, so the audit measures them on the keyboard's pixels. Neither is the entry's: the
+            // fields are audited above the keyboard, and the same lines with no keyboard on `text-field-behavior`.
+            // The contrast suppression holds only while the keyboard is up and the line reaches below its top; the
+            // same line above the keyboard, in any theme or text size, is audited as usual.
+            for entryID in ["text-field-focus-framed", "text-field-focus-inline"] {
+                suppressions += [
+                    Suppression(
+                        .entry(entryID), type: .sufficientElementDescription,
+                        reason: "the system keyboard's prediction cell", detail: "TUIPredictionViewCell"
+                    ) { $0 == nil || $0 == "" },
+                    Suppression(
+                        .entry(entryID), type: .contrast, reason: "a line under the system keyboard",
+                        underKeyboard: true
+                    ) {
+                        ($0?.hasPrefix("Focused: ") ?? false) || $0 == "Clear focus"
+                    },
+                ]
+            }
             suppressions += [
                 // The same row's hidden label, which the text clipped audit (iOS only) measures as drawn text.
                 Suppression(.entry("checkbox"), type: .textClipped, reason: "a hidden label, not drawn") {

@@ -5,6 +5,6 @@ extension ComponentMatrix.Supplement {
     /// captures as the generated sheets. They are not catalog entries, so the accessibility audit does not walk them.
     static let all: [Self] = [
         .buttonLabelWithoutIcon, .iconBesideText, .iconColorRoles, .surfaceNesting, .checkboxListColors,
-        .checkboxTextRoles,
+        .checkboxTextRoles, .textFieldCardNotes, .textFieldSecure, .textFieldOnSurface, .textFieldOnSunken,
     ]
 }
