@@ -10,13 +10,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Capacity (2026-11-19, phase 3 with Text field: 28 catalog entries, 364 iOS and 184 macOS snapshot images). Every
-  # job below but the three on Linux (tools, audit-scope, snapshot-components) runs on a Mac (`xcode-27`), at most 5
-  # at once on this repository, so a run's wall-clock is about its Mac runner-minutes over 5 (runs 44360219942 and
-  # 44386153527: 13 Mac jobs, 62–69 min). Per run, from the times in the job comments (apple about 25 min,
+  # Capacity (2026-11-19, phase 3 with Text field: 28 catalog entries, 365 iOS and 184 macOS snapshot images). Every
+  # job below but the three on Linux (tools, audit-scope, snapshot-components) runs on a Mac (`xcode-27`), and at most
+  # 5 run at once on this repository (runs 44339047592, 44360219942, 44364265656 and 44386153527). So a run's
+  # wall-clock is at best its Mac runner-minutes over 5; measured, about 1.2 times that (run 44386153527: 12 Mac jobs,
+  # 256 runner-minutes, 62 min). Per run, estimated from the times in the job comments (apple about 25 min,
   # catalog-screenshots about 20, a page merge about 3):
-  #   before: 35 Mac jobs (audit 17 legs, snapshot 14 + 2 pages), about 10.1 runner-hours, about 2 h on 5 runners;
-  #   now:    17 Mac jobs (audit 10 legs, snapshot 4 + 1 pages), about 7.7 runner-hours, about 1.5 h on 5 runners.
+  #   before: 35 Mac jobs (audit 17 legs, snapshot 14 + 2 pages), about 10.1 runner-hours: 2 h at best, about 2.4 h
+  #           expected;
+  #   now:    17 Mac jobs (audit 10 legs, snapshot 4 + 1 pages), about 7.7 runner-hours: 1.5 h at best, about
+  #           1.6–1.9 h expected (the two iOS snapshot legs of about 48 min may start late, behind the audit's ten).
   # What is left is mostly the audit's own tests (2.6 h) and the captures (1.9 h); each Mac job's build and setup
   # costs 5–17 min more.
   tools:
@@ -227,7 +230,7 @@ jobs:
       images: ${{ steps.legs.outputs.images }}
     env:
       IMAGES: >-
-        {"button": {"ios": 144, "macos": 72}, "checkbox": {"ios": 18, "macos": 12}, "icon": {"ios": 73, "macos": 32},
+        {"button": {"ios": 144, "macos": 72}, "checkbox": {"ios": 19, "macos": 12}, "icon": {"ios": 73, "macos": 32},
         "rule": {"ios": 7, "macos": 4}, "surface": {"ios": 24, "macos": 12}, "text": {"ios": 47, "macos": 24},
         "text-field": {"ios": 51, "macos": 28}}
     steps:
@@ -237,12 +240,14 @@ jobs:
         run: |
           set -euo pipefail
           registry=platforms/apple/Sources/WestronCatalog/Generated/ComponentMatrix+All.swift
-          components="$(sed -n '/static let all: \[ComponentMatrix\]/,$p' "$registry" | grep -oE '\.[A-Za-z0-9]+' \
-            | sed 's/^\.//' | perl -pe 's/([A-Z])/-\l$1/g' | jq -R . | jq -cs .)"
-          if [ "$components" = "[]" ]; then
+          # grep finds nothing in an empty registry; `|| true` keeps pipefail from ending the step before it says so.
+          members="$(sed -n '/static let all: \[ComponentMatrix\]/,$p' "$registry" \
+            | { grep -oE '\.[A-Za-z0-9]+' || true; })"
+          if [ -z "$members" ]; then
             echo "No component in $registry" >&2
             exit 1
           fi
+          components="$(sed 's/^\.//' <<< "$members" | perl -pe 's/([A-Z])/-\l$1/g' | jq -R . | jq -cs .)"
           for id in $(jq -r --argjson images "$IMAGES" '.[] | select($images[.] == null)' <<< "$components"); do
             echo "::warning title=Snapshot matrix legs::No image count for $id in IMAGES" \
               "(.github/workflows/ci.yml); it is packed as 150 images."
@@ -300,6 +305,8 @@ jobs:
             .build/snapshot-matrix/${{ matrix.platform }}/
             .build/logs/snapshot-matrix-${{ matrix.platform }}-${{ matrix.name }}.log
           if-no-files-found: warn
+          # A rerun of a failed leg replaces its artifact.
+          overwrite: true
 
   snapshot-matrix-pages:
     name: Snapshot matrix — pages

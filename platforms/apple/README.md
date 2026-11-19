@@ -206,9 +206,12 @@ the image:
 - the content stays clear of the box around the indicator (160 × 12 pt, from 16 to 4 pt above the bottom of the
   screen) in both pictures: the band from 4 pt above the box down to its bottom, across the whole width, is one color
   (`clearOfContent`). The box lies in the bottom safe-area inset (34 pt on iPhone 17), under which a sheet that fits
-  draws only its canvas; a sheet that does not fit reaches into the band and is compared whole. Of the iOS sheets of
-  all seven components (2026-11-19), every one but Checkbox's twelve list colors at `accessibility5` ends 22 pt or
-  more above the bottom; that one overflows the screen at both ends and ends 13 pt above it;
+  draws only its canvas; a sheet that does not fit reaches into the band and is compared whole. Scanned on iOS
+  captures of 2026-11-19, every sheet of Button, Icon, Text, Surface, Rule and Text field ends 39 pt or more above
+  the bottom of the screen, and Checkbox's 22 pt or more but for its twelve list colors at `accessibility5`, which
+  then overflowed the screen at both ends (13 pt above the bottom). Since e76d2d3 that sheet is taken in two
+  pictures of three rows there, which fit under the status bar with nothing at the bottom (the Icon follow-up's
+  capture; not scanned here);
 - nothing in the box differs off the footprint (`onlyOnFootprint`): a block, a dot or a line elsewhere in the box, or
   wider or taller than the indicator, is reported, together with whatever differs on the footprint;
 - both captures are iOS at one scale.
@@ -223,7 +226,7 @@ a macOS one; the counts are in the workflow's `IMAGES`, and the page job warns w
 captures its components in one run (`--component a,b`) and uploads `snapshot-matrix-<platform>-<a+b>`; then
 `snapshot-matrix-pages` puts each platform's legs together with `merge --expect` and uploads one page per platform,
 `snapshot-matrix-ios` and `snapshot-matrix-macos`, as before. A page whose component no leg brought names it at its top.
-With Text field, 364 iOS images go in three legs and 184 macOS images in one.
+With Text field, 365 iOS images go in three legs and 184 macOS images in one.
 
 ### Accessibility audit
 

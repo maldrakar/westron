@@ -91,12 +91,17 @@ Date: 2026-11-14. Status: accepted.
   2026-11-19 (phase 3): the catalog grows from 17 entries to 28 (Text, Surface, Rule, Checkbox, Icon, Text field),
   and the whole phase reaches `main` in one pull request, so its first run must already fit. Seventeen legs of 35
   minutes would fit, but each pays the mean 10.4 minutes before its first entry, and at most 5 Mac jobs run at once
-  on this repository: a run with 35 Mac jobs took about 2 hours and kept other branches' `apple` job waiting. So ten
+  on this repository (measured: runs 44339047592, 44360219942, 44364265656 and 44386153527 never ran more), while
+  other branches' required `apple` job waits behind them (24 minutes in run 44364265656, behind a run on `main`). A
+  run of 35 Mac jobs, about 10.1 runner-hours, would take an estimated 2 hours at best and about 2.4 as measured runs
+  go (1.2 times the floor of runner-minutes over 5; run 44386153527: 256 minutes of Mac jobs, 62 minutes). So ten
   legs of 45 minutes with a retry budget of 40, from the times per entry above (90, 130 and 38 s):
   `testDefaultSettings` in three shards (10 entries, about 25.4 minutes), `testAccessibilityDynamicType` in four
   (7 entries, about 25.6) and each contrast test in one leg (28 entries, about 28.1); about 4.3 runner-hours. A stall
   in the first entry of the slowest leg is retried by 32.6 minutes, and still after up to 17.8 minutes before the
-  first entry (17.1 seen), against 14.7 with the seventeen legs; a leg without a retry ends by 34.8 minutes.
+  first entry (17.1 seen), against 14.7 with the seventeen legs; a leg without a retry ends by 34.8 minutes. With
+  the snapshot legs below, a run has 17 Mac jobs, about 7.7 runner-hours: an estimated 1.5 hours at best and about
+  1.6–1.9 expected.
 
 ## Consequences
 
@@ -167,7 +172,7 @@ Date: 2026-11-14. Status: accepted.
     for iOS (711 s, iPhone 17 simulator, iOS 26.3.1) and 5 for macOS (315 s), plus the builds. One CI job for both
     took 32–40 of its 50 minutes before; it would now need well over an hour, so the job `snapshot-matrix` runs one job
     per platform side by side, with 75 and 45 minutes, and uploads `snapshot-matrix-ios` and `snapshot-matrix-macos`.
-  - 2026-11-19 (phase 3): with Text, Surface, Rule, Checkbox, Icon and Text field, 364 images on iOS and 184 on
+  - 2026-11-19 (phase 3): with Text, Surface, Rule, Checkbox, Icon and Text field, 365 images on iOS and 184 on
     macOS: about 91 minutes of capture on iOS on the runner, past any one job. One job per component (fourteen, each
     with its own build) was too many for 5 concurrent Mac runners, so the components go into legs packed by their
     number of images (first fit, the largest first, at most 40 minutes of capture each, from a table of counts in the
