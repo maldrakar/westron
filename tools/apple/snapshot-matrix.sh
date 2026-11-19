@@ -17,6 +17,8 @@
 # picture there.
 # Compare: compares two capture directories image by image and writes a report page, by default to
 # .build/snapshot-matrix/compare/; prints its path; exits 0 when every image is the same and 1 when one differs.
+# Between two iOS captures it ignores the home indicator's box at the bottom of the screen, which the system draws or
+# not from launch to launch, and reports what differs there apart (platforms/apple/README.md, "Snapshot matrix").
 # Only captures from the same environment compare (decisions/0008). macOS needs Automation Mode
 # (platforms/apple/README.md) and the screen to itself.
 set -euo pipefail
@@ -26,7 +28,7 @@ cd "$root"
 # shellcheck source=tools/apple/xcode-env.sh
 source tools/apple/xcode-env.sh
 
-usage() { sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,/^set /{/^#/p;}' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
 absolute() { case "$1" in /*) echo "$1" ;; *) echo "$root/$1" ;; esac; }
 

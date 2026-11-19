@@ -188,6 +188,19 @@ device and scale, and each picture's size) and prints its path; it fails when an
 check. The
 comparison writes `before/`, `after/`, `diff/` and its `index.html` to `.build/snapshot-matrix/compare/` (`--out` to
 change it). Compare only captures from the same environment: two local runs, or two CI artifacts (decisions/0008).
+Between two iOS captures (both manifests say `ios`, at one scale) the comparison ignores the home indicator's box,
+160 × 12 pt at the bottom centre of the screen, from 16 to 4 pt above its bottom (`homeIndicatorBox` in
+`tools/apple/snapshot-pages.swift`): the system draws the indicator over the app, and from launch to launch draws it or
+not, or at another opacity, so two captures of the same commit differed there and nowhere else (iPhone 17, iOS 26.3:
+every differing pixel in x 387–819, y 2583–2598 of 1206 × 2622). The box lies in the bottom safe-area inset (34 pt on
+iPhone 17), under which a sheet that fits draws only its canvas; it is ignored in an image only where the content
+stays clear of it in both pictures, that is when the band around it (from 4 pt above it down to its bottom, across the
+whole width) is one color (`clearOfContent`). A sheet that does not fit the screen reaches into the band, and its box
+is compared like the rest. The pixels that differ in an ignored box are not hidden: a diff draws them in amber, a
+changed image's line counts them apart, and an image that differs there alone is listed as unchanged with their
+number, as is the summary line. Of the sheets of Button, Checkbox and Text field (2026-11-19), every one but Checkbox's
+twelve list colors at `accessibility5` ends 22 pt or more above the bottom of the screen; that one, which overflows the
+screen at both ends, ends 13 pt above it and is compared whole.
 CI's `snapshot-matrix` job runs one job per platform, side by side, and uploads each platform's page as its own
 artifact, `snapshot-matrix-ios` and `snapshot-matrix-macos`.
 

@@ -116,6 +116,17 @@ Date: 2026-11-14. Status: accepted.
     `tools/apple/snapshot-matrix.sh compare <before> <after>` compares two captures pixel by pixel; its report names
     both environments, so a comparison across them is visible as such. The review page of each capture
     (`index.html`) names its OS version, device and scale, and the size of each picture.
+    2026-11-19: on iOS the picture is the whole screen, and the system draws the home indicator over it, from launch
+    to launch or not, or at another opacity: two captures of Button on the same commit differed in 54, 83 or 84 of
+    its 144 images, every pixel in the indicator's place. The comparison of two iOS captures ignores that box
+    (160 × 12 pt at the bottom centre, in the bottom safe-area inset), but only in an image whose content stays clear
+    of it in both pictures, and reports what differs there apart; a sheet that overflows the screen is compared whole.
+    What a capture is does not change. Rejected: hiding the indicator in the catalog (`.persistentSystemOverlays(.hidden)`,
+    UIKit's `prefersHomeIndicatorAutoHidden`), which only allows the system to hide it on its own schedule, after a
+    few seconds without touches, so whether it shows still depends on timing, and which would change the catalog for
+    one tool; it could not be shown to be deterministic cheaply either, since unchanged one capture showed the
+    indicator in none of Button's 144 images and the next in 54. And cropping the bottom inset out of every picture,
+    which would change what a capture is and hide from review whatever a sheet draws there.
   - **The capture sets what it can itself:** the theme and the contrast for each image, the text size (`large`, the
     default), the language and the locale (`en`, `en_US`), on macOS the window's size (720 × 540, whatever size the
     system restores) and the picture of the sheet alone, without the title bar and the desktop at the window's
