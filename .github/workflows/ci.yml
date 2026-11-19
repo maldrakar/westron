@@ -231,7 +231,9 @@ jobs:
     # leg of macOS went silent after the capture's header and ran 62 min into its timeout. So `snapshot-matrix.sh`
     # stops an xcodebuild whose log has not grown for 10 min (WESTRON_MATRIX_STALL_SECONDS) and counts the capture as
     # the machinery's failure, retried as above; and `snapshot-matrix` gives it a deadline 2 min before the timeout
-    # (WESTRON_MATRIX_DEADLINE), the 2 min above, since a stall noticed 10 min late can otherwise run past it.
+    # (WESTRON_MATRIX_DEADLINE), the 2 min above, at which the script stops whatever it still does (an xcodebuild, the
+    # export, the page) and exits 1, since a stall noticed 10 min late, or a hang outside xcodebuild, can otherwise
+    # run past the timeout. A capture that would have ended within those 2 min fails then, with its logs.
     runs-on: ubuntu-24.04
     outputs:
       components: ${{ steps.legs.outputs.components }}
@@ -307,8 +309,8 @@ jobs:
         # A capture the machinery failed (the catalog did not launch, the test runner did not start) is run once more,
         # with a warning on the run, and never one whose test reported a failure of a sheet; the first run's log stays
         # beside the retry's (`-retry.log`), and both go up below, even when the retry passed. A run whose log has
-        # gone silent for 10 min counts as the machinery's failure; whatever still runs 2 min before the timeout is
-        # stopped, so that the logs go up (`snapshot-components`).
+        # gone silent for 10 min counts as the machinery's failure; whatever the script still does 2 min before the
+        # timeout is stopped and the step fails, so that the logs go up (`snapshot-components`).
         run: >-
           WESTRON_MATRIX_DEADLINE=$((${{ matrix.timeout }} - 2))
           tools/apple/snapshot-matrix.sh ${{ matrix.platform }} --component ${{ matrix.components }}

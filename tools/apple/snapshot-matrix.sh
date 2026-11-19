@@ -17,7 +17,8 @@
 # failed (the app did not launch, the test runner did not start: a stalled simulator) is run once more, within
 # WESTRON_MATRIX_RETRY_BY minutes (default 25) of the start; never one whose test reported a failure of a sheet. An
 # xcodebuild whose log has not grown for WESTRON_MATRIX_STALL_SECONDS (default 600) is stopped, and a capture so
-# stopped counts as the machinery's failure; WESTRON_MATRIX_DEADLINE (minutes from the start) stops any still running.
+# stopped counts as the machinery's failure; at WESTRON_MATRIX_DEADLINE minutes from the start (if set) the script
+# stops whatever it still does and exits 1.
 # The sheets are laid out for the default device, iPhone 17 in portrait: at accessibility5 a part of one column and six
 # rows just fits it, so another --device, a shorter one above all, may fail the check that every cell is inside the
 # picture there.
@@ -182,17 +183,18 @@ prepare_destination() {
   xcodebuild_args=(-project platforms/apple/Catalog/Catalog.xcodeproj -scheme Catalog -destination "$destination"
     -derivedDataPath .build/xcode/catalog)
 }
-prepare_destination
 
-# The watchdog over every xcodebuild of the script, the build and each capture. A run whose log has not grown for
-# WESTRON_MATRIX_STALL_SECONDS (default 600, 10 min) has stalled: CI run 44461921450 printed the capture's header and
-# then nothing for 62 minutes, until the job's timeout killed the leg, and a leg the timeout kills uploads no logs. A
-# capture's longest usual silences are the machinery's: the test runner starting (2.4 min on a stalled CI runner, run
-# 44444325775), a launch timing out (3 min) or the runner crashing while bootstrapping (3.5 min after "Running
-# tests..."); between the test's own lines no more than 2.3 s (local captures of every component, 1750 s on iOS and
-# 709 s on macOS). WESTRON_MATRIX_DEADLINE, in minutes from the script's start (unset: none), stops whatever xcodebuild
-# still runs then, stalled or not, so that the logs upload before the job's timeout (CI sets it, .github/workflows/
-# ci.yml). Either way the run is stopped with its children, and a line saying why goes into its log for matrix_plan.
+# CI run 44461921450 printed the capture's header and then nothing for 62 minutes, until the job's timeout killed the
+# leg, and a leg the timeout kills uploads no logs. Two guards keep that from happening again:
+# - The watchdog over every xcodebuild of the script, the build and each capture: a run whose log has not grown for
+#   WESTRON_MATRIX_STALL_SECONDS (default 600, 10 min) has stalled, and is stopped with its children; a line saying so
+#   goes into its log for matrix_plan, which retries a stalled capture. A capture's longest usual silences are the
+#   machinery's: the test runner starting (2.4 min on a stalled CI runner, run 44444325775), a launch timing out
+#   (3 min) or the runner crashing while bootstrapping (3.5 min after "Running tests..."); between the test's own lines
+#   no more than 2.3 s (local captures of every component, 1750 s on iOS and 709 s on macOS).
+# - The deadline, WESTRON_MATRIX_DEADLINE minutes from the script's start (unset: none; CI sets it, .github/workflows/
+#   ci.yml): then whatever the script still does, an xcodebuild, the export of the attachments, the page, is stopped,
+#   and the script says which step it stopped and exits 1, with no retry, so that the logs upload before the timeout.
 stall_after="${WESTRON_MATRIX_STALL_SECONDS:-600}"
 deadline=""
 [ -z "${WESTRON_MATRIX_DEADLINE:-}" ] || deadline=$((WESTRON_MATRIX_DEADLINE * 60))
@@ -204,11 +206,11 @@ process_tree() {
   for child in $(pgrep -P "$1" || true); do process_tree "$child"; done
 }
 
-# Stops the process <pid> and its children: TERM, then KILL for what is left after 30 s. The tree is read first: a
-# child of a process that has gone belongs to launchd, and pgrep -P no longer finds it.
+# Stops the processes <pid>… and their children: TERM, then KILL for what is left after 30 s. The trees are read
+# first: a child of a process that has gone belongs to launchd, and pgrep -P no longer finds it.
 stop_tree() {
   local tree pid alive waited=0
-  tree="$(process_tree "$1")"
+  tree="$(for pid in "$@"; do process_tree "$pid"; done)"
   # shellcheck disable=SC2086 # one pid per word
   kill -TERM $tree 2> /dev/null || true
   while [ "$waited" -lt 30 ]; do
@@ -222,18 +224,29 @@ stop_tree() {
   kill -KILL $alive 2> /dev/null || true
 }
 
-# Stops the xcodebuild <pid> of a run and what the run started. On macOS the test runner and the catalog it launched
-# belong to launchd, not to xcodebuild: a stopped run's runner exits by itself, its catalog stays (seen locally), so
-# whatever still runs from this checkout's build products is stopped too. On iOS they run in the simulator, whose test
-# daemon capture() stops.
+# Stops the processes <pid>… of the script (an xcodebuild, the export, the page) and what they started. On macOS the
+# test runner and the catalog it launched belong to launchd, not to xcodebuild: a stopped run's runner exits by
+# itself, its catalog stays (seen locally), so whatever still runs from this checkout's build products is stopped too,
+# a concurrent macOS check in the same checkout included. On iOS they run in the simulator, whose test daemon
+# stop_test_daemon stops.
 stop_run() {
-  stop_tree "$1"
+  [ $# -eq 0 ] || stop_tree "$@"
   if [ "$platform" = macos ]; then pkill -f "$root/.build/xcode/catalog/Build/Products/" 2> /dev/null || true; fi
 }
 
+# After UI tests the simulator's testmanagerd has been seen to spin for hours (tools/apple/check.sh, a11y): it is
+# stopped once no xcodebuild uses the simulator (nothing on macOS).
+stop_test_daemon() {
+  if [ -n "$udid" ] && ! pgrep -f "xcodebuild.*-destination id=$udid" > /dev/null; then
+    xcrun simctl spawn "$udid" launchctl kill SIGKILL system/com.apple.testmanagerd > /dev/null 2>&1 || true
+  fi
+}
+
 # Watches xcodebuild <pid> through its <log> once a second, in the background, until it ends or is stopped (above).
+# The line goes into the log after a newline: xcodebuild's last output may lack one, and matrix_plan reads the line
+# only at the start of a line.
 watchdog() {
-  local log="$1" pid="$2" size last=-1 quiet_since=$SECONDS quiet why=""
+  local log="$1" pid="$2" size last=-1 quiet_since=$SECONDS quiet why
   while kill -0 "$pid" 2> /dev/null; do
     size=$(($(wc -c < "$log")))
     quiet=$((SECONDS - quiet_since))
@@ -242,14 +255,7 @@ watchdog() {
     elif [ "$quiet" -ge "$stall_after" ]; then
       why="stalled: xcodebuild wrote nothing for $((quiet / 60)) min $((quiet % 60)) s"
       echo "snapshot-matrix: $why (WESTRON_MATRIX_STALL_SECONDS=$stall_after); stopping it, log: $log" >&2
-    fi
-    if [ -z "$why" ] && [ -n "$deadline" ] && [ "$SECONDS" -ge "$deadline" ]; then
-      why="stopped at the deadline: $((SECONDS / 60)) min since the start"
-      echo "snapshot-matrix: xcodebuild $why (WESTRON_MATRIX_DEADLINE=$((deadline / 60)))," \
-        "so that the logs upload before the job's timeout; log: $log" >&2
-    fi
-    if [ -n "$why" ]; then
-      echo "snapshot-matrix: $why" >> "$log"
+      printf '\nsnapshot-matrix: %s\n' "$why" >> "$log"
       stop_run "$pid"
       return 0
     fi
@@ -283,6 +289,48 @@ watched_xcodebuild() {
   return "$status"
 }
 
+# The deadline (above), in the background: at it, the timer signals the script (USR1) and stops the script's other
+# children, the step that runs among them; the script handles the signal once its own command has ended, at once when
+# it waits for an xcodebuild. The timer ends with the script. Its own pid: bash 3.2 has no BASHPID, so a child that
+# execs sh reports its parent.
+deadline_timer() {
+  local self child children=""
+  self="$(exec sh -c 'echo "$PPID"')"
+  while kill -0 $$ 2> /dev/null; do
+    if [ "$SECONDS" -ge "$deadline" ]; then
+      kill -USR1 $$ 2> /dev/null || return 0
+      for child in $(pgrep -P $$ || true); do [ "$child" = "$self" ] || children="$children $child"; done
+      # shellcheck disable=SC2086 # one pid per word
+      stop_run $children
+      return 0
+    fi
+    sleep 1
+  done
+}
+
+# The script's side of the deadline: says which <step> it stopped, writes the same into the current log, stops what
+# is left, and exits 1.
+at_deadline() {
+  local why="stopped at the deadline: $((SECONDS / 60)) min since the start, during $step"
+  echo "snapshot-matrix: $why (WESTRON_MATRIX_DEADLINE=$((deadline / 60))), so that the logs upload before the job's" \
+    "timeout; log: $log" >&2
+  printf '\nsnapshot-matrix: %s\n' "$why" >> "$log"
+  # shellcheck disable=SC2046 # one pid per word
+  stop_run $(pgrep -P $$ | grep -vx "$deadline_timer_pid" || true)
+  stop_test_daemon
+  exit 1
+}
+
+if [ -n "$deadline" ]; then
+  trap at_deadline USR1
+  deadline_timer &
+  deadline_timer_pid=$!
+fi
+
+step="finding the destination"
+prepare_destination
+
+step="the build (xcodebuild build-for-testing)"
 : > "$log"
 if ! watched_xcodebuild "$log" "${xcodebuild_args[@]}" build-for-testing; then
   grep -E "error:|BUILD FAILED" "$log" | head -20 >&2 || true
@@ -301,22 +349,22 @@ capture() {
   rm -rf "$results" "$attachments"
   echo "== snapshot-matrix: $destination${component:+, $component}" >&2
   test_status=0
+  step="the test run (xcodebuild test-without-building)"
   watched_xcodebuild "$log" "${xcodebuild_args[@]}" test-without-building -resultBundlePath "$results" \
     -collect-test-diagnostics never \
     -only-testing:CatalogUITests/SnapshotMatrixTests/testMatrix || test_status=$?
   grep -E "^matrix: |: error: |Failed to install or launch the test runner|Early unexpected exit" "$log" \
     | grep -v "\[MT\]" >&2 || true
-  if [ -n "$udid" ] && ! pgrep -f "xcodebuild.*-destination id=$udid" > /dev/null; then
-    # After UI tests the simulator's testmanagerd has been seen to spin for hours (tools/apple/check.sh, a11y).
-    xcrun simctl spawn "$udid" launchctl kill SIGKILL system/com.apple.testmanagerd > /dev/null 2>&1 || true
-  fi
+  stop_test_daemon
   # A runner that never started leaves no result bundle: no manifest then, and matrix_plan below decides.
+  step="the export of the attachments (xcresulttool)"
   if ! xcrun xcresulttool export attachments --path "$results" --output-path "$attachments" >> "$log" 2>&1; then
     echo "snapshot-matrix: no attachments in $results, log: $log" >&2
     return 0
   fi
   # The export names each file by its own id; its manifest.json maps them to the names the test gave the attachments,
   # which xcresulttool suggests as `<name without .png>_<n>_<UUID>.png`.
+  step="moving the attachments"
   jq -r '.[].attachments[] | [.exportedFileName, .suggestedHumanReadableName] | @tsv' \
     "$attachments/manifest.json" | while IFS=$'\t' read -r file label; do
     case "$label" in
@@ -339,7 +387,9 @@ capture() {
 #   fail <reason>   anything else: a failure of the test's own (a cell count that differs, a cell outside the window,
 #                   a sheet that did not render or showed a problem, an unknown component), such a failure among
 #                   others, stalled or not, a run with no failure that explains it (the runner died mid-run), a test
-#                   that did not start otherwise, a test that passed, a run the watchdog stopped at the deadline.
+#                   that did not start otherwise, a test that passed.
+# A real macOS xcodebuild the watchdog stops mid-test ends its output with "** BUILD INTERRUPTED **" and reports no
+# failure of the test (seen locally), so a stall alone is retried.
 # The machinery's messages, told by how they start, never by text further in: the XCTest messages that
 # CatalogAccessibilityAuditTests.isInfrastructure counts as infrastructure (the same XCUIApplication calls), not that
 # test's own failures:
@@ -358,7 +408,6 @@ matrix_plan() {
     index($0, "Failed to install or launch the test runner") { runner = 1 }
     index($0, "Early unexpected exit, operation never finished bootstrapping") { runner = 1 }
     index($0, "snapshot-matrix: stalled: ") == 1 { stalled = substr($0, length("snapshot-matrix: ") + 1) }
-    index($0, "snapshot-matrix: stopped at the deadline: ") == 1 { deadline = 1 }
     index($0, e) {
       errors++
       m = substr($0, index($0, e) + length(e))
@@ -371,7 +420,6 @@ matrix_plan() {
     }
     END {
       if (passed) { print "fail the test passed, yet wrote no manifest"; exit }
-      if (deadline) { print "fail xcodebuild was stopped at the deadline"; exit }
       if (stalled != "") {
         if (other != "") print "fail a failure of the capture: " other
         else print "retry " stalled
@@ -393,8 +441,8 @@ matrix_plan() {
 # time with a third more (.github/workflows/ci.yml, `snapshot-components`): a retry that starts by 25 minutes, takes
 # about 3 to start the test runner (2.4 on the stalled CI runner, run 44444325775) and captures within the third more,
 # leaves about 2 minutes for the export, the page and the upload. A leg the timeout kills uploads no logs, so CI sets
-# the watchdog's deadline (above) at those 2 minutes before the timeout: a stall noticed 10 minutes late, in a retry
-# or after a slow first run, would otherwise run into it.
+# the deadline (above) at those 2 minutes before the timeout: a stall noticed 10 minutes late, in a retry or after a
+# slow first run, or a step that hangs outside xcodebuild, would otherwise run into it.
 retry_by=$((${WESTRON_MATRIX_RETRY_BY:-25} * 60))
 
 # One test invocation for the whole matrix, and one retry when the machinery failed it (above), with a warning on
@@ -415,6 +463,7 @@ if [ ! -f "$out/matrix.json" ] && [ "$test_status" -ne 0 ]; then
             "${plan#retry }. The first run's failures are in this step's output; its log is in the leg's artifact."
         fi
         # The simulator may have died with the run; it is found, and booted again if need be.
+        step="finding the destination again"
         prepare_destination
         log=".build/logs/$name-retry.log" results=".build/xcode/results/$name-retry.xcresult"
         : > "$log"
@@ -430,6 +479,7 @@ if [ ! -f "$out/matrix.json" ]; then
   exit 1
 fi
 page_status=0
+step="the review page (snapshot-pages)"
 pages index "$out" || page_status=$?
 echo "$out/index.html"
 if [ "$test_status" -ne 0 ] || [ "$page_status" -ne 0 ]; then
