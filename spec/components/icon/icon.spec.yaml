@@ -1,15 +1,16 @@
-# westron's Icon contract (#28), a draft: decisions/0001-icon-contract.md records the owner's answers of 2026-11-18,
-# what the documents already decide, and what the agent proposes on top of them, to confirm.
+# westron's Icon contract (#28), approved on 2026-11-19 under the owner's delegation of 2026-11-18: decisions/0001-icon-contract.md
+# records the owner's answers of 2026-11-18, what the documents already decide, and what the agent and the coordinator
+# decided under the delegation, for the owner to confirm (the Apple view among them).
 id: icon
-status: draft
+status: approved
 description: >-
-  An icon of westron's registry on the platform's own image view: westron adds no image type of its own, only the
-  names and how a glyph is drawn (design-language/07, decisions/0011). Next to text, an icon takes that text's role
-  for its size and its weight, so it sits on the line like a letter and grows with the person's text size; without
-  text, it takes the role of its control's label; it never has a size of its own. Where it must be smaller or larger
-  than its text, it takes the platform's relative scale, small, medium or large. It has no color option: it draws in
-  the color its context gives it, and that is one of the roles chapter 07 lists, the color of the text it goes with,
-  color.status.<name>.icon for a status glyph, color.category.<name>.icon for a list's glyph,
+  An icon of westron's registry, drawn as the platform's own glyph image: westron adds the names, how a glyph is
+  drawn and what assistive technology hears of it (design-language/07, decisions/0011). Next to text, an icon takes
+  that text's role for its size and its weight, so it sits on the line like a letter and grows with the person's text
+  size; without text, it takes the role of its control's label; it never has a size of its own. Where it must be
+  smaller or larger than its text, it takes the platform's relative scale, small, medium or large. It has no color
+  option: it draws in the color its context gives it, and that is one of the roles chapter 07 lists, the color of the
+  text it goes with, color.status.<name>.icon for a status glyph, color.category.<name>.icon for a list's glyph,
   color.icon.tertiary for a chevron or a grip, or the on-fill color of a solid fill it sits on (on-accent, a
   status's on-fill, a list's on-fill). It is drawn in one color, outlined at rest; a filled glyph marks a state.
   The component has no states. An icon inside a shape, such as a list's tile, is a component of its own (phase 4).
@@ -46,18 +47,35 @@ accessibility:
 
 platforms:
   apple:
-    strategy: extension-on-system-control
-    base: SwiftUI.Image
+    strategy: own-component
+    form: view
     systemOptions: { scale: SwiftUI.Image.Scale }
     description: >-
-      Image(.tray) draws the glyph's SF Symbol and is hidden from assistive technology; Image(.sun, label: "Today")
-      is announced as an image labeled "Today". Label("Rename", icon: .pen) keeps the system Label, whose icon is
-      decorative beside its title. The glyph is the SF Symbol the registry names: a symbol takes the font of its
-      context (.textRole(_:)), which gives it the size and the weight of the text beside it, and the context's
-      foregroundStyle, which gives it its color; rendering is monochrome. scale is SwiftUI's own Image.Scale, set
-      with .imageScale(_:), so no enum is generated for it. westron's own glyphs become custom symbols built from a
-      variable template, so they get the same weights, scales and alignment, with phase 6 (design-language/07, open
-      question 1). On watchOS the icon is drawn as on the other OSes.
+      Icon(.tray) draws the glyph's SF Symbol and is hidden from assistive technology; Icon(.sun, label: "Today") is
+      announced as an image labeled "Today", and Icon(.folder, label: list.title) takes a label that is not localized,
+      as Label(_:icon:) takes its title. Icon is a view of westron's own, not an initializer of SwiftUI's Image: an
+      Image of an SF Symbol always carries the system's spoken name of the symbol ("Increase Brightness" for the sun),
+      and SwiftUI has no initializer of an Image of a symbol and no modifier returning an Image that hides it or
+      names it (decisions/0001, "The Apple view"). Image(_: Westron.Icon) stays an adapter, not this component, for
+      where only an Image fits, such as Text interpolation: it keeps the system's name. Label("Rename", icon: .pen)
+      keeps the system Label, as Label(_:systemImage:) makes it, so whether its icon is hidden beside its title is the
+      system's choice: in a control the title names it, and on its own iOS 26.3 has been seen both to read the
+      symbol's system name before the title and to read the title alone. Hiding its icon would hide a menu item built
+      from the label as a whole, so westron leaves it as the system makes it (decisions/0001, "The Apple view"). The
+      glyph is the SF Symbol the registry names: a
+      symbol takes the font of its context (.textRole(_:)), which gives it the size and the weight of the text beside
+      it, and the context's foregroundStyle, which gives it its color; rendering is monochrome. scale is SwiftUI's own
+      Image.Scale, which the product sets with .imageScale(_:) on the icon or its container and the symbol inside
+      reads from the environment, so Icon takes no scale argument and no enum is generated. Weight, measured on iOS
+      and macOS: at rest a symbol takes the weight of the role around it, in the system font and in Onest and Geist
+      Mono alike (Onest ExtraBold reads as regular, but no role draws it at rest). Under Bold Text it differs from the
+      text beside it: the symbol takes its font's weight and then the system's Bold Text step, and a role in Onest or
+      Geist Mono has already taken the heavier instance, so its icon steps twice and draws heavier than its text, black
+      beside heading.large's Onest ExtraBold, heavy beside code.regular's Geist Mono SemiBold; beside a system-font
+      role, text and icon take one step together (decisions/0001, open points). westron's own glyphs become custom
+      symbols built from a variable template, so they get the same weights, scales and alignment, with phase 6
+      (design-language/07, open question 1). On watchOS the icon is drawn as on the other OSes; every role there is
+      the system font, so the Bold Text difference does not arise.
   web:
     status: planned
     description: >-

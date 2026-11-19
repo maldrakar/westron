@@ -256,7 +256,9 @@ extension ComponentMatrix.Supplement {
         component: "checkbox", id: "list-colors", title: "the twelve list colors",
         note: "The color comes from .category(_:). Blue to olive in body.regular, amber to indigo in "
             + "subheadline.regular; no labels; growth stops at accessibility1.",
-        keeps: [:]
+        // Two lines of six checks to a cell: at accessibility5 a picture of all five rows runs under the status bar
+        // and to the screen's bottom edge on an iPhone 17, so it takes three rows at a time there.
+        keeps: [:], rowsPerPicture: 3
     ) { combination in
         CheckboxSupplementCell(combination: combination) { isChecked in
             CheckboxColors(isChecked: isChecked, labelsShown: false)

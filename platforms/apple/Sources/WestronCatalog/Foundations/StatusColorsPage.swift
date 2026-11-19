@@ -53,7 +53,7 @@ struct StatusBadge: View {
 
     var body: some View {
         HStack(spacing: .space50) {
-            Image(status.icon)
+            Icon(status.icon)
                 .foregroundStyle(status.iconColor)
             Text(status.word)
                 .foregroundStyle(status.text)

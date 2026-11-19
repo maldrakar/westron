@@ -128,7 +128,7 @@ extension ComponentMatrix.Supplement {
         keeps: ["size": "m"],
         // A card with a title and two lines of notes is taller than a generated cell: at the largest text size two
         // rows of cards fill a picture, so a sheet is split into one picture per column and per two rows.
-        rowsWhenSplit: 2
+        rowsPerPicture: 2
     ) { combination in
         TextFieldCardSample(values: TextFieldMatrixValues(combination))
     }

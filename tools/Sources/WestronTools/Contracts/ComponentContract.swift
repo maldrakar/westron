@@ -122,11 +122,15 @@ public struct ComponentContract: Equatable, Sendable {
     /// `states`. A state none names changes no token: it draws as rest, and only what the platform adds itself, such
     /// as the system's focus ring, tells it apart.
     public let boundStates: [String]
+    /// `accessibility.label`: `required` or `optional`; nil when the contract gives none.
+    public let accessibilityLabel: String?
 
     public init(
         id: String, status: String, options: [Option], states: [String], apple: Apple?,
-        constraints: [Constraint] = [], boundStates: [String]? = nil, slots: [String] = []
+        constraints: [Constraint] = [], boundStates: [String]? = nil, slots: [String] = [],
+        accessibilityLabel: String? = nil
     ) {
+        self.accessibilityLabel = accessibilityLabel
         self.id = id
         self.status = status
         self.options = options
@@ -230,7 +234,8 @@ public struct ComponentContract: Equatable, Sendable {
         self.init(
             id: id, status: status, options: options, states: states, apple: apple, constraints: constraints,
             boundStates: states.filter(named.contains),
-            slots: document["slots"]?.elements?.compactMap(\.string) ?? [])
+            slots: document["slots"]?.elements?.compactMap(\.string) ?? [],
+            accessibilityLabel: document["accessibility"]?["label"]?.string)
     }
 
     /// A constraint's `when` or `require`: by option name, a value, a list of values, or `true` or `false`.

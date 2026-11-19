@@ -18,6 +18,10 @@
 ///   option): its columns are the column axis's values and its rows rest and the states, at most `maxColumns` by
 ///   `maxRows`, so a sheet fits an iPhone in portrait and the catalog's macOS window at the default text size. A sheet
 ///   whose every combination a constraint forbids is left out.
+/// - A contract with no states and an option whose values are the icon registry's names runs that option down the
+///   rows instead (`rowAxis`): Icon's 36 glyphs at rest would otherwise make sheets of three glyphs each, twelve to a
+///   scale. Its sheets hold one value of every other axis but the column axis, which is then the variant, else the
+///   first other option that is not a bool.
 ///
 /// What the generator does not do (#72), so that the contract alone drives every generated combination and sheet: the
 /// catalog (`WestronCatalog/SnapshotMatrix/ComponentMatrix.swift`) captures the sheets at other text sizes too and
@@ -35,12 +39,15 @@ public struct SnapshotMatrix: Equatable, Sendable {
         public let systemType: String?
         /// The token group a token option takes its values from, `typography`; nil for any other option.
         public let tokenGroup: String?
-        /// The Swift accessor of the group's tokens on Apple, `Westron.TextRole` (`AppleComponents.tokenAccessors`).
+        /// The Swift accessor of the group's tokens on Apple, `Westron.TextRole` (`AppleComponents.tokenAccessors`);
+        /// for an option whose values are icons, `Westron.Icon` (`AppleIcons.iconType`).
         public let accessor: String?
+        /// Whether its values are the icon registry's names, in the registry's order.
+        public let isIcons: Bool
 
         init(
             name: String, values: [String], isBool: Bool = false, systemType: String? = nil, tokenGroup: String? = nil,
-            accessor: String? = nil
+            accessor: String? = nil, isIcons: Bool = false
         ) {
             self.name = name
             self.values = values
@@ -48,6 +55,7 @@ public struct SnapshotMatrix: Equatable, Sendable {
             self.systemType = systemType
             self.tokenGroup = tokenGroup
             self.accessor = accessor
+            self.isIcons = isIcons
         }
     }
 
@@ -94,7 +102,7 @@ public struct SnapshotMatrix: Equatable, Sendable {
         public let fixed: [String]
         /// Values of the column axis.
         public let columns: [String]
-        /// The states of the rows; nil is rest.
+        /// The states of the rows, nil for rest; with a row axis, its values.
         public let rows: [String?]
     }
 
@@ -111,6 +119,9 @@ public struct SnapshotMatrix: Equatable, Sendable {
     public let unboundStates: [String]
     /// The axis of the columns; nil when the contract has no options.
     public let columnAxis: String?
+    /// The axis down the rows in place of the states: an option whose values are icons, in a contract with no states;
+    /// nil otherwise.
+    public let rowAxis: String?
     /// In order: the first axis outermost, the state innermost, rest first.
     public let combinations: [Combination]
     /// Combinations of options that a constraint of severity `error` forbids, left out with every state.
@@ -121,11 +132,15 @@ public struct SnapshotMatrix: Equatable, Sendable {
     public let platforms: [Platform]
     public let sheets: [Sheet]
 
-    /// `tokens` gives the values of an option whose values are tokens; a contract without one needs none.
+    /// `tokens` gives the values of an option whose values are tokens, `icons` the registry's names, in its order, for
+    /// one whose values are icons; a contract without such an option needs neither.
     /// - Throws: `ContractProblem` when a value an Apple OS drops has no fallback, which `spec check` rejects first;
     ///   when an option takes its values from a token group without the tokens, or from a group that has no accessor
-    ///   of its own on Apple (`AppleComponents.tokenAccessors`), for the cell to take its value as.
-    public init(_ contract: ComponentContract, source: String, tokens: ContractTokens? = nil) throws(ContractProblem) {
+    ///   of its own on Apple (`AppleComponents.tokenAccessors`), for the cell to take its value as; when an option
+    ///   takes its values from the icon registry without its names.
+    public init(
+        _ contract: ComponentContract, source: String, tokens: ContractTokens? = nil, icons: [String]? = nil
+    ) throws(ContractProblem) {
         component = contract.id
         let systemOptions = contract.apple?.systemOptions ?? [:]
         var axes: [Axis] = []
@@ -139,10 +154,12 @@ public struct SnapshotMatrix: Equatable, Sendable {
                         name: option.name, values: ["false", "true"], isBool: true,
                         systemType: systemOptions[option.name]))
             case .icons:
-                throw ContractProblem(
-                    source: source, path: .root.key("options").key(option.name),
-                    "\(option.name) takes its values from the icon registry: the snapshot matrix does not take such "
-                        + "an option yet")
+                guard let icons, !icons.isEmpty else {
+                    throw ContractProblem(
+                        source: source, path: .root.key("options").key(option.name),
+                        "\(option.name) takes its values from the icon registry: the matrix needs its names")
+                }
+                axes.append(Axis(name: option.name, values: icons, accessor: AppleIcons.iconType, isIcons: true))
             case .tokenGroup(let group, _):
                 let path = DocumentPath.root.key("options").key(option.name)
                 guard let accessor = AppleComponents.tokenAccessors[group] else {
@@ -197,8 +214,8 @@ public struct SnapshotMatrix: Equatable, Sendable {
             let applePath = DocumentPath.root.key("platforms").key("apple")
             for os in ComponentContract.appleOSes {
                 var drawn: [(option: String, map: [(value: String, drawn: String)])] = []
-                // A token option has no platform restriction: spec check rejects one that names it.
-                for axis in axes where !axis.isBool && axis.systemType == nil && axis.tokenGroup == nil {
+                // A token or icons option has no platform restriction: spec check rejects one that names it.
+                for axis in axes where !axis.isBool && axis.systemType == nil && axis.accessor == nil {
                     var map: [(value: String, drawn: String)] = []
                     for value in axis.values {
                         let target = try AppleComponents.API.drawn(
@@ -217,29 +234,35 @@ public struct SnapshotMatrix: Equatable, Sendable {
         }
         self.platforms = platforms
 
+        let rowIndex = contract.states.isEmpty ? axes.firstIndex(where: \.isIcons) : nil
+        rowAxis = rowIndex.map { axes[$0].name }
+        let others = axes.indices.filter { $0 != rowIndex }
         let columnIndex =
-            axes.firstIndex { $0.name == "variant" } ?? axes.firstIndex { !$0.isBool } ?? axes.indices.first
+            others.first { axes[$0].name == "variant" } ?? others.first { !axes[$0].isBool } ?? others.first
         columnAxis = columnIndex.map { axes[$0].name }
-        let fixedAxes = axes.indices.filter { $0 != columnIndex }
+        let fixedAxes = others.filter { $0 != columnIndex }
         var fixedTuples: [[String]] = [[]]
         for index in fixedAxes {
             fixedTuples = fixedTuples.flatMap { tuple in axes[index].values.map { tuple + [$0] } }
         }
         let columnChunks = Self.chunks(columnIndex.map { axes[$0].values } ?? [""], of: Self.maxColumns)
-        let rowChunks = Self.chunks(rows, of: Self.maxRows)
+        let rowValues: [String?] = rowIndex.map { axes[$0].values.map { Optional($0) } } ?? rows
+        let rowChunks = Self.chunks(rowValues, of: Self.maxRows)
         let allowedSet = Set(allowed)
         var sheets: [Sheet] = []
         for fixed in fixedTuples {
             let base = zip(fixedAxes, fixed).map { "\(axes[$0.0].name)-\($0.1)" }
             for (columnNumber, columns) in columnChunks.enumerated() {
                 // A sheet with no allowed combination is left out.
-                let drawsSomething = columns.contains { column in
-                    var tuple = fixed
-                    if let columnIndex { tuple.insert(column, at: columnIndex) }
-                    return allowedSet.contains(tuple)
-                }
-                guard drawsSomething else { continue }
                 for (rowNumber, rowChunk) in rowChunks.enumerated() {
+                    let drawsSomething = columns.contains { column in
+                        rowChunk.contains { row in
+                            let rowValue = rowIndex.map { (index: $0, value: row ?? "") }
+                            return allowedSet.contains(
+                                Self.values(fixed, column: (columnIndex, column), row: rowValue))
+                        }
+                    }
+                    guard drawsSomething else { continue }
                     var parts = base.isEmpty ? ["all"] : base
                     if columnChunks.count > 1 { parts.append("columns-\(columnNumber + 1)") }
                     if rowChunks.count > 1 { parts.append("rows-\(rowNumber + 1)") }
@@ -249,6 +272,18 @@ public struct SnapshotMatrix: Equatable, Sendable {
             }
         }
         self.sheets = sheets
+    }
+
+    /// The values of every axis: the fixed ones with the column's and the row's in their places.
+    static func values(_ fixed: [String], column: (index: Int?, value: String), row: (index: Int, value: String)?)
+        -> [String]
+    {
+        var inserted: [(index: Int, value: String)] = []
+        if let index = column.index { inserted.append((index, column.value)) }
+        if let row { inserted.append(row) }
+        var values = fixed
+        for item in inserted.sorted(by: { $0.index < $1.index }) { values.insert(item.value, at: item.index) }
+        return values
     }
 
     private static func chunks<T>(_ items: [T], of size: Int) -> [[T]] {
