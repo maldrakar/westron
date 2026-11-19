@@ -119,12 +119,12 @@ extension View {
 
 extension ComponentMatrix.Supplement {
     /// A card's title and notes (the pilot's open task card): the title in `heading.small` and the notes, a multiline
-    /// field, in a smaller role and the secondary color, on the surface ground.
+    /// field, in a smaller role and the secondary color, on a raised surface.
     static let textFieldCardNotes = ComponentMatrix.Supplement(
         component: "text-field", id: "card-notes", title: "a card's title and multiline notes",
         note: "The context of a field is not a contract option. Here, as in the pilot's open task card, the title is "
             + "set in heading.small and the notes, a multiline field (axis: .vertical), in subheadline.regular and "
-            + "text.secondary, on the surface ground: an inline field takes them; a framed field keeps its own.",
+            + "text.secondary, on a raised surface: an inline field takes them; a framed field keeps its own.",
         keeps: ["size": "m"],
         // A card with a title and two lines of notes is taller than a generated cell: at the largest text size two
         // rows of cards fill a picture, so a sheet is split into one picture per column and per two rows.
@@ -144,7 +144,9 @@ extension ComponentMatrix.Supplement {
         TextFieldSecureSample(values: TextFieldMatrixValues(combination))
     }
 
-    /// A field on the surface ground, for the outline's contrast; the generated sheets show it on the canvas.
+    /// A field on the surface ground, for the outline's contrast; the generated sheets show it on the canvas. The ground
+    /// is the bare fill, not `.surface(_:)`: the sheet is about the outline against a colour, and a raised surface's
+    /// shadow and high-contrast line would be more than that.
     static let textFieldOnSurface = grounded(.background.surface, name: "surface")
 
     /// A field on the sunken ground, for the outline's contrast.
@@ -163,7 +165,7 @@ extension ComponentMatrix.Supplement {
     }
 }
 
-/// A card on the surface ground with an inline title and multiline notes, as a product writes them.
+/// A card, a raised surface, with an inline title and multiline notes, as a product writes them.
 private struct TextFieldCardSample: View {
     let values: TextFieldMatrixValues
     @State private var title = "Buy groceries"
@@ -192,7 +194,9 @@ private struct TextFieldCardSample: View {
                 .foregroundStyle(.text.secondary)
         }
         .padding(.space150)
-        .background(.background.surface, in: RoundedRectangle(cornerRadius: .radius.card, style: .continuous))
+        // The card's ground as a product draws it, a raised surface (spec/components/surface): the surface fill, and
+        // its shadow and, in the high-contrast themes, its line.
+        .surface(.raised)
         .forcingTextFieldState(stateName.flatMap(TextFieldCatalogState.init(named:)))
         .matrixCellContainer()
     }
@@ -383,7 +387,7 @@ private struct TextFieldLivePage: View {
                         .accessibilityIdentifier(TextFieldCatalogID.notes)
                 }
                 .padding(.space.card)
-                .background(.background.surface, in: RoundedRectangle(cornerRadius: .radius.card, style: .continuous))
+                .surface(.raised)
                 SecureField("Password", text: $password, prompt: Text("Required"))
                     .textFieldStyle(.framed)
                     .accessibilityLabel("Password")
