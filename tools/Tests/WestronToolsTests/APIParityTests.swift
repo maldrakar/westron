@@ -545,6 +545,11 @@ struct APIParityTests {
         let elsewhere = try problems(files(extra: ["Context.swift": category]))
         #expect(elsewhere.count == 1)
         #expect(elsewhere[0].contains("public func View.category: a public modifier on View that no contract gives"))
+        // The message names every place a reviewed adapter may live.
+        #expect(
+            elsewhere[0].contains(
+                "a reviewed adapter in TokenAdapters.swift (APIParity.adapters) or in Category.swift "
+                    + "(APIParity.otherAdapters)"))
 
         // The file holds only the names listed for it, each taking a westron value.
         let unlisted = try problems(

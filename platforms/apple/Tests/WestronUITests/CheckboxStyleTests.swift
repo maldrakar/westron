@@ -205,6 +205,47 @@ struct CheckboxStyleTests {
         #expect(abs(cell.width - expected) < 0.5 && abs(cell.height - expected) < 0.5, "\(role.name): \(cell)")
     }
 
+    @Test("the real .toggleStyle(.check) measures the circle on the text role set on the toggle")
+    func realStyleFollowsTheTextRole() throws {
+        // With its label hidden, the toggle is the circle's cell alone (labelsVisibility: iOS 18, macOS 15).
+        guard #available(iOS 18, macOS 15, watchOS 11, *) else { return }
+        func check(_ role: Westron.TextRole) -> CGSize {
+            fittingSize(Toggle("Done", isOn: .constant(true)).toggleStyle(.check).labelsHidden().textRole(role))
+        }
+        var sides: [CGFloat] = []
+        for role in [Westron.TextRole.body.regular, .heading.large] {
+            let line = fittingSize(Text(verbatim: "X").textRole(role)).height
+            let expected = CheckboxMetrics.hitSide(diameter: CheckboxMetrics.diameter(lineHeight: line))
+            let size = check(role)
+            #expect(abs(size.width - expected) < 0.5 && abs(size.height - expected) < 0.5, "\(role.name): \(size)")
+            sides.append(size.height)
+        }
+        // heading.large's circle is past the least hit area, so it is the circle's own diameter.
+        #expect(sides[1] > CheckboxMetrics.minimumHitSide && sides[1] > sides[0])
+    }
+
+    #if os(iOS)
+        @Test("the real .toggleStyle(.check) grows with Dynamic Type in the ratio of the text's line")
+        func realStyleFollowsDynamicType() throws {
+            guard #available(iOS 18, *) else { return }
+            func measure(_ size: DynamicTypeSize) -> (line: CGFloat, side: CGFloat) {
+                let line = fittingSize(Text(verbatim: "X").textRole(.body.regular).dynamicTypeSize(size)).height
+                let side = fittingSize(
+                    Toggle("Done", isOn: .constant(false)).toggleStyle(.check).labelsHidden()
+                        .textRole(.body.regular).dynamicTypeSize(size)
+                ).height
+                return (line, side)
+            }
+            // Both circles are past the least hit area, so the sides are the diameters.
+            let small = measure(.accessibility3)
+            let large = measure(.accessibility5)
+            #expect(small.side > CheckboxMetrics.minimumHitSide)
+            #expect(abs(small.side / small.line - CheckboxMetrics.diameterPerLine) < 0.01, "\(small)")
+            #expect(abs(large.side / large.line - CheckboxMetrics.diameterPerLine) < 0.01, "\(large)")
+            #expect(large.side > small.side)
+        }
+    #endif
+
     @Test("a larger text role draws a larger circle, past the least hit area")
     func largerRoleLargerCircle() {
         let body = fittingSize(CheckboxCell().textRole(.body.regular))

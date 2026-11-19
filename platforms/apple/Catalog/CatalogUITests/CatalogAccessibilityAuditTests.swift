@@ -576,6 +576,12 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                 Suppression(.entry("checkbox"), type: .textClipped, reason: "a hidden label, not drawn") {
                     $0 == "Call the plumber"
                 },
+                // The same on the List rows of `checkbox-in-list`, whose checks hide their labels beside separate
+                // titles: the List gives each toggle's element the whole row, and the title drawn in it is hidden
+                // from assistive technology, so the audit measures the hidden label as if it were drawn there.
+                Suppression(.entry("checkbox-in-list"), type: .textClipped, reason: "a hidden label, not drawn") {
+                    ["Call the plumber", "Pay the rent"].contains($0 ?? "")
+                },
                 // "Text clipped" with no element on the background colors. It appeared when the page got its
                 // layout for accessibility sizes, which puts a name on a line above its cells. The audit names no
                 // element, so there is nothing to fix by; the same page at accessibility5 passes the text clipped

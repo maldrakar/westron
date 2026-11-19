@@ -638,7 +638,8 @@ public enum APIParity {
                 problem(
                     d,
                     "\(what): a public modifier on View that no contract gives: one is a component's style overload, "
-                        + "a state modifier, or a reviewed adapter in \(adaptersFile) (APIParity.adapters); \(allow)")
+                        + "a state modifier, or a reviewed adapter in \(adaptersFile) (APIParity.adapters) or in "
+                        + "\(otherAdapters.keys.sorted().joined(separator: ", ")) (APIParity.otherAdapters); \(allow)")
             } else if generatedTokenFiles.contains(file) {
                 guard (d.kind.isType || d.kind == .typealias) && d.container.isEmpty else { continue }
                 problem(
