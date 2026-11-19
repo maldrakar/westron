@@ -5,11 +5,11 @@ contracts, design language) and a native library on each platform. Its look is i
 The pilot platform is Apple (SwiftUI), the pilot product is [todo-app](https://github.com/maldrakar/todo-app)
 (decisions/0006): its screens decide which components come first, and it is the first to adopt westron's look.
 
-Phases 1 and 2 are done, phase 3 "Primitives and forms (Apple)" is next; phases are GitHub milestones, tasks are
-issues. Order matters more than speed: tokens (phase 1), then the contract schema, API generation, the parity lint,
-the snapshot matrix and the end-to-end Button slice on Apple (phase 2). A second component waits until API generation
-and the parity lint work on Button, or drift would appear before the mechanism that catches it; that condition is now
-met (`reports/`, section "Work plan").
+Phases 1 and 2 are done; phases are GitHub milestones, tasks are issues. Phase 3 "Primitives and forms (Apple)" has
+its six components implemented (Text, Icon, Surface, Rule, TextField, Checkbox), and they wait for the owner's review
+of their snapshot matrices (decisions/0005, the second gate); phase 4 is next after that. Order matters more than
+speed: tokens (phase 1), then the contract schema, API generation, the parity lint, the snapshot matrix and the
+end-to-end Button slice on Apple (phase 2), before a second component (`reports/`, section "Work plan").
 
 ## Where things are
 
@@ -24,7 +24,7 @@ met (`reports/`, section "Work plan").
 | `platforms/apple/Sources/WestronTokens/` | Token values as plain Swift with no imports, generated (decisions/0010) |
 | `platforms/apple/Sources/WestronUI/` | SwiftUI styles, components and token accessors: what products import |
 | `platforms/apple/Sources/WestronCatalog/` | Registry of catalog entries and its host, and the snapshot matrices generated from the contracts |
-| `platforms/apple/Catalog/` | Catalog app (iOS + macOS) and the screenshot UI test; the project is `project.xcproj` in Xcode 27 format, not `project.pbxproj` |
+| `platforms/apple/Catalog/` | Catalog app (iOS + macOS) and its UI tests: screenshots, the snapshot matrix, the accessibility audit, behaviour; the project is `project.xcproj` in Xcode 27 format, not `project.pbxproj` |
 | `tools/` | Generators and checks: a separate SwiftPM package with the `westron` executable, and scripts for Apple |
 | `Package.swift` | SwiftPM manifest; it sits at the root because SwiftPM requires it |
 

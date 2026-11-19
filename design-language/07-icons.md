@@ -107,7 +107,8 @@ An icon is sized by text, not by a number of its own. Its size comes from a text
 
 - **Next to text, an icon takes that text's role.** It gets the role's size and weight, so it sits on the line like a
   letter and scales with Dynamic Type together with the text. An SF Symbol does this when it takes the role's font; a
-  custom symbol does it because it is built from a template.
+  custom symbol does it because it is built from a template. Chrome glyphs share no weight of their own: each follows
+  the weight of its text (the Icon contract, #28, 2026-11-18).
 - **Without text, an icon takes its control's text role.** The glyph of an icon-only button is sized as that button's
   label would be. So a glyph in a larger control is larger, and every glyph grows with the person's text size.
 - **Inside a shape, an icon is sized by the shape.** A glyph in a check box or on a badge keeps its proportion to the
@@ -119,6 +120,9 @@ An icon is sized by text, not by a number of its own. Its size comes from a text
 
 ## Open questions
 
+The Icon contract (#28) answered question 4 on 2026-11-18: an icon takes its size and its weight from the text role
+beside it ("Size relative to text"). The other questions keep their numbers.
+
 1. **Which names are domain icons.** All 36 names map to SF Symbols on Apple. The pilot's list glyphs, such as
    `tray`, `logbook` or `briefcase`, are icons a person picks for a list. Do they take the platform's glyph wherever
    one exists, or westron's glyph on every platform, Apple included, so that a list's icon looks the same everywhere?
@@ -127,6 +131,5 @@ An icon is sized by text, not by a number of its own. Its size comes from a text
 3. **Smaller masters.** Lucide's 2 px stroke scaled to 16 px is 1.33 px, lighter than Adwaita's 2 px. The research
    proposes a 20 px master with a 1.5 px stroke for macOS sidebars and dense tables, and a 16 px master redrawn with
    a 2 px stroke for GNOME. Are they drawn with the first domain icon, or with the platform that needs them?
-4. **Weight.** Should an icon follow the weight of its text, as proposed, or should all chrome glyphs share one weight?
 5. **License of westron's glyphs.** The masters derive from Lucide (ISC) and Tabler (MIT), whose notices stay. Do
    westron's own masters go under MIT, with the tokens and the registry, or CC BY 4.0, with the design language?

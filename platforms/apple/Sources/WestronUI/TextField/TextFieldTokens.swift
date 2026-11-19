@@ -104,7 +104,7 @@ struct TextFieldMetrics: Equatable, Sendable {
     static let inlineRingOutsetVertical: Westron.Dimension = .space50
 
     /// The smallest height of the area that takes a touch or a click on a `framed` field: the platform's recommended
-    /// target (design-language/08, "Target size"), 44 pt on iOS, iPadOS and watchOS, which is `size.control.m` there,
+    /// target (design-language/08, "Hit targets"), 44 pt on iOS, iPadOS and watchOS, which is `size.control.m` there,
     /// and 28 pt on macOS. Below it the field takes touches and clicks around what it draws. `inline` has no height of
     /// its own, and the contract binds it none.
     static var minimumHitHeight: CGFloat {
