@@ -237,8 +237,8 @@ The owner compared prototype renders of three button looks with Apple's own butt
   or `color.status.danger.border` at `stroke.thin`: the muted fill stands about 1.1:1 off the canvas, chapter 02 asks
   that the edge of a control a person must find meets the non-text target, and the high-contrast themes keep steps
   1–5, so no fill alone can mark that edge there.
-- **The capsule's ends are circular.** SwiftUI's `Capsule()` with circular ends, as the prototype drew it, so that
-  icon-only is a true circle. A continuous capsule draws a square frame as a rounded square.
+- **The capsule's ends are continuous on Apple.** SwiftUI's `Capsule()`, continuous by default, as the prototype
+  drew it and as chapter 04 asks of Apple's corners; in icon-only's square frame it draws a circle.
 
 ## Why
 

@@ -128,7 +128,8 @@ private struct ButtonBody: View {
 
 /// The drawn button: its content, padding, frame, fill, border, hit area and opacity. The horizontal padding and the
 /// icon–label gap scale with Dynamic Type from their tokens, relative to the label's text style. The shape is the
-/// platform's capsule (`container.shape`), with circular ends, so that icon-only, laid out in a square, is a circle.
+/// platform's capsule (`container.shape`), SwiftUI's `Capsule` with its default continuous ends, as the prototype the
+/// owner chose drew it; icon-only, laid out in a square, is a circle.
 private struct ButtonSurface<Label: View>: View {
     let label: Label
     let tokens: ButtonTokens

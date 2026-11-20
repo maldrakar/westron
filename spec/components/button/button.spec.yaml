@@ -137,8 +137,8 @@ platforms:
       keeps it as the accessible label and draws the circle. A product's own .labelStyle(.iconOnly) is not the way to
       it: the style's label style overrides it, and the style cannot read it to draw the circle (spec/conventions.md).
       A call without size: takes it from controlSize (spec/conventions.md). The focus ring is the system's, so the
-      focusRing bindings do not apply. The shape is SwiftUI's Capsule with circular ends, as the prototype the owner
-      chose drew it, so that icon-only is a true circle; a continuous capsule would draw icon-only as a rounded square.
+      focusRing bindings do not apply. The shape is SwiftUI's Capsule with its default continuous ends, as the
+      prototype the owner chose drew it; in icon-only's square frame it draws a circle.
       The icon beside the label is set to .imageScale(.small) and laid out with the label in an HStack aligned on
       .firstTextBaseline; icon-only draws the glyph at the same small scale. The high-contrast outline follows
       colorSchemeContrast, as Surface's line does.
