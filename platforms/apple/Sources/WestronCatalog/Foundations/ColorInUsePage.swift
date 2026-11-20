@@ -54,11 +54,20 @@ private struct Card<Content: View>: View {
 /// A task list: its title, the primary action, a search field and four tasks, one late, one selected, one done.
 private struct TasksSample: View {
     @Environment(\.colorSchemeContrast) private var contrast
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// The title and the action side by side; at an accessibility size the action goes under the title, since beside
+    /// it the button is squeezed until its label stands a letter per line. One `AnyLayout`, so the views stay the same.
+    private var header: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: .space100))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: .space100))
+    }
 
     var body: some View {
         Card {
             VStack(alignment: .leading, spacing: .space100) {
-                HStack(alignment: .center, spacing: .space100) {
+                header {
                     VStack(alignment: .leading, spacing: 0) {
                         Text("Inbox")
                             .textRole(.heading.medium)
@@ -67,7 +76,7 @@ private struct TasksSample: View {
                             .textRole(.footnote.regular)
                             .foregroundStyle(.text.secondary)
                     }
-                    Spacer(minLength: .space100)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     Button {
                     } label: {
                         Label("Task", icon: .plus)
@@ -134,7 +143,8 @@ private struct TaskRow<Meta: View>: View {
                     .textRole(.body.regular)
                     .foregroundStyle(done ? Westron.Color.text.secondary : .text.primary)
                     .strikethrough(done, color: Color(.icon.tertiary))
-                HStack(spacing: .space100) {
+                // Wraps rather than breaks a word at an accessibility size.
+                FlowLayout(spacing: .space100) {
                     meta
                 }
                 .textRole(.footnote.regular)
@@ -275,7 +285,9 @@ private struct NoticesSample: View {
         VStack(alignment: .leading, spacing: .space100) {
             Notice(status: .warning, title: "Storage almost full", detail: "92% of the attachment space is used.")
             Notice(status: .danger, title: "Report not sent", detail: "The webhook returned 404. Check its address.")
-            HStack(spacing: .space100) {
+            // The row wraps rather than squeezes: at an accessibility size four items do not fit a phone's width, and
+            // squeezed buttons lose their labels (the accessibility audit's contrast check, 2026-11-20).
+            FlowLayout(spacing: .space100) {
                 // westron's own buttons: the accent, a secondary one, text.primary on background.muted (outlined
                 // in border.strong in high contrast), and a destructive one.
                 Button("Save") {}
