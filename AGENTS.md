@@ -24,7 +24,9 @@ end-to-end Button slice on Apple (phase 2), before a second component (`reports/
 | `platforms/apple/Sources/WestronTokens/` | Token values as plain Swift with no imports, generated (decisions/0010) |
 | `platforms/apple/Sources/WestronUI/` | SwiftUI styles, components and token accessors: what products import |
 | `platforms/apple/Sources/WestronCatalog/` | Registry of catalog entries and its host, and the snapshot matrices generated from the contracts |
-| `platforms/apple/Catalog/` | Catalog app (iOS + macOS) and its UI tests: screenshots, the snapshot matrix, the accessibility audit, behaviour; the project is `project.xcproj` in Xcode 27 format, not `project.pbxproj` |
+| `platforms/apple/Tests/WestronSnapshotTests/` | The snapshot matrix rendered in-process: a package test on macOS, and the catalog's hosted unit-test bundle `CatalogSnapshotTests` on iOS |
+| `platforms/apple/Snapshots/` | The matrix's references, recorded on the CI runner: PNGs in Git LFS and the environment they were made in |
+| `platforms/apple/Catalog/` | Catalog app (iOS + macOS) and its UI tests: screenshots, the accessibility audit, behaviour; the project is `project.xcproj` in Xcode 27 format, not `project.pbxproj` |
 | `tools/` | Generators and checks: a separate SwiftPM package with the `westron` executable, and scripts for Apple |
 | `Package.swift` | SwiftPM manifest; it sits at the root because SwiftPM requires it |
 
@@ -51,13 +53,14 @@ tools/apple/catalog-screenshot.sh ios   --entry environment --appearance dark   
 tools/apple/catalog-screenshot.sh macos --entry environment                     # the same on macOS
 
 tools/apple/snapshot-matrix.sh ios [--component button]   # every combination of every contract in four themes, and
-                                                          # light at xSmall and accessibility5, with the supplements;
-                                                          # one xcodebuild test run; prints the path to index.html;
-                                                          # --component rule,surface (or repeated): those, one run
-tools/apple/snapshot-matrix.sh macos                      # the same on macOS
-tools/apple/snapshot-matrix.sh compare <dirA> <dirB>      # pixel diff of two captures; exit 1 when one differs
-tools/apple/snapshot-matrix.sh merge --expect <ids> <out> <dir>…  # captures of one platform taken apart, one page;
-                                                          # names on it any expected component none of them holds
+                                                          # light at xSmall and accessibility5, with the supplements,
+                                                          # rendered in-process (about 1 min); prints the path to
+                                                          # index.html; --component rule,surface: those only
+tools/apple/snapshot-matrix.sh macos                      # the same on macOS (about 15 s)
+tools/apple/snapshot-matrix.sh compare <dirA> <dirB>      # pixel diff of two renders, one level of tolerance
+                                                          # (--tolerance); exit 1 when one differs
+tools/apple/snapshot-matrix.sh check ios|macos            # against the references; locally: exit 4, "the environment
+                                                          # differs" (they are the CI runner's), so compare instead
 git diff --name-only main...HEAD | tools/apple/audit-scope.sh  # the catalog entries a pull request's audit
                                                           # covers, from the branch's commits (not uncommitted ones)
 
@@ -82,18 +85,21 @@ the log to `.build/logs/`. Bold Text and a scroll position have no option yet: s
 `--out`, since the file name does not show them. The test runner inherits them: set them on the command only, since an
 exported value silently applies to every later capture. On macOS, screenshots need Automation Mode enabled once
 (`platforms/apple/README.md`).
-The snapshot matrix (#24) is the second approval gate's review surface: `tools/westron generate` writes each
-component's matrix from its contract into `WestronCatalog/Generated/`, and the capture goes to
+The snapshot matrix (#24, #92): `tools/westron generate` writes each component's matrix from its contract into
+`WestronCatalog/Generated/`, unit tests render it in-process, and the render goes to
 `.build/snapshot-matrix/<platform>/` (`--out <dir>` elsewhere). The text sizes, the parts of a sheet that does not fit
 at one, and the supplementary sheets for what no contract option sets ("not a contract option") are hand-written in
-the catalog, not generated (`platforms/apple/README.md`, "Snapshot matrix"). Compare only captures from the same
-environment (decisions/0008).
-CI (decisions/0008, note of 2026-11-20): `.github/workflows/ci.yml` on every pull request and push to `main` (the
-tools, the Apple package and catalog, the catalog screenshots, and on a pull request the accessibility audit of the
-components it changes); `accessibility-audit.yml`, the full audit and the behaviour UI tests on iOS and macOS, every
-night and by hand (`gh workflow run accessibility-audit.yml --ref <branch>`); `snapshot-matrix.yml` on demand only,
-by hand (`gh workflow run snapshot-matrix.yml --ref <branch> [-f components=button,rule]`) or by the label `snapshot-matrix` on
-a pull request.
+the catalog, not generated (`platforms/apple/README.md`, "Snapshot matrix"). Compare only renders from the same
+environment (decisions/0008): locally, render before and after a change and `compare` them. The references in
+`platforms/apple/Snapshots/` are the CI runner's and are recorded only there. The second approval gate's review
+surface is the CI job `snapshots`: its report of what changed against the references and the full page of the render.
+CI (decisions/0008, notes of 2026-11-20 and 2026-11-21): `.github/workflows/ci.yml` on every pull request and push to
+`main` (the tools, the Apple package and catalog, `snapshots`, which checks the matrix of both platforms against the
+references, and on a pull request the accessibility audit of the components it changes); `accessibility-audit.yml`,
+the full audit and the behaviour UI tests on iOS and macOS, every night and by hand (`gh workflow run
+accessibility-audit.yml --ref <branch>`); `snapshot-references.yml` records the references, by the label
+`record-snapshots` on a pull request or by hand (`gh workflow run snapshot-references.yml --ref <branch>`), and commits
+them to that branch.
 
 ## Rules
 

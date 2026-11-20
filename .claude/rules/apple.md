@@ -98,11 +98,16 @@ paths:
   the component adds the hand-written `<Component>MatrixCell` (in `WestronCatalog/Components/<Component>Pages.swift`),
   which draws one combination with the real component, and what no option sets as a supplement, defined in the same
   file (`extension ComponentMatrix.Supplement`) and registered in `Supplement.all`
-  (`SnapshotMatrix/Supplements.swift`). `tools/apple/snapshot-matrix.sh ios|macos [--component a,b]` captures every
-  sheet, or those components', in four themes at `large` (on iOS also light at `xSmall` and `accessibility5`), with
-  supplementary sheets marked "not a contract option", and prints the path to `index.html`; `compare` diffs two
-  captures of one environment, `merge` joins captures taken apart (platforms/apple/README.md, "Snapshot matrix").
+  (`SnapshotMatrix/Supplements.swift`). `tools/apple/snapshot-matrix.sh ios|macos [--component a,b]` renders every
+  sheet, or those components', in-process (the unit tests in `platforms/apple/Tests/WestronSnapshotTests`), in four
+  themes at `large` (on iOS also light at `xSmall` and `accessibility5`), with supplementary sheets marked "not a
+  contract option", and prints the path to `index.html`; `compare` diffs two renders of one environment within one
+  level. The references in `platforms/apple/Snapshots/` are the CI runner's, recorded only there; `check` against them
+  is CI's job `snapshots`, and locally it reports that the environment differs (platforms/apple/README.md, "Snapshot
+  matrix").
 - The catalog project is `Catalog.xcodeproj/project.xcproj` in Xcode 27 format. Files are picked up from the
-  `Catalog/` and `CatalogUITests/` folders automatically; edit the project only to change settings or targets.
+  `Catalog/` and `CatalogUITests/` folders automatically, and the hosted bundle `CatalogSnapshotTests` takes
+  `../Tests/WestronSnapshotTests`; edit the project only to change settings or targets.
 - Look at the result: `tools/apple/catalog-screenshot.sh ios|macos --entry <id>` prints the path to the PNG.
-  `ImageRenderer` and `cacheDisplay` do not work for this: on macOS they do not see SwiftUI content.
+  `ImageRenderer` and `cacheDisplay` misdraw system controls; the matrix's in-process paths are `drawHierarchy` in the
+  hosted iOS bundle and `CARenderer` on macOS (decisions/0008).

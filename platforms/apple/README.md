@@ -7,8 +7,9 @@ A SwiftUI library for iOS, iPadOS, macOS and watchOS. The package manifest lives
 | `Sources/WestronTokens/` | Token values as plain Swift with no imports, for a product's shared code and its WebAssembly build |
 | `Sources/WestronUI/` | Styles, components and the SwiftUI accessors of the tokens: what products import |
 | `Sources/WestronCatalog/` | Catalog entries, their host and launch arguments |
-| `Tests/` | Package tests (Swift Testing) |
-| `Catalog/` | Catalog app for iOS and macOS and its UI tests: screenshots, the snapshot matrix, the accessibility audit and behaviour |
+| `Tests/` | Package tests (Swift Testing); `Tests/WestronSnapshotTests/` renders the snapshot matrix, on iOS inside the catalog app |
+| `Snapshots/` | The snapshot matrix's references, recorded on the CI runner (PNGs in Git LFS) |
+| `Catalog/` | Catalog app for iOS and macOS and its UI tests: screenshots, the accessibility audit and behaviour |
 
 ## Adding the package
 
@@ -195,87 +196,67 @@ still drives every generated sheet and combination:
 ```sh
 tools/apple/snapshot-matrix.sh ios                       # or macos; --component button,rule for some components
 tools/apple/snapshot-matrix.sh compare <before> <after>  # exit 0 when every image is the same, 1 otherwise
-tools/apple/snapshot-matrix.sh merge --expect button,rule <out> <capture>…  # captures taken apart, one page
+tools/apple/snapshot-matrix.sh check ios                 # against the references: 0 same, 1 changed, 3 none yet,
+                                                         # 4 another environment (locally, always)
+tools/apple/snapshot-matrix.sh record ios                # on CI only (snapshot-references.yml)
 ```
 
-The capture runs the UI test `SnapshotMatrixTests` once (one `xcodebuild test`), which launches the catalog for every
-picture (a sheet, or a part of one) in every capture: light, dark, light-hc and dark-hc at `large`, and on iOS light at
-`xSmall` and `accessibility5`. It waits until the sheet stands still, checks that the number of cells on screen
-matches the matrix and that each lies inside the picture, and attaches the screenshot: the screen on iOS, the sheet
-without the title bar on macOS. It pins the text size, the language and the locale, the window's size on macOS, and
-freezes Core Animation in the sheet's window so a loading indicator draws the same frame every time. With Button's 12
-generated and 6 supplementary sheets that is 144 images on iOS (18 × 4 themes, 18 at `xSmall`, 18 × 3 parts at
-`accessibility5`) and 72 on macOS (18 × 4). The script exports the PNGs, `<component>.<sheet>.<theme>.png` at `large`
-and `<component>.<sheet>[_part-<n>-of-<count>].light.<text size>.png` at the others, with the manifest `matrix.json`
-to `.build/snapshot-matrix/<platform>/`, writes the review page `index.html` there (sheets down; across, each text size
-with its themes, the parts of a sheet side by side; the supplements in sections of their own; with the OS version,
-device and scale, and each picture's size) and prints its path; it fails when an image is missing or a sheet failed a
-check. The
-comparison writes `before/`, `after/`, `diff/` and its `index.html` to `.build/snapshot-matrix/compare/` (`--out` to
-change it). Compare only captures from the same environment: two local runs, or two CI artifacts (decisions/0008).
-Between two iOS captures (both manifests say `ios`, at one scale) the comparison ignores the home indicator
-(`HomeIndicator` in `tools/apple/snapshot-pages.swift`): the system draws it over the app, and from launch to launch
-draws it or not, or at another opacity, so two captures of the same commit differed there and nowhere else (iPhone 17,
-iOS 26.3: every differing pixel in x 387–819, y 2583–2598 of 1206 × 2622, a capsule of 144 × 5 pt centred 10.3 pt above
-the bottom). A pixel is ignored only on that footprint, with 1.5 pt of tolerance, and only when three things hold in
-the image:
-- the content stays clear of the box around the indicator (160 × 12 pt, from 16 to 4 pt above the bottom of the
-  screen) in both pictures: the band from 4 pt above the box down to its bottom, across the whole width, is one color
-  (`clearOfContent`). The box lies in the bottom safe-area inset (34 pt on iPhone 17), under which a sheet that fits
-  draws only its canvas; a sheet that does not fit reaches into the band and is compared whole. Scanned on iOS
-  captures of 2026-11-19, every sheet of Button, Icon, Text, Surface, Rule and Text field ends 39 pt or more above
-  the bottom of the screen, and Checkbox's 22 pt or more but for its twelve list colors at `accessibility5`, which
-  then overflowed the screen at both ends (13 pt above the bottom). Since e76d2d3 that sheet is taken in two
-  pictures of three rows there, which fit under the status bar with nothing at the bottom (the Icon follow-up's
-  capture; not scanned here);
-- nothing in the box differs off the footprint (`onlyOnFootprint`): a block, a dot or a line elsewhere in the box, or
-  wider or taller than the indicator, is reported, together with whatever differs on the footprint;
-- both captures are iOS at one scale.
+**Rendering** (#92, decisions/0008, the note of 2026-11-21). Unit tests draw the matrix in-process:
+`Tests/WestronSnapshotTests`, one source compiled twice, as the package test target `WestronSnapshotTests` on macOS
+(`swift test`) and as `CatalogSnapshotTests`, a unit-test bundle in the catalog project hosted by the catalog app, on
+the iOS simulator (the project takes the same folder; without a host app iOS draws nothing). Each picture is the
+catalog's own view for `-WestronMatrixSheet` with the capture's launch arguments (`CatalogRootView`), so the theme, the
+contrast and the text size are applied as in the app, in light, dark, light-hc and dark-hc at `large`, and on iOS light
+at `xSmall` and `accessibility5`. On iOS a window in the app's scene, over the app's own, is drawn with
+`drawHierarchy(in:afterScreenUpdates:)`; on macOS a borderless window that is never ordered in, with its backing scale
+fixed at 2 whatever the screens', is drawn by Core Animation's renderer (`CARenderer`) into a Metal texture.
+`ImageRenderer`, `cacheDisplay` and `CALayer.render(in:)` misdraw system controls, so none of them is used. Core
+Animation is frozen in the sheet's window as before, so a spinner draws one frame. The picture is cut to the sheet's
+content, the frame `MatrixSheetView` reports through `EnvironmentValues.matrixSheetFrame`: the window's width, from the
+top of the sheet (under the status bar's safe area on iOS; no status bar or home indicator is drawn) to its bottom, its
+own padding included; it is opaque RGB. A sheet whose cells run past the window fails ("cut off" on the page), and a
+blank picture, which `drawHierarchy` has returned for slow sheets on the CI runner, is drawn again up to four times,
+with a longer pause each, then fails by name. The tests run only when `WESTRON_SNAPSHOTS` names the output directory
+(on the simulator through `TEST_RUNNER_WESTRON_SNAPSHOTS`), so `swift test` and `tools/apple/check.sh package` skip
+them; `WESTRON_SNAPSHOTS_COMPONENT` takes some components.
 
-What is ignored stays visible: a diff draws it in amber, a changed image's line counts it apart, and every image that
-differs on the indicator alone counts as unchanged but gets its diff picture under a heading of its own, "Unchanged but
-for the home indicator", not collapsed, and in the summary line.
+The script builds the tests incrementally, runs them (`swift test --filter WestronSnapshotTests` on macOS; on iOS one
+`xcodebuild test-without-building -only-testing:CatalogSnapshotTests -testLanguage en -testRegion en_US` on `iPhone
+17` or `$WESTRON_SIM_DEVICE`), and writes to `.build/snapshot-matrix/<platform>/` (`--out` to change it) the PNGs,
+`<component>.<sheet>.<theme>.png` at `large` and `<component>.<sheet>[_part-<n>-of-<count>].light.<text size>.png` at
+the others, the manifest `matrix.json`, `environment.json` and the review page `index.html` (sheets down; across, each
+text size with its themes, the parts of a sheet side by side; the supplements in sections of their own; with the
+environment and each picture's size). It prints the images per component, the build and render times and the page's
+path, and fails when a picture failed or is missing. The log, `.build/logs/snapshot-matrix-<platform>.log`, has each
+picture's time. Locally (an M4 Pro, macOS 26.7.1, the iPhone 17 simulator on iOS 26.3.1) the 388 iOS images render in
+40 s and the 196 macOS images in 13 s; two renders of one commit were byte-identical. On the CI runner, a 3-core VM,
+the spike of 2026-11-20 measured 0.85 s an iOS image and 1.1 s a macOS one.
 
-CI captures the matrix on demand only, in its own workflow, `.github/workflows/snapshot-matrix.yml`: run it by hand
-(`gh workflow run snapshot-matrix.yml --ref <branch>`, `-f components=button,text-field` for some components; empty
-for all), or add the label `snapshot-matrix` to a pull request, which captures it once, on the pull request as it is
-then. Its job `snapshot-matrix` packs the components of the generated registry `ComponentMatrix.all`, or those asked
-for, into legs by their number of images (first fit, the largest first, at most 40 minutes of capture on the runner, 15 s an iOS image and 8 s
-a macOS one; the counts are in the workflow's `IMAGES`, and the page job warns when a capture's count differs). Each leg
-captures its components in one run (`--component a,b`) and uploads `snapshot-matrix-<platform>-<a+b>`; then
-`snapshot-matrix-pages` puts each platform's legs together with `merge --expect` and uploads one page per platform,
-`snapshot-matrix-ios` and `snapshot-matrix-macos`, as before. A page whose component no leg brought names it at its top.
-With Text field, 365 iOS images go in three legs and 184 macOS images in one.
+**Comparing.** `compare <before> <after>` compares two directories image by image and writes `before/`, `after/`,
+`diff/` and its `index.html` to `.build/snapshot-matrix/compare/` (`--out` to change it): each changed image with the
+two pictures and a diff (the pixels beyond the tolerance red, those within it amber, over the new picture faded), the
+added and removed ones, and the changed components named. A pixel whose every channel differs by at most one level
+counts as the same (`--tolerance <n>`): within one environment, renders have drifted by a level in a few pixels of a
+shadow or an edge. Compare only renders from the same environment (decisions/0008): every image differs between this
+Mac and the runner, in text and symbol anti-aliasing.
 
-A capture that the machinery failed, not a sheet, is run once more, as the audit's retry is (#74): when the test wrote
-no manifest and either the test runner did not start ("Failed to install or launch the test runner", "Early unexpected
-exit, operation never finished bootstrapping") or every failure XCTest reported is one of its messages for a request
-to a stalled simulator, the ones the audit counts as infrastructure (a launch that timed out, "Failed to launch
-<XCUIApplicationImpl: …> via Xcode: Timed out while launching application", seen on CI in run 44444325775; a
-background assertion, a terminate, a UI query that timed out). A failure of the test's own (a cell count, a cell
-outside the window, a sheet that did not render or showed a problem, an unknown component), alone or among others, is
-never retried, and nor is a capture that wrote its manifest. The script says `snapshot-matrix: retrying the capture:
-…` and, on GitHub Actions, warns on the run; the first run's log stays as `snapshot-matrix-<platform>[-<a+b>].log`
-and the retry's is `…-retry.log`, both in the leg's artifact. The retry captures everything again, so it starts only
-within 25 minutes of the script's start (`WESTRON_MATRIX_RETRY_BY`); a leg's timeout is 30 minutes and its capture
-time with a third more, so a retry that starts by then ends about 2 minutes before it
-(`.github/workflows/snapshot-matrix.yml`).
+**References and the check.** `Snapshots/<platform>/` holds the references, the PNGs in Git LFS, and
+`environment.json`: the Mac's macOS and processor, Xcode, on iOS the simulator's runtime and device, the scale, the
+number of images (`Snapshots/README.md`). They are recorded on the CI runner only, by
+`.github/workflows/snapshot-references.yml`. `check <platform>` renders (or takes `--from <dir>`) and compares with them into
+`.build/snapshot-matrix/check-<platform>/`; with no references yet it exits 3, and in another environment it says what
+differs and exits 4 without comparing: on your Mac that is the usual outcome, so render before and after your change
+and `compare` them. `record <platform>` writes a render into the references, keeping a reference within the tolerance
+of its new picture, so a drift does not rewrite it. `.lfsconfig` keeps the references out of what Git LFS fetches by
+default (they would be pointers in a clone; `git lfs pull --include "platforms/apple/Snapshots/**" --exclude ""` gets
+them).
 
-A run that goes silent is stopped: when the log of the build or of a capture has not grown for 10 minutes
-(`WESTRON_MATRIX_STALL_SECONDS`, default 600), the script says `snapshot-matrix: stalled: xcodebuild wrote nothing
-for …`, stops that xcodebuild and its children, and writes the same line into the log. A stalled capture counts as the
-machinery's failure and is retried by the rules above, unless its test reported a failure of a sheet before the
-silence; a stalled build fails as a build does; a second stall fails the capture. On macOS, stopping a run also stops
-any catalog app or test runner started from this checkout's build products (they belong to launchd, not to
-xcodebuild), so a concurrent macOS check in the same checkout would be stopped with it. In CI run 44461921450 the
-macOS leg printed the capture's header and nothing more for 62 minutes, until the job's timeout, and a leg the timeout
-kills uploads no logs. The capture's longest usual silences are the machinery's, 2.4–3.5 minutes (the runner
-starting, a launch timing out, the runner crashing while bootstrapping); between the test's own lines, at most 2.3
-seconds. CI also sets `WESTRON_MATRIX_DEADLINE` to the leg's timeout less 2 minutes, in minutes from the script's
-start: then the script stops whatever it still does (an xcodebuild, the export of the attachments, the page), says
-`snapshot-matrix: stopped at the deadline: … during <step>`, writes the same into the log, and exits 1 without a
-retry, so the step fails rather than being cancelled and the logs go up. The trade: a run that would have finished in
-the last 2 minutes or so before the timeout now fails, with its logs, instead of passing.
+**CI.** The job `snapshots` in `ci.yml` renders both platforms on every pull request and push to `main`, pulls the
+references through a cache of `.git/lfs`, and checks: a difference fails it and uploads `snapshot-diff`, the report;
+no references, or references from another runner image, pass with a warning that they need recording. Every run
+uploads `snapshot-matrix`, the full page of both platforms. A look that changes on purpose is recorded with the label
+`record-snapshots` on the pull request; the workflow commits the references to its branch and comments how to run the
+checks again (a commit pushed by a workflow starts none).
 
 ### Behaviour UI tests
 
@@ -472,4 +453,5 @@ on every run:
 sudo automationmodetool enable-automationmode-without-authentication
 ```
 
-Why not `screencapture` and not an in-process capture: see decisions/0008.
+Why not `screencapture` and not an in-process capture for an entry: see decisions/0008; the snapshot matrix is drawn
+in-process (above).
