@@ -31,7 +31,7 @@ extension CatalogEntry {
     }
 
     /// The destructive role's states are two entries: at accessibility5 the accessibility audit cannot finish a
-    /// screenful that holds the disabled rows next to the others of this page (decisions/0003 of Button, "Open" 3),
+    /// screenful that holds the disabled rows next to the others of this page (Button's decisions/0003, "Finding"),
     /// and finishes each half. Together they hold every row `button-states` holds.
     static let buttonStatesDestructive = CatalogEntry(
         id: "button-states-destructive", title: "Button: states, destructive role", section: .components
