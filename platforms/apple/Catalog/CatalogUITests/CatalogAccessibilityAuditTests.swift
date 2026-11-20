@@ -567,7 +567,8 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         // contract: WCAG exempts an inactive control from the contrast minimum (design-language chapter 08). The
         // system disables them (`.disabled(true)`), so only an element that is not enabled matches; the other rows,
         // loading included, are audited as usual.
-        suppressions += ["button-states", "button-states-destructive"].map { entryID in
+        suppressions += ["button-states", "button-states-destructive", "button-states-destructive-disabled"].map {
+            entryID in
             Suppression(.entry(entryID), type: .contrast, reason: "an inactive control", enabled: false) {
                 ["Save", "Delete"].contains($0 ?? "")
             }

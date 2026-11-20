@@ -10,6 +10,7 @@ public enum Catalog {
         .buttonDestructive,
         .buttonStates,
         .buttonStatesDestructive,
+        .buttonStatesDestructiveDisabled,
         .buttonBehavior,
         .text,
         .icon,

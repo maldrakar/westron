@@ -9,9 +9,10 @@ import WestronUI
 
 // Button's catalog entries, from spec/components/button/button.spec.yaml. The matrix is larger than one screen, so it
 // is split into pages, each of which fits one screenshot on an iPhone 17 in portrait: `button` (variants × sizes ×
-// label, icon and label, icon-only), `button-destructive` (the same in the destructive role), `button-states` and
-// `button-states-destructive` (every state and the combinations the contract excludes), `button-behavior` (live
-// buttons that count accepted presses, close neighbors and focus). The variants, sizes and states come from the
+// label, icon and label, icon-only), `button-destructive` (the same in the destructive role), `button-states` (every
+// state and the combinations the contract excludes), the same in the destructive role in two entries,
+// `button-states-destructive` (the enabled rows) and `button-states-destructive-disabled` (the disabled rows), and
+// `button-behavior` (live buttons that count accepted presses, close neighbors and focus). The variants, sizes and states come from the
 // generated enums, so the pages follow the contract.
 
 extension CatalogEntry {
@@ -26,13 +27,23 @@ extension CatalogEntry {
     }
 
     static let buttonStates = CatalogEntry(id: "button-states", title: "Button: states", section: .components) {
-        ButtonStatesPage(destructive: false)
+        ButtonStatesPage(destructive: false, rows: .all)
     }
 
+    /// The destructive role's states are two entries: at accessibility5 the accessibility audit cannot finish a
+    /// screenful that holds the disabled rows next to the others of this page (decisions/0003 of Button, "Open" 3),
+    /// and finishes each half. Together they hold every row `button-states` holds.
     static let buttonStatesDestructive = CatalogEntry(
         id: "button-states-destructive", title: "Button: states, destructive role", section: .components
     ) {
-        ButtonStatesPage(destructive: true)
+        ButtonStatesPage(destructive: true, rows: .enabled)
+    }
+
+    static let buttonStatesDestructiveDisabled = CatalogEntry(
+        id: "button-states-destructive-disabled", title: "Button: disabled states, destructive role",
+        section: .components
+    ) {
+        ButtonStatesPage(destructive: true, rows: .disabled)
     }
 
     static let buttonBehavior = CatalogEntry(
@@ -379,7 +390,17 @@ struct FlowLayout: Layout {
 /// Every state of the contract alone, and disabled and loading combined with a forced hover and pressed, which they
 /// exclude: those rows must look as disabled and loading alone.
 private struct ButtonStatesPage: View {
+    /// Which rows a page shows.
+    enum Rows {
+        case all
+        /// The rows where the button is enabled.
+        case enabled
+        /// The rows where the button is disabled, alone or with a state it excludes.
+        case disabled
+    }
+
     let destructive: Bool
+    let rows: Rows
 
     /// A row of the matrix: the states it shows, forced or real, on buttons with an icon and a label, a label alone or
     /// icon-only.
@@ -400,7 +421,7 @@ private struct ButtonStatesPage: View {
     /// Rest, each state alone, then each state that excludes hover and pressed combined with each of them; last,
     /// loading on a label without an icon, where the indicator goes before the label and the button widens (P13), and
     /// on icon-only buttons, where the indicator replaces the icon.
-    private static var rows: [Row] {
+    private static var allRows: [Row] {
         let entered = ButtonCatalogState.all.filter(\.isEntered)
         let excluding = entered.filter(\.excludesTint)
         let excluded = entered.filter(\.isTint)
@@ -411,17 +432,33 @@ private struct ButtonStatesPage: View {
 
     var body: some View {
         TokenPage(
-            title: destructive ? "Button · states, destructive" : "Button · states",
+            title: title,
             summary: "Hover, pressed and focus are forced for the screenshot; disabled and loading are real. "
                 + "Disabled and loading exclude hover and pressed. The system draws focus, so its row looks at rest."
         ) {
             // The row's buttons wrap rather than squeeze: with the padding of #85, three "Delete" buttons of size s
             // and the longest name are wider than a phone, and a squeezed label breaks inside its word.
-            SampleRows(items: Self.rows, name: \.name, monospaced: false, wrapsCells: true) { row in
+            SampleRows(items: shownRows, name: \.name, monospaced: false, wrapsCells: true) { row in
                 ForEach(ButtonVariant.allCases, id: \.self) { variant in
                     cell(row, variant: variant)
                 }
             }
+        }
+    }
+
+    private var shownRows: [Row] {
+        switch rows {
+        case .all: Self.allRows
+        case .enabled: Self.allRows.filter { !$0.states.contains(where: \.isDisabled) }
+        case .disabled: Self.allRows.filter { $0.states.contains(where: \.isDisabled) }
+        }
+    }
+
+    private var title: String {
+        switch (destructive, rows) {
+        case (false, _): "Button · states"
+        case (true, .disabled): "Button · disabled states, destructive"
+        case (true, _): "Button · states, destructive"
         }
     }
 
