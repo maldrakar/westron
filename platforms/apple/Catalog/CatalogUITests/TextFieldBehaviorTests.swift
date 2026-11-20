@@ -164,8 +164,11 @@ final class TextFieldBehaviorTests: XCTestCase {
     func testTheFieldKeepsItsOwnTouches() {
         #if os(iOS)
             UIPasteboard.general.string = "pasted"
-            // Taking the focus away dismisses a menu and a selection.
+            // Taking the focus away dismisses a menu and a selection. A tap on the page's title first closes a menu
+            // that covers the Clear focus button: with the iOS control heights of #85 the secure field's AutoFill
+            // menu opens over it, and the tap opened its submenu instead.
             func clearFocus() {
+                app.staticTexts["TextField · live"].tap()
                 app.buttons[ID.clearFocus].tap()
                 _ = app.menuItems.firstMatch.waitForNonExistence(timeout: 5)
             }
