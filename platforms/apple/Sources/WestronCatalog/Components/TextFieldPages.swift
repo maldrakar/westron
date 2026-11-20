@@ -216,6 +216,8 @@ private struct TextFieldCardSample: View {
     /// Two lines, so the multiline field shows it grows, and short ones, so the card fits a sheet's row at the largest
     /// text size.
     @State private var notes = "Milk, bread\nApples"
+    /// Whether the title holds the keyboard focus, which the sample keeps off (below).
+    @FocusState private var titleFocused: Bool
 
     var body: some View {
         let (variant, size, _, stateName) = values.fields
@@ -226,6 +228,7 @@ private struct TextFieldCardSample: View {
                 .accessibilityLabel("Title")
                 .textRole(.heading.small)
                 .foregroundStyle(.text.primary)
+                .focused($titleFocused)
             TextField("Notes", text: $notes, prompt: Text("Notes"), axis: .vertical)
                 .textFieldStyle(variant, size: size)
                 .accessibilityLabel("Notes")
@@ -242,6 +245,15 @@ private struct TextFieldCardSample: View {
         .surface(.raised)
         .forcingTextFieldState(stateName.flatMap(TextFieldCatalogState.init(named:)))
         .matrixCellContainer()
+        // On macOS the window the sheet opens in gave the first card's title the keyboard focus for real, its text
+        // selected, in the rest row of every theme (the matrix of #85, since the style fixes a field's height). A
+        // sheet shows each state as the matrix sets it, so the sample takes that focus away once it appears and once
+        // more after the window settles.
+        .task {
+            titleFocused = false
+            try? await Task.sleep(for: .milliseconds(300))
+            titleFocused = false
+        }
     }
 }
 
