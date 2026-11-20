@@ -2740,18 +2740,18 @@ extension Westron.Dimension {
         public enum target {
             #if os(macOS)
                 /// The least side of the area that takes a touch or a click on a control, whatever the control draws:
-                /// 44 on iOS, iPadOS and watchOS, the recommended touch target; 32 on macOS, westron's control height m
-                /// there, above the recommended 28 (chapter 08). A contract may record a control whose hit area is
-                /// smaller, as Button's size s on macOS.
+                /// 44 on iOS, iPadOS and watchOS, the recommended touch target; 28 on macOS, the recommended target for
+                /// a pointer (chapter 08). A contract may record a control whose hit area is smaller, as Button's size
+                /// s on macOS.
                 ///
                 /// Use for: hit area of a control, hit area of a check. Avoid: A drawn size: use size.control.*. A
                 /// row's height: rows have heights of their own.
-                public static let minimum = Westron.Dimension(name: "size.target.minimum", value: 32)
+                public static let minimum = Westron.Dimension(name: "size.target.minimum", value: 28)
             #else
                 /// The least side of the area that takes a touch or a click on a control, whatever the control draws:
-                /// 44 on iOS, iPadOS and watchOS, the recommended touch target; 32 on macOS, westron's control height m
-                /// there, above the recommended 28 (chapter 08). A contract may record a control whose hit area is
-                /// smaller, as Button's size s on macOS.
+                /// 44 on iOS, iPadOS and watchOS, the recommended touch target; 28 on macOS, the recommended target for
+                /// a pointer (chapter 08). A contract may record a control whose hit area is smaller, as Button's size
+                /// s on macOS.
                 ///
                 /// Use for: hit area of a control, hit area of a check. Avoid: A drawn size: use size.control.*. A
                 /// row's height: rows have heights of their own.

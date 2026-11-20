@@ -91,7 +91,7 @@ struct AppleTokensTests {
         }
         // The least hit area: macOS's behind #if, the touch target that iOS and watchOS share under #else.
         let target = "public static let minimum = Westron.Dimension(name: \"size.target.minimum\", value: "
-        #expect(tokens.contains(target + "32)") && tokens.contains(target + "44)"))
+        #expect(tokens.contains(target + "28)") && tokens.contains(target + "44)"))
         #expect(tokens.contains(#"public static let disabled = Westron.Number(name: "opacity.disabled", value: 0.4)"#))
     }
 
