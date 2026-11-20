@@ -58,13 +58,12 @@ struct MatrixSheetView: View {
             }
         }
         .padding(SampleMetrics.pagePadding)
-        // The sheet's content, below the title bar and clear of the window's rounded corners: the macOS capture cuts
-        // its picture around it, with a margin.
+        // The sheet's content: the snapshot tests cut their picture to it.
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(CatalogAccessibilityID.matrixSheet)
-        // The in-process snapshot tests (platforms/apple/Tests/WestronSnapshotTests) cut their picture to the same
-        // frame; they have no accessibility query to find it.
+        // The in-process snapshot tests (platforms/apple/Tests/WestronSnapshotTests) find the frame here; they have no
+        // accessibility query.
         .onGeometryChange(for: CGRect.self) { proxy in
             proxy.frame(in: .global)
         } action: { frame in

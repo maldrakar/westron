@@ -151,7 +151,7 @@ extension View {
     }
 
     /// Makes a matrix cell that holds several fields one accessibility element that contains them, so the sheet's
-    /// identifier for the cell names the cell, not each field in it (SnapshotMatrixTests counts the cells by it).
+    /// identifier for the cell names the cell, not each field in it.
     fileprivate func matrixCellContainer() -> some View {
         accessibilityElement(children: .contain)
     }
