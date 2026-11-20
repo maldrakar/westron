@@ -433,8 +433,7 @@ private struct ButtonStatesPage: View {
     var body: some View {
         TokenPage(
             title: title,
-            summary: "Hover, pressed and focus are forced for the screenshot; disabled and loading are real. "
-                + "Disabled and loading exclude hover and pressed. The system draws focus, so its row looks at rest."
+            summary: summary
         ) {
             // The row's buttons wrap rather than squeeze: with the padding of #85, three "Delete" buttons of size s
             // and the longest name are wider than a phone, and a squeezed label breaks inside its word.
@@ -443,6 +442,18 @@ private struct ButtonStatesPage: View {
                     cell(row, variant: variant)
                 }
             }
+        }
+    }
+
+    /// What the page shows: the disabled rows alone say so, since they show no focus or loading.
+    private var summary: String {
+        switch rows {
+        case .disabled:
+            "Disabled is real; hover and pressed are forced on it, and disabled excludes them, so every row keeps the "
+                + "resting fill at opacity.disabled. The enabled rows are on button-states-destructive."
+        case .all, .enabled:
+            "Hover, pressed and focus are forced for the screenshot; disabled and loading are real. "
+                + "Disabled and loading exclude hover and pressed. The system draws focus, so its row looks at rest."
         }
     }
 

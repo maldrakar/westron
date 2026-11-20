@@ -87,7 +87,8 @@ private struct CheckboxPage: View {
     var body: some View {
         TokenPage(
             title: "Checkbox",
-            summary: "Toggle with .toggleStyle(.check): a ring in border.strong, checked a disc in the list's color, "
+            summary: "Toggle with .toggleStyle(.check): a quiet ring in border.default (border.strong in high "
+                + "contrast), checked a disc in the list's color, "
                 + "the accent without one, with a check mark. The circle follows the text role set on the toggle, "
                 + "and its hit area is at least size.target.minimum and size.control.m."
         ) {

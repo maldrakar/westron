@@ -94,7 +94,7 @@ struct CheckboxStyleTests {
         ]
         #expect(Self.stateCombinations.count == 16)
         for states in Self.stateCombinations {
-            let tokens = CheckboxTokens(category: nil, states: states)
+            let tokens = CheckboxTokens(category: nil, states: states, highContrast: false)
             for item in bindings {
                 // A state the current OS never enters draws as if absent.
                 let expected = item.binding.resolve(states.filter(\.isEntered))
@@ -113,9 +113,9 @@ struct CheckboxStyleTests {
     )
     func listColor() {
         for states in Self.stateCombinations {
-            let accent = CheckboxTokens(category: nil, states: states)
+            let accent = CheckboxTokens(category: nil, states: states, highContrast: false)
             for category in Westron.Category.allCases {
-                let tokens = CheckboxTokens(category: category, states: states)
+                let tokens = CheckboxTokens(category: category, states: states, highContrast: false)
                 if states.contains(.checked) {
                     #expect(tokens.disc == category.control, "\(category)")
                     #expect(tokens.mark == category.onControl, "\(category)")
@@ -127,9 +127,29 @@ struct CheckboxStyleTests {
                 #expect(tokens.opacity == accent.opacity)
             }
         }
-        let checked = CheckboxTokens(category: nil, states: [.checked])
+        let checked = CheckboxTokens(category: nil, states: [.checked], highContrast: false)
         #expect(checked.disc == .background.accent && checked.mark == .text.onAccent)
-        #expect(CheckboxTokens(category: nil, states: []).ringColor == .border.strong)
+        #expect(CheckboxTokens(category: nil, states: [], highContrast: false).ringColor == .border.default)
+    }
+
+    @Test("the unchecked ring is border.default in the standard themes and border.strong in high contrast (0003)")
+    func highContrastRing() {
+        for states in Self.stateCombinations {
+            for category in [nil] + Westron.Category.allCases.map(Optional.some) {
+                let standard = CheckboxTokens(category: category, states: states, highContrast: false)
+                let high = CheckboxTokens(category: category, states: states, highContrast: true)
+                var ringless = high
+                ringless.ringColor = standard.ringColor
+                #expect(ringless == standard)
+                if states.contains(.checked) {
+                    #expect(high.ringColor == nil && standard.ringColor == nil)
+                } else {
+                    #expect(standard.ringColor == .border.default)
+                    #expect(high.ringColor == .border.strong)
+                    #expect(high.ringWidth == .stroke.regular)
+                }
+            }
+        }
     }
 
     @Test("the environment carries the list color, nil (the accent) by default")

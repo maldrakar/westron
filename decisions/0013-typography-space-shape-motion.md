@@ -3,7 +3,7 @@
 Date: 2026-11-15. Status: accepted. The owner chose direction B on the direction specimens. Its default density is
 comfortable. Revised 2026-11-16: control heights and the disabled opacity. Revised 2026-11-18: the roles of the
 spacing rhythm and where the page margin applies. Revised 2026-11-20: buttons are capsules, the iOS control heights,
-the minimum hit target.
+the minimum hit target; then filled fields, a capsule on one line, and the check's quiet ring.
 
 ## Context
 
@@ -239,6 +239,25 @@ The owner compared prototype renders of three button looks with Apple's own butt
   1–5, so no fill alone can mark that edge there.
 - **The capsule's ends are continuous on Apple.** SwiftUI's `Capsule()`, continuous by default, as the prototype
   drew it and as chapter 04 asks of Apple's corners; in icon-only's square frame it draws a circle.
+
+**Fields and the check, the same day.** The owner then compared three looks of the framed text field and of the
+unchecked check on prototype renders and chose (spec/components/text-field, decisions/0002; spec/components/checkbox,
+decisions/0003):
+
+- **A framed text field is filled, not outlined:** `color.background.muted`, the secondary button's fill, with no
+  border in the standard themes, and in high contrast `border.strong` at `stroke.thin` around it.
+- **A one-line field is a capsule**, like the buttons beside it; **a field of several lines is a rounded rectangle**,
+  since a capsule's ends would cut into its lines. Fields leave `radius.control`, which stays 8 for the segmented
+  control and the ring around an inline field.
+- **The unchecked check is a quiet ring**, `color.border.default` at `stroke.regular`.
+- **The edges of these quiet controls miss 3:1 in the standard themes**, accepted by the owner for the field;
+  chapter 08 records the deviation with its measured values.
+
+The implementing agent's, pending the owner's review: the multiline field's radius is `radius.150`, 12, a step of the
+existing ladder, with no new role token (`radius.field` aliasing it is the proposal if the owner wants a role); the
+field's horizontal padding is Button's, `space.200`, `space.250` and `space.300`; a multiline field holds its lines off
+its edges by `space.50`, `space.100` and `space.150`, which keeps a field of one line as tall as a single one; in high
+contrast the check's ring is `border.strong`, as the coordinator assumed, awaiting the owner's confirmation.
 
 ## Why
 

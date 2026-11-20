@@ -20,8 +20,10 @@ struct CheckboxTokens: Equatable, Sendable {
 
     /// The tokens of a check in `states`, which hold at once, in the list color `category` of its context; nil: the
     /// accent, the contract's bindings. A list color takes the disc and the mark from `color.category.<name>.control`
-    /// and `.on-control` (the contract's description). A state the current OS never enters is ignored.
-    init(category: Westron.Category?, states: Set<CheckboxState>) {
+    /// and `.on-control` (the contract's description). A state the current OS never enters is ignored. `highContrast`:
+    /// one of the high-contrast themes, `colorSchemeContrast == .increased`, where the ring is `color.border.strong`
+    /// instead of the quiet `color.border.default` the bindings give (the contract's description, decisions/0003).
+    init(category: Westron.Category?, states: Set<CheckboxState>, highContrast: Bool) {
         let states = states.filter(\.isEntered)
         if states.contains(.checked) {
             ringColor = nil
@@ -29,7 +31,7 @@ struct CheckboxTokens: Equatable, Sendable {
             disc = category?.control ?? .background.accent
             mark = category?.onControl ?? .text.onAccent
         } else {
-            ringColor = .border.strong
+            ringColor = highContrast ? .border.strong : .border.default
             ringWidth = .stroke.regular
             disc = nil
             mark = nil

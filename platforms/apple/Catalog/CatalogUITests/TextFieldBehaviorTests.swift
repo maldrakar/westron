@@ -22,8 +22,8 @@ final class TextFieldBehaviorTests: XCTestCase {
         static let clearFocus = "text-field.live.clear-focus"
     }
 
-    /// The small field's drawn height, `size.control.s`, its padding at the default text size, `space.100`, and the
-    /// platform's recommended target (chapter 08).
+    /// The small field's drawn height, `size.control.s`, its padding at the default text size, `space.200` since the
+    /// capsule of 2026-11-20 (the contract's decisions/0002), and the platform's recommended target (chapter 08).
     #if os(macOS)
         private let drawnHeight: CGFloat = 24
         private let target: CGFloat = 28
@@ -31,7 +31,7 @@ final class TextFieldBehaviorTests: XCTestCase {
         private let drawnHeight: CGFloat = 28
         private let target: CGFloat = 44
     #endif
-    private let padding: CGFloat = 8
+    private let padding: CGFloat = 16
 
     private var app: XCUIApplication!
 

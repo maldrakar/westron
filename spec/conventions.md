@@ -131,7 +131,9 @@ enum ButtonState: String, CaseIterable, Sendable {
 - **An option that is the system's own API gets no type.** The Apple entry names it in `systemOptions`, with the
   system type that carries it: Button's `role` is `systemOptions: { role: SwiftUI.ButtonRole }`, so no `ButtonRole`
   is generated, which would shadow SwiftUI's, the overload takes no `role:`, and the style reads
-  `configuration.role`. A generated `<Component><Option>` or `<Component>State` that is the name of a public SwiftUI
+  `configuration.role`. TextField's `lines` is `systemOptions: { lines: SwiftUI.Axis }`, the system field's
+  `axis:`; a `TextFieldStyle` has no public accessor for it, so the style reads the configuration's stored axis by
+  reflection (spec/components/text-field, decisions/0002). A generated `<Component><Option>` or `<Component>State` that is the name of a public SwiftUI
   type, of any control, fails generation and points at `systemOptions`: the generator checks it against
   `tools/Sources/WestronTools/Contracts/SwiftUITypes.swift`, the public top-level types of the SwiftUI and SwiftUICore
   interfaces of the Xcode in `.xcode-version`, which a test on macOS keeps current (`tools/README.md`). Types of the

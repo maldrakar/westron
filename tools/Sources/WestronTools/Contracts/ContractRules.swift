@@ -353,13 +353,15 @@ struct ContractRules {
     static let shapes = ["capsule"]
 
     /// Token bindings name tokens that exist in every mode and are not primitives; a binding by option value uses
-    /// the values of one enum option. A part's `shape` binds one of `shapes`, and only a `shape` does.
+    /// the values of one enum option. A part's `shape` binds one of `shapes`, alone or in cases (a text field is a
+    /// capsule on one line only), and only a `shape` does.
     mutating func checkTokens() {
         let enums = enumOptions
         for member in document["tokens"]?.members ?? [] {
             let path = DocumentPath.root.key("tokens").key(member.key)
             let isShape = member.key.hasSuffix(".shape")
-            if isShape && !Self.shapes.contains(member.value.string ?? "") {
+            let isCases = member.value["cases"] != nil
+            if isShape && !isCases && !Self.shapes.contains(member.value.string ?? "") {
                 report(path, "a part's shape is one of \(Self.shapes.joined(separator: ", ")), not a token")
                 continue
             }
@@ -368,8 +370,8 @@ struct ContractRules {
                 if !isShape { report(path, "\(shape) is a shape: bind it to a part's shape, such as container.shape") }
             case .string(let token):
                 checkToken(token, at: path)
-            case .object where member.value["cases"] != nil:
-                checkCases(member.value, at: path)
+            case .object where isCases:
+                checkCases(member.value, at: path, shape: isShape)
             case .object(let byValue):
                 let keys = byValue.map(\.key)
                 let owners = enums.keys.sorted().filter { option in keys.allSatisfy { enums[option]!.contains($0) } }
@@ -412,8 +414,19 @@ struct ContractRules {
 
     /// A case binding: each case's `when` names options, values and states that exist, its token can be bound, every
     /// case is reachable (some combination of options and states matches it before any earlier case, since cases
-    /// apply first match), and so is the binding's `token`, which applies where no case matches.
-    private mutating func checkCases(_ binding: JSON, at path: DocumentPath) {
+    /// apply first match), and so is the binding's `token`, which applies where no case matches. In the cases of a
+    /// part's `shape` (`shape`), each token is one of `shapes` instead.
+    private mutating func checkCases(_ binding: JSON, at path: DocumentPath, shape: Bool = false) {
+        func checkToken(_ token: String, at place: DocumentPath) {
+            switch (shape, Self.shapes.contains(token)) {
+            case (true, true): break
+            case (true, false):
+                report(place, "a part's shape is one of \(Self.shapes.joined(separator: ", ")), not a token")
+            case (false, true):
+                report(place, "\(token) is a shape: bind it to a part's shape, such as container.shape")
+            case (false, false): self.checkToken(token, at: place)
+            }
+        }
         if let token = binding["token"]?.string { checkToken(token, at: path.key("token")) }
         var domains = enumOptions
         for option in boolOptions { domains[option] = ["false", "true"] }

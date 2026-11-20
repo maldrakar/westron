@@ -18,7 +18,7 @@ This chapter says why. The values are in decisions/0013 and in `tokens/semantic/
 
   | Token | For |
   |---|---|
-  | `radius.control` | A field or a segmented control westron draws; a button is a capsule |
+  | `radius.control` | A segmented control westron draws, the focus ring of an inline field; a button and a one-line field are capsules, a multiline field takes `radius.150` |
   | `radius.row` | The highlight of a row under the pointer or selected |
   | `radius.card` | A card or a panel on the canvas |
   | `radius.overlay` | A popover or a menu westron draws; system ones keep their own |
@@ -29,9 +29,10 @@ This chapter says why. The values are in decisions/0013 and in `tokens/semantic/
   and that costs room in a table or a log.
 - **The roles sit on one ladder.** `radius.25` to `radius.400` are steps of the space ladder (chapter 06): `radius.100`
   equals `space.100`. So a corner and the padding inside it come from one scale and stay in proportion.
-- **A capsule is the platform's capsule.** Buttons, tags and badges are capsules: fully round ends at any height, and
-  an icon-only button is a circle. They use the platform's capsule shape, never a large radius, so they stay capsules
-  when Dynamic Type makes them taller (decisions/0013, revision of 2026-11-20, for buttons).
+- **A capsule is the platform's capsule.** Buttons, one-line text fields, tags and badges are capsules: fully round
+  ends at any height, and an icon-only button is a circle. They use the platform's capsule shape, never a large
+  radius, so they stay capsules when Dynamic Type makes them taller (decisions/0013, revision of 2026-11-20). A field
+  that grows to several lines is a rounded rectangle, `radius.150`: a capsule's ends would cut into its lines.
 - **Nested corners share a center.** A shape that sits within its container's corner, closer to the edge than the
   container's radius, takes `max(outer − inset, 4)`, so the two corners stay concentric and the inner one never turns
   square. Further in, a shape keeps its own role's radius: a row highlight inside a card with 16 px of padding stays
@@ -57,12 +58,14 @@ This chapter says why. The values are in decisions/0013 and in `tokens/semantic/
   where a dragged item will land. Rules and guides stay thin, because space and alignment already show the grouping.
 - **A card needs no outline.** In the standard themes a card is set off from the canvas by its tone, and in light also
   by its shadow. A hairline edges it only where tone does not, such as a card on a fill.
-- **Color comes from the border tokens** (chapter 02). `color.border.default` draws separators, `border.strong` the
-  outline of a field or a checkbox, and `border.focus` the focus ring. In the high-contrast themes lines gain contrast
-  through their color, and their widths stay.
-- **A filled control needs no outline, except in high contrast.** A secondary button is set off by its muted fill. In
-  the high-contrast themes the fill stays as quiet as in the standard ones, so the button also draws `border.strong`
-  at `stroke.thin`, as a raised surface draws its line there.
+- **Color comes from the border tokens** (chapter 02). `color.border.default` draws separators and an unchecked
+  check's quiet ring, `border.strong` the outline of a control a person must find in high contrast, and `border.focus`
+  the focus ring. In the high-contrast themes lines gain contrast through their color, and their widths stay.
+- **A filled control needs no outline, except in high contrast.** A secondary button and a framed text field are set
+  off by their muted fill. In the high-contrast themes the fill stays as quiet as in the standard ones, so they also
+  draw `border.strong` at `stroke.thin`, as a raised surface draws its line there, and an unchecked check's ring turns
+  from `border.default` to `border.strong`. In the standard themes these edges stay below 3:1, a deviation the owner
+  accepted (chapter 08).
 
 ## Shadows
 

@@ -53,6 +53,8 @@ private struct Card<Content: View>: View {
 
 /// A task list: its title, the primary action, a search field and four tasks, one late, one selected, one done.
 private struct TasksSample: View {
+    @Environment(\.colorSchemeContrast) private var contrast
+
     var body: some View {
         Card {
             VStack(alignment: .leading, spacing: .space100) {
@@ -72,15 +74,20 @@ private struct TasksSample: View {
                     }
                     .buttonStyle(.primary, size: .s)
                 }
-                // text.placeholder in a field ringed in border.strong.
+                // text.placeholder in a field filled with background.muted, a capsule, as a framed text field is
+                // (decisions/0002 of the text field); in high contrast ringed in border.strong.
                 Label("Find a task or a tag", icon: .magnifier)
                     .textRole(.footnote.regular)
                     .foregroundStyle(.text.placeholder)
-                    .padding(.horizontal, .space100)
+                    .padding(.horizontal, .space150)
                     .frame(maxWidth: .infinity, minHeight: Metrics.control, alignment: .leading)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: .radius.control)
-                            .strokeBorder(.border.strong, lineWidth: .stroke.thin)
+                    .background {
+                        Capsule()
+                            .fill(.background.muted)
+                        if contrast == .increased {
+                            Capsule()
+                                .strokeBorder(.border.strong, lineWidth: .stroke.thin)
+                        }
                     }
                 VStack(spacing: 0) {
                     TaskRow(title: "Order the backsplash tiles") {
@@ -140,9 +147,11 @@ private struct TaskRow<Meta: View>: View {
     }
 }
 
-/// A task's check: open, a ring in border.strong; done, a disc in background.accent with its mark in text.on-accent.
+/// A task's check: open, a ring in border.default, border.strong in high contrast (decisions/0003 of the checkbox);
+/// done, a disc in background.accent with its mark in text.on-accent.
 private struct Check: View {
     let done: Bool
+    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
         ZStack {
@@ -154,7 +163,9 @@ private struct Check: View {
                     .foregroundStyle(.text.onAccent)
             } else {
                 Circle()
-                    .strokeBorder(.border.strong, lineWidth: .stroke.regular)
+                    .strokeBorder(
+                        contrast == .increased ? Westron.Color.border.strong : .border.default,
+                        lineWidth: .stroke.regular)
             }
         }
         .frame(width: Metrics.check, height: Metrics.check)

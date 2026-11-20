@@ -3,7 +3,8 @@
 Date: 2026-11-15. Status: accepted. The owner chose direction B with the cobalt palette on the direction specimens.
 Revised 2026-11-16: pressed fills. Revised 2026-11-18: the fill of a checked control in a list color, chosen by an
 agent on the owner's behalf and pending the owner's confirmation. Revised 2026-11-20: the muted fill under the pointer
-and pressed, how dark the owner's decision, how derived pending the owner's review.
+and pressed, how dark the owner's decision, how derived pending the owner's review; the fields' and the check's quiet
+edges, with no pair changed.
 
 ## Context
 
@@ -276,6 +277,18 @@ and 5, sit on either side of the muted step 4 and do not darken it.
   dark high contrast; the red words on `muted-pressed-colored` 4.51, 4.54, 7.05 and 7.05. With these pairs,
   `tools/westron tokens contrast` measured 319 declared pairs in each theme, and none failed. The plain pressed fill
   is a little darker than the prototype's, `#D1D4DA` against `#D7DAE0`: two hover steps, as the solid fills take.
+- **Fields and the check, the same day.** The owner chose a framed text field filled with `background.muted` and no
+  outline, and an unchecked check drawn as a quiet ring in `border.default` (spec/components/text-field,
+  decisions/0002; spec/components/checkbox, decisions/0003). Their edges no longer reach the non-text target in the
+  standard themes: the fill 1.11 against the canvas in light and 1.24 in dark, the ring 1.27 and 1.46, where
+  `border.strong` gave 3.50 and 4.12. The owner accepted it for the field; the ring awaits the owner's confirmation;
+  chapter 08 records the deviation with every ground. **No declared pair changed or was removed:** `border.strong`
+  keeps its `non-text` pairs on the grounds and on `background.muted`, which still hold and which the field's and the
+  check's high-contrast outlines rely on; `border.default` keeps its `separator` pairs, decorative in the standard
+  themes, 3:1 in high contrast. No pair declares the fill or the ring against a ground as a component's edge, so the
+  deviation lives in the components and chapter 08, not in a failing pair. The descriptions of `background.muted`,
+  `border.default` and `border.strong` say where each is now drawn. `tools/westron tokens contrast` still measures
+  319 declared pairs in each theme, none failed.
 
 ## Why
 

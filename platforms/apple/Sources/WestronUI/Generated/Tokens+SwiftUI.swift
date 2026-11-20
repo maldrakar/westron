@@ -95,7 +95,9 @@ extension CGFloat {
 
     /// The lengths `radius.*` in points.
     public enum radius {
-        /// A control westron draws: a button, a field, a segmented control. 8 px, a quarter of a 32 px control.
+        /// A control westron draws with corners: a segmented control, the focus ring around an inline text field. 8 px,
+        /// a quarter of a 32 px control. A button and a one-line framed text field are capsules; a multiline framed
+        /// text field takes radius.150 (decisions/0013, revision of 2026-11-20).
         public static var control: CGFloat {
             CGFloat(Westron.Dimension.radius.control)
         }

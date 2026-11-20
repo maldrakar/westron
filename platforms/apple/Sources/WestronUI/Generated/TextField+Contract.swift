@@ -35,6 +35,8 @@ extension View {
     /// Applies westron's TextField style, from its contract, to the system's `TextField` in this view:
     /// `.textFieldStyle(.framed, size: .m)`.
     ///
+    /// The option `lines` is the system's own `SwiftUI.Axis`, which the style reads from the control.
+    ///
     /// - Parameters:
     ///   - variant: See `TextFieldVariant`. Every call names one.
     ///   - size: The size; without it, the size comes from `controlSize` (`TextFieldSize.init(_:)`).

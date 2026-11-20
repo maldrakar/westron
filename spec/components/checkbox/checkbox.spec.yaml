@@ -3,13 +3,21 @@
 # documents already decide, what the agent proposed on top of them, and what the implementation on Apple decided under
 # the same delegation, pending the owner's confirmation. Revised on 2026-11-19 (#86): a check with no drawn label,
 # written with an initializer that requires its accessible name, on every OS (decisions/0002-a-check-without-a-label.md,
-# the form the owner's choice, the exact API name pending the owner's confirmation).
+# the form the owner's choice, the exact API name pending the owner's confirmation). Revised on 2026-11-20 (#85): the
+# unchecked ring is color.border.default, quiet, and color.border.strong in high contrast
+# (decisions/0003-the-look-of-2026-11-20.md, the owner's choice of the ring, its contrast pending the owner).
 id: checkbox
 status: approved
 description: >-
   The round check that marks a task or a subtask done: westron's style on the platform's own toggle, which keeps
-  its role, its value and its keyboard. It is a circle on every platform, never a square box. Unchecked, it is a ring
-  in color.border.strong at stroke.regular, the same for every list. Checked, it is a disc filled with the list's
+  its role, its value and its keyboard. It is a circle on every platform, never a square box. Unchecked, it is a quiet
+  ring in color.border.default at stroke.regular, the same for every list. The ring stands about 1.27:1 off the
+  canvas in light and 1.46:1 in dark, below the 3:1 that WCAG 1.4.11 asks of a component's boundary: in the standard
+  themes a deviation like the text field's, which the owner accepted on 2026-11-20 for the field, taken for the ring
+  too pending the owner's confirmation; design-language/08 records it with the measured values (decisions/0003). In
+  the high-contrast themes the ring is color.border.strong at the same width, which meets the non-text target there.
+  The bindings below cannot say this, since a case has no contrast key, so this description is the contract for it,
+  as Button's is for its outline. Checked, it is a disc filled with the list's
   color with a check mark on it, so it shows a shape and not only a color (design-language/08): the list's color
   comes from the context, the accent when the context sets none. With the accent the disc is
   color.background.accent and the mark color.text.on-accent; with a list's color the disc is
@@ -40,7 +48,7 @@ states: [checked, pressed, focus, disabled]
 
 tokens:
   ring.color:
-    token: color.border.strong
+    token: color.border.default
     cases:
       - { when: { state: checked }, token: null }
   ring.width:
@@ -107,7 +115,8 @@ platforms:
       and watchOS 11, where a custom style sees it (labelsVisibility); on iOS 17, macOS 14 and watchOS 10 the style
       draws the label beside the circle, so a row with a separate title writes the initializer, not
       .labelsHidden(). The focus ring is the system's, so the focusRing bindings do not apply, as for Button. The
-      mark is the registry's check glyph.
+      mark is the registry's check glyph. The high-contrast ring follows colorSchemeContrast, as Button's outline
+      does.
     ios:
       description: >-
         The accessibility hierarchy holds the system Toggle of the representation: a switch with its label, its value
