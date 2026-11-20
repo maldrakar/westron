@@ -236,8 +236,11 @@ What is ignored stays visible: a diff draws it in amber, a changed image's line 
 differs on the indicator alone counts as unchanged but gets its diff picture under a heading of its own, "Unchanged but
 for the home indicator", not collapsed, and in the summary line.
 
-CI's `snapshot-matrix` job packs the components of the generated registry `ComponentMatrix.all` into legs by their
-number of images (first fit, the largest first, at most 40 minutes of capture on the runner, 15 s an iOS image and 8 s
+CI captures the matrix on demand only, in its own workflow, `.github/workflows/snapshot-matrix.yml`: run it by hand
+(`gh workflow run snapshot-matrix.yml --ref <branch>`, `-f components=button,text-field` for some components; empty
+for all), or add the label `snapshot-matrix` to a pull request, which captures it once, on the pull request as it is
+then. Its job `snapshot-matrix` packs the components of the generated registry `ComponentMatrix.all`, or those asked
+for, into legs by their number of images (first fit, the largest first, at most 40 minutes of capture on the runner, 15 s an iOS image and 8 s
 a macOS one; the counts are in the workflow's `IMAGES`, and the page job warns when a capture's count differs). Each leg
 captures its components in one run (`--component a,b`) and uploads `snapshot-matrix-<platform>-<a+b>`; then
 `snapshot-matrix-pages` puts each platform's legs together with `merge --expect` and uploads one page per platform,
@@ -255,7 +258,8 @@ never retried, and nor is a capture that wrote its manifest. The script says `sn
 …` and, on GitHub Actions, warns on the run; the first run's log stays as `snapshot-matrix-<platform>[-<a+b>].log`
 and the retry's is `…-retry.log`, both in the leg's artifact. The retry captures everything again, so it starts only
 within 25 minutes of the script's start (`WESTRON_MATRIX_RETRY_BY`); a leg's timeout is 30 minutes and its capture
-time with a third more, so a retry that starts by then ends about 2 minutes before it (`.github/workflows/ci.yml`).
+time with a third more, so a retry that starts by then ends about 2 minutes before it
+(`.github/workflows/snapshot-matrix.yml`).
 
 A run that goes silent is stopped: when the log of the build or of a capture has not grown for 10 minutes
 (`WESTRON_MATRIX_STALL_SECONDS`, default 600), the script says `snapshot-matrix: stalled: xcodebuild wrote nothing
@@ -304,19 +308,32 @@ WESTRON_ENTRY=controls,icons tools/apple/check.sh a11y     # those entries only
 WESTRON_ENTRY_SHARD=2/3 tools/apple/check.sh a11y          # every third entry, from the second (after WESTRON_ENTRY)
 ```
 
-CI runs the audit in its own job, `accessibility-audit`, side by side (`fail-fast: false`, 45 minutes each): ten legs
-for the 28 entries of phase 3, `testDefaultSettings` in three shards (`WESTRON_ENTRY_SHARD`),
-`testAccessibilityDynamicType` in four, and each of the three contrast tests in one leg, about 25–28 minutes each, its
-build included (the arithmetic is in `.github/workflows/ci.yml`). Each leg pays about 10 minutes of build and setup
-before its first entry, and at most 5 Mac jobs run at once, so fewer, longer legs finish the run sooner. The runner is
-about 3 times slower than a local Mac: with the Button entries (PR #66, 2026-11-17) it took over 36.6 minutes for
-`testAccessibilityDynamicType`, past the timeout, 32.4 minutes for `testDefaultSettings`, and 16–19 minutes for each of
-the others, against 627 s, 476 s and 194–196 s locally. The cost is ten parallel jobs, about 4.3 runner-hours per run,
-so the audit runs on every push to `main` and on a pull request only when it changes a path the audit depends on:
-`platforms/apple/`, `tokens/`, `spec/`, `tools/apple/`, `Package.swift`, `Package.resolved`, `.xcode-version` or
-`.github/workflows/ci.yml`. The job `audit-scope` decides, from the pull request's merge commit; otherwise the audit's
-jobs show as skipped. If `audit-scope` itself fails, the audit runs. A leg that passes about 30 minutes as pages are
-added (a contrast leg at about 31 entries) gets another shard, so that a retry still fits its 45.
+CI runs the full audit once a night on `main`, and by hand on any branch (`gh workflow run accessibility-audit.yml
+--ref <branch>`), in its own workflow, `.github/workflows/accessibility-audit.yml`: ten legs side by side
+(`fail-fast: false`, 45 minutes each) for the 28 entries of phase 3, `testDefaultSettings` in three shards
+(`WESTRON_ENTRY_SHARD`), `testAccessibilityDynamicType` in four, and each of the three contrast tests in one leg, about
+25–28 minutes each, its build included (the arithmetic is in the workflow). Each leg pays about 10 minutes of build and
+setup before its first entry, and at most 5 Mac jobs run at once, so fewer, longer legs finish the run sooner. The
+runner is about 3 times slower than a local Mac: with the Button entries (PR #66, 2026-11-17) it took over 36.6
+minutes for `testAccessibilityDynamicType`, past the timeout, 32.4 minutes for `testDefaultSettings`, and 16–19
+minutes for each of the others, against 627 s, 476 s and 194–196 s locally. The cost is ten parallel jobs, about 4.3
+runner-hours per run, so a scheduled run skips them when `main`'s head is the commit the last successful scheduled
+run already audited. A leg that passes about 30 minutes as pages are added (a contrast leg at about 31 entries) gets
+another shard, so that a retry still fits its 45.
+
+A pull request audits only the entries of the components it changes, in `.github/workflows/ci.yml`: the job
+`audit-scope` passes the merge commit's changed paths to `tools/apple/audit-scope.sh`, which prints the entry ids, and
+one job runs all five tests for them (`WESTRON_ENTRY`), 55 minutes with a retry budget of 50, in shards of at most 5
+entries when there are more. A path counts for a component when it is in the component's WestronUI directory, its
+generated `<Name>+Contract.swift` or `<Name>+Matrix.swift`, its catalog page `Components/<Name>Pages.swift` or its
+contract `spec/components/<id>/`, and gives the entries that page declares; a Foundations page that shares nothing
+with other files gives its own entries. Everything else gives nothing: shared paths (tokens, the shared files of
+WestronUI, the catalog's host, the audit test, the scripts) touch every entry and wait for the nightly run, or for a
+run by hand on the branch. The audit is skipped when there is nothing to audit, and on a push to `main`.
+
+```sh
+git diff --name-only main | tools/apple/audit-scope.sh   # the entries a pull request from this branch audits
+```
 
 | Test | Launch arguments | Audit types on iOS |
 |---|---|---|
@@ -400,7 +417,8 @@ added (a contrast leg at about 31 entries) gets another shard, so that a retry s
     `a11y: xcodebuild exited with status <n> although every test passed` in its output. A retry that fails again
     fails the leg.
   - A retry must fit a time budget, 40 minutes from the start of `check.sh a11y`, its build included
-    (`WESTRON_A11Y_RETRY_BUDGET`): a CI leg times out at 45, and a leg the timeout kills uploads no logs. A retry
+    (`WESTRON_A11Y_RETRY_BUDGET`): a nightly leg times out at 45, and a leg the timeout kills uploads no logs (a
+    pull request's audit sets 50 of its 55). A retry
     is estimated at 90 s plus, for each entry to retry, the mean time of the entries the first run finished
     without a failure and without an audit the test retried on the spot (-56), from XCTest's `t = <s>s` activity
     times in the log; a stalled entry's time is never used. When there are none, as with a stall in the first

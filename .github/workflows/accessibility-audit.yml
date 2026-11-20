@@ -1,0 +1,142 @@
+name: Accessibility audit
+
+# The full accessibility audit: every catalog entry in the five configurations of CatalogAccessibilityAuditTests, in
+# ten legs, about 3.7–4.3 Mac runner-hours. Once a night on main, and by hand on any branch (the owner's decision of
+# 2026-11-20): `gh workflow run accessibility-audit.yml --ref <branch>`, or "Run workflow" on the Actions tab. A pull
+# request audits only the entries of the components it changes (`accessibility-audit` in ci.yml); what that leaves out
+# (tokens, the shared files of WestronUI, the catalog's host and shared pages, the scripts) this run covers, on main
+# after the merge, or on the branch when it is run by hand. GitHub mails a failed scheduled run to whoever last changed
+# the `schedule` below, and turns the schedule off after 60 days without activity in a public repository.
+on:
+  schedule:
+    # 02:37 UTC, 03:37 in Central Europe in winter and 04:37 in summer. Off the top of the hour, when GitHub's
+    # scheduler is busiest and delays or drops runs.
+    - cron: '37 2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: accessibility-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  # `audit-needed` reads this workflow's earlier runs.
+  actions: read
+
+jobs:
+  audit-needed:
+    name: Accessibility audit — anything new
+    # On schedule, whether main's head is a commit the last successful scheduled run did not audit already; a night
+    # with no merge then costs a minute of Linux and no Mac. By hand, always. A successful scheduled run that skipped the
+    # legs ran on the same commit as the one before it, so the last success always names an audited commit. Fails open:
+    # if the question fails, or this job does, the audit runs.
+    runs-on: ubuntu-24.04
+    outputs:
+      audit: ${{ steps.last.outputs.audit }}
+    steps:
+      - name: The commit the last successful scheduled run audited
+        id: last
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != schedule ]; then
+            echo "audit=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          runs="repos/$GITHUB_REPOSITORY/actions/workflows/accessibility-audit.yml/runs"
+          if audited="$(gh api "$runs?event=schedule&status=success&branch=$GITHUB_REF_NAME&per_page=1" \
+            --jq '.workflow_runs[0].head_sha // ""')"; then
+            echo "The last successful scheduled run audited ${audited:-nothing yet}; $GITHUB_REF_NAME is at $GITHUB_SHA."
+          else
+            echo "::warning title=Accessibility audit::Could not read the earlier runs; the audit runs."
+            audited=""
+          fi
+          if [ "$audited" = "$GITHUB_SHA" ]; then
+            echo "Nothing new to audit."
+            echo "audit=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "audit=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  accessibility-audit:
+    name: >-
+      Accessibility audit — ${{ matrix.test }}${{ matrix.shard && format(' ({0}/{1})', matrix.shard, matrix.shards) || '' }}
+    # Ten parallel jobs, each with its own catalog build. When this `if:` is false, GitHub reports one skipped check
+    # under the unexpanded matrix name, so the legs must never be required checks.
+    needs: audit-needed
+    if: >-
+      !cancelled() && (needs.audit-needed.result != 'success' || needs.audit-needed.outputs.audit != 'false')
+    runs-on: xcode-27
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    strategy:
+      fail-fast: false
+      # Each configuration of CatalogAccessibilityAuditTests, the slow two split into shards of the catalog's entries
+      # (WESTRON_ENTRY_SHARD=<i>/<n>, every n-th entry from the i-th). With the Button entries (PR #66, head 1c62267),
+      # the runner took over 36.6 min for testAccessibilityDynamicType (killed by the timeout) and 32.4 min for
+      # testDefaultSettings, and 16–19 min for each of the other three, about 3 times a local Mac (627 s, 476 s and
+      # 194–196 s on 2026-11-17). Phase 3 grows the catalog from 17 entries (ded3d5c) to 28 with Text field's four.
+      # Per entry on CI, with a margin (tools/apple/check.sh, a11y_retry_estimate): testDefaultSettings 90 s,
+      # testAccessibilityDynamicType 130 s, the other three 38 s; before the first entry the step spends 6.5–17.1 min,
+      # mean 10.4 (the build, the simulator, the runner), paid once per leg. So fewer, longer legs, under 45 min each
+      # with a retry budget of 40 (tools/apple/check.sh):
+      #   testDefaultSettings           28 × 90 s = 42.0 min → 3 shards of at most 10 entries: 15.0 + 10.4 = 25.4 min
+      #   testAccessibilityDynamicType  28 × 130 s = 60.7 min → 4 shards of at most 7 entries: 15.2 + 10.4 = 25.6 min
+      #   each of the other three       28 × 38 s = 17.7 min → 1 leg of 28 entries:           17.7 + 10.4 = 28.1 min
+      # The worst usual retry, a stall (3 min) in the first entry of a leg after the mean 10.4 min, retries all its
+      # entries (90 s to start, then each): a contrast leg ends at 10.4 + 3 + 1.5 + 17.7 = 32.6 min, within the budget
+      # of 40, which takes it after up to 17.8 min before the first entry (17.1 seen); testAccessibilityDynamicType
+      # 30.1, testDefaultSettings 29.9. Without a retry the slowest leg ends by 17.1 + 17.7 = 34.8 min. With 17 legs
+      # of 35 min the same retry fitted only after up to 14.7 min. A leg past about 30 min as pages are added (a
+      # contrast leg at about 31 entries) gets another shard.
+      matrix:
+        include:
+          - {test: testDefaultSettings, shard: 1, shards: 3}
+          - {test: testDefaultSettings, shard: 2, shards: 3}
+          - {test: testDefaultSettings, shard: 3, shards: 3}
+          - {test: testAccessibilityDynamicType, shard: 1, shards: 4}
+          - {test: testAccessibilityDynamicType, shard: 2, shards: 4}
+          - {test: testAccessibilityDynamicType, shard: 3, shards: 4}
+          - {test: testAccessibilityDynamicType, shard: 4, shards: 4}
+          - {test: testIncreasedContrast}
+          - {test: testDarkAppearance}
+          - {test: testDarkIncreasedContrast}
+    # The retry's budget in tools/apple/check.sh is 40 of these 45 min: a leg the timeout kills uploads no logs.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Audit (iOS)
+        # check.sh audits once more, in a second xcodebuild run, the entries a stalled simulator failed or kept from
+        # being audited, and never a run with a finding (#74); each retry shows as a warning on the run. Only the
+        # entries left are retried, and only within a time budget of 40 of the job's 45 minutes; the whole shard only
+        # when the test runner failed to start.
+        env:
+          WESTRON_ENTRY_SHARD: ${{ matrix.shard && format('{0}/{1}', matrix.shard, matrix.shards) || '' }}
+        run: tools/apple/check.sh a11y ios ${{ matrix.test }}
+      # A leg that retried keeps its logs, the first run's and the retry's, even when the retry passed: the flakiness
+      # stays visible. Logs only, a few MB; the result bundles go up with a failure below. Whether there is a retry's
+      # log is a shell step's output: `hashFiles()` in the upload's `if:` hashes the whole workspace's matches and once
+      # failed the leg after a passed audit, "couldn't finish within 120 seconds" (run 44364265656).
+      - name: Retry logs
+        id: retried
+        if: ${{ !cancelled() }}
+        run: |
+          if ls .build/logs/a11y-*-retry-*.log > /dev/null 2>&1; then
+            echo "logs=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && steps.retried.outputs.logs == 'true' }}
+        with:
+          name: a11y-retried-${{ matrix.test }}${{ matrix.shard && format('-shard{0}of{1}', matrix.shard, matrix.shards) || '' }}
+          path: .build/logs/a11y-*.log
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: a11y-${{ matrix.test }}${{ matrix.shard && format('-shard{0}of{1}', matrix.shard, matrix.shards) || '' }}
+          path: |
+            .build/logs/a11y-*.log
+            .build/xcode/results/a11y-*.xcresult
+          if-no-files-found: ignore

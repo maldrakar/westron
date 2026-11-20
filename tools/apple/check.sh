@@ -200,10 +200,13 @@ a11y_plan() {
 # and 44339047592, 2026-11-18, 17 legs) the step spends 6.5–17.1 minutes, median 10.0 and mean 10.4, before the
 # first entry (finding the simulator, the build, starting the test runner; the end of the first test run less the
 # test's own time), and a stall fails its entry 2–3 minutes in. The worst usual case, a stall in the first entry of
-# the slowest leg after the mean 10.4 minutes, fits: with the legs of phase 3 (.github/workflows/ci.yml, 28 entries),
+# the slowest leg after the mean 10.4 minutes, fits: with the legs of phase 3 (28 entries),
 # a contrast test's single leg, 10.4 + 3 + 90 s + 28 × 38 s = 32.6 minutes (a11y_retry_estimate below). When the
 # step needed more than about 17.8 minutes before the first entry it does not, and the leg fails rather than run into
 # the timeout. (Before phase 3: legs of 35 minutes, a budget of 30, `testDefaultSettings` 1/2 with 9 entries, 28.4.)
+# These are the legs of the nightly full audit (.github/workflows/accessibility-audit.yml). A pull request's audit of
+# the entries it changes, all five tests in one leg of at most 5 entries, times out at 55 minutes and sets a budget of
+# 50 (.github/workflows/ci.yml has its arithmetic).
 a11y_retry_budget=$((${WESTRON_A11Y_RETRY_BUDGET:-40} * 60))
 
 # How long, in seconds, a retry of <count> entries of <test> would take, judged from the first run in <log>: 90 s to
