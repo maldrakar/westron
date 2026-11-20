@@ -59,6 +59,7 @@ tools/apple/snapshot-matrix.sh merge --expect <ids> <out> <dir>…  # captures o
 git diff --name-only main | tools/apple/audit-scope.sh    # the catalog entries a pull request's audit covers
 
 tools/check.sh                    # build and test tools/, then the checks below (CI runs it on Linux)
+tools/check.sh spec api-parity    # some of its steps: tools raw-values generate tokens contrast icons spec api-parity
 tools/westron lint raw-values     # no raw values in WestronUI
 tools/westron lint api-parity     # WestronUI's public API is exactly the component API the contracts give
 tools/westron generate            # regenerate code from the sources
