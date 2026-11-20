@@ -10,35 +10,68 @@ import Testing
 #endif
 
 /// The loading indicator takes the icon's place (contract, `description`; decisions/0001, "Loading"): offered the
-/// icon's slot, it fits in it, at every size, so it neither covers the gap to the label nor outgrows icon-only's
-/// square. The system's spinner has fixed sizes, 10 pt at mini on macOS and 14 pt at small on iOS, and a frame does
-/// not shrink it (#23); the icon at the symbol's small scale is smaller at size s (#85), so the indicator draws the
-/// spinner scaled down to the slot.
+/// icon's slot, it draws within it, at every size, so it neither covers the gap to the label nor outgrows icon-only's
+/// circle, and the button keeps its width. The system's spinner has fixed sizes, 10 pt at mini on macOS and 14 pt at
+/// small on iOS, and a frame does not shrink it (#23); the icon at the symbol's small scale is smaller at size s (#85),
+/// so the indicator draws the spinner scaled down to the slot. Its own frame is the slot whatever it draws, so the
+/// test reads where the spinner is drawn, its scale included (`ButtonProgress.drawn`), in a window.
 @Suite("Button progress indicator")
 @MainActor
 struct ButtonProgressTests {
-    @Test("The indicator fits the icon's slot", arguments: ButtonSize.allCases)
-    func indicatorFitsTheIconSlot(size: ButtonSize) {
+    /// Where the spinner was drawn, reported by the indicator.
+    @MainActor
+    final class Drawn {
+        var frame: CGRect?
+    }
+
+    @Test("The spinner is drawn within the icon's slot", arguments: ButtonSize.allCases)
+    func spinnerIsDrawnWithinTheIconSlot(size: ButtonSize) {
         let metrics = ButtonMetrics(size)
         let progress = ButtonTokens(variant: .primary, destructive: false, states: [], highContrast: false).progress
         // The spinner as the system draws it, before it is scaled.
         let natural = fittingSize(ButtonProgress(color: progress).spinner.fixedSize())
         #expect(natural.width > 0 && natural.height > 0)
+        var scaled = false
         for icon in [Westron.Icon.check, .xmarkCircleFill, .plus] {
             let slot = fittingSize(
                 Image(icon).textRole(metrics.iconFont).imageScale(ButtonMetrics.iconScale).fixedSize())
-            // The indicator takes the slot it is offered, no more.
-            let indicator = fittingSize(Offer(proposal: ProposedViewSize(slot)) { ButtonProgress(color: progress) })
-            #expect(
-                indicator.width <= slot.width + 0.5 && indicator.height <= slot.height + 0.5,
-                "size \(size.rawValue): the indicator takes \(indicator) in the slot of \(icon.rawValue), \(slot)")
-            // And the spinner it draws, scaled, fits in it, so the gap to the label stays whole.
-            let scale = ButtonProgress.fittingScale(natural: natural, slot: slot)
-            #expect(scale <= 1)
-            #expect(
-                natural.width * scale <= slot.width + 0.5 && natural.height * scale <= slot.height + 0.5,
-                "size \(size.rawValue): the spinner, \(natural) at \(scale), in the slot of \(icon.rawValue), \(slot)")
+            let drawn = Drawn()
+            show(
+                Offer(proposal: ProposedViewSize(slot)) {
+                    ButtonProgress(color: progress) { drawn.frame = $0 }
+                })
+            let frame = try? #require(drawn.frame, "size \(size.rawValue): the spinner reported no frame")
+            guard let frame else { continue }
+            let name = "size \(size.rawValue), \(icon.rawValue): the spinner drawn at \(frame) in the slot \(slot)"
+            #expect(frame.minX >= -0.1 && frame.maxX <= slot.width + 0.1, "\(name) overflows the slot across")
+            #expect(frame.minY >= -0.1 && frame.maxY <= slot.height + 0.1, "\(name) overflows the slot up or down")
+            if natural.width > slot.width + 0.5 || natural.height > slot.height + 0.5 {
+                scaled = true
+                #expect(frame.width < natural.width, "\(name) is not scaled down from \(natural)")
+            }
         }
+        if size == .s {
+            // At size s the slot is smaller than the system's spinner on every platform, so the scaling is exercised.
+            #expect(scaled, "the spinner was never larger than the slot at size s")
+        }
+    }
+
+    @Test("Loading does not change the width of a button with an icon", arguments: ButtonSize.allCases, [false, true])
+    func loadingKeepsTheWidth(size: ButtonSize, iconOnly: Bool) {
+        func width(loading: Bool) -> CGFloat {
+            fittingSize(
+                Button {
+                } label: {
+                    Label("Save", icon: .check)
+                }
+                .buttonStyle(.secondary, size: size, iconOnly: iconOnly)
+                .loading(loading)
+            ).width
+        }
+        let idle = width(loading: false)
+        let loading = width(loading: true)
+        #expect(idle > 0)
+        #expect(abs(idle - loading) < 0.5, "size \(size.rawValue), iconOnly \(iconOnly): \(idle) at rest, \(loading)")
     }
 
     /// The size a view takes, laid out on its own.
@@ -49,6 +82,32 @@ struct ButtonProgressTests {
             return host.fittingSize
         #else
             return UIHostingController(rootView: view).sizeThatFits(in: CGSize(width: 1000, height: 1000))
+        #endif
+    }
+
+    /// Shows a view in a window and lets it lay out twice, so that what it measured in the first pass takes effect.
+    private func show(_ view: some View) {
+        #if canImport(AppKit)
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 200, height: 200), styleMask: [.titled], backing: .buffered,
+                defer: false)
+            window.contentView = NSHostingView(rootView: view.frame(width: 200, height: 200, alignment: .topLeading))
+            window.orderFront(nil)
+            defer { window.orderOut(nil) }
+            for _ in 0..<3 {
+                window.contentView?.layoutSubtreeIfNeeded()
+                RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+            }
+        #else
+            let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 200, height: 200))
+            window.rootViewController = UIHostingController(
+                rootView: view.frame(width: 200, height: 200, alignment: .topLeading))
+            window.isHidden = false
+            defer { window.isHidden = true }
+            for _ in 0..<3 {
+                window.layoutIfNeeded()
+                RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+            }
         #endif
     }
 }

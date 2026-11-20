@@ -103,6 +103,23 @@
                     #expect(
                         !click(window, at: point, presses: presses), "\(name): 1.5 pt past the \(edge) edge reached it")
                 }
+                // The capsule's corners (#85): the hit area is the drawn capsule, so the corner of its frame outside
+                // the capsule takes no click, where the rounded rectangle of radius.control took one before. A click
+                // 3 pt in from the left and the bottom edges lies outside the capsule's end, whose radius is half the
+                // height; one at 45° on a circle of 0.4 × the height around the end's center lies inside it.
+                let radius = button.height / 2
+                let corner = NSPoint(x: button.minX + 3, y: button.minY + 3)
+                #expect(
+                    hypot(corner.x - (button.minX + radius), corner.y - button.midY) > radius,
+                    "\(name): the corner point is not outside the capsule")
+                #expect(
+                    !click(window, at: corner, presses: presses),
+                    "\(name): a click 3 pt in from the left and bottom edges, outside the capsule, reached it")
+                let reach = radius * 0.8 / 2.squareRoot()
+                let insideEnd = NSPoint(x: button.minX + radius - reach, y: button.midY - reach)
+                #expect(
+                    click(window, at: insideEnd, presses: presses),
+                    "\(name): a click inside the capsule's end, off its frame's corner, missed")
             }
         }
     }

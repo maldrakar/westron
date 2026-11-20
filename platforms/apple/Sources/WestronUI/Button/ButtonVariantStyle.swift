@@ -392,6 +392,9 @@ private struct ButtonLabelStyle: LabelStyle {
 /// their fade. One spinner, no mask: a mask over an animating view costs an offscreen pass on every frame.
 struct ButtonProgress: View {
     let color: Westron.Color
+    /// Reports where the spinner is drawn, its scale included, in the slot's coordinates: ButtonProgressTests reads
+    /// it, since the indicator's own frame is the slot whatever it draws.
+    var drawn: (@MainActor (CGRect) -> Void)? = nil
     /// The spinner's own size, measured before it is scaled.
     @State private var natural: CGSize?
 
@@ -404,10 +407,20 @@ struct ButtonProgress: View {
                 } action: {
                     natural = $0
                 }
+                // Inside the scale, so the frame is the drawn one.
+                .onGeometryChange(for: CGRect.self) {
+                    $0.frame(in: .named(ButtonProgress.slotSpace))
+                } action: { frame in
+                    drawn?(frame)
+                }
                 .scaleEffect(natural.map { Self.fittingScale(natural: $0, slot: proxy.size) } ?? 1)
                 .frame(width: proxy.size.width, height: proxy.size.height)
         }
+        .coordinateSpace(.named(ButtonProgress.slotSpace))
     }
+
+    /// The slot's coordinate space, for `drawn`.
+    static let slotSpace = "ButtonProgress.slot"
 
     /// The control size the spinner is drawn at: the smaller of the two the platform draws.
     static var controlSize: ControlSize {

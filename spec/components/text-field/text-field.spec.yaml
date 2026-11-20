@@ -123,7 +123,8 @@ platforms:
       description: >-
         Focus is the field being edited, with the keyboard up. There is no pointer to hover with on an iPhone, and
         the field shows nothing on hover on an iPad either. At s, drawn 28 pt high, a tap 8 pt past the drawn edge,
-        at the 44 pt target, focuses the field, and one 24 pt past it does not (the catalog's TextFieldBehaviorTests);
+        at the 44 pt target, focuses the field, and one 24 pt past it does not; at m, drawn 36 pt high, a tap 4 pt
+        past either edge, at the same target, focuses it (the catalog's TextFieldBehaviorTests);
         a one-off probe of #30 found the reach ending between 16 and 18 pt. The style's tap gesture, which focuses a
         field from its padding, is what takes these touches: with it removed, a tap on the padding and one at the
         target missed. The style grows no frame of its own on iOS. A product reaches color.text.placeholder by

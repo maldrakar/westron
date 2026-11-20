@@ -94,6 +94,23 @@ final class ButtonBehaviorTests: XCTestCase {
         XCTAssertEqual(accepted, 1)
     }
 
+    /// Size m is drawn 36 pt tall on iOS (#85), below size.target.minimum, 44: a tap 4 pt below what is drawn, at the
+    /// target's edge, must reach it, through the system's touch tolerance as at size s. The button below it in the
+    /// page is loading and refuses presses, so a press counted is this button's. macOS draws m at 32 pt, above its
+    /// target, and takes clicks in what it draws (testSmallButtonHitArea).
+    @MainActor
+    func testMediumButtonHitAreaOnTouch() throws {
+        #if os(macOS)
+            throw XCTSkip("macOS draws size m above its target")
+        #else
+            let rest = button(ID.rest)
+            XCTAssertEqual(rest.frame.height, 36, accuracy: 0.5)
+            press(rest.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 1)).withOffset(CGVector(dx: 0, dy: 4)))
+            XCTAssertEqual(
+                accepted, 1, "a tap 4 pt below the drawn size m button, at the target's edge, did not reach it")
+        #endif
+    }
+
     /// Publish has an icon, which the indicator replaces; "Publish now" has a label and no icon, which stays whole after
     /// the indicator while the button widens (P13).
     @MainActor

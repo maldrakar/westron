@@ -151,6 +151,27 @@ final class TextFieldBehaviorTests: XCTestCase {
         #endif
     }
 
+    /// Size m is drawn 36 pt tall on iOS (#85), below the 44 pt target: a tap 4 pt past its drawn edge, above and
+    /// below, at the target's edge, focuses the field, as at size s. The secure field is the page's framed field at m.
+    /// macOS draws m at 32 pt, above its target of 28.
+    @MainActor
+    func testTheMediumFieldTakesTheTargetAroundWhatItDraws() throws {
+        #if os(macOS)
+            throw XCTSkip("macOS draws size m above its target")
+        #else
+            let drawnHeight: CGFloat = 36
+            let frame = field(ID.secure).frame
+            let reach = (target - drawnHeight) / 2
+            XCTAssertEqual(reach, 4, accuracy: 0.01)
+            let top = frame.midY - drawnHeight / 2
+            let bottom = frame.midY + drawnHeight / 2
+            XCTAssertEqual(
+                press(at: CGPoint(x: frame.midX, y: top - reach)), "Focused: secure", "the target's top edge")
+            XCTAssertEqual(
+                press(at: CGPoint(x: frame.midX, y: bottom + reach)), "Focused: secure", "the target's bottom edge")
+        #endif
+    }
+
     /// The system field's own touches and clicks through the style. iOS: a double tap selects a word, with the
     /// selection's handles and the edit menu; a long press on a focused field shows the edit menu; a long press on an
     /// empty field shows it with Paste, how a person pastes into an empty field. macOS: a right click shows the field's
