@@ -43,7 +43,7 @@ extension Westron.Color {
         /// A quiet fill inside content: the track of a segmented control, a tag or a badge without a color, a secondary
         /// button, a framed text field. It stands about 1.1:1 off the canvas, so a control found by it alone misses 3:1
         /// for its edge, as the owner accepted for the text field (design-language/08); in high contrast such a control
-        /// also draws border.strong.
+        /// also draws border.strong, or status.danger.border on a destructive secondary button.
         ///
         /// Use for: segmented track, neutral tag, neutral badge, secondary button, framed text field. Avoid: A row
         /// under the pointer: use background.hover.

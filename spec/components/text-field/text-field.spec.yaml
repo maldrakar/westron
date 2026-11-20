@@ -131,7 +131,10 @@ platforms:
       shapes are SwiftUI's Capsule and a RoundedRectangle, both with continuous corners, and the high-contrast outline
       follows colorSchemeContrast, as Button's does. The style fixes the field's vertical size, so that it keeps its
       height: without it, offered 8 pt at accessibility5 on iOS 26.3, a framed field of one line took 36 pt for its
-      65, a framed multiline one 36 for 142 and an inline multiline one 8 for 126 (TextFieldStyleTests).
+      65, a framed multiline one 36 for 142 and an inline multiline one 8 for 126 (TextFieldStyleTests). So a
+      multiline field takes its text's height, and a product's fixed-height frame does not squeeze it into scrolling:
+      the field spills past the frame. A product bounds a multiline field with lineLimit, not with a fixed-height
+      frame; here westron's field differs from the system's, which scrolls inside such a frame.
       The style is a TextFieldStyle, which SwiftUI declares with only the underscored requirement
       _body(configuration:). The probe of #30 with Xcode 27.1, run on iOS 26.3 and macOS 26.7 and compiled for iOS 17,
       macOS 14 and watchOS 10 (no older runtime and no watch runtime to run on): the requirement is not isolated to the

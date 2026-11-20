@@ -37,7 +37,8 @@ The reference is WCAG 2 ([WCAG 2.2](https://www.w3.org/TR/WCAG22/)). The kinds a
   the same deviation, pending the owner's confirmation: 1.27, 1.33 and 1.20 in light, 1.46, 1.34 and 1.53 in dark
   (spec/components/checkbox, decisions/0003). The secondary button's fill, 1.11 against the canvas in light, was chosen
   with its look the same day (spec/components/button, decisions/0003). The deviation is deliberate and limited to the
-  standard themes: the high-contrast themes draw `border.strong` on each of them (below). A product that needs 1.4.11
+  standard themes: the high-contrast themes draw `border.strong` on each of them, `status.danger.border` on a
+  destructive secondary button (below). A product that needs 1.4.11
   in the standard themes asks for a high-contrast option or a component that draws an outline; westron has none yet.
 - **A disabled control is dimmed whole.** westron draws it at `opacity.disabled`, 0.4, fill, border, label and icon
   together, rather than in colors of its own (decisions/0013). It falls under the exemption for inactive controls,

@@ -6,7 +6,7 @@
     @testable import WestronUI
 
     /// On macOS the hit area is the drawn button (contract, `platforms.apple.macos`): a click anywhere in what is drawn
-    /// reaches it, an outlined or unfilled button's empty inside included, and a click past the drawn edge misses. The
+    /// reaches it, an unfilled button's empty inside included, and a click past the drawn edge misses. The
     /// clicks are AppKit events sent to a window, so the screen is not used; the catalog's UI test
     /// (ButtonBehaviorTests) clicks the real pointer.
     @Suite("Button hit area on macOS")

@@ -40,6 +40,13 @@ private struct ControlsPage: View {
                 ("background.muted", .background.muted), ("muted-hover", .background.mutedHover),
                 ("muted-pressed", .background.mutedPressed),
             ]),
+        // The muted fill under colored words, a destructive secondary button's: it darkens only as far as they read.
+        FillStates(
+            name: "muted, colored words", word: "Delete", label: .status.danger.text,
+            states: [
+                ("background.muted", .background.muted), ("muted-hover-colored", .background.mutedHoverColored),
+                ("muted-pressed-colored", .background.mutedPressedColored),
+            ]),
     ]
 
     private static let heights: [Westron.Dimension] = [.size.control.s, .size.control.m, .size.control.l]
@@ -100,12 +107,17 @@ private struct ControlsPage: View {
                 Grid(alignment: .leading, horizontalSpacing: .space100, verticalSpacing: .space100) {
                     ForEach([false, true], id: \.self) { disabled in
                         GridRow {
+                            // westron's own buttons, so that each draws what the real one does, the secondary one's
+                            // outline in high contrast included; disabled, the style dims each whole.
                             Group {
-                                sample("Save", fill: .background.accent, label: .text.onAccent)
-                                sample("Delete", fill: .status.danger.fill, label: .status.danger.onFill)
-                                sample("Cancel", fill: .background.muted, label: .text.primary)
+                                Button("Save") {}
+                                    .buttonStyle(.primary)
+                                Button("Delete", role: .destructive) {}
+                                    .buttonStyle(.primary)
+                                Button("Cancel") {}
+                                    .buttonStyle(.secondary)
                             }
-                            .modifier(DisabledSample(disabled: disabled))
+                            .disabled(disabled)
                             // The row's caption is not a control: it keeps its contrast.
                             TokenDetail(disabled ? "disabled" : "enabled")
                         }
@@ -134,23 +146,6 @@ private struct ControlsPage: View {
                 .textRole(.subheadline.strong)
                 .foregroundStyle(.text.primary)
             content()
-        }
-    }
-}
-
-/// A disabled control's face: dimmed by opacity.disabled, and announced as disabled, as a disabled control is. WCAG
-/// exempts an inactive control from the contrast minimum (design-language chapter 08); the accessibility audit lets
-/// these samples through by that value (`CatalogAccessibilityAuditTests`).
-private struct DisabledSample: ViewModifier {
-    let disabled: Bool
-
-    func body(content: Content) -> some View {
-        if disabled {
-            content
-                .opacity(.opacity.disabled)
-                .accessibilityValue(Text("disabled"))
-        } else {
-            content
         }
     }
 }
