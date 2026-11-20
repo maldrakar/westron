@@ -190,7 +190,7 @@ final class ButtonBehaviorTests: XCTestCase {
     /// 44, 8 pt past each edge; 32 pt before #85), 24 on macOS (target 28). The hit area the contract gives it differs
     /// by platform.
     ///
-    /// iOS: a tap 7.5 pt below what is drawn, inside the target, must reach it. The hit area is the system's touch
+    /// iOS: a tap 8 pt below what is drawn, at the target's edge, must reach it. The hit area is the system's touch
     /// tolerance, which westron does not grow (ButtonVariantStyle.swift): measured on iOS 26.3 it reached 16 pt below
     /// a 32 pt button, and the test fails if the platform ever covers less than the target.
     ///
@@ -219,8 +219,8 @@ final class ButtonBehaviorTests: XCTestCase {
             XCTAssertEqual(accepted, 1, "a click 3 pt below the drawn button reached it")
         #else
             XCTAssertEqual(small.frame.height, 28, accuracy: 0.5)
-            pressBelow(7.5)
-            XCTAssertEqual(accepted, 1, "a tap 7.5 pt below the drawn button did not reach it")
+            pressBelow(8)
+            XCTAssertEqual(accepted, 1, "a tap 8 pt below the drawn button, at the target's edge, did not reach it")
         #endif
     }
 

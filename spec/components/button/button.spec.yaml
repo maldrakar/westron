@@ -6,7 +6,7 @@ id: button
 status: approved
 description: >-
   A push button that runs an action: westron's style on the platform's own button, with a label and a leading icon.
-  It is the platform's capsule at every variant and size, fully round ends at any height, so it stays a capsule when
+  It is the platform's capsule at every variant and size, its ends round at any height, so it stays a capsule when
   the text grows (design-language/04); icon-only is a circle. Every fill is flat and opaque, in westron's colors, with
   no glass or material. primary is filled with the accent, secondary with color.background.muted and no outline,
   tertiary has no fill. In the high-contrast themes a secondary button also draws an outline, color.border.strong
@@ -145,8 +145,10 @@ platforms:
     ios:
       description: >-
         Hover only with a pointer, on iPad; an iPhone never enters it. The hit area is the system's touch tolerance
-        around the drawn button, which westron does not grow: measured on iOS 26.3 it reaches about 16 pt past a size
-        s button, beyond size.target.minimum, 44 pt, around the 28 pt drawn (the catalog's ButtonBehaviorTests).
+        around the drawn button, which westron does not grow: measured on iOS 26.3 it reached 16 pt past a 32 pt
+        button (#23), and the catalog's ButtonBehaviorTests taps 8 pt below the 28 pt size s, the edge of
+        size.target.minimum, 44 pt. Size m, 36 pt, needs 4 pt each side from the same tolerance; it is not measured
+        on its own.
     macos:
       keyboardIntents: [defaultAction, cancelAction]
       description: >-
