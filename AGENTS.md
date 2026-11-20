@@ -42,8 +42,10 @@ tools/apple/check.sh catalog      # build the catalog app and the UI tests
 tools/apple/check.sh a11y         # accessibility audit of every catalog entry on the iOS simulator (macOS: a11y macos);
                                   # a11y ios <test>… runs some of its five tests, WESTRON_ENTRY=<id>,… some entries
                                   # WESTRON_ENTRY_SHARD=<i>/<n> then every n-th of those entries, from the i-th
+tools/apple/check.sh behavior     # the behaviour UI tests (Button, Checkbox, TextField, Icon) on the iOS simulator;
+                                  # behavior macos on the Mac, behavior ios <Class>… some classes; CI: nightly
 tools/apple/check.sh format       # swift format lint; to fix: tools/apple/check.sh fix-format
-tools/apple/check.sh all          # everything at once, except a11y (package-ios included, so it boots the simulator)
+tools/apple/check.sh all          # everything at once but a11y and behavior (package-ios included: boots the simulator)
 
 tools/apple/catalog-screenshot.sh ios   --entry environment --appearance dark   # prints the path to the PNG
 tools/apple/catalog-screenshot.sh macos --entry environment                     # the same on macOS
@@ -88,9 +90,9 @@ the catalog, not generated (`platforms/apple/README.md`, "Snapshot matrix"). Com
 environment (decisions/0008).
 CI (decisions/0008, note of 2026-11-20): `.github/workflows/ci.yml` on every pull request and push to `main` (the
 tools, the Apple package and catalog, the catalog screenshots, and on a pull request the accessibility audit of the
-components it changes); `accessibility-audit.yml`, the full audit, every night and by hand
-(`gh workflow run accessibility-audit.yml --ref <branch>`); `snapshot-matrix.yml` on demand only, by hand
-(`gh workflow run snapshot-matrix.yml --ref <branch> [-f components=button,rule]`) or by the label `snapshot-matrix` on
+components it changes); `accessibility-audit.yml`, the full audit and the behaviour UI tests on iOS and macOS, every
+night and by hand (`gh workflow run accessibility-audit.yml --ref <branch>`); `snapshot-matrix.yml` on demand only,
+by hand (`gh workflow run snapshot-matrix.yml --ref <branch> [-f components=button,rule]`) or by the label `snapshot-matrix` on
 a pull request.
 
 ## Rules

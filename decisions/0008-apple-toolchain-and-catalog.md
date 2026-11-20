@@ -141,7 +141,11 @@ Date: 2026-11-14. Status: accepted.
   catalog's host, the scripts) is audited by the night after its merge, or by hand on the branch before it. The
   snapshot matrix moves to `.github/workflows/snapshot-matrix.yml`, run by hand (optionally for some components) or
   by the label `snapshot-matrix` on a pull request; its legs, artifacts and page are as before. A pull request now
-  takes 2–3 Mac jobs, up to about 1.4 runner-hours; a push to `main` 2. Decided by the owner.
+  takes 2–3 Mac jobs, up to about 1.4 runner-hours; a push to `main` 2. Decided by the owner. The same day the owner
+  added the catalog's behaviour UI tests (`ButtonBehaviorTests`, `CheckboxBehaviorTests`, `TextFieldBehaviorTests`,
+  `IconAccessibilityTests`), which nothing ran, to the nightly workflow: `tools/apple/check.sh behavior`, one leg on
+  iOS and one on macOS, under the same skip rule; the release now needs that run green on its commit, behaviour tests
+  included.
 
 ## Consequences
 

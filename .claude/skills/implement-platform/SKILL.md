@@ -36,6 +36,7 @@ Arguments: `$ARGUMENTS`, the component id and the platform.
 ```sh
 tools/apple/check.sh all
 tools/check.sh             # tools tests, the raw-values lint, generate --check
+tools/apple/check.sh behavior ios <Component>BehaviorTests   # its behaviour UI tests, if it has a class of them
 ```
 
 Then run `/visual-check <id>` and open every screenshot, and capture the snapshot matrix on both platforms:

@@ -1,12 +1,16 @@
-name: Accessibility audit
+name: Nightly — accessibility audit and behaviour tests
 
-# The full accessibility audit: every catalog entry in the five configurations of CatalogAccessibilityAuditTests, in
-# ten legs, about 3.7–4.3 Mac runner-hours. Once a night on main, and by hand on any branch (the owner's decision of
-# 2026-11-20): `gh workflow run accessibility-audit.yml --ref <branch>`, or "Run workflow" on the Actions tab. A pull
-# request audits only the entries of the components it changes (`accessibility-audit` in ci.yml); what that leaves out
-# (tokens, the shared files of WestronUI, the catalog's host and shared pages, the scripts) this run covers, on main
-# after the merge, or on the branch when it is run by hand. GitHub mails a failed scheduled run to whoever last changed
-# the `schedule` below, and turns the schedule off after 60 days without activity in a public repository.
+# The nightly checks too slow for every pull request (the owner's decisions of 2026-11-20):
+#   - the full accessibility audit: every catalog entry in the five configurations of CatalogAccessibilityAuditTests,
+#     in ten legs, about 3.7–4.3 Mac runner-hours. A pull request audits only the entries of the components it changes
+#     (`accessibility-audit` in ci.yml); what that leaves out (tokens, the shared files of WestronUI, the catalog's
+#     host and shared pages, the scripts) this run covers;
+#   - the catalog's behaviour UI tests (`tools/apple/check.sh behavior`), on iOS and on macOS, which nothing else runs.
+# Once a night on main, and by hand on any branch: `gh workflow run accessibility-audit.yml --ref <branch>`, or "Run
+# workflow" on the Actions tab. The file keeps its name, which the release skill and the docs use; the release needs a
+# run of it on the release commit with every job green (.claude/skills/release/SKILL.md). GitHub mails a failed
+# scheduled run to whoever last changed the `schedule` below, and turns the schedule off after 60 days without
+# activity in a public repository.
 on:
   schedule:
     # 02:37 UTC, 03:37 in Central Europe in winter and 04:37 in summer. Off the top of the hour, when GitHub's
@@ -29,7 +33,8 @@ jobs:
     # On schedule, whether main's head is a commit the last successful scheduled run did not audit already; a night
     # with no merge then costs a minute of Linux and no Mac. By hand, always. A successful scheduled run that skipped the
     # legs ran on the same commit as the one before it, so the last success always names an audited commit. Fails open:
-    # if the question fails, or this job does, the audit runs.
+    # if the question fails, or this job does, the audit runs. It gates the behaviour tests the same way. (Its name
+    # stays as it is: the release skill tells the Mac jobs from it by that name.)
     runs-on: ubuntu-24.04
     outputs:
       audit: ${{ steps.last.outputs.audit }}
@@ -139,4 +144,58 @@ jobs:
           path: |
             .build/logs/a11y-*.log
             .build/xcode/results/a11y-*.xcresult
+          if-no-files-found: ignore
+
+  behavior:
+    name: Behaviour UI tests (${{ matrix.platform }})
+    # The catalog's behaviour UI tests (`tools/apple/check.sh behavior`): ButtonBehaviorTests, CheckboxBehaviorTests,
+    # TextFieldBehaviorTests and IconAccessibilityTests, each with branches of its own for iOS and macOS, so one leg on
+    # each, gated by `audit-needed` as the audit is.
+    #
+    # No retry. A failed test fails the whole run, and `audit-needed` counts only successful scheduled runs, so the
+    # next night runs every job again on the same commit, and the release waits. For a flaky failure, "Re-run failed
+    # jobs" on that run (or `gh run rerun <id> --failed`) is the cheap remedy: a re-run is a new attempt of the same
+    # run, with its id, commit and event, and once it passes the run counts as successful both for `audit-needed` and
+    # for the release skill's check, which reads the latest attempt's jobs, the ones not re-run carried over as they
+    # were (seen on CI run 44461921450, attempt 2). `gh workflow run` instead starts all twelve Mac jobs again.
+    #
+    # Locally on an iPhone 17 simulator (iOS 26.3, 2026-11-20) all 20 tests passed in 182 and 185 s in two runs, 2 of
+    # them skipped (a keyboard shortcut the simulator's typeKey does not reach; keyboard focus, measured on macOS), the
+    # step 224 and 192 s with an incremental build. On the runner, at 2.2–3 times a local Mac, the tests take about
+    # 7–9 min, after 6–17 min of build and setup: at most about 26 min, so a timeout of 40. A leg the timeout kills
+    # uploads no logs, and a macOS UI test run has gone silent on CI for an hour (run 44461921450), so the step stops
+    # itself 3 minutes before it (WESTRON_BEHAVIOR_DEADLINE: xcodebuild and the test daemon stopped, a line in the log,
+    # exit 1) and the failure upload runs.
+    #
+    # The macOS leg was not run when this job was added (its tests take over the screen, and the Mac was in use), so
+    # its first night is its first run on CI: Automation Mode is on for the runner (decisions/0008), as the snapshot
+    # matrix's macOS legs rely on, and a failure uploads the log and the result bundle, with XCTest's screenshots, to
+    # tell a stale test from a broken component or a runner problem. On macOS
+    # CheckboxBehaviorTests.testKeyboardFocusAndSpace skips itself when the system's keyboard navigation is off, as it
+    # likely is on the runner, so a green macOS leg may not have run it: the step's output shows the skip.
+    needs: audit-needed
+    if: >-
+      !cancelled() && (needs.audit-needed.result != 'success' || needs.audit-needed.outputs.audit != 'false')
+    runs-on: xcode-27
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ios, macos]
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - name: Behaviour UI tests
+        env:
+          # 3 minutes before the job's timeout, in minutes from the step's start: the failure upload below still runs.
+          WESTRON_BEHAVIOR_DEADLINE: 37
+        run: tools/apple/check.sh behavior ${{ matrix.platform }}
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: behavior-${{ matrix.platform }}
+          path: |
+            .build/logs/behavior-*.log
+            .build/xcode/results/behavior-*.xcresult
           if-no-files-found: ignore
