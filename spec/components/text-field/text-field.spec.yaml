@@ -25,7 +25,10 @@ description: >-
   (design-language/08). The placeholder is in color.text.placeholder. There is no error state, hint or message in
   this version: no pilot screen shows one, and a field marked only by a danger border would tell an error by color
   alone (design-language/08, "Color is never the only signal"). The text, and with it a framed field's height,
-  follows the person's text size (design-language/08, "Settings the person chooses").
+  follows the person's text size (design-language/08, "Settings the person chooses"). A field is never drawn lower
+  than its text needs, in either variant: its height is that of its lines and its padding, or its minimum height,
+  whichever is more, and a layout that offers it less height does not squeeze it; a multiline field has as many lines
+  as its text and the product's line limit give, and scrolls past them.
 consumers: [todo-app/lists-screen, todo-app/list-screen]
 
 options:
@@ -126,7 +129,9 @@ platforms:
       reflection (Mirror) finds, measured with Xcode 27.1 on iOS 17.5, iOS 26.3 and macOS 26.7 (TextFieldStyleTests);
       where reflection finds no axis, the style draws single (decisions/0002, pending the owner's confirmation). The
       shapes are SwiftUI's Capsule and a RoundedRectangle, both with continuous corners, and the high-contrast outline
-      follows colorSchemeContrast, as Button's does.
+      follows colorSchemeContrast, as Button's does. The style fixes the field's vertical size, so that it keeps its
+      height: without it, offered 8 pt at accessibility5 on iOS 26.3, a framed field of one line took 36 pt for its
+      65, a framed multiline one 36 for 142 and an inline multiline one 8 for 126 (TextFieldStyleTests).
       The style is a TextFieldStyle, which SwiftUI declares with only the underscored requirement
       _body(configuration:). The probe of #30 with Xcode 27.1, run on iOS 26.3 and macOS 26.7 and compiled for iOS 17,
       macOS 14 and watchOS 10 (no older runtime and no watch runtime to run on): the requirement is not isolated to the

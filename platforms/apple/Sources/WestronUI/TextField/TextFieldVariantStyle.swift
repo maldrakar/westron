@@ -67,10 +67,12 @@ private struct TextFieldBody: View {
             field
                 .opacity(tokens.opacity.map(Double.init) ?? 1)
         #else
+            let axis = TextFieldAxis.of(field)
             let metrics = TextFieldMetrics(
-                variant: variant, size: .resolved(explicit: explicitSize, controlSize: controlSize),
-                axis: TextFieldAxis.of(field))
+                variant: variant, size: .resolved(explicit: explicitSize, controlSize: controlSize), axis: axis)
             TextFieldSurface(field: field, variant: variant, tokens: tokens, metrics: metrics, isFocused: $isFocused)
+                // What the style resolved, for the tests (`TextFieldResolvedAxes`).
+                .preference(key: TextFieldResolvedAxes.self, value: [axis])
         #endif
     }
 }
@@ -148,6 +150,13 @@ private struct TextFieldBody: View {
                 .padding(.horizontal, padding)
                 .padding(.vertical, verticalPadding)
                 .frame(minHeight: metrics.height.map(CGFloat.init))
+                // The field's height is its own, its text's and padding's or its minimum height, whichever is more: a
+                // layout that offers less does not squeeze it below its lines (the contract's description). Without
+                // this, the field took any height offered down to its minimum, measured in TextFieldStyleTests at
+                // accessibility5 on iOS 26.3: a framed field of one line 36 pt for its 65, a framed multiline one 36
+                // for 142, an inline multiline one 8 for 126. Its lines are as many as its text and the product's
+                // `lineLimit` give; past them the system field scrolls.
+                .fixedSize(horizontal: false, vertical: true)
                 .background {
                     if let background = tokens.background {
                         shape.fill(background)

@@ -76,6 +76,18 @@ extension TextFieldVariant {
     }
 }
 
+/// The axis each westron text field in a view resolved from the field SwiftUI gave its style, the contract's `lines`
+/// (`TextFieldAxis`), one entry per field. Tests and the catalog read it with `onPreferenceChange(_:perform:)`, so that a
+/// SwiftUI that no longer gives the style the field's axis fails a test instead of drawing every field as one line.
+/// Package only: a product never reads it.
+package struct TextFieldResolvedAxes: PreferenceKey {
+    package static var defaultValue: [Axis] { [] }
+
+    package static func reduce(value: inout [Axis], nextValue: () -> [Axis]) {
+        value += nextValue()
+    }
+}
+
 extension View {
     /// Draws the westron text fields in this view as if they were also in `states`. Catalog only: it forces how a
     /// state looks, for a screenshot, and changes nothing a field does; the field takes no keyboard focus.

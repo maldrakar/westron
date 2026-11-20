@@ -58,24 +58,18 @@ struct TextFieldSample: View {
     @State private var text: String
 
     init(variant: TextFieldVariant, size: TextFieldSize? = nil, axis: Axis = .horizontal, filled: Bool) {
-        self.init(
-            variant: variant, size: size, axis: axis,
-            text: filled ? (axis == .vertical ? Self.filledNotes : Self.filledText) : "")
-    }
-
-    /// A sample holding `text`.
-    init(variant: TextFieldVariant, size: TextFieldSize?, axis: Axis, text: String) {
         self.variant = variant
         self.size = size
         self.axis = axis
-        _text = State(initialValue: text)
+        _text = State(initialValue: filled ? (axis == .vertical ? Self.filledNotes : Self.filledText) : "")
     }
 
     /// The text of a filled sample on one line; the prompt of an empty one is "Untitled".
     static let filledText = "Groceries"
 
-    /// The text of a filled sample on several lines, two of them; the prompt of an empty one is "Add a note".
-    static let filledNotes = "Milk, bread\nApples"
+    /// The text of a filled sample on several lines, two short ones, which stay two at the largest text size; the prompt
+    /// of an empty one is "Add a note".
+    static let filledNotes = "Milk\nApples"
 
     var body: some View {
         Group {
@@ -84,9 +78,7 @@ struct TextFieldSample: View {
                     .textFieldStyle(variant, size: size)
                     .accessibilityLabel("Notes")
                     .lineLimit(1...4)
-                    // A matrix sheet is laid out in the screen's height with no scroll view, and a field with a
-                    // vertical axis is the only view in it that can shrink: it keeps its height.
-                    .fixedSize(horizontal: false, vertical: true)
+                // No fixed size of its own: the style keeps a field's height (the contract's description).
             } else {
                 TextField("List name", text: $text, prompt: Text("Untitled"))
                     .textFieldStyle(variant, size: size)
@@ -116,10 +108,14 @@ extension Axis {
 /// one); disabled is set with the real `.disabled(_:)`.
 struct TextFieldMatrixCell: View {
     let values: TextFieldMatrixValues
+    /// Whether the cell always holds both fields, as on the scrolling `text-field` entry; otherwise, as on a matrix
+    /// sheet, which does not scroll, a multiline cell at the accessibility text sizes holds the two-line field alone.
+    let whole: Bool
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    init(_ values: TextFieldMatrixValues) {
+    init(_ values: TextFieldMatrixValues, whole: Bool = false) {
         self.values = values
+        self.whole = whole
     }
 
     var body: some View {
@@ -129,17 +125,15 @@ struct TextFieldMatrixCell: View {
         let axis = Axis(textFieldLines: lines)
         // Apart by more than two forced rings reach outside their fields, so they do not touch.
         VStack(alignment: .leading, spacing: .space150) {
-            // At the accessibility text sizes a sheet's three rows of multiline cells, each an empty field and one of
-            // two lines, are taller than an iPhone's screen, and at accessibility5 three rows of the two-line field
-            // alone still are at size l. There a multiline cell shows one field holding a short word, on one line, in
-            // the multiline field's shape; the empty field and the two lines are on the other text sizes' sheets, and
-            // a framed multiline field of two lines at accessibility5 is on the card-notes supplement.
-            if axis == .vertical && dynamicTypeSize.isAccessibilitySize {
-                TextFieldSample(variant: variant, size: size, axis: axis, text: "Milk")
-            } else {
+            // On a matrix sheet at the accessibility text sizes, three rows of multiline cells holding an empty field
+            // and one of two lines are taller than an iPhone's screen, and the matrix splits a sheet's columns there,
+            // not its rows. So there a multiline cell holds the two-line field alone, which fits; the empty one is on
+            // the other text sizes' sheets and, at every text size, on the `text-field` entry, which the
+            // accessibility audit walks.
+            if whole || axis == .horizontal || !dynamicTypeSize.isAccessibilitySize {
                 TextFieldSample(variant: variant, size: size, axis: axis, filled: false)
-                TextFieldSample(variant: variant, size: size, axis: axis, filled: true)
             }
+            TextFieldSample(variant: variant, size: size, axis: axis, filled: true)
         }
         // Room for the ring, which is drawn outside the field's frame: forced, it touches neither the next cell nor
         // the picture's edge (the contract's platforms.apple).
@@ -167,14 +161,16 @@ extension ComponentMatrix.Supplement {
     /// A card's title and notes (the pilot's open task card): the title in `heading.small` and the notes, a multiline
     /// field, in a smaller role and the secondary color, on a raised surface.
     static let textFieldCardNotes = ComponentMatrix.Supplement(
-        component: "text-field", id: "card-notes", title: "a card's title and multiline notes",
-        note: "The context of a field is not a contract option. Here, as in the pilot's open task card, the title is "
-            + "set in heading.small and the notes, a multiline field (axis: .vertical), in subheadline.regular and "
-            + "text.secondary, on a raised surface: an inline field takes them; a framed field keeps its own.",
-        keeps: ["size": "m", "lines": "single"],
-        // A card with a title and two lines of notes is taller than a generated cell: at the largest text size two
-        // rows of cards fill a picture, so a sheet is split into one picture per column and per two rows.
-        rowsPerPicture: 2
+        component: "text-field", id: "card-notes", title: "a card's one-line title and its notes",
+        note: "The context of a field is not a contract option. Here, as in the pilot's open task card, the title, a "
+            + "field of one line, is set in heading.small and the notes, a multiline field (lines multiple, axis: "
+            + ".vertical), in subheadline.regular and text.secondary, on a raised surface: an inline field takes "
+            + "them; a framed field keeps its own.",
+        // The sheet's lines are the notes'; the title is always one line.
+        keeps: ["size": "m", "lines": "multiple"],
+        // A card with a title and two lines of notes is taller than a generated cell: at the largest text size one card
+        // fills most of a picture, so a sheet is split into one picture per column and per row.
+        rowsPerPicture: 1
     ) { combination in
         TextFieldCardSample(values: TextFieldMatrixValues(combination))
     }
@@ -234,10 +230,9 @@ private struct TextFieldCardSample: View {
                 .textFieldStyle(variant, size: size)
                 .accessibilityLabel("Notes")
                 .lineLimit(1...4)
-                // A matrix sheet is laid out in the screen's height with no scroll view, and a field with a vertical
-                // axis is the only view in it that can shrink: at the largest text sizes it took the missing height
-                // and cut its second line. It keeps its height.
-                .fixedSize(horizontal: false, vertical: true)
+                // Neither field fixes its own height: a matrix sheet is laid out in the screen's height with no scroll
+                // view, and the style keeps each field's height there (the contract's description), the title's one
+                // line too, which a sheet once squeezed below its text.
                 .textRole(.subheadline.regular)
                 .foregroundStyle(.text.secondary)
         }
@@ -362,8 +357,10 @@ private struct TextFieldMatrixPage: View {
                 }
                 section("multiple lines, size m") {
                     VariantColumns { variant in
+                        // Both fields at every text size: the page scrolls, and the accessibility audit walks it.
                         TextFieldMatrixCell(
-                            TextFieldMatrixValues(variant: variant, size: .m, lines: "multiple", state: nil))
+                            TextFieldMatrixValues(variant: variant, size: .m, lines: "multiple", state: nil),
+                            whole: true)
                     }
                 }
             }

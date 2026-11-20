@@ -4,6 +4,12 @@ import Testing
 
 @testable import WestronUI
 
+#if canImport(AppKit)
+    import AppKit
+#elseif canImport(UIKit)
+    import UIKit
+#endif
+
 /// TextField's style against its contract, spec/components/text-field/text-field.spec.yaml: the tokens it draws for
 /// every variant, size and combination of states, evaluated from the contract's own `cases` as the contract resolves
 /// them, so the code cannot drift from the file; how a size is chosen; the hit area's minimum; and the catalog's hook.
@@ -198,6 +204,49 @@ struct TextFieldStyleTests {
         #expect(TextFieldAxis.of("not a field") == .horizontal)
     }
 
+    /// The axes the westron style resolved for the fields of `view`, hosted in a window: what SwiftUI gave the style's
+    /// `_body(configuration:)`, not a field the test built.
+    @MainActor static func resolvedAxes(_ view: some View) -> [Axis] {
+        let box = ResolvedAxes()
+        show(view.onPreferenceChange(TextFieldResolvedAxes.self) { box.axes = $0 })
+        return box.axes
+    }
+
+    @Test("the style resolves lines from the field SwiftUI hands it: vertical is multiple, anything else single")
+    @MainActor func axisTheStyleResolves() {
+        let notes = TextField("Notes", text: .constant("Milk"), axis: .vertical)
+        #expect(Self.resolvedAxes(notes.textFieldStyle(.framed)) == [.vertical])
+        #expect(Self.resolvedAxes(notes.lineLimit(1...4).padding().textFieldStyle(.framed)) == [.vertical])
+        #expect(
+            Self.resolvedAxes(TextField("Name", text: .constant("Groceries")).textFieldStyle(.framed)) == [.horizontal])
+        #expect(
+            Self.resolvedAxes(TextField("Name", text: .constant(""), axis: .horizontal).textFieldStyle(.inline))
+                == [.horizontal])
+        #expect(
+            Self.resolvedAxes(SecureField("Password", text: .constant("")).textFieldStyle(.framed)) == [.horizontal])
+    }
+
+    // MARK: - Height
+
+    /// The height a field takes when its layout offers it `height` and a width of 300, alone in a window.
+    @MainActor static func height(_ field: some View, offered height: CGFloat?) -> CGFloat {
+        fittingSize(Propose(proposal: ProposedViewSize(width: 300, height: height)) { field }).height
+    }
+
+    @Test(
+        "a field keeps the height its text needs when a layout offers it less, at a large text size",
+        arguments: TextFieldVariant.allCases, [Axis.horizontal, .vertical])
+    @MainActor func keepsItsHeightWhenSqueezed(variant: TextFieldVariant, axis: Axis) {
+        let field = TextField("Notes", text: .constant(axis == .vertical ? "Milk\nApples" : "Groceries"), axis: axis)
+            .textFieldStyle(variant, size: .m)
+            .textRole(.body.regular)
+            .dynamicTypeSize(.accessibility5)
+        let natural = Self.height(field, offered: nil)
+        let squeezed = Self.height(field, offered: 8)
+        #expect(natural > 8)
+        #expect(squeezed >= natural - 0.5, "\(variant) \(axis): \(natural) offered nothing, \(squeezed) offered 8 pt")
+    }
+
     @Test("in the high-contrast themes a framed field draws an outline in border.strong at stroke.thin, in every state")
     func highContrastOutline() {
         for variant in TextFieldVariant.allCases {
@@ -303,5 +352,62 @@ struct TextFieldStyleTests {
         #expect(TextFieldCatalogState(named: "disabled")?.isDisabled == true)
         #expect(TextFieldCatalogState(named: "hover") == nil)
         #expect(EnvironmentValues().forcedTextFieldStates.isEmpty)
+    }
+}
+
+/// What the style reported through `TextFieldResolvedAxes`, written from the preference's callback.
+private final class ResolvedAxes: @unchecked Sendable {
+    var axes: [Axis] = []
+}
+
+/// Offers its one subview `proposal` and takes the size the subview answers with.
+private struct Propose: Layout {
+    let proposal: ProposedViewSize
+
+    func sizeThatFits(proposal _: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        subviews.first?.sizeThatFits(proposal) ?? .zero
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal _: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        subviews.first?.place(at: bounds.origin, proposal: proposal)
+    }
+}
+
+extension TextFieldStyleTests {
+    /// The size a view takes, laid out on its own.
+    @MainActor static func fittingSize(_ view: some View) -> CGSize {
+        #if canImport(AppKit)
+            let host = NSHostingView(rootView: view)
+            host.layoutSubtreeIfNeeded()
+            return host.fittingSize
+        #else
+            return UIHostingController(rootView: view).sizeThatFits(in: CGSize(width: 1000, height: 1000))
+        #endif
+    }
+
+    /// Shows a view in a window and lets it lay out a few times, so that its preferences reach the callbacks.
+    @MainActor static func show(_ view: some View) {
+        #if canImport(AppKit)
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 320, height: 320), styleMask: [.titled], backing: .buffered,
+                defer: false)
+            window.contentView = NSHostingView(rootView: view.frame(width: 320, height: 320, alignment: .topLeading))
+            window.orderFront(nil)
+            defer { window.orderOut(nil) }
+            for _ in 0..<3 {
+                window.contentView?.layoutSubtreeIfNeeded()
+                RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+            }
+        #else
+            let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 320, height: 320))
+            window.rootViewController = UIHostingController(
+                rootView: view.frame(width: 320, height: 320, alignment: .topLeading))
+            window.isHidden = false
+            defer { window.isHidden = true }
+            for _ in 0..<3 {
+                window.layoutIfNeeded()
+                RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+            }
+        #endif
     }
 }
