@@ -44,6 +44,15 @@ Date: 2026-11-14. Status: accepted.
   - `NSView.cacheDisplay` and `CALayer.render(in:)` produce an empty image: SwiftUI draws through the render server;
   - `screencapture` requires the terminal to have screen recording permission;
   - `ImageRenderer` replaces system controls with placeholders.
+
+  2026-11-21 (#92): this holds for the agent's screenshots of an entry, which stay as they are; the snapshot matrix is
+  now drawn in-process (Consequences, the note of 2026-11-21). A spike of 2026-11-20 found what the test of
+  2026-11-14 missed. `cacheDisplay` and `CALayer.render(in:)` do draw a hosting view that sits in a window, but they
+  misdraw, as `ImageRenderer` does: a text field's placeholder, a spinner drawn as a square, a capsule's stroke,
+  shadows, a color one level off. Two paths draw what the screen shows: on iOS, `drawHierarchy(in:afterScreenUpdates:)`
+  of a window in the scene of the catalog app, which hosts a unit-test bundle (without a host app iOS draws nothing);
+  on macOS, Core Animation's own renderer (`CARenderer`) into a Metal texture, for a hosting view in a borderless
+  window that is never ordered in, with its backing scale fixed at 2 whatever the screens'.
 - On iOS the status bar is pinned (`simctl status_bar`, 9:41) so that screenshots do not differ by the time.
 - UI tests on macOS require Automation Mode. It is on for GitHub runners. On your own machine the human turns it on
   once: `sudo automationmodetool enable-automationmode-without-authentication`.
@@ -168,7 +177,8 @@ Date: 2026-11-14. Status: accepted.
   - **No reference images in the repository.** A matrix is generated from the contract and captured on demand
     (`tools/apple/snapshot-matrix.sh ios|macos`); nothing captured is committed. A committed reference would have to
     be taken in exactly one environment, and every other machine would see a diff of the OS version, the scale or a
-    system setting rather than of the component.
+    system setting rather than of the component. 2026-11-21 (#92): superseded; the references are in the
+    repository, made in one environment, the CI runner's (the note of 2026-11-21 below).
   - **A matrix is compared only with a matrix from the same environment:** two local runs (before and after a change,
     on the same Mac and simulator), or two CI artifacts (`main` against the pull request, on the same runner image).
     `tools/apple/snapshot-matrix.sh compare <before> <after>` compares two captures pixel by pixel; its report names
@@ -229,3 +239,53 @@ Date: 2026-11-14. Status: accepted.
   - 2026-11-20: the matrix compares nothing, so it no longer runs with every pull request and push to `main`; it is
     captured on demand, by `.github/workflows/snapshot-matrix.yml` (the note of 2026-11-20 under "Screenshots for the
     agent"). Decided by the owner.
+- 2026-11-21 (#92): the matrix is rendered by unit tests in-process, and every pull request and push to `main`
+  compares it with references in the repository. The UI-test capture took about 4.8 s an image locally and 7.5–15 s on
+  CI (about 2.2 runner-hours for both platforms) and compared nothing. A spike on 2026-11-20 measured the in-process
+  paths (the note of 2026-11-21 under "Screenshots for the agent") locally and on the runner. The owner decided:
+  - **Rendering.** The matrix is drawn by `platforms/apple/Tests/WestronSnapshotTests`, one source compiled twice:
+    on macOS as a package test target under `swift test`, on iOS as the unit-test bundle `CatalogSnapshotTests`, hosted
+    by the catalog app, whose project takes the same folder. Each picture is the catalog's own view for
+    `-WestronMatrixSheet` with the capture's launch arguments, so the theme, the contrast and the text size are applied
+    as in the app; states are forced through the API as before, and `FrozenAnimations` holds a spinner still. The
+    picture is cut to the sheet's content, as the macOS UI test cut it: on iOS from under the status bar's safe area
+    (no status bar or home indicator is drawn in-process, so the rule of 2026-11-19 that ignored the indicator goes),
+    on macOS the window's width; the sheet reports that frame through an environment value the tests set, since they
+    have no accessibility query to find it. A sheet whose cells run past the window fails, as before. The pictures are
+    opaque RGB, the alpha channel only cost space. Locally (an M4 Pro, macOS 26.7.1, the iPhone 17 simulator on iOS
+    26.3.1) the 388 iOS images take 40 s and the 196 macOS images 13 s, about 0.1 and 0.07 s an image; the spike
+    measured 0.85 s and 1.1 s an image on the runner. On the runner `drawHierarchy` sometimes returned nothing for a
+    slow sheet (text fields at `accessibility5`), so a blank picture is drawn again, up to four times with a longer
+    pause each, and then fails by name; every picture's time is logged. The tests run only when `WESTRON_SNAPSHOTS`
+    names a directory, so `swift test` and `tools/apple/check.sh package` skip them.
+  - **Fidelity.** In the same environment the in-process pictures match the UI test's: on iOS, of Checkbox's and
+    Rule's 26 images, 21 are pixel for pixel the same and 5 the same except where the UI test's status bar covered the
+    top of a sheet that overflows the safe area (Checkbox's twelve list colors); on macOS, Text field's 40 images show
+    the same layout, with a color one level off across the canvas (the window server's screenshot) and edges a few
+    levels off. One difference is a defect of the old capture, not of the new: on macOS the UI test's window was key,
+    so the first `SecureField` of the rest row drew a focus ring; in-process it draws at rest, as the contract asks.
+    Seen again on 2026-11-21 in a UI-test capture of `main` (fac36da).
+  - **References** are in `platforms/apple/Snapshots/<platform>/`, PNGs in Git LFS, beside `environment.json`, plain
+    text: the environment they were made in (the Mac's macOS and processor, Xcode, on iOS the simulator's runtime and
+    device, the scale) and the number of images. Environments still differ in every image (locally and on the runner,
+    in text and symbol anti-aliasing), so the references are made on the CI runner only, by the workflow
+    `snapshot-references.yml` (by hand on a branch, or the label `record-snapshots` on a pull request), which commits
+    them to that branch. `tools/apple/snapshot-matrix.sh check <platform>` compares a render with them and reports
+    every change on a page, the reference, the new picture and a diff side by side; in an environment other than the
+    references' it says so and compares nothing (exit 4), and with no references yet it says that (exit 3); `record`
+    writes them. A pixel whose every channel differs by at most one level counts as the same: within one environment
+    runs drift by a level in a few pixels of a shadow or an edge. A full set is about 77 MB (60 iOS, 17 macOS, measured
+    locally): the RGB pictures cut to the sheet are 21 % smaller than RGBA of the whole window, and the encoder's level
+    is not ImageIO's to set (a stronger zlib saved about 15 % more, not worth a dependency). `.lfsconfig` excludes the
+    references from what Git LFS fetches by default: a clone or a SwiftPM checkout of westron does not download them,
+    and without it a SwiftPM-style checkout (a clone of a local mirror) on a machine with Git LFS fails, the objects
+    being nowhere to smudge from; CI pulls them explicitly, from a cache keyed by their object ids.
+  - **CI.** A job `snapshots` in `ci.yml` renders both platforms on every pull request and push to `main` and checks
+    them: a difference fails it, and it uploads the report and the new pictures; with no references, or references
+    from another runner image, it passes with a warning that they need recording. It replaces the job "Catalog
+    screenshots" (the agent's `catalog-screenshot.sh` stays) and `snapshot-matrix.yml` with its legs. The review
+    surface of the second gate (decisions/0005) is the job's report of what changed against the references, and the
+    full page of the render, an artifact of every run. The UI test `SnapshotMatrixTests` and the capture's retry,
+    stall and deadline machinery are removed, and so is `merge`.
+  The details (the tolerance of one level, the cut to the sheet, the exit statuses, the gate on an environment
+  variable) were chosen in the implementation, pending the owner's confirmation.
