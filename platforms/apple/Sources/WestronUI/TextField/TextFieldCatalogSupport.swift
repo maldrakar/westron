@@ -65,7 +65,7 @@ extension TextFieldVariant {
         #else
             switch offered {
             case .framed:
-                let outset = CGFloat(TextFieldMetrics.framedRingGap) + CGFloat(Westron.Dimension.stroke.thick)
+                let outset = CGFloat(Westron.Dimension.stroke.thick)
                 return EdgeInsets(top: outset, leading: outset, bottom: outset, trailing: outset)
             case .inline:
                 let across = CGFloat(TextFieldMetrics.inlineRingOutsetHorizontal)
