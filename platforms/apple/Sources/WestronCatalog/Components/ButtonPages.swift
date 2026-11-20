@@ -329,12 +329,20 @@ struct FlowLayout: Layout {
         return CGSize(width: width, height: height)
     }
 
+    /// A subview's ideal size, or, where that is wider than the layout, its size at the layout's width: a button wider
+    /// than the page wraps its label between words instead of running off the page (Button's contract).
+    private func size(_ subview: LayoutSubview, width: CGFloat) -> CGSize {
+        let ideal = subview.sizeThatFits(.unspecified)
+        guard ideal.width > width, width.isFinite else { return ideal }
+        return subview.sizeThatFits(ProposedViewSize(width: width, height: nil))
+    }
+
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         var y = bounds.minY
         for line in lines(subviews, width: bounds.width) {
             var x = bounds.minX
             for index in line.indices {
-                let size = subviews[index].sizeThatFits(.unspecified)
+                let size = size(subviews[index], width: bounds.width)
                 subviews[index].place(
                     at: CGPoint(x: x, y: y + line.height / 2), anchor: .leading, proposal: ProposedViewSize(size))
                 x += size.width + spacing
@@ -353,7 +361,7 @@ struct FlowLayout: Layout {
         var lines: [Line] = []
         var line = Line()
         for index in subviews.indices {
-            let size = subviews[index].sizeThatFits(.unspecified)
+            let size = size(subviews[index], width: width)
             let needed = line.indices.isEmpty ? size.width : line.width + spacing + size.width
             if !line.indices.isEmpty && needed > width {
                 lines.append(line)
@@ -407,7 +415,9 @@ private struct ButtonStatesPage: View {
             summary: "Hover, pressed and focus are forced for the screenshot; disabled and loading are real. "
                 + "Disabled and loading exclude hover and pressed. The system draws focus, so its row looks at rest."
         ) {
-            SampleRows(items: Self.rows, name: \.name, monospaced: false) { row in
+            // The row's buttons wrap rather than squeeze: with the padding of #85, three "Delete" buttons of size s
+            // and the longest name are wider than a phone, and a squeezed label breaks inside its word.
+            SampleRows(items: Self.rows, name: \.name, monospaced: false, wrapsCells: true) { row in
                 ForEach(ButtonVariant.allCases, id: \.self) { variant in
                     cell(row, variant: variant)
                 }
@@ -416,7 +426,7 @@ private struct ButtonStatesPage: View {
     }
 
     private func cell(_ row: Row, variant: ButtonVariant) -> some View {
-        // Size s: the states' colors do not depend on the size, and three buttons of s fit beside the names on a phone.
+        // Size s: the states' colors do not depend on the size, and it is the narrowest.
         SampleButton(kind: row.kind, variant: variant, size: .s, destructive: destructive)
             .forcingButtonStates(Set(row.states.filter(\.isForced)))
             .disabled(row.states.contains(where: \.isDisabled))
@@ -496,8 +506,9 @@ private struct ButtonBehaviorPage: View {
                     .accessibilityIdentifier(ButtonCatalogID.iconOnly)
                 }
                 FlowLayout(spacing: .space200) {
+                    // Its ideal width, and no wider than the page: at accessibility sizes its label wraps.
                     Toggle("Loading: Publish, Publish now, Export", isOn: $isPublishing)
-                        .fixedSize()
+                        .fixedSize(horizontal: false, vertical: true)
                         .accessibilityIdentifier(ButtonCatalogID.loadingToggle)
                     // A test control: it presses Publish as assistive technology does.
                     Button("Press Publish via accessibility") {
