@@ -556,10 +556,11 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                 .entry("motion"), type: .contrast, reason: "a dash, a single thin stroke",
                 description: "Contrast nearly passed", appearance: .light
             ) { $0 == "–" },
-            // Contrast on the disabled control samples, drawn at opacity.disabled on purpose: WCAG exempts an
-            // inactive control from the contrast minimum (design-language chapter 08). The page announces them as
-            // disabled, and only an element with that value matches; the enabled samples are audited as usual.
-            Suppression(.entry("controls"), type: .contrast, reason: "an inactive control", value: "disabled") {
+            // Contrast on the disabled buttons of the disabled row, drawn whole at opacity.disabled on purpose: WCAG
+            // exempts an inactive control from the contrast minimum (design-language chapter 08). The system
+            // disables them (`.disabled(true)`), so only an element that is not enabled matches; the enabled row and
+            // the fill samples are audited as usual.
+            Suppression(.entry("controls"), type: .contrast, reason: "an inactive control", enabled: false) {
                 ["Save", "Delete", "Cancel"].contains($0 ?? "")
             },
         ]
