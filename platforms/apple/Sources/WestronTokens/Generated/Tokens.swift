@@ -66,6 +66,57 @@ extension Westron.Color {
             lightHighContrast: Westron.RGB(hex: 0xE6E9EF),
             darkHighContrast: Westron.RGB(hex: 0x292E34))
 
+        /// The muted fill of a control filled with it and labelled in text.primary, such as a secondary button, under
+        /// the pointer: background.muted one hover step towards its words (decisions/0012, 0013).
+        ///
+        /// Use for: secondary button under the pointer. Avoid: A fill under colored words, such as a destructive
+        /// secondary button: use background.muted-hover-colored. A row or an unfilled control under the pointer: use
+        /// background.hover.
+        public static let mutedHover = Westron.Color(
+            name: "color.background.muted-hover",
+            light: Westron.RGB(hex: 0xDEE1E7),
+            dark: Westron.RGB(hex: 0x2C3037),
+            lightHighContrast: Westron.RGB(hex: 0xDEE1E7),
+            darkHighContrast: Westron.RGB(hex: 0x2C3037))
+
+        /// The muted fill of a control filled with it and labelled in text.primary, such as a secondary button, while
+        /// it is pressed: background.muted two hover steps towards its words, as far as text.primary still reads on it
+        /// (decisions/0012, 0013).
+        ///
+        /// Use for: pressed secondary button. Avoid: A fill under colored words, such as a destructive secondary
+        /// button: use background.muted-pressed-colored. A pressed row or an unfilled control: use background.pressed.
+        public static let mutedPressed = Westron.Color(
+            name: "color.background.muted-pressed",
+            light: Westron.RGB(hex: 0xD1D4DA),
+            dark: Westron.RGB(hex: 0x363B41),
+            lightHighContrast: Westron.RGB(hex: 0xD1D4DA),
+            darkHighContrast: Westron.RGB(hex: 0x363B41))
+
+        /// The muted fill of a control filled with it and labelled in colored words, such as a destructive secondary
+        /// button, under the pointer: halfway between background.muted and muted-pressed-colored.
+        ///
+        /// Use for: destructive secondary button under the pointer. Avoid: A fill under text.primary: use
+        /// background.muted-hover, which darkens more.
+        public static let mutedHoverColored = Westron.Color(
+            name: "color.background.muted-hover-colored",
+            light: Westron.RGB(hex: 0xE8ECF1),
+            dark: Westron.RGB(hex: 0x262A31),
+            lightHighContrast: Westron.RGB(hex: 0xE8ECF1),
+            darkHighContrast: Westron.RGB(hex: 0x262A31))
+
+        /// The muted fill of a control filled with it and labelled in colored words, such as a destructive secondary
+        /// button, while it is pressed: background.muted moved towards its words as far as every colored word, step 11
+        /// of every ramp, still reads on it, which is about step 5's tone (decisions/0012, 0013).
+        ///
+        /// Use for: pressed destructive secondary button. Avoid: A fill under text.primary: use
+        /// background.muted-pressed, which darkens more.
+        public static let mutedPressedColored = Westron.Color(
+            name: "color.background.muted-pressed-colored",
+            light: Westron.RGB(hex: 0xE5E9EE),
+            dark: Westron.RGB(hex: 0x2A2E35),
+            lightHighContrast: Westron.RGB(hex: 0xE5E9EE),
+            darkHighContrast: Westron.RGB(hex: 0x2A2E35))
+
         /// A selected row or item, tinted with the accent.
         ///
         /// Use for: selected row, selected item. Avoid: Color alone: in high contrast a selected row also shows a check
@@ -134,6 +185,8 @@ extension Westron.Color {
                 ["color.background.muted"],
                 ["color.background.hover"],
                 ["color.background.pressed"],
+                ["color.background.muted-hover"],
+                ["color.background.muted-pressed"],
                 ["color.background.selected"],
                 ["color.background.accent-subtle"],
             ])
@@ -236,7 +289,9 @@ extension Westron.Color {
             darkHighContrast: Westron.RGB(hex: 0x656B72),
             backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
 
-        /// The border of a control that must be seen: a field, a checkbox, a radio ring, a secondary button.
+        /// The border of a control that must be seen: a field, a checkbox, a radio ring, and a secondary button in the
+        /// high-contrast themes, where its muted fill alone does not mark its edge against the ground; the ground is
+        /// what that border is measured on, not the fill inside it.
         public static let strong = Westron.Color(
             name: "color.border.strong",
             light: Westron.RGB(hex: 0x81868D),
@@ -278,7 +333,8 @@ extension Westron.Color {
                 lightHighContrast: Westron.RGB(hex: 0xFFEFED),
                 darkHighContrast: Westron.RGB(hex: 0x2F1B18))
 
-            /// The border of a field or a banner in the status danger.
+            /// The border of a field or a banner in the status danger, and of a destructive secondary button in the
+            /// high-contrast themes.
             public static let border = Westron.Color(
                 name: "color.status.danger.border",
                 light: Westron.RGB(hex: 0xCF665C),
@@ -290,6 +346,9 @@ extension Westron.Color {
                     ["color.background.surface"],
                     ["color.background.sunken"],
                     ["color.status.danger.background"],
+                    ["color.background.muted"],
+                    ["color.background.muted-hover-colored"],
+                    ["color.background.muted-pressed-colored"],
                 ])
 
             /// The icon or dot of the status danger.
@@ -319,6 +378,9 @@ extension Westron.Color {
                     ["color.background.sunken"],
                     ["color.background.hover"],
                     ["color.background.pressed"],
+                    ["color.background.muted"],
+                    ["color.background.muted-hover-colored"],
+                    ["color.background.muted-pressed-colored"],
                     ["color.status.danger.background"],
                 ])
 
@@ -726,6 +788,10 @@ extension Westron.Color {
         background.muted,
         background.hover,
         background.pressed,
+        background.mutedHover,
+        background.mutedPressed,
+        background.mutedHoverColored,
+        background.mutedPressedColored,
         background.selected,
         background.accentSubtle,
         background.accent,
@@ -2620,51 +2686,104 @@ extension Westron.Dimension {
         /// The lengths `size.control.*`.
         public enum control {
             #if os(macOS)
-                /// The height of a control at size s: 24 on macOS, 32 on iOS, iPadOS and watchOS. On touch platforms it
-                /// is below the recommended target, so its hit area stays the target's size (chapter 08).
+                /// The height of a control at size s: 24 on macOS, 28 on iOS and iPadOS, 32 on watchOS. It is below the
+                /// recommended target on every platform, so its hit area stays size.target.minimum, except where a
+                /// contract records otherwise (chapter 08).
                 ///
                 /// Use for: small button, small field, control in a toolbar or a table row. Avoid: The default size:
                 /// use size.control.m. A row's height: rows have heights of their own.
                 public static let s = Westron.Dimension(name: "size.control.s", value: 24)
-            #else
-                /// The height of a control at size s: 24 on macOS, 32 on iOS, iPadOS and watchOS. On touch platforms it
-                /// is below the recommended target, so its hit area stays the target's size (chapter 08).
+            #elseif os(watchOS)
+                /// The height of a control at size s: 24 on macOS, 28 on iOS and iPadOS, 32 on watchOS. It is below the
+                /// recommended target on every platform, so its hit area stays size.target.minimum, except where a
+                /// contract records otherwise (chapter 08).
                 ///
                 /// Use for: small button, small field, control in a toolbar or a table row. Avoid: The default size:
                 /// use size.control.m. A row's height: rows have heights of their own.
                 public static let s = Westron.Dimension(name: "size.control.s", value: 32)
+            #else
+                /// The height of a control at size s: 24 on macOS, 28 on iOS and iPadOS, 32 on watchOS. It is below the
+                /// recommended target on every platform, so its hit area stays size.target.minimum, except where a
+                /// contract records otherwise (chapter 08).
+                ///
+                /// Use for: small button, small field, control in a toolbar or a table row. Avoid: The default size:
+                /// use size.control.m. A row's height: rows have heights of their own.
+                public static let s = Westron.Dimension(name: "size.control.s", value: 28)
             #endif
 
             #if os(macOS)
                 /// The height of a control at the default size m: a button, a field, a segmented control. 32 on macOS,
-                /// westron's control (decisions/0013); 44 on iOS, iPadOS and watchOS, the touch target (chapter 08).
+                /// westron's control (decisions/0013); 36 on iOS and iPadOS, beside the system's own 34
+                /// (decisions/0013, revision of 2026-11-20); 44 on watchOS. A hit area takes size.target.minimum, not
+                /// this height.
                 ///
                 /// Use for: button, field, segmented control. Avoid: A row's height: rows have heights of their own. A
-                /// fixed height where text can grow: the height is a minimum.
+                /// fixed height where text can grow: the height is a minimum. A hit area: use size.target.minimum.
                 public static let m = Westron.Dimension(name: "size.control.m", value: 32)
+            #elseif os(watchOS)
+                /// The height of a control at the default size m: a button, a field, a segmented control. 32 on macOS,
+                /// westron's control (decisions/0013); 36 on iOS and iPadOS, beside the system's own 34
+                /// (decisions/0013, revision of 2026-11-20); 44 on watchOS. A hit area takes size.target.minimum, not
+                /// this height.
+                ///
+                /// Use for: button, field, segmented control. Avoid: A row's height: rows have heights of their own. A
+                /// fixed height where text can grow: the height is a minimum. A hit area: use size.target.minimum.
+                public static let m = Westron.Dimension(name: "size.control.m", value: 44)
             #else
                 /// The height of a control at the default size m: a button, a field, a segmented control. 32 on macOS,
-                /// westron's control (decisions/0013); 44 on iOS, iPadOS and watchOS, the touch target (chapter 08).
+                /// westron's control (decisions/0013); 36 on iOS and iPadOS, beside the system's own 34
+                /// (decisions/0013, revision of 2026-11-20); 44 on watchOS. A hit area takes size.target.minimum, not
+                /// this height.
                 ///
                 /// Use for: button, field, segmented control. Avoid: A row's height: rows have heights of their own. A
-                /// fixed height where text can grow: the height is a minimum.
-                public static let m = Westron.Dimension(name: "size.control.m", value: 44)
+                /// fixed height where text can grow: the height is a minimum. A hit area: use size.target.minimum.
+                public static let m = Westron.Dimension(name: "size.control.m", value: 36)
             #endif
 
             #if os(macOS)
                 /// The height of a control at size l: the one prominent action of a form, a sheet or an empty state. 40
-                /// on macOS, 52 on iOS, iPadOS and watchOS.
+                /// on macOS, 50 on iOS and iPadOS, 52 on watchOS.
                 ///
                 /// Use for: prominent button, call to action. Avoid: Every control on a screen: the large size marks
                 /// the one action that leads.
                 public static let l = Westron.Dimension(name: "size.control.l", value: 40)
-            #else
+            #elseif os(watchOS)
                 /// The height of a control at size l: the one prominent action of a form, a sheet or an empty state. 40
-                /// on macOS, 52 on iOS, iPadOS and watchOS.
+                /// on macOS, 50 on iOS and iPadOS, 52 on watchOS.
                 ///
                 /// Use for: prominent button, call to action. Avoid: Every control on a screen: the large size marks
                 /// the one action that leads.
                 public static let l = Westron.Dimension(name: "size.control.l", value: 52)
+            #else
+                /// The height of a control at size l: the one prominent action of a form, a sheet or an empty state. 40
+                /// on macOS, 50 on iOS and iPadOS, 52 on watchOS.
+                ///
+                /// Use for: prominent button, call to action. Avoid: Every control on a screen: the large size marks
+                /// the one action that leads.
+                public static let l = Westron.Dimension(name: "size.control.l", value: 50)
+            #endif
+        }
+
+        /// The lengths `size.target.*`.
+        public enum target {
+            #if os(macOS)
+                /// The least side of the area that takes a touch or a click on a control, whatever the control draws:
+                /// 44 on iOS, iPadOS and watchOS, the recommended touch target; 28 on macOS, the recommended target for
+                /// a pointer (chapter 08). A contract may record a control whose hit area is smaller, as Button's size
+                /// s on macOS.
+                ///
+                /// Use for: hit area of a control, hit area of a check. Avoid: A drawn size: use size.control.*. A
+                /// row's height: rows have heights of their own.
+                public static let minimum = Westron.Dimension(name: "size.target.minimum", value: 28)
+            #else
+                /// The least side of the area that takes a touch or a click on a control, whatever the control draws:
+                /// 44 on iOS, iPadOS and watchOS, the recommended touch target; 28 on macOS, the recommended target for
+                /// a pointer (chapter 08). A contract may record a control whose hit area is smaller, as Button's size
+                /// s on macOS.
+                ///
+                /// Use for: hit area of a control, hit area of a check. Avoid: A drawn size: use size.control.*. A
+                /// row's height: rows have heights of their own.
+                public static let minimum = Westron.Dimension(name: "size.target.minimum", value: 44)
             #endif
         }
     }
@@ -2709,6 +2828,7 @@ extension Westron.Dimension {
         size.control.s,
         size.control.m,
         size.control.l,
+        size.target.minimum,
     ]
 }
 

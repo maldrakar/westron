@@ -34,6 +34,12 @@ private struct ControlsPage: View {
                 ("status.danger.fill", .status.danger.fill), ("fill-hover", .status.danger.fillHover),
                 ("fill-pressed", .status.danger.fillPressed),
             ]),
+        FillStates(
+            name: "muted", word: "Cancel", label: .text.primary,
+            states: [
+                ("background.muted", .background.muted), ("muted-hover", .background.mutedHover),
+                ("muted-pressed", .background.mutedPressed),
+            ]),
     ]
 
     private static let heights: [Westron.Dimension] = [.size.control.s, .size.control.m, .size.control.l]
@@ -53,8 +59,8 @@ private struct ControlsPage: View {
         TokenPage(
             title: "Controls",
             summary: "size.control.* on \(Self.platform), the platform this build is for: the input decides the "
-                + "height. Then the fills of a control at rest, under the pointer and pressed, and opacity.disabled, "
-                + "which dims a whole control."
+                + "height; size.target.minimum is the least hit area, whatever the height. Then the fills of a control "
+                + "at rest, under the pointer and pressed, and opacity.disabled, which dims a whole control."
         ) {
             section("Height · size.control.* on \(Self.platform)") {
                 Grid(alignment: .leading, horizontalSpacing: .space150, verticalSpacing: .space100) {
@@ -66,12 +72,20 @@ private struct ControlsPage: View {
                             sample("Save", fill: .background.accent, label: .text.onAccent, height: CGFloat(height))
                         }
                     }
+                    GridRow {
+                        TokenName(Westron.Dimension.size.target.minimum.name)
+                        TokenDetail(Points(Westron.Dimension.size.target.minimum.value).text)
+                            .gridColumnAlignment(.trailing)
+                        TokenDetail("the least hit area")
+                    }
                 }
             }
             section("Fills · at rest, hover, pressed") {
-                Grid(alignment: .leading, horizontalSpacing: .space100, verticalSpacing: .space100) {
+                // A row of samples wraps rather than squeezes its labels: three columns of token names are wider than
+                // a phone (the accessibility audit's text clipped check).
+                VStack(alignment: .leading, spacing: .space100) {
                     ForEach(Self.fills, id: \.name) { fill in
-                        GridRow {
+                        FlowLayout(spacing: .space100) {
                             ForEach(fill.states, id: \.name) { state in
                                 VStack(alignment: .leading, spacing: .space25) {
                                     sample(fill.word, fill: state.color, label: fill.label)
@@ -89,10 +103,7 @@ private struct ControlsPage: View {
                             Group {
                                 sample("Save", fill: .background.accent, label: .text.onAccent)
                                 sample("Delete", fill: .status.danger.fill, label: .status.danger.onFill)
-                                sample("Cancel", fill: .background.surface, label: .text.primary)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: .radius.control)
-                                            .strokeBorder(.border.strong, lineWidth: .stroke.thin))
+                                sample("Cancel", fill: .background.muted, label: .text.primary)
                             }
                             .modifier(DisabledSample(disabled: disabled))
                             // The row's caption is not a control: it keeps its contrast.
@@ -104,8 +115,8 @@ private struct ControlsPage: View {
         }
     }
 
-    /// A control's face at a height token. The height is its least: the face grows with its text at a large Dynamic
-    /// Type size, as a control does, so the word is never clipped.
+    /// A button's face at a height token, a capsule (decisions/0013, revision of 2026-11-20). The height is its least: the
+    /// face grows with its text at a large Dynamic Type size, as a control does, so the word is never clipped.
     private func sample(
         _ word: String, fill: Westron.Color, label: Westron.Color, height: CGFloat = .size.control.m
     ) -> some View {
@@ -114,7 +125,7 @@ private struct ControlsPage: View {
             .foregroundStyle(label)
             .padding(.horizontal, .space200)
             .frame(minHeight: height)
-            .background(fill, in: RoundedRectangle(cornerRadius: .radius.control))
+            .background(fill, in: Capsule())
     }
 
     private func section(_ title: String, @ViewBuilder content: () -> some View) -> some View {

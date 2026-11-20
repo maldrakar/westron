@@ -5,7 +5,7 @@
     "control": {
       "s": {
         "$value": {"value": 32, "unit": "px"},
-        "$description": "The height of a control at size s: 24 on macOS, 32 on iOS, iPadOS and watchOS. On touch platforms it is below the recommended target, so its hit area stays the target's size (chapter 08).",
+        "$description": "The height of a control at size s: 24 on macOS, 28 on iOS and iPadOS, 32 on watchOS. It is below the recommended target on every platform, so its hit area stays size.target.minimum, except where a contract records otherwise (chapter 08).",
         "$extensions": {
           "dev.westron.usage": {
             "use": ["small button", "small field", "control in a toolbar or a table row"],
@@ -15,21 +15,33 @@
       },
       "m": {
         "$value": {"value": 44, "unit": "px"},
-        "$description": "The height of a control at the default size m: a button, a field, a segmented control. 32 on macOS, westron's control (decisions/0013); 44 on iOS, iPadOS and watchOS, the touch target (chapter 08).",
+        "$description": "The height of a control at the default size m: a button, a field, a segmented control. 32 on macOS, westron's control (decisions/0013); 36 on iOS and iPadOS, beside the system's own 34 (decisions/0013, revision of 2026-11-20); 44 on watchOS. A hit area takes size.target.minimum, not this height.",
         "$extensions": {
           "dev.westron.usage": {
             "use": ["button", "field", "segmented control"],
-            "avoid": "A row's height: rows have heights of their own. A fixed height where text can grow: the height is a minimum."
+            "avoid": "A row's height: rows have heights of their own. A fixed height where text can grow: the height is a minimum. A hit area: use size.target.minimum."
           }
         }
       },
       "l": {
         "$value": {"value": 52, "unit": "px"},
-        "$description": "The height of a control at size l: the one prominent action of a form, a sheet or an empty state. 40 on macOS, 52 on iOS, iPadOS and watchOS.",
+        "$description": "The height of a control at size l: the one prominent action of a form, a sheet or an empty state. 40 on macOS, 50 on iOS and iPadOS, 52 on watchOS.",
         "$extensions": {
           "dev.westron.usage": {
             "use": ["prominent button", "call to action"],
             "avoid": "Every control on a screen: the large size marks the one action that leads."
+          }
+        }
+      }
+    },
+    "target": {
+      "minimum": {
+        "$value": {"value": 44, "unit": "px"},
+        "$description": "The least side of the area that takes a touch or a click on a control, whatever the control draws: 44 on iOS, iPadOS and watchOS, the recommended touch target; 28 on macOS, the recommended target for a pointer (chapter 08). A contract may record a control whose hit area is smaller, as Button's size s on macOS.",
+        "$extensions": {
+          "dev.westron.usage": {
+            "use": ["hit area of a control", "hit area of a check"],
+            "avoid": "A drawn size: use size.control.*. A row's height: rows have heights of their own."
           }
         }
       }

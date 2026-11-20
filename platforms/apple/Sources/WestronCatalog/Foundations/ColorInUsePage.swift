@@ -66,7 +66,11 @@ private struct TasksSample: View {
                             .foregroundStyle(.text.secondary)
                     }
                     Spacer(minLength: .space100)
-                    FilledButton(title: "Task", icon: .plus, fill: .background.accent, label: .text.onAccent)
+                    Button {
+                    } label: {
+                        Label("Task", icon: .plus)
+                    }
+                    .buttonStyle(.primary, size: .s)
                 }
                 // text.placeholder in a field ringed in border.strong.
                 Label("Find a task or a tag", icon: .magnifier)
@@ -261,19 +265,17 @@ private struct NoticesSample: View {
             Notice(status: .warning, title: "Storage almost full", detail: "92% of the attachment space is used.")
             Notice(status: .danger, title: "Report not sent", detail: "The webhook returned 404. Check its address.")
             HStack(spacing: .space100) {
-                FilledButton(title: "Save", icon: nil, fill: .background.accent, label: .text.onAccent)
-                // A secondary button: text.primary on background.surface, ringed in border.strong.
-                Text("Cancel")
-                    .textRole(.footnote.strong)
-                    .foregroundStyle(.text.primary)
-                    .padding(.horizontal, .space150)
-                    .frame(minHeight: Metrics.control)
-                    .background(.background.surface, in: RoundedRectangle(cornerRadius: .radius.control))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: .radius.control)
-                            .strokeBorder(.border.strong, lineWidth: .stroke.thin)
-                    }
-                FilledButton(title: "Delete", icon: .trash, fill: .status.danger.fill, label: .status.danger.onFill)
+                // westron's own buttons: the accent, a secondary one, text.primary on background.muted (outlined
+                // in border.strong in high contrast), and a destructive one.
+                Button("Save") {}
+                    .buttonStyle(.primary, size: .s)
+                Button("Cancel") {}
+                    .buttonStyle(.secondary, size: .s)
+                Button(role: .destructive) {
+                } label: {
+                    Label("Delete", icon: .trash)
+                }
+                .buttonStyle(.primary, size: .s)
                 Text("Webhook help")
                     .textRole(.footnote.strong)
                     .underline()
@@ -305,26 +307,6 @@ private struct Notice: View {
         }
         .padding(.space100)
         .background(status.background, in: RoundedRectangle(cornerRadius: .radius.control))
-    }
-}
-
-/// A button with a solid fill and its label.
-private struct FilledButton: View {
-    let title: String
-    let icon: Westron.Icon?
-    let fill: Westron.Color
-    let label: Westron.Color
-
-    var body: some View {
-        HStack(spacing: .space50) {
-            if let icon { Icon(icon) }
-            Text(title)
-        }
-        .textRole(.footnote.strong)
-        .foregroundStyle(label)
-        .padding(.horizontal, .space150)
-        .frame(minHeight: Metrics.control)
-        .background(fill, in: RoundedRectangle(cornerRadius: .radius.control))
     }
 }
 

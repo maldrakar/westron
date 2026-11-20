@@ -45,6 +45,46 @@
       },
       "hover": {"$value": "{color.neutral.3}", "$description": "A row or a control under the pointer."},
       "pressed": {"$value": "{color.neutral.5}", "$description": "A row or a control while it is pressed."},
+      "muted-hover": {
+        "$value": "{color.neutral.muted-hover}",
+        "$description": "The muted fill of a control filled with it and labelled in text.primary, such as a secondary button, under the pointer: background.muted one hover step towards its words (decisions/0012, 0013).",
+        "$extensions": {
+          "dev.westron.usage": {
+            "use": ["secondary button under the pointer"],
+            "avoid": "A fill under colored words, such as a destructive secondary button: use background.muted-hover-colored. A row or an unfilled control under the pointer: use background.hover."
+          }
+        }
+      },
+      "muted-pressed": {
+        "$value": "{color.neutral.muted-pressed}",
+        "$description": "The muted fill of a control filled with it and labelled in text.primary, such as a secondary button, while it is pressed: background.muted two hover steps towards its words, as far as text.primary still reads on it (decisions/0012, 0013).",
+        "$extensions": {
+          "dev.westron.usage": {
+            "use": ["pressed secondary button"],
+            "avoid": "A fill under colored words, such as a destructive secondary button: use background.muted-pressed-colored. A pressed row or an unfilled control: use background.pressed."
+          }
+        }
+      },
+      "muted-hover-colored": {
+        "$value": "{color.neutral.muted-hover-colored}",
+        "$description": "The muted fill of a control filled with it and labelled in colored words, such as a destructive secondary button, under the pointer: halfway between background.muted and muted-pressed-colored.",
+        "$extensions": {
+          "dev.westron.usage": {
+            "use": ["destructive secondary button under the pointer"],
+            "avoid": "A fill under text.primary: use background.muted-hover, which darkens more."
+          }
+        }
+      },
+      "muted-pressed-colored": {
+        "$value": "{color.neutral.muted-pressed-colored}",
+        "$description": "The muted fill of a control filled with it and labelled in colored words, such as a destructive secondary button, while it is pressed: background.muted moved towards its words as far as every colored word, step 11 of every ramp, still reads on it, which is about step 5's tone (decisions/0012, 0013).",
+        "$extensions": {
+          "dev.westron.usage": {
+            "use": ["pressed destructive secondary button"],
+            "avoid": "A fill under text.primary: use background.muted-pressed, which darkens more."
+          }
+        }
+      },
       "selected": {
         "$value": "{color.blue.5}",
         "$description": "A selected row or item, tinted with the accent.",
@@ -99,6 +139,8 @@
                 "color.background.muted",
                 "color.background.hover",
                 "color.background.pressed",
+                "color.background.muted-hover",
+                "color.background.muted-pressed",
                 "color.background.selected",
                 "color.background.accent-subtle"
               ]
@@ -220,7 +262,7 @@
       },
       "strong": {
         "$value": "{color.neutral.8}",
-        "$description": "The border of a control that must be seen: a field, a checkbox, a radio ring, a secondary button.",
+        "$description": "The border of a control that must be seen: a field, a checkbox, a radio ring, and a secondary button in the high-contrast themes, where its muted fill alone does not mark its edge against the ground; the ground is what that border is measured on, not the fill inside it.",
         "$extensions": {
           "dev.westron.contrast": [
             {
@@ -263,7 +305,7 @@
         },
         "border": {
           "$value": "{color.red.8}",
-          "$description": "The border of a field or a banner in the status danger.",
+          "$description": "The border of a field or a banner in the status danger, and of a destructive secondary button in the high-contrast themes.",
           "$extensions": {
             "dev.westron.contrast": [
               {
@@ -272,7 +314,10 @@
                   "color.background.canvas",
                   "color.background.surface",
                   "color.background.sunken",
-                  "color.status.danger.background"
+                  "color.status.danger.background",
+                  "color.background.muted",
+                  "color.background.muted-hover-colored",
+                  "color.background.muted-pressed-colored"
                 ]
               }
             ]
@@ -308,6 +353,9 @@
                   "color.background.sunken",
                   "color.background.hover",
                   "color.background.pressed",
+                  "color.background.muted",
+                  "color.background.muted-hover-colored",
+                  "color.background.muted-pressed-colored",
                   "color.status.danger.background"
                 ]
               }

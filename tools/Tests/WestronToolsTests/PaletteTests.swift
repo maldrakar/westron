@@ -86,7 +86,47 @@ struct PaletteTests {
                 let series = colors["series.\(index)"]!
                 #expect(grounds.allSatisfy { ratio(series, $0) >= 3 }, "\(theme) series.\(index)")
             }
+            // The muted fill under the pointer and pressed moves away from the canvas, step by step: under primary
+            // words further than under colored ones. Primary words read on the first pair, every ramp's words on
+            // the second.
+            let target = highContrast ? 7.0 : 4.5
+            let primary = ["neutral.4", "neutral.muted-hover", "neutral.muted-pressed"].map { colors[$0]! }
+            let colored = ["neutral.4", "neutral.muted-hover-colored", "neutral.muted-pressed-colored"].map {
+                colors[$0]!
+            }
+            for (name, fills) in [("muted", primary), ("muted colored", colored)] {
+                let fromCanvas = fills.map { ratio($0, grounds[0]) }
+                #expect(
+                    fromCanvas[1] > fromCanvas[0] && fromCanvas[2] > fromCanvas[1], "\(theme) \(name): \(fromCanvas)")
+            }
+            #expect(ratio(primary[2], grounds[0]) > ratio(colored[2], grounds[0]), "\(theme): pressed fills")
+            #expect(primary.map { ratio(colors["neutral.12"]!, $0) }.min()! >= target, "\(theme) neutral.12 on muted")
+            for ramp in ramps {
+                for word in ["11", "12"] {
+                    let least = colored.map { ratio(colors["\(ramp).\(word)"]!, $0) }.min()!
+                    #expect(least >= target, "\(theme) \(ramp).\(word) on the colored muted fills: \(least)")
+                }
+            }
         }
+    }
+
+    @Test("the muted fill's states stop where a word would miss, at most two hover steps from step 4")
+    func mutedFillStates() {
+        let gray = { (lightness: Double) in PaletteSolver.color(lightness, 0, 0) }
+        // A dark word with room to spare: the pressed fill moves the whole two hover steps, the hover fill half.
+        let free = PaletteSolver.mutedFillStates(
+            from: 0.95, chroma: 0, hue: 0, direction: -1, words: [gray(0.2)], text: 4.5)
+        #expect(free.pressed == gray(0.87))
+        #expect(free.hover == gray(0.91))
+        // A word exactly at its target on step 4: the fill cannot darken at all.
+        let stuck = PaletteSolver.mutedFillStates(
+            from: 0.95, chroma: 0, hue: 0, direction: -1, words: [gray(0.5)], text: ratio(gray(0.5), gray(0.95)))
+        #expect(stuck.pressed == gray(0.95) && stuck.hover == gray(0.95))
+        // In between, the word decides how far the fill moves, short of two hover steps.
+        let capped = PaletteSolver.mutedFillStates(
+            from: 0.95, chroma: 0, hue: 0, direction: -1, words: [gray(0.5)], text: ratio(gray(0.5), gray(0.91)))
+        #expect(ratio(gray(0.5), capped.pressed) >= ratio(gray(0.5), gray(0.91)))
+        #expect(capped.pressed != gray(0.95) && capped.pressed != gray(0.87))
     }
 
     @Test("a high-contrast theme keeps its canvas and steps 1–5, and its file lists only what differs")

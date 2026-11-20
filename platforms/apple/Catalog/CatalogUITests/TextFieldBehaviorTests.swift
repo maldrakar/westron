@@ -28,7 +28,7 @@ final class TextFieldBehaviorTests: XCTestCase {
         private let drawnHeight: CGFloat = 24
         private let target: CGFloat = 28
     #else
-        private let drawnHeight: CGFloat = 32
+        private let drawnHeight: CGFloat = 28
         private let target: CGFloat = 44
     #endif
     private let padding: CGFloat = 8
@@ -130,7 +130,7 @@ final class TextFieldBehaviorTests: XCTestCase {
     @MainActor
     func testTheSmallFieldTakesTheTargetAroundWhatItDraws() {
         let drawn = drawnSmallField
-        // How far the target reaches past the drawn edge: 6 pt on iOS, 2 pt on macOS.
+        // How far the target reaches past the drawn edge: 8 pt on iOS, 2 pt on macOS.
         let reach = (target - drawnHeight) / 2
         let x = drawn.midX
         #if os(macOS)
@@ -142,12 +142,33 @@ final class TextFieldBehaviorTests: XCTestCase {
             XCTAssertEqual(
                 press(at: CGPoint(x: x, y: drawn.minY - reach - 3)), "Focused: none", "past the target above")
         #else
-            // At the edge of the 44 pt target, 6 pt past the drawn edge, above and below; the touch tolerance gives
+            // At the edge of the 44 pt target, 8 pt past the drawn edge, above and below; the touch tolerance gives
             // up well before 24 pt. A one-off probe of #30 found it reaching 16 pt and not 18 pt.
             XCTAssertEqual(press(at: CGPoint(x: x, y: drawn.minY - reach)), "Focused: small", "the target's top edge")
             XCTAssertEqual(
                 press(at: CGPoint(x: x, y: drawn.maxY + reach)), "Focused: small", "the target's bottom edge")
             XCTAssertEqual(press(at: CGPoint(x: x, y: drawn.minY - 24)), "Focused: none", "24 pt above the field")
+        #endif
+    }
+
+    /// Size m is drawn 36 pt tall on iOS (#85), below the 44 pt target: a tap 4 pt past its drawn edge, above and
+    /// below, at the target's edge, focuses the field, as at size s. The secure field is the page's framed field at m.
+    /// macOS draws m at 32 pt, above its target of 28.
+    @MainActor
+    func testTheMediumFieldTakesTheTargetAroundWhatItDraws() throws {
+        #if os(macOS)
+            throw XCTSkip("macOS draws size m above its target")
+        #else
+            let drawnHeight: CGFloat = 36
+            let frame = field(ID.secure).frame
+            let reach = (target - drawnHeight) / 2
+            XCTAssertEqual(reach, 4, accuracy: 0.01)
+            let top = frame.midY - drawnHeight / 2
+            let bottom = frame.midY + drawnHeight / 2
+            XCTAssertEqual(
+                press(at: CGPoint(x: frame.midX, y: top - reach)), "Focused: secure", "the target's top edge")
+            XCTAssertEqual(
+                press(at: CGPoint(x: frame.midX, y: bottom + reach)), "Focused: secure", "the target's bottom edge")
         #endif
     }
 
@@ -164,8 +185,11 @@ final class TextFieldBehaviorTests: XCTestCase {
     func testTheFieldKeepsItsOwnTouches() {
         #if os(iOS)
             UIPasteboard.general.string = "pasted"
-            // Taking the focus away dismisses a menu and a selection.
+            // Taking the focus away dismisses a menu and a selection. A tap on the page's title first closes a menu
+            // that covers the Clear focus button: with the iOS control heights of #85 the secure field's AutoFill
+            // menu opens over it, and the tap opened its submenu instead.
             func clearFocus() {
+                app.staticTexts["TextField · live"].tap()
                 app.buttons[ID.clearFocus].tap()
                 _ = app.menuItems.firstMatch.waitForNonExistence(timeout: 5)
             }

@@ -136,7 +136,8 @@ values in #56, and the Apple generator got the mechanism that "Density and platf
 - **Control heights by platform.** `platform/<platform>.tokens.json` holds `size.control.s`, `m` and `l`: 24, 32 and
   40 on macOS, which a pointer drives; 32, 44 and 52 on iOS, iPadOS and watchOS, which touch drives. The owner chose
   the values in the Button interview. The three files name the same tokens with the same descriptions; only the
-  values differ.
+  values differ. On 2026-11-20 iOS and iPadOS took 28, 36 and 50, and `size.target.minimum` joined them
+  (decisions/0013).
 - **`compact` stays empty.** The platform files supply only the regular heights, so both densities take them. When
   the dense components (#33) give `compact` values, the platform files supply both columns and each density context
   points `size.control.<size>` at its own, so no token is set by two modifiers and no name a contract binds changes.

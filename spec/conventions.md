@@ -55,7 +55,7 @@ decisions/0003 rejected.
 | **Slots** | System control: the control's own `@ViewBuilder` label. The contract's `label` and `icon` are the title and the icon of a `Label` inside it: `Button { save() } label: { Label("Save", icon: .check) }`. Own component: a `@ViewBuilder` closure per slot, named after the slot, plus convenience initializers that take text and a `Westron.Icon`, as SwiftUI's `Label` does | The element's content; `<slot>` and `<slot name="icon">` in a custom element | Child widgets: `adw::ButtonContent` for an icon and a label; an own component exposes a child property per slot | `@Composable` lambda parameters: `content`, `icon: (@Composable () -> Unit)? = null` |
 | **Extension of a system view** (`extension-on-system-control`) | The base takes no style (SwiftUI has no `textStyle`), so westron adds a modifier in `extension View`, named after what it sets, and the same on the base where the base's own modifiers return it: `.textRole(.heading.large)` on any view, and `Text.textRole(_:) -> Text`. No westron type and no style. The base is one of `SystemStyles.withoutStyle`; a base with a style modifier takes a style instead, and `spec check` reports the other strategy (below) | The native element the product chooses, with westron's class | The stock widget with a style class (`GtkLabel`): in GTK terms a style on the system control, so the strategy there is `style-on-system-control` | A `TextStyle` from `WestronTheme` passed to the Material3 composable (`Text(style = …)`) |
 | **Constraints between options** | The contract states them (`when` / `require` / `severity`) and the validator checks the contract (#18). The catalog and the snapshot matrix (#24) leave out combinations a constraint forbids. What code does with a forbidden combination is Q3 | As SwiftUI: checked in the contract; runtime behavior with Q3 | As SwiftUI | As SwiftUI |
-| **Token bindings** | Written by hand in the style's or the component's body (decisions/0001), through WestronUI's accessors: `.background(.background.accent, in: …)`, `.radius.control`, `.textRole(.body.strong)`, `.animation(.press, value: …)`. No raw values: the raw-values lint and the `spec-reviewer` subagent check them (decisions/0005) | CSS custom properties generated from the token paths (#39), read with `var(…)` in westron's CSS | libadwaita's variables (`--accent-bg-color`, …) and westron's `style.css` variables, both generated; Rust constants for values outside CSS | `WestronTheme` values through `CompositionLocal`, and a Material `ColorScheme` mapped from the tokens (chapter 09) |
+| **Token bindings** | Written by hand in the style's or the component's body (decisions/0001), through WestronUI's accessors: `.background(.background.accent, in: …)`, `.radius.control`, `.textRole(.body.strong)`, `.animation(.press, value: …)`. A part's `shape: capsule` is SwiftUI's `Capsule()`, never a large radius (design-language/04). No raw values: the raw-values lint and the `spec-reviewer` subagent check them (decisions/0005) | CSS custom properties generated from the token paths (#39), read with `var(…)` in westron's CSS; `shape: capsule` is a `border-radius` of half the height or more | libadwaita's variables (`--accent-bg-color`, …) and westron's `style.css` variables, both generated; Rust constants for values outside CSS | `WestronTheme` values through `CompositionLocal`, and a Material `ColorScheme` mapped from the tokens (chapter 09) |
 | **Accessibility: role** | System control: it keeps its own role and traits (chapter 08). Own component: `.accessibilityElement(children:)` and `.accessibilityAddTraits` (`.isButton`, `.isHeader`, `.isSelected`, `.isToggle`). Role `none`: nothing on a container, whose children stay as they are (Surface); `.accessibilityHidden(true)` on a component with no content (Rule) | The native element's implicit role; a custom element sets it through `ElementInternals.role`. Role `none`: `role="none"` on a container, `aria-hidden="true"` on a component with no content | The stock widget's role; an own widget sets `gtk::AccessibleRole` on its class; how role `none` maps is decided in phase 7 | The Material composable's semantics; an own component sets `Modifier.semantics { role = … }`; role `none` adds no semantics of its own, and how a component with no content is hidden is decided in phase 8 |
 | **Accessibility: intents** | `.accessibilityLabel`, `.accessibilityValue`, `.accessibilityAction(named:)`, `.accessibilityAdjustableAction`, `.accessibilityAction(.escape)` for dismiss | ARIA states and properties, and events | `update_property` and `update_state` (`gtk::AccessibleProperty`, `gtk::AccessibleState`); `GtkAccessible` documents no custom accessible actions, so how a named action reaches Orca is decided in phase 7 | `semantics { stateDescription, customActions, onClick(label = …) }` |
 | **Accessibility: a label that is not drawn** (`hiddenLabel`) | An initializer of the base control that takes no label view and requires the name: `Toggle(isOn: $done, accessibilityLabel: title)`, with a `StringProtocol` twin; its label is an `EmptyView` carrying the name, so nothing is drawn or laid out on any OS. Not `.labelsHidden()` alone, which a custom style sees only from iOS 18, macOS 15 and watchOS 11 (below, "A label that is not drawn") | `aria-label` on the native element, with no `<label>` (#40) | The accessible property `gtk::AccessibleProperty::Label` on the stock widget, with no child label (phase 7) | `Modifier.semantics { contentDescription = … }` on the composable, with no label content (phase 8) |
@@ -210,7 +210,7 @@ private struct ButtonBody: View {
     let configuration: ButtonStyleConfiguration
     let variant: ButtonVariant
     let explicitSize: ButtonSize?
-    let iconOnly: Bool  // the style hides the title and draws a square; VoiceOver still reads the title
+    let iconOnly: Bool  // the style hides the title and draws a circle; VoiceOver still reads the title
 
     @Environment(\.controlSize) private var controlSize  // the size when the call names none
     @Environment(\.isEnabled) private var isEnabled  // disabled: set by .disabled(_:)
@@ -226,14 +226,14 @@ private struct ButtonBody: View {
 
     var body: some View {
         // With iconOnly, westron's label style hides the title, which stays the accessible label, and the frame is
-        // a square of the height.
+        // a circle of the height.
         configuration.label
             .textRole(.body.strong)
             .foregroundStyle(.text.onAccent)
             .padding(.horizontal, .space200)
             .background(
                 isTinted ? .background.accentHover : .background.accent,
-                in: RoundedRectangle(cornerRadius: .radius.control, style: .continuous)
+                in: Capsule()
             )
             .overlay { if isLoading { ProgressView() } }
             .animation(.press, value: configuration.isPressed)
@@ -316,11 +316,11 @@ Button { save() } label: {
 
 The style lays the slots out, through a `LabelStyle` of its own where it must place the icon and the title
 differently from the system. Icon-only is the style's own argument, `.buttonStyle(.primary, iconOnly: true)`: the
-style hides the title, keeps it as the accessible label and draws the square.
+style hides the title, keeps it as the accessible label and draws the circle.
 
 A product's own `.labelStyle(.iconOnly)` cannot do this. The label style is an environment value, so the label style
 westron's `ButtonStyle` applies to `configuration.label` inside `makeBody` overrides the product's outer one, and a
-`ButtonStyle` has no public way to read the outer label style, so it could not know to draw the square either. A
+`ButtonStyle` has no public way to read the outer label style, so it could not know to draw the circle either. A
 probe on macOS confirmed both (#22).
 
 ### A label that is not drawn

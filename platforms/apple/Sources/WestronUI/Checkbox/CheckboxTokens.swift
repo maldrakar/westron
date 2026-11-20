@@ -99,10 +99,11 @@ enum CheckboxMetrics {
         diameter * markPerDiameter
     }
 
-    /// The least side of the check's hit area: `size.control.m`, the recommended touch target, 44 pt, on iOS and
-    /// watchOS, and 32 pt on macOS, above its recommended 28 (chapter 08; tokens/platform). Where the circle is
-    /// smaller, the hit area stays this size around it; where it grows past it with the text, the hit area grows too.
-    static var minimumHitSide: CGFloat { .size.control.m }
+    /// The least side of the check's hit area: the larger of `size.target.minimum`, the recommended target, and
+    /// `size.control.m`, so 44 pt on iOS and watchOS and 32 pt on macOS, above its recommended 28 (chapter 08;
+    /// tokens/platform; the contract, P17). Where the circle is smaller, the hit area stays this size around it; where
+    /// it grows past it with the text, the hit area grows too.
+    static var minimumHitSide: CGFloat { max(.size.target.minimum, .size.control.m) }
 
     /// The hit area's side around a circle of `diameter`.
     static func hitSide(diameter: CGFloat) -> CGFloat {

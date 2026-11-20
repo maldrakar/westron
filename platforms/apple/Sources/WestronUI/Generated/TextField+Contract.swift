@@ -17,10 +17,11 @@ public enum TextFieldVariant: String, CaseIterable, Sendable {
 
 /// TextField's option `size`, from its contract.
 ///
-/// framed: the height is size.control.s, m or l, 24, 32 and 40 with a pointer (macOS), 32, 44 and 52 on touch, as a
-/// minimum, so the field grows with its text; its padding follows the size, and its text is body.regular at every size.
-/// A field drawn at s keeps a hit area of the platform's recommended size, 28 pt on macOS and 44 pt on iOS
-/// (design-language/08). inline takes its height and its text role from its context, so the size changes nothing on it.
+/// framed: the height is size.control.s, m or l, 24, 32 and 40 with a pointer (macOS), 28, 36 and 50 on iOS and iPadOS,
+/// 44 on watchOS, as a minimum, so the field grows with its text; its padding follows the size, and its text is
+/// body.regular at every size. A field drawn below size.target.minimum, the platform's recommended target, 28 pt on
+/// macOS and 44 pt on iOS, keeps a hit area of that height (design-language/08): at s on macOS, at s and m on iOS.
+/// inline takes its height and its text role from its context, so the size changes nothing on it.
 ///
 /// A call without `size:` takes the size from `controlSize`: mini and small → s, regular → m, large and extraLarge → l.
 /// An explicit `size:` wins.

@@ -72,6 +72,9 @@ The reference is WCAG 2 ([WCAG 2.2](https://www.w3.org/TR/WCAG22/)). The kinds a
     text further from the ground (decisions/0012).
   - Every raised surface gets an outline in `color.border.default`, because a shadow alone does not mark an edge
     (decisions/0013).
+  - A secondary button gets an outline in `color.border.strong` (`color.status.danger.border` with the destructive
+    role), because its muted fill stays about 1.1:1 off the canvas, as the high-contrast themes keep steps 1–5
+    (chapter 04, decisions/0013).
   - In `dark-hc`, a fill with a white label turns light and its label dark, so that the pair reaches 7:1 and the
     fill still stands out from the dark canvas.
   - On Apple, each colorset carries all four themes and the system switches them. watchOS shows the dark theme
@@ -108,10 +111,10 @@ westron's target is the platform's recommended size. The hit area may be larger 
 | Web | 44×44 CSS px (AAA) | 24×24 CSS px (AA) | [2.5.5](https://www.w3.org/TR/WCAG22/#target-size-enhanced), [2.5.8](https://www.w3.org/TR/WCAG22/#target-size-minimum) |
 | Android | 48×48 dp | — | [Android accessibility](https://developer.android.com/guide/topics/ui/accessibility/apps) |
 
-The value for each platform lives in its platform token file, not in component code. The control heights are there
-(#56): `size.control.m` is 44 on iOS, iPadOS and watchOS, the recommended target, and 32 on macOS, above its
-recommended 28. `size.control.s` is below the recommended size on every platform, 32 on touch and 24 on macOS, so a
-control drawn at it keeps a hit area of the recommended size around what it draws.
+The value for each platform lives in its platform token file, not in component code: `size.target.minimum` is 44 on
+iOS, iPadOS and watchOS and 28 on macOS (decisions/0013, revision of 2026-11-20). The control heights are there too
+(#56), and they are not the target: on iOS and iPadOS `size.control.s` and `m`, 28 and 36, are below it, on watchOS
+`s`, 32, and on macOS `s`, 24, so a control drawn at them keeps a hit area of the target's size around what it draws.
 A component's contract may record an exception: on macOS, Button's size s takes clicks in its drawn 24 pt
 (spec/components/button, decisions/0001).
 

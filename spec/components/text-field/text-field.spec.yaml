@@ -29,10 +29,11 @@ options:
     values: [s, m, l]
     default: m
     description: >-
-      framed: the height is size.control.s, m or l, 24, 32 and 40 with a pointer (macOS), 32, 44 and 52 on touch, as
-      a minimum, so the field grows with its text; its padding follows the size, and its text is body.regular at
-      every size. A field drawn at s keeps a hit area of the platform's recommended size, 28 pt on macOS and 44 pt on
-      iOS (design-language/08). inline takes its height and its text role from its context, so the size changes
+      framed: the height is size.control.s, m or l, 24, 32 and 40 with a pointer (macOS), 28, 36 and 50 on iOS and
+      iPadOS, 44 on watchOS, as a minimum, so the field grows with its text; its padding follows the size, and its
+      text is body.regular at every size. A field drawn below size.target.minimum, the platform's recommended target,
+      28 pt on macOS and 44 pt on iOS, keeps a hit area of that height (design-language/08): at s on macOS, at s and
+      m on iOS. inline takes its height and its text role from its context, so the size changes
       nothing on it.
 
 slots: [label, placeholder]
@@ -121,8 +122,9 @@ platforms:
     ios:
       description: >-
         Focus is the field being edited, with the keyboard up. There is no pointer to hover with on an iPhone, and
-        the field shows nothing on hover on an iPad either. At s, drawn 32 pt high, a tap 6 pt past the drawn edge,
-        at the 44 pt target, focuses the field, and one 24 pt past it does not (the catalog's TextFieldBehaviorTests);
+        the field shows nothing on hover on an iPad either. At s, drawn 28 pt high, a tap 8 pt past the drawn edge,
+        at the 44 pt target, focuses the field, and one 24 pt past it does not; at m, drawn 36 pt high, a tap 4 pt
+        past either edge, at the same target, focuses it (the catalog's TextFieldBehaviorTests);
         a one-off probe of #30 found the reach ending between 16 and 18 pt. The style's tap gesture, which focuses a
         field from its padding, is what takes these touches: with it removed, a tap on the padding and one at the
         target missed. The style grows no frame of its own on iOS. A product reaches color.text.placeholder by
