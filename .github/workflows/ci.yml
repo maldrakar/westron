@@ -14,13 +14,15 @@ jobs:
   # on a Mac (`xcode-27`), and at most 5 run at once on this repository (runs 44339047592, 44360219942, 44364265656
   # and 44386153527). Until 2026-11-19 every pull request and push to main also ran the full accessibility audit (10
   # legs) and the snapshot matrix (4 legs and a page job): 17 Mac jobs, about 6–7.7 runner-hours, 85–150 min. By the
-  # owner's decision of 2026-11-20 the full audit runs once a night (accessibility-audit.yml) and the snapshot matrix
-  # on demand (snapshot-matrix.yml). Per run now, estimated from the times in the job comments:
-  #   a pull request: apple (about 25 min) and catalog-screenshots (about 20), and when it changes a component, an
-  #     audit of that component's entries (10.4 min and 5.6 min an entry: Button's five about 38 min, Rule's one
-  #     about 16): 2–3 Mac jobs, up to about 1.4 runner-hours (one more job for each further 5 entries when it
-  #     changes several components), as long as its slowest job when the runners are free;
-  #   a push to main: apple and catalog-screenshots, about 45 runner-minutes.
+  # owner's decision of 2026-11-20 the full audit runs once a night (accessibility-audit.yml). Since 2026-11-21 (#92)
+  # the snapshot matrix is rendered in-process and checked against references in `snapshots`, which replaced the job
+  # "Catalog screenshots" and the on-demand snapshot-matrix.yml. Per run now, estimated from the times in the job
+  # comments:
+  #   a pull request: apple (about 25 min) and snapshots (about 25), and when it changes a component, an audit of that
+  #     component's entries (10.4 min and 5.6 min an entry: Button's five about 38 min, Rule's one about 16): 2–3 Mac
+  #     jobs, up to about 1.5 runner-hours (one more job for each further 5 entries when it changes several
+  #     components), as long as its slowest job when the runners are free;
+  #   a push to main: apple and snapshots, about 50 runner-minutes.
   tools:
     name: Tools (Swift on Linux)
     runs-on: ubuntu-24.04
@@ -170,24 +172,102 @@ jobs:
             .build/xcode/results/a11y-*.xcresult
           if-no-files-found: ignore
 
-  catalog-screenshots:
-    name: Catalog screenshots
+  snapshots:
+    name: Snapshot matrix — check against the references
+    # Renders the snapshot matrix of both platforms in-process (tools/apple/snapshot-matrix.sh: the unit tests in
+    # platforms/apple/Tests/WestronSnapshotTests, under `swift test` on macOS and hosted by the catalog app on the iOS
+    # simulator) and compares it with the references in platforms/apple/Snapshots/, recorded on this runner image by
+    # snapshot-references.yml (decisions/0008, the note of 2026-11-21). The outcome of each platform's check:
+    #   - the same, within one level a channel: the step passes;
+    #   - a picture changed, was added or removed, or the render failed: the job fails, and the artifact
+    #     `snapshot-diff` holds the report (index.html: reference, new picture and diff side by side, the changed
+    #     components named). An intended change is recorded with the label `record-snapshots` on the pull request;
+    #   - no references yet, or references recorded on another runner image (its macOS, processor, Xcode or simulator
+    #     runtime differ from those in environment.json): nothing can be compared, so the step passes with a warning
+    #     on the run that the references need recording: a pull request does not fail for what the runner image did.
+    #     Until they are recorded again on main, no pull request is checked, so record them soon.
+    # Every run uploads the full review page of each platform, `snapshot-matrix` (the second gate's surface,
+    # decisions/0005): about 77 MB of PNGs (60 iOS, 17 macOS, measured locally), kept 14 days.
+    #
+    # The references are in Git LFS. The checkout leaves them as pointers (`.lfsconfig` excludes them), and the
+    # renders do not need them; before the check they come from the cache of `.git/lfs`, keyed by their object ids, and
+    # `git lfs pull` fetches only what the cache lacks, so an unchanged set costs no LFS bandwidth (a cache made on
+    # main serves pull requests; GitHub counts Actions downloads against the owner's 10 GiB a month).
+    #
+    # Timeout. On this runner (the spike of 2026-11-20, #92): the macOS test build 79 s and the render 207–237 s for
+    # 196 images; the simulator 85 s, the catalog build 432 s and the render 325–336 s for 388 images, 406–490 s of
+    # xcodebuild in all. About 22 min with the checkout, the LFS pull, the comparison and the uploads. The renders have
+    # step timeouts of their own with room for the retries of blank iOS pictures (up to four renders of a 13–17 s
+    # sheet), so a hung step still leaves time for the uploads; the job's 50 min cover the rest.
     runs-on: xcode-27
+    timeout-minutes: 50
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     steps:
       - uses: actions/checkout@v7
-      - name: iOS, light theme
-        run: tools/apple/catalog-screenshot.sh ios --entry environment --appearance light
-      - name: iOS, dark theme
-        run: tools/apple/catalog-screenshot.sh ios --entry environment --appearance dark
-      - name: macOS
-        run: tools/apple/catalog-screenshot.sh macos --entry environment --appearance light
-      - uses: actions/upload-artifact@v7
-        if: always()
+      - name: Render (macOS)
+        timeout-minutes: 15
+        run: tools/apple/snapshot-matrix.sh macos
+      - name: Render (iOS)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 30
+        run: tools/apple/snapshot-matrix.sh ios
+      - name: Reference object ids
+        if: ${{ !cancelled() }}
+        run: |
+          git lfs install --local
+          mkdir -p .build
+          git lfs ls-files --long --include 'platforms/apple/Snapshots/**' --exclude '' | cut -d' ' -f1 | sort \
+            > .build/snapshot-references.lfs-ids
+          echo "$(wc -l < .build/snapshot-references.lfs-ids | tr -d ' ') reference objects"
+      - uses: actions/cache@v6
+        if: ${{ !cancelled() }}
         with:
-          name: catalog-screenshots
+          path: .git/lfs
+          key: snapshot-references-${{ hashFiles('.build/snapshot-references.lfs-ids') }}
+          restore-keys: snapshot-references-
+      - name: References from Git LFS
+        if: ${{ !cancelled() }}
+        run: git lfs pull --include 'platforms/apple/Snapshots/**' --exclude ''
+      - name: Check against the references
+        if: ${{ !cancelled() }}
+        run: |
+          set -uo pipefail
+          failed=0
+          for platform in macos ios; do
+            if [ ! -f ".build/snapshot-matrix/$platform/environment.json" ]; then
+              echo "::error title=Snapshot matrix ($platform)::The render failed before its manifest; see the step above and the logs."
+              failed=1
+              continue
+            fi
+            status=0
+            tools/apple/snapshot-matrix.sh check "$platform" --from ".build/snapshot-matrix/$platform" || status=$?
+            case "$status" in
+              0) ;;
+              3) echo "::warning title=No snapshot references ($platform)::Nothing to compare with yet. Record them: the label record-snapshots on a pull request, or gh workflow run snapshot-references.yml --ref <branch>." ;;
+              4) echo "::warning title=Snapshot references from another environment ($platform)::The runner image differs from the one the references were recorded on (the step's output lists what), so nothing was compared. Record them again: the label record-snapshots on a pull request, or gh workflow run snapshot-references.yml --ref main -f allow-main=true." ;;
+              *)
+                echo "::error title=Snapshot matrix ($platform)::The render differs from the references (or failed); the artifact snapshot-diff holds the report."
+                failed=1
+                ;;
+            esac
+          done
+          exit "$failed"
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: snapshot-matrix
           path: |
-            .build/screenshots/
-            .build/logs/
+            .build/snapshot-matrix/ios/
+            .build/snapshot-matrix/macos/
+          retention-days: 14
           if-no-files-found: warn
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: snapshot-diff
+          path: |
+            .build/snapshot-matrix/check-ios/
+            .build/snapshot-matrix/check-macos/
+            .build/logs/
+          if-no-files-found: ignore
