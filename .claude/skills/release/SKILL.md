@@ -33,9 +33,11 @@ with no prefix: `0.2.0`, not `v0.2.0`.
      `gh run view <databaseId> --json jobs --jq '[.jobs[] | select(.name != "Accessibility audit — anything new") | .conclusion]'`
      must be a non-empty list of `success` only (a run whose jobs were skipped shows `skipped`). No such run, or no
      run listed at all (`none`, or `none found` when the query failed), means not green: the release waits. Say so,
-     and offer the human the two ways: run the nightly checks now on `main` (`gh workflow run
-     accessibility-audit.yml --ref main`, an hour or more, then check again), or wait for the nightly run. The
-     snapshot matrix is not a precondition.
+     and offer the human the ways: when a run on this commit failed only for a flaky job (`gh run list --workflow
+     accessibility-audit.yml --commit "$(git rev-parse HEAD)"` lists them all), re-run its failed jobs
+     (`gh run rerun <databaseId> --failed`, then check that run again: a re-run keeps its id and commit); otherwise run
+     the nightly checks now on `main` (`gh workflow run accessibility-audit.yml --ref main`, an hour or more, then
+     check again), or wait for the nightly run. The snapshot matrix is not a precondition.
 2. **Version.** If the human passed `major|minor|patch` (`$ARGUMENTS`), use that. Otherwise propose one yourself from
    the "Unreleased" section in `CHANGELOG.md` and the commits: before 1.0, a breaking change is a minor bump.
    With no tags, the first version is `0.1.0`. Show the resulting version and wait for confirmation.

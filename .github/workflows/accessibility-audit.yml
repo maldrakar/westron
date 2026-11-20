@@ -150,15 +150,29 @@ jobs:
     name: Behaviour UI tests (${{ matrix.platform }})
     # The catalog's behaviour UI tests (`tools/apple/check.sh behavior`): ButtonBehaviorTests, CheckboxBehaviorTests,
     # TextFieldBehaviorTests and IconAccessibilityTests, each with branches of its own for iOS and macOS, so one leg on
-    # each, gated by `audit-needed` as the audit is. No retry: a failure shows on the run, and a flaky one is run again
-    # by hand. Locally on an iPhone 17 simulator (iOS 26.3, 2026-11-20) all 20 tests passed in 182 and 185 s in two
-    # runs, 2 of them skipped (a keyboard shortcut the simulator's typeKey does not reach; keyboard focus, measured on
-    # macOS), the step 224 and 192 s with an incremental build. On the runner, at 2.2–3 times a local Mac, the tests
-    # take about 7–9 min, after 6–17 min of build and setup: at most about 26 min, so a timeout of 40. The macOS leg
-    # was not run when this job was added (its tests take over the screen, and the Mac was in use), so its first night
-    # is its first run on CI: Automation Mode is on for the runner (decisions/0008), as the snapshot matrix's macOS legs
-    # rely on, and a failure uploads the log and the result bundle, with XCTest's screenshots, to tell a stale test
-    # from a broken component or a runner problem.
+    # each, gated by `audit-needed` as the audit is.
+    #
+    # No retry. A failed test fails the whole run, and `audit-needed` counts only successful scheduled runs, so the
+    # next night runs every job again on the same commit, and the release waits. For a flaky failure, "Re-run failed
+    # jobs" on that run (or `gh run rerun <id> --failed`) is the cheap remedy: a re-run is a new attempt of the same
+    # run, with its id, commit and event, and once it passes the run counts as successful both for `audit-needed` and
+    # for the release skill's check, which reads the latest attempt's jobs, the ones not re-run carried over as they
+    # were (seen on CI run 44461921450, attempt 2). `gh workflow run` instead starts all twelve Mac jobs again.
+    #
+    # Locally on an iPhone 17 simulator (iOS 26.3, 2026-11-20) all 20 tests passed in 182 and 185 s in two runs, 2 of
+    # them skipped (a keyboard shortcut the simulator's typeKey does not reach; keyboard focus, measured on macOS), the
+    # step 224 and 192 s with an incremental build. On the runner, at 2.2–3 times a local Mac, the tests take about
+    # 7–9 min, after 6–17 min of build and setup: at most about 26 min, so a timeout of 40. A leg the timeout kills
+    # uploads no logs, and a macOS UI test run has gone silent on CI for an hour (run 44461921450), so the step stops
+    # itself 3 minutes before it (WESTRON_BEHAVIOR_DEADLINE: xcodebuild and the test daemon stopped, a line in the log,
+    # exit 1) and the failure upload runs.
+    #
+    # The macOS leg was not run when this job was added (its tests take over the screen, and the Mac was in use), so
+    # its first night is its first run on CI: Automation Mode is on for the runner (decisions/0008), as the snapshot
+    # matrix's macOS legs rely on, and a failure uploads the log and the result bundle, with XCTest's screenshots, to
+    # tell a stale test from a broken component or a runner problem. On macOS
+    # CheckboxBehaviorTests.testKeyboardFocusAndSpace skips itself when the system's keyboard navigation is off, as it
+    # likely is on the runner, so a green macOS leg may not have run it: the step's output shows the skip.
     needs: audit-needed
     if: >-
       !cancelled() && (needs.audit-needed.result != 'success' || needs.audit-needed.outputs.audit != 'false')
@@ -173,6 +187,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Behaviour UI tests
+        env:
+          # 3 minutes before the job's timeout, in minutes from the step's start: the failure upload below still runs.
+          WESTRON_BEHAVIOR_DEADLINE: 37
         run: tools/apple/check.sh behavior ${{ matrix.platform }}
       - uses: actions/upload-artifact@v7
         if: failure()

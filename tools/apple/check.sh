@@ -406,8 +406,45 @@ a11y() {
 # The catalog's behaviour UI tests (platforms/apple/README.md, "Behaviour UI tests"): presses, hit areas, the
 # accessibility hierarchy, the keyboard, on the catalog's entries. Each class runs on iOS and macOS, with branches of
 # its own for each; macOS needs Automation Mode and the screen to itself. No retry: the nightly CI run reports a
-# failure, and a flaky one is run again by hand.
+# failure, and a flaky one is re-run there with "Re-run failed jobs" (.github/workflows/accessibility-audit.yml).
 behavior_tests=(ButtonBehaviorTests CheckboxBehaviorTests TextFieldBehaviorTests IconAccessibilityTests)
+
+# WESTRON_BEHAVIOR_DEADLINE=<minutes> from the script's start (unset: none; CI sets it a few minutes before the job's
+# timeout, since a job the timeout kills uploads no logs, and a macOS UI test run has gone silent on CI for an hour,
+# run 44461921450): at it, the timer below stops the run's xcodebuild and signals the script (USR1), which says so in
+# its output and the log, stops the test daemon and exits 1. The timer ends with the script; bash 3.2 has no BASHPID,
+# so it polls the script's pid rather than being waited for.
+behavior_deadline_timer() {
+  local deadline="$1"
+  while kill -0 $$ 2> /dev/null; do
+    if [ "$SECONDS" -ge "$deadline" ]; then
+      kill -USR1 $$ 2> /dev/null || return 0
+      pkill -P $$ -x xcodebuild 2> /dev/null || true
+      return 0
+    fi
+    sleep 1
+  done
+}
+
+# The script's side of the deadline. A foreground build ends first (the timer stopped it), a test run's wait at once.
+behavior_at_deadline() {
+  local why="stopped at the deadline: $((SECONDS / 60)) min $((SECONDS % 60)) s since the start"
+  why+=" (WESTRON_BEHAVIOR_DEADLINE=$WESTRON_BEHAVIOR_DEADLINE)"
+  # xcodebuild first: it writes the log at its own offset, over a line appended before it ends.
+  if [ -n "${ui_test_xcodebuild:-}" ]; then
+    kill "$ui_test_xcodebuild" 2> /dev/null || true
+    wait "$ui_test_xcodebuild" 2> /dev/null || true
+  fi
+  pkill -P $$ -x xcodebuild 2> /dev/null || true
+  echo "check.sh: behavior: $why, so that the logs upload before the job's timeout; log: $behavior_log" >&2
+  printf '\ncheck.sh: behavior: %s\n' "$why" >> "$behavior_log"
+  # On macOS the test runner and the catalog belong to launchd, not to xcodebuild (tools/apple/snapshot-matrix.sh).
+  if [ "$behavior_platform" = macos ]; then
+    pkill -f "$root/.build/xcode/catalog/Build/Products/" 2> /dev/null || true
+  fi
+  stop_test_daemon "$behavior_udid"
+  exit 1
+}
 
 behavior() {
   local platform=ios destination udid="" test status=0
@@ -427,7 +464,18 @@ behavior() {
   local name="behavior-$platform$selection"
   local log=".build/logs/$name.log" results=".build/xcode/results/$name.xcresult"
   mkdir -p .build/logs .build/xcode/results
+  behavior_log="$log" behavior_platform="$platform" behavior_udid=""
+  if [ -n "${WESTRON_BEHAVIOR_DEADLINE:-}" ]; then
+    if ! [[ "$WESTRON_BEHAVIOR_DEADLINE" =~ ^[1-9][0-9]*$ ]]; then
+      echo "check.sh: behavior: WESTRON_BEHAVIOR_DEADLINE=\"$WESTRON_BEHAVIOR_DEADLINE\": expected whole minutes" >&2
+      return 2
+    fi
+    : > "$log"
+    trap behavior_at_deadline USR1
+    behavior_deadline_timer $((WESTRON_BEHAVIOR_DEADLINE * 60)) &
+  fi
   ui_test_destination "$platform" || return 1
+  behavior_udid="$udid"
   echo "== behavior: $destination${selection:+ (${selection#-})}"
   ui_test_build "$destination" ".build/logs/$name-build.log" "behavior" "$platform" || return 1
   ui_test_run test-without-building "$log" "$results" "$destination" "$udid" "${only[@]}" || status=$?
