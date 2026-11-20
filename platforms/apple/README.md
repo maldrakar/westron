@@ -332,7 +332,8 @@ WestronUI, the catalog's host, the audit test, the scripts) touch every entry an
 run by hand on the branch. The audit is skipped when there is nothing to audit, and on a push to `main`.
 
 ```sh
-git diff --name-only main | tools/apple/audit-scope.sh   # the entries a pull request from this branch audits
+git diff --name-only main...HEAD | tools/apple/audit-scope.sh   # the entries a pull request from this branch audits:
+                                                                # its commits since main, as CI diffs; not uncommitted
 ```
 
 | Test | Launch arguments | Audit types on iOS |

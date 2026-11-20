@@ -30,13 +30,16 @@ westron_ui='^platforms/apple/Sources/WestronUI/'
 
 # The Apple package and its catalog (tools/apple/check.sh). The package's unit tests also read the contracts
 # (`contractFile` in platforms/apple/Tests); the catalog app and its UI tests import WestronCatalog alone, and a
-# change of WestronUI that breaks WestronCatalog fails `package` first. A change of a script in tools/apple/ alone runs
-# nothing: no check runs a script it does not use itself.
+# change of WestronUI that breaks WestronCatalog fails `package` first. The four checks are targets of
+# tools/apple/check.sh, so a change of that script runs all four; simulator.sh serves only its targets the hook does not
+# run (package-ios, a11y). Any other script in tools/apple/ (snapshot-matrix.sh, catalog-screenshot.sh,
+# audit-scope.sh) runs none of them, only the syntax check below.
+apple_script='^tools/apple/check\.sh$'
 swift_sources='^(Package\.swift|platforms/apple/.*\.swift|tools/(Package\.swift|Sources/.*\.swift|Tests/.*\.swift))$'
-format_inputs="$swift_sources|^\.swift-format$|$toolchain"
-package_inputs="$package_manifest|^platforms/apple/(Sources|Tests)/|^spec/components/[^/]+/[^/]+\.spec\.yaml$|$toolchain"
-platforms_inputs="$package_manifest|^platforms/apple/Sources/|$toolchain"
-catalog_inputs="$package_manifest|^platforms/apple/Catalog/|^platforms/apple/Sources/WestronCatalog/|$toolchain"
+format_inputs="$swift_sources|^\.swift-format$|$apple_script|$toolchain"
+package_inputs="$package_manifest|^platforms/apple/(Sources|Tests)/|^spec/components/[^/]+/[^/]+\.spec\.yaml$|$apple_script|$toolchain"
+platforms_inputs="$package_manifest|^platforms/apple/Sources/|$apple_script|$toolchain"
+catalog_inputs="$package_manifest|^platforms/apple/Catalog/|^platforms/apple/Sources/WestronCatalog/|$apple_script|$toolchain"
 
 # The steps of tools/check.sh, each with what its command reads by default (tools/Sources). The data: the token
 # files, the resolver and the palette; the contracts, their schema and the icon registry; not the Markdown beside
@@ -58,6 +61,11 @@ tools_steps=(
 )
 
 checks=()
+# Every changed shell script of the tools and the hooks is parsed (`bash -n`, a fraction of a second): most of them
+# no other check runs.
+while IFS= read -r script; do
+  [ -f "$script" ] && checks+=("bash -n $(printf '%q' "$script")")
+done < <(grep -E '^(tools/.*\.sh|tools/westron|\.claude/hooks/.*\.sh)$' <<< "$changed")
 has "$format_inputs" && checks+=("tools/apple/check.sh format")
 has "$package_inputs" && checks+=("tools/apple/check.sh package")
 has "$platforms_inputs" && checks+=("tools/apple/check.sh platforms")

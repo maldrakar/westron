@@ -118,7 +118,10 @@ jobs:
     # the mean 10.4 min, stops that test method and retries all its entries (90 s to start, then each): 10.4 + 27.8 +
     # 3 + 1.5 = 42.7 min, within a retry budget of 50 (WESTRON_A11Y_RETRY_BUDGET), which takes it after up to 17.7 min
     # before the first entry (17.1 seen). The job's timeout is 55, 5 min above the budget, as in the nightly legs: a
-    # leg the timeout kills uploads no logs.
+    # leg the timeout kills uploads no logs. A known limit: when the test runner fails to start (7 min in, as seen on
+    # CI), all five tests are retried whole, one at a time, each estimated at half the budget (25 min), so the first two
+    # are retried and the third is refused (about 28 + 25 > 50): the leg fails with its logs, where a nightly leg, with
+    # one test, retries the same failure in full.
     needs: audit-scope
     if: ${{ needs.audit-scope.result == 'success' && needs.audit-scope.outputs.entries != '' }}
     runs-on: xcode-27

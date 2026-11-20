@@ -10,7 +10,9 @@
 #     `<Name>+Matrix.swift`, `platforms/apple/Sources/WestronCatalog/Components/<Name>Pages.swift`, its contract
 #     `spec/components/<id>/` (`text-field` is `TextField`) → the entries `<Name>Pages.swift` declares. A component of
 #     WestronUI without that page fails the script: every component has its catalog entry (Catalog.swift). A contract
-#     without one is not implemented on Apple yet, and gives nothing;
+#     without one is not implemented on Apple yet, and gives nothing. A component's page that holds code other pages
+#     use (`FlowLayout` in ButtonPages.swift, used by the Checkbox and color pages) still gives only its own entries:
+#     the other pages wait for the nightly run;
 #   - a page of WestronCatalog's Foundations, or its root, that declares entries and shares nothing with other files
 #     (every other type it declares is used by no other file of WestronCatalog, and it extends no type but
 #     CatalogEntry) → those entries;

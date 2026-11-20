@@ -56,7 +56,8 @@ tools/apple/snapshot-matrix.sh macos                      # the same on macOS
 tools/apple/snapshot-matrix.sh compare <dirA> <dirB>      # pixel diff of two captures; exit 1 when one differs
 tools/apple/snapshot-matrix.sh merge --expect <ids> <out> <dir>…  # captures of one platform taken apart, one page;
                                                           # names on it any expected component none of them holds
-git diff --name-only main | tools/apple/audit-scope.sh    # the catalog entries a pull request's audit covers
+git diff --name-only main...HEAD | tools/apple/audit-scope.sh  # the catalog entries a pull request's audit
+                                                          # covers, from the branch's commits (not uncommitted ones)
 
 tools/check.sh                    # build and test tools/, then the checks below (CI runs it on Linux)
 tools/check.sh spec api-parity    # some of its steps: tools raw-values generate tokens contrast icons spec api-parity
