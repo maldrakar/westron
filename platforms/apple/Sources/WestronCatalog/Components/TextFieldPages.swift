@@ -58,10 +58,17 @@ struct TextFieldSample: View {
     @State private var text: String
 
     init(variant: TextFieldVariant, size: TextFieldSize? = nil, axis: Axis = .horizontal, filled: Bool) {
+        self.init(
+            variant: variant, size: size, axis: axis,
+            text: filled ? (axis == .vertical ? Self.filledNotes : Self.filledText) : "")
+    }
+
+    /// A sample holding `text`.
+    init(variant: TextFieldVariant, size: TextFieldSize?, axis: Axis, text: String) {
         self.variant = variant
         self.size = size
         self.axis = axis
-        _text = State(initialValue: filled ? (axis == .vertical ? Self.filledNotes : Self.filledText) : "")
+        _text = State(initialValue: text)
     }
 
     /// The text of a filled sample on one line; the prompt of an empty one is "Untitled".
@@ -109,6 +116,7 @@ extension Axis {
 /// one); disabled is set with the real `.disabled(_:)`.
 struct TextFieldMatrixCell: View {
     let values: TextFieldMatrixValues
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     init(_ values: TextFieldMatrixValues) {
         self.values = values
@@ -121,8 +129,17 @@ struct TextFieldMatrixCell: View {
         let axis = Axis(textFieldLines: lines)
         // Apart by more than two forced rings reach outside their fields, so they do not touch.
         VStack(alignment: .leading, spacing: .space150) {
-            TextFieldSample(variant: variant, size: size, axis: axis, filled: false)
-            TextFieldSample(variant: variant, size: size, axis: axis, filled: true)
+            // At the accessibility text sizes a sheet's three rows of multiline cells, each an empty field and one of
+            // two lines, are taller than an iPhone's screen, and at accessibility5 three rows of the two-line field
+            // alone still are at size l. There a multiline cell shows one field holding a short word, on one line, in
+            // the multiline field's shape; the empty field and the two lines are on the other text sizes' sheets, and
+            // a framed multiline field of two lines at accessibility5 is on the card-notes supplement.
+            if axis == .vertical && dynamicTypeSize.isAccessibilitySize {
+                TextFieldSample(variant: variant, size: size, axis: axis, text: "Milk")
+            } else {
+                TextFieldSample(variant: variant, size: size, axis: axis, filled: false)
+                TextFieldSample(variant: variant, size: size, axis: axis, filled: true)
+            }
         }
         // Room for the ring, which is drawn outside the field's frame: forced, it touches neither the next cell nor
         // the picture's edge (the contract's platforms.apple).

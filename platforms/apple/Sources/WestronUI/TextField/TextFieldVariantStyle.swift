@@ -105,8 +105,8 @@ private struct TextFieldBody: View {
     }
 
     /// The drawn field: the system field in its plain style, in the text role and color of `framed` or of the context,
-    /// its padding, height, fill, high-contrast outline, focus ring, hit area and opacity. The padding scales with
-    /// Dynamic Type from its token, relative to the field's text style.
+    /// its padding, height, fill, high-contrast outline, focus ring, hit area and opacity. The horizontal padding scales
+    /// with Dynamic Type from its token, relative to the field's text style; the vertical one does not.
     private struct TextFieldSurface: View {
         let field: TextField<TextFieldVariantStyle._Label>
         let variant: TextFieldVariant
@@ -115,7 +115,9 @@ private struct TextFieldBody: View {
         let isFocused: FocusState<Bool>.Binding
         @ScaledMetric private var padding: CGFloat
         /// The padding above and below a multiline framed field's text, which holds its lines off the field's edges.
-        @ScaledMetric private var verticalPadding: CGFloat
+        /// It stands in for the centering a single line gets from the minimum height, which does not grow with the
+        /// text either, so it is the token's value at every text size: a field at a large text size stays compact.
+        private var verticalPadding: CGFloat { metrics.paddingVertical.map(CGFloat.init) ?? .zero }
         /// The height the field is drawn at, which grows past its minimum with its text.
         @State private var drawnHeight: CGFloat = .zero
 
@@ -131,8 +133,6 @@ private struct TextFieldBody: View {
             let textStyle = Font.TextStyle((tokens.textFont ?? .body.regular).textStyle)
             _padding = ScaledMetric(
                 wrappedValue: metrics.paddingHorizontal.map(CGFloat.init) ?? .zero, relativeTo: textStyle)
-            _verticalPadding = ScaledMetric(
-                wrappedValue: metrics.paddingVertical.map(CGFloat.init) ?? .zero, relativeTo: textStyle)
         }
 
         var body: some View {

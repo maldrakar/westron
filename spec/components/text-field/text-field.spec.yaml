@@ -52,8 +52,9 @@ options:
     description: >-
       single is a field of one line, whose text scrolls sideways, such as a list's name; multiple is a field whose
       text wraps and which grows a line at a time, such as a card's notes. framed draws single as a capsule and
-      multiple as a rounded rectangle of radius.150, its lines held off its top and bottom edges by a padding that
-      makes a field of one line as tall as a single one of its size; inline draws both alike. On Apple it is the
+      multiple as a rounded rectangle of radius.150, its lines held off its top and bottom edges by a padding that,
+      at the default text size, makes a field of one line as tall as a single one of its size, and that does not grow
+      with the text, as the minimum heights do not; inline draws both alike. On Apple it is the
       system field's own axis (platforms.apple.systemOptions).
 
 slots: [label, placeholder]
