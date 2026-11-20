@@ -397,6 +397,45 @@ struct ContractCheckTests {
             ])
     }
 
+    @Test("rule: a part's shape binds capsule, a shape no radius draws, and only a shape binds it")
+    func shapes() {
+        let radius = "  container.radius: radius.control"
+        #expect(contractProblems(replacing(radius, with: "  container.shape: capsule")) == [])
+        #expect(
+            contractProblems(replacing(radius, with: "  container.radius: capsule")) == [
+                "tokens.container.radius: capsule is a shape: bind it to a part's shape, such as container.shape"
+            ])
+        #expect(
+            contractProblems(replacing(radius, with: "  container.shape: radius.control")) == [
+                "tokens.container.shape: a part's shape is one of capsule, not a token"
+            ])
+        #expect(
+            contractProblems(replacing(radius, with: "  container.shape: { s: capsule, m: capsule, l: capsule }"))
+                .contains { $0.hasPrefix("tokens.container.shape") })
+    }
+
+    @Test("rule: a part's shape may be bound in cases, each case a shape; a shape in another binding's cases is not")
+    func shapesInCases() {
+        let radius = "  container.radius: radius.control"
+        let cases = """
+              container.shape:
+                cases:
+                  - { when: { size: s }, token: capsule }
+            """
+        #expect(contractProblems(replacing(radius, with: cases)) == [])
+        #expect(
+            contractProblems(
+                replacing(radius, with: cases.replacingOccurrences(of: "token: capsule", with: "token: radius.control"))
+            ) == ["tokens.container.shape.cases[0].token: a part's shape is one of capsule, not a token"])
+        #expect(
+            contractProblems(
+                replacing(radius, with: cases.replacingOccurrences(of: "container.shape", with: "container.radius"))
+            ) == [
+                "tokens.container.radius.cases[0].token: capsule is a shape: bind it to a part's shape, such as "
+                    + "container.shape"
+            ])
+    }
+
     @Test("rule: a binding by value gives every value of its option a token; a partial binding is written as cases")
     func partialBinding() {
         let radius = "  container.radius: radius.control"

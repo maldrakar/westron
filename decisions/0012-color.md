@@ -2,7 +2,9 @@
 
 Date: 2026-11-15. Status: accepted. The owner chose direction B with the cobalt palette on the direction specimens.
 Revised 2026-11-16: pressed fills. Revised 2026-11-18: the fill of a checked control in a list color, chosen by an
-agent on the owner's behalf and pending the owner's confirmation.
+agent on the owner's behalf and pending the owner's confirmation. Revised 2026-11-20: the muted fill under the pointer
+and pressed, how dark the owner's decision, how derived pending the owner's review; the fields' and the check's quiet
+edges, with no pair changed.
 
 ## Context
 
@@ -229,6 +231,64 @@ moves no other color.
 - **Visibly**, a checked amber or olive check is an ochre or a darker olive in light. In light high contrast it is a
   brown or a deep olive with a white mark. A checked red check is a little brighter in dark. A lit tag keeps the bright
   fill.
+
+## Revision of 2026-11-20
+
+**Status of this revision: how dark a secondary button gets is the owner's decision of 2026-11-20; how the solver
+derives the fills, the token names and the pairs declared are the implementing agent's, pending the owner's review
+with Button's snapshot matrix (#85).**
+
+The owner's new look for Button fills the secondary button with `color.background.muted` and asks for darker fills
+under the pointer and pressed (decisions/0013, revision of 2026-11-20). `background.hover` and `pressed`, steps 3
+and 5, sit on either side of the muted step 4 and do not darken it.
+
+- **The neutral ramp gets two pairs of muted fill states.** A muted fill carries words, so it moves the other way
+  from a solid fill: away from the canvas, towards its words, one hover step, 0.04 in OKLCH lightness, per state, as
+  step 10 and `fill-pressed` move from step 9.
+  - `muted-hover` and `muted-pressed` carry primary words, step 12 of the neutral ramp: one and two hover steps,
+    stopping short only where those words would miss the text target, 4.5:1 and 7:1 in high contrast. They never
+    do: the words keep 8.4:1 or more.
+  - `muted-hover-colored` and `muted-pressed-colored` carry colored words, such as a destructive button's:
+    `muted-pressed-colored` moves up to two hover steps, but no further than every ramp's step 11 and step 12 still
+    reach the text target on it; `muted-hover-colored` is halfway. Step 11 is solved to just reach its target on
+    every step 5, so the colored words stop this pair at about step 5's tone.
+  - Like `fill-pressed`, they are named for the step they belong to, and the ramp keeps its twelve numbered steps.
+- **The owner's decision.** The first prototype darkened the pressed secondary by laying `text.primary` over it at
+  10 %, about `#D7DAE0` in light; the red words of a destructive secondary would read on that at 3.9:1. The owner
+  chose on 2026-11-20 that the plain secondary darkens as in the prototype, and the destructive one keeps the steps
+  its words allow.
+- **New semantic colors.** `color.background.muted-hover` and `muted-pressed` alias the first pair, for a fill under
+  `text.primary`, and `muted-hover-colored` and `muted-pressed-colored` the second, for a fill under colored words.
+  `text.primary` declares the first pair as `text`; `status.danger.text` declares `background.muted` and the second
+  pair as `text`, and `status.danger.border` as `non-text`. `border.strong` keeps `background.muted` only: the
+  secondary button's high-contrast outline marks its edge against the ground, which it is declared on, and on the
+  darker pressed fill inside it, it would measure 2.46 in light.
+- **What the solver gives.** The high-contrast themes keep steps 1–5 and give the same fills:
+
+  | Token | Light | Dark | On the canvas, light |
+  |---|---|---|---|
+  | `background.muted` (n4) | `#EBEEF4` | `#22272D` | 1.11 |
+  | `background.muted-hover` | `#DEE1E7` | `#2C3037` | 1.25 |
+  | `background.muted-pressed` | `#D1D4DA` | `#363B41` | 1.42 |
+  | `background.muted-hover-colored` | `#E8ECF1` | `#262A31` | 1.13 |
+  | `background.muted-pressed-colored` | `#E5E9EE` | `#2A2E35` | 1.17 |
+
+  `text.primary` on `muted-pressed` measures 10.11 in light, 8.41 in dark, 11.27 in light high contrast and 9.75 in
+  dark high contrast; the red words on `muted-pressed-colored` 4.51, 4.54, 7.05 and 7.05. With these pairs,
+  `tools/westron tokens contrast` measured 319 declared pairs in each theme, and none failed. The plain pressed fill
+  is a little darker than the prototype's, `#D1D4DA` against `#D7DAE0`: two hover steps, as the solid fills take.
+- **Fields and the check, the same day.** The owner chose a framed text field filled with `background.muted` and no
+  outline, and an unchecked check drawn as a quiet ring in `border.default` (spec/components/text-field,
+  decisions/0002; spec/components/checkbox, decisions/0003). Their edges no longer reach the non-text target in the
+  standard themes: the fill 1.11 against the canvas in light and 1.24 in dark, the ring 1.27 and 1.46, where
+  `border.strong` gave 3.50 and 4.12. The owner accepted it for the field; the ring awaits the owner's confirmation;
+  chapter 08 records the deviation with every ground. **No declared pair changed or was removed:** `border.strong`
+  keeps its `non-text` pairs on the grounds and on `background.muted`, which still hold and which the field's and the
+  check's high-contrast outlines rely on; `border.default` keeps its `separator` pairs, decorative in the standard
+  themes, 3:1 in high contrast. No pair declares the fill or the ring against a ground as a component's edge, so the
+  deviation lives in the components and chapter 08, not in a failing pair. The descriptions of `background.muted`,
+  `border.default` and `border.strong` say where each is now drawn. `tools/westron tokens contrast` still measures
+  319 declared pairs in each theme, none failed.
 
 ## Why
 

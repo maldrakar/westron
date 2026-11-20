@@ -53,10 +53,21 @@ private struct Card<Content: View>: View {
 
 /// A task list: its title, the primary action, a search field and four tasks, one late, one selected, one done.
 private struct TasksSample: View {
+    @Environment(\.colorSchemeContrast) private var contrast
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// The title and the action side by side; at an accessibility size the action goes under the title, since beside
+    /// it the button is squeezed until its label stands a letter per line. One `AnyLayout`, so the views stay the same.
+    private var header: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: .space100))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: .space100))
+    }
+
     var body: some View {
         Card {
             VStack(alignment: .leading, spacing: .space100) {
-                HStack(alignment: .center, spacing: .space100) {
+                header {
                     VStack(alignment: .leading, spacing: 0) {
                         Text("Inbox")
                             .textRole(.heading.medium)
@@ -65,18 +76,27 @@ private struct TasksSample: View {
                             .textRole(.footnote.regular)
                             .foregroundStyle(.text.secondary)
                     }
-                    Spacer(minLength: .space100)
-                    FilledButton(title: "Task", icon: .plus, fill: .background.accent, label: .text.onAccent)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Button {
+                    } label: {
+                        Label("Task", icon: .plus)
+                    }
+                    .buttonStyle(.primary, size: .s)
                 }
-                // text.placeholder in a field ringed in border.strong.
+                // text.placeholder in a field filled with background.muted, a capsule, as a framed text field is
+                // (decisions/0002 of the text field); in high contrast ringed in border.strong.
                 Label("Find a task or a tag", icon: .magnifier)
                     .textRole(.footnote.regular)
                     .foregroundStyle(.text.placeholder)
-                    .padding(.horizontal, .space100)
+                    .padding(.horizontal, .space150)
                     .frame(maxWidth: .infinity, minHeight: Metrics.control, alignment: .leading)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: .radius.control)
-                            .strokeBorder(.border.strong, lineWidth: .stroke.thin)
+                    .background {
+                        Capsule()
+                            .fill(.background.muted)
+                        if contrast == .increased {
+                            Capsule()
+                                .strokeBorder(.border.strong, lineWidth: .stroke.thin)
+                        }
                     }
                 VStack(spacing: 0) {
                     TaskRow(title: "Order the backsplash tiles") {
@@ -123,7 +143,8 @@ private struct TaskRow<Meta: View>: View {
                     .textRole(.body.regular)
                     .foregroundStyle(done ? Westron.Color.text.secondary : .text.primary)
                     .strikethrough(done, color: Color(.icon.tertiary))
-                HStack(spacing: .space100) {
+                // Wraps rather than breaks a word at an accessibility size.
+                FlowLayout(spacing: .space100) {
                     meta
                 }
                 .textRole(.footnote.regular)
@@ -136,9 +157,11 @@ private struct TaskRow<Meta: View>: View {
     }
 }
 
-/// A task's check: open, a ring in border.strong; done, a disc in background.accent with its mark in text.on-accent.
+/// A task's check: open, a ring in border.default, border.strong in high contrast (decisions/0003 of the checkbox);
+/// done, a disc in background.accent with its mark in text.on-accent.
 private struct Check: View {
     let done: Bool
+    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
         ZStack {
@@ -150,7 +173,9 @@ private struct Check: View {
                     .foregroundStyle(.text.onAccent)
             } else {
                 Circle()
-                    .strokeBorder(.border.strong, lineWidth: .stroke.regular)
+                    .strokeBorder(
+                        contrast == .increased ? Westron.Color.border.strong : .border.default,
+                        lineWidth: .stroke.regular)
             }
         }
         .frame(width: Metrics.check, height: Metrics.check)
@@ -260,20 +285,20 @@ private struct NoticesSample: View {
         VStack(alignment: .leading, spacing: .space100) {
             Notice(status: .warning, title: "Storage almost full", detail: "92% of the attachment space is used.")
             Notice(status: .danger, title: "Report not sent", detail: "The webhook returned 404. Check its address.")
-            HStack(spacing: .space100) {
-                FilledButton(title: "Save", icon: nil, fill: .background.accent, label: .text.onAccent)
-                // A secondary button: text.primary on background.surface, ringed in border.strong.
-                Text("Cancel")
-                    .textRole(.footnote.strong)
-                    .foregroundStyle(.text.primary)
-                    .padding(.horizontal, .space150)
-                    .frame(minHeight: Metrics.control)
-                    .background(.background.surface, in: RoundedRectangle(cornerRadius: .radius.control))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: .radius.control)
-                            .strokeBorder(.border.strong, lineWidth: .stroke.thin)
-                    }
-                FilledButton(title: "Delete", icon: .trash, fill: .status.danger.fill, label: .status.danger.onFill)
+            // The row wraps rather than squeezes: at an accessibility size four items do not fit a phone's width, and
+            // squeezed buttons lose their labels (the accessibility audit's contrast check, 2026-11-20).
+            FlowLayout(spacing: .space100) {
+                // westron's own buttons: the accent, a secondary one, text.primary on background.muted (outlined
+                // in border.strong in high contrast), and a destructive one.
+                Button("Save") {}
+                    .buttonStyle(.primary, size: .s)
+                Button("Cancel") {}
+                    .buttonStyle(.secondary, size: .s)
+                Button(role: .destructive) {
+                } label: {
+                    Label("Delete", icon: .trash)
+                }
+                .buttonStyle(.primary, size: .s)
                 Text("Webhook help")
                     .textRole(.footnote.strong)
                     .underline()
@@ -305,26 +330,6 @@ private struct Notice: View {
         }
         .padding(.space100)
         .background(status.background, in: RoundedRectangle(cornerRadius: .radius.control))
-    }
-}
-
-/// A button with a solid fill and its label.
-private struct FilledButton: View {
-    let title: String
-    let icon: Westron.Icon?
-    let fill: Westron.Color
-    let label: Westron.Color
-
-    var body: some View {
-        HStack(spacing: .space50) {
-            if let icon { Icon(icon) }
-            Text(title)
-        }
-        .textRole(.footnote.strong)
-        .foregroundStyle(label)
-        .padding(.horizontal, .space150)
-        .frame(minHeight: Metrics.control)
-        .background(fill, in: RoundedRectangle(cornerRadius: .radius.control))
     }
 }
 

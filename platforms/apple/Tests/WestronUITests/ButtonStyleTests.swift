@@ -136,8 +136,6 @@ struct ButtonStyleTests {
     func tokensMatchTheContract(variant: ButtonVariant, destructive: Bool) throws {
         let bindings: [(name: String, cases: [Case], drawn: (ButtonTokens) -> String?)] = [
             ("container.background", try Self.cases("container.background"), { $0.background?.name }),
-            ("container.borderColor", try Self.cases("container.borderColor"), { $0.borderColor?.name }),
-            ("container.borderWidth", try Self.cases("container.borderWidth"), { $0.borderWidth?.name }),
             ("container.opacity", try Self.cases("container.opacity"), { $0.opacity?.name }),
             ("label.color", try Self.cases("label.color"), { $0.label.name }),
             ("icon.color", try Self.cases("icon.color"), { $0.icon.name }),
@@ -145,7 +143,7 @@ struct ButtonStyleTests {
         ]
         #expect(Self.stateCombinations.count == 32)
         for states in Self.stateCombinations {
-            let tokens = ButtonTokens(variant: variant, destructive: destructive, states: states)
+            let tokens = ButtonTokens(variant: variant, destructive: destructive, states: states, highContrast: false)
             for binding in bindings {
                 let expected = binding.cases.first {
                     $0.matches(variant: variant, destructive: destructive, states: states)
@@ -155,6 +153,42 @@ struct ButtonStyleTests {
                     "\(binding.name), \(variant) \(destructive ? "destructive" : "default"), states \(states.map(\.rawValue).sorted())"
                 )
             }
+            // The contract binds no border (#85): in the standard themes no variant draws one.
+            #expect(tokens.borderColor == nil && tokens.borderWidth == nil)
+        }
+        #expect(try Self.tokenLines().allSatisfy { !$0.hasPrefix("  container.border") })
+    }
+
+    @Test("secondary darkens further under text.primary than under the danger words (the owner's decision, 2026-11-20)")
+    func secondaryFillsByRole() {
+        func fill(_ destructive: Bool, _ states: Set<ButtonState>) -> Westron.Color? {
+            ButtonTokens(variant: .secondary, destructive: destructive, states: states, highContrast: false).background
+        }
+        #expect(fill(false, []) == .background.muted && fill(true, []) == .background.muted)
+        #expect(fill(false, [.hover]) == .background.mutedHover)
+        #expect(fill(false, [.pressed]) == .background.mutedPressed)
+        #expect(fill(true, [.hover]) == .background.mutedHoverColored)
+        #expect(fill(true, [.pressed]) == .background.mutedPressedColored)
+    }
+
+    @Test(
+        "in the high-contrast themes a secondary button draws its outline in every state, over the same fill",
+        arguments: ButtonVariant.allCases, [false, true])
+    func highContrastOutline(variant: ButtonVariant, destructive: Bool) {
+        for states in Self.stateCombinations {
+            let standard = ButtonTokens(variant: variant, destructive: destructive, states: states, highContrast: false)
+            let high = ButtonTokens(variant: variant, destructive: destructive, states: states, highContrast: true)
+            // Only the outline differs.
+            var edgeless = high
+            edgeless.borderColor = nil
+            edgeless.borderWidth = nil
+            #expect(edgeless == standard)
+            if variant == .secondary {
+                #expect(high.borderColor == (destructive ? .status.danger.border : .border.strong))
+                #expect(high.borderWidth == .stroke.thin)
+            } else {
+                #expect(high.borderColor == nil && high.borderWidth == nil)
+            }
         }
     }
 
@@ -162,19 +196,22 @@ struct ButtonStyleTests {
     func disabledAndLoadingExcludeHoverAndPressed() {
         for variant in ButtonVariant.allCases {
             for destructive in [false, true] {
-                let rest = ButtonTokens(variant: variant, destructive: destructive, states: [])
+                let rest = ButtonTokens(variant: variant, destructive: destructive, states: [], highContrast: false)
                 for excluding in [ButtonState.disabled, .loading] {
                     for tint in [ButtonState.hover, .pressed] {
                         let tokens = ButtonTokens(
-                            variant: variant, destructive: destructive, states: [excluding, tint])
+                            variant: variant, destructive: destructive, states: [excluding, tint], highContrast: false)
                         #expect(tokens.background == rest.background)
                     }
                     #expect(!ButtonTokens.scalesDown(states: [excluding, .pressed]))
                 }
                 // Loading does not dim; disabled does.
-                #expect(ButtonTokens(variant: variant, destructive: destructive, states: [.loading]).opacity == nil)
                 #expect(
-                    ButtonTokens(variant: variant, destructive: destructive, states: [.disabled]).opacity
+                    ButtonTokens(variant: variant, destructive: destructive, states: [.loading], highContrast: false)
+                        .opacity == nil)
+                #expect(
+                    ButtonTokens(variant: variant, destructive: destructive, states: [.disabled], highContrast: false)
+                        .opacity
                         == .opacity.disabled)
             }
         }
@@ -183,7 +220,7 @@ struct ButtonStyleTests {
         #expect(!ButtonTokens.scalesDown(states: [.hover]))
     }
 
-    @Test("the per-size bindings are the contract's: height, padding, gap, label and icon fonts; one radius")
+    @Test("the per-size bindings are the contract's: height, padding, gap, label and icon fonts; the capsule")
     func metricsMatchTheContract() throws {
         let height = try Self.bySize("container.height")
         let padding = try Self.bySize("container.paddingHorizontal")
@@ -199,7 +236,9 @@ struct ButtonStyleTests {
             #expect(metrics.labelFont.name == labelFont[key])
             #expect(metrics.iconFont.name == iconFont[key])
         }
-        #expect(ButtonMetrics.radius.name == (try Self.single("container.radius")))
+        // The shape is the capsule, drawn with SwiftUI's `Capsule()` in the style; the icon is at the small scale.
+        #expect(try Self.single("container.shape") == "capsule")
+        #expect(ButtonMetrics.iconScale == .small)
         #expect(try Self.single("container.pressMotion") == Westron.Transition.press.name)
         #expect(try Self.single("container.hoverMotion") == Westron.Transition.fade.name)
     }

@@ -178,7 +178,8 @@ The contract binds the ring's color and width and leaves its place to the implem
 (a) the ring over the outline, replacing it; (b) the ring outside the kept outline. Proposed: (b) on `framed`,
 `stroke.thick` in `border.focus`, `space.25` outside the outline, its corners the outline's grown by that distance; on
 `inline`, which has no outline, around the field, `space.100` out across and `space.50` up and down, with
-`radius.control`. Every distance is a token.
+`radius.control`. Every distance is a token. (Amended by decisions/0002, item 7: on `framed` the ring now touches the
+field's edge, with no gap, and there is no outline in the standard themes.)
 
 Why: `border.focus` and `border.strong` are about equally light, 1.01:1 in light (3.53:1 and 3.50:1 against the canvas),
 so a ring replacing the outline would show focus mostly by its hue, which chapter 08 ("Color is never the only signal")
@@ -186,5 +187,6 @@ forbids; outside the outline, focus changes the shape from one line to two. The 
 
 What it asks of a product: the ring is drawn outside the field's laid out frame, so a focused field needs that room
 around it, which no clipping parent and no close neighbor may take: on `framed` `space.25` plus `stroke.thick` beyond
-the outline on every side, on `inline` `space.100` across and `space.50` up and down. The contract's `platforms.apple`
+the outline on every side (since decisions/0002, item 7, `stroke.thick` alone), on `inline` `space.100` across and
+`space.50` up and down. The contract's `platforms.apple`
 states it; the catalog's matrix cells keep it.

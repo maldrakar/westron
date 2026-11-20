@@ -17,14 +17,19 @@ values, the ramps and the rules that solve them are in decisions/0012; the token
   Apple and GNOME. It suits a dense table as well as a calm list. Warm grays read as paper and fit long reading;
   westron's products are mostly tools.
 - **Surfaces differ by small steps.** `muted` is a quiet fill inside content: the track of a segmented control, a tag
-  or a badge without a color. `hover` and `pressed` follow the pointer. Type, space and a soft shadow carry the
+  or a badge without a color, a secondary button. `hover` and `pressed` follow the pointer; a control filled with
+  `muted` darkens to `muted-hover` and `muted-pressed` instead, or, under colored words such as a destructive
+  button's, to `muted-hover-colored` and `muted-pressed-colored`, which stop where those words would no longer read. Type, space and a soft shadow carry the
   hierarchy (chapter 04), so the surface steps stay small.
 - **Two inks for words, one for quiet glyphs.** `color.text.primary` and `text.secondary` serve words and glyphs
   alike. `color.icon.tertiary` serves chevrons, grips and strike-through lines, never words. Any ink light enough to
   look tertiary fails the text target, so words stop at secondary.
-- **Lines are quiet, borders of controls are not.** `color.border.default` draws separators. In the standard themes
-  it is decoration, since space and alignment also show the grouping. `border.strong` draws the outline of something a
-  person must find, such as a field, a checkbox or a secondary button, and it meets 3:1.
+- **Lines are quiet; controls are found by their fill, or by a strong line in high contrast.** `color.border.default`
+  draws separators. In the standard themes it is decoration, since space and alignment also show the grouping, and it
+  draws the quiet ring of an unchecked check. `border.strong` draws the outline of something a person must find, and
+  it meets 3:1. A secondary button and a framed text field are found by their muted fill, and draw the outline only in
+  high contrast, where the check's ring is `border.strong` too (chapter 04). In the standard themes their edges stay
+  below 3:1, a deviation the owner accepted on 2026-11-20 (chapter 08).
 
 ## One accent: cobalt
 

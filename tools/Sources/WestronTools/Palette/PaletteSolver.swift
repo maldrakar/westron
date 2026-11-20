@@ -17,6 +17,10 @@ import Foundation
 /// | `control-contrast` | the label on `control` | step 9's label where it still reads at 4.5 (7), else the other one |
 /// | 11 | colored or secondary text | 4.5 on every ground and on every step 5; high contrast 7 |
 /// | 12 | primary text | from the source's lightness, 13 on the canvas and 7 on every step 5; high contrast 16 |
+/// | `muted-pressed` | the neutral muted fill (step 4) pressed, under primary words | step 4, two hover steps on |
+/// | `muted-hover` | the neutral muted fill under the pointer, under primary words | one hover step on |
+/// | `muted-pressed-colored` | the same, under colored words | as far as every step 11 still reads |
+/// | `muted-hover-colored` | the same, under colored words | halfway to `muted-pressed-colored` |
 ///
 /// The grounds are the canvas, raised and sunken surfaces. Each step moves away from the canvas, towards contrast,
 /// the least lightness that meets its targets, keeping its hue and chroma; contrast is measured on the 8-bit sRGB
@@ -35,6 +39,16 @@ import Foundation
 /// no longer reads there, no lightness further away helps that label, so the other label takes over (white for a dark
 /// ink, the ink for white) and `control` moves on until both targets hold. A dark ink at 7:1 on a fill at 4.5:1 to a
 /// light canvas would need more than 21:1 between the canvas and the ink.
+///
+/// The `muted-` states belong to the neutral ramp only: the muted fill of a control that is filled with it, such as a
+/// secondary button, under the pointer and pressed. A muted fill carries words, so it moves the other way from a solid
+/// fill: away from the canvas, towards its words, a hover step (0.04 in OKLCH lightness) per state, as `10` and
+/// `fill-pressed` move from step 9. `muted-hover` and `muted-pressed` carry primary words, step 12 of the neutral ramp:
+/// they move one and two hover steps, and stop short only where those words would miss the text target, 4.5 and 7 in
+/// high contrast. `muted-hover-colored` and `muted-pressed-colored` carry colored words, such as a destructive
+/// button's: `muted-pressed-colored` moves up to two hover steps, but no further than every ramp's step 11 and step 12
+/// still read on it, and `muted-hover-colored` is halfway. Step 11 is solved to just reach its target on every step 5,
+/// so colored words stop that pair near step 5's tone (decisions/0012, 0013, revisions of 2026-11-20).
 public enum PaletteSolver {
     public static let themes = ["light", "dark", "light-hc", "dark-hc"]
 
@@ -134,14 +148,16 @@ public enum PaletteSolver {
         // Steps 1–5 of every ramp first: text and marks must read on the step 5 of every ramp, since equal targets
         // still round to slightly different luminances in 8 bits.
         var low: [String: [RGB]] = [:]
+        var mutedLightness = canvasLightness
         for ramp in ramps {
             var steps = [ramp.name == "neutral" ? canvas : color(canvasLightness, ramp.chroma[0], ramp.hue)]
             for step in 2...5 {
-                steps.append(
-                    try solve(
-                        theme, [ramp.name, "\(step)"], from: canvasLightness, ramp.chroma[step - 1], ramp.hue,
-                        direction: away, "\(targets[step - 2]):1 on the canvas"
-                    ) { ratio($0, canvas) >= targets[step - 2] }.color)
+                let solved = try solve(
+                    theme, [ramp.name, "\(step)"], from: canvasLightness, ramp.chroma[step - 1], ramp.hue,
+                    direction: away, "\(targets[step - 2]):1 on the canvas"
+                ) { ratio($0, canvas) >= targets[step - 2] }
+                steps.append(solved.color)
+                if ramp.name == "neutral" && step == 4 { mutedLightness = solved.lightness }
             }
             low[ramp.name] = steps
         }
@@ -150,6 +166,8 @@ public enum PaletteSolver {
         var entries: [Entry] = [
             Entry(path: ["neutral", "raised"], color: raised), Entry(path: ["neutral", "sunken"], color: sunken),
         ]
+        // The words of every ramp, steps 11 and 12, which the muted fill's states must still carry.
+        var words: [RGB] = []
         for ramp in ramps {
             var steps = low[ramp.name]!
             func solveStep(
@@ -233,12 +251,32 @@ public enum PaletteSolver {
                     ratio($0, canvas) >= primary && minimum($0, on: onEverything) >= Target.primaryOnSteps
                 }.color)
 
+            words += [steps[10], steps[11]]
             entries += steps.enumerated().map { Entry(path: [ramp.name, "\($0.offset + 1)"], color: $0.element) }
             entries.append(Entry(path: [ramp.name, "contrast"], color: label))
             entries.append(Entry(path: [ramp.name, "fill-pressed"], color: fillStates[1].color))
             entries.append(Entry(path: [ramp.name, "control"], color: control.fill))
             entries.append(Entry(path: [ramp.name, "control-contrast"], color: control.label))
         }
+
+        // The muted fill under the pointer and pressed, after every ramp's words are known; written with the neutral
+        // ramp, whose group must stay whole in the token file. Under primary words (neutral step 12, the second word
+        // listed) it darkens the whole two hover steps unless they miss; under colored words, as far as they all read.
+        let text = highContrast ? Target.text.highContrast : Target.text.standard
+        let mutedChroma = ramps[0].chroma[3]
+        let mutedStates = mutedFillStates(
+            from: mutedLightness, chroma: mutedChroma, hue: neutral.hue, direction: away, words: [words[1]],
+            text: text)
+        let coloredStates = mutedFillStates(
+            from: mutedLightness, chroma: mutedChroma, hue: neutral.hue, direction: away, words: words, text: text)
+        let afterNeutral = (entries.lastIndex { $0.path[0] == "neutral" } ?? entries.count - 1) + 1
+        entries.insert(
+            contentsOf: [
+                Entry(path: ["neutral", "muted-hover"], color: mutedStates.hover),
+                Entry(path: ["neutral", "muted-pressed"], color: mutedStates.pressed),
+                Entry(path: ["neutral", "muted-hover-colored"], color: coloredStates.hover),
+                Entry(path: ["neutral", "muted-pressed-colored"], color: coloredStates.pressed),
+            ], at: afterNeutral)
 
         let series = source.series[dark: dark]
         for (index, hex) in series.enumerated() {
@@ -252,6 +290,23 @@ public enum PaletteSolver {
                     ) { minimum($0, on: grounds) >= Target.series }.color))
         }
         return entries
+    }
+
+    /// The muted fill's `muted-hover` and `muted-pressed`: step 4, at `lightness`, moved away from the canvas up to two
+    /// hover steps, as far as every one of `words` still reads on it at `text`; the hover fill halfway. The distance is
+    /// walked in small steps from step 4 and stops at the first that a word misses, so 8-bit rounding cannot skip past
+    /// a miss.
+    static func mutedFillStates(
+        from lightness: Double, chroma: Double, hue: Double, direction: Double, words: [RGB], text: Double
+    ) -> (hover: RGB, pressed: RGB) {
+        let reach = Target.hoverOffset + Target.pressedOffset
+        let walk = 0.0005
+        func at(_ distance: Double) -> RGB { color(lightness + direction * distance, chroma, hue) }
+        var distance = 0.0
+        while distance + walk <= reach + 1e-9, words.allSatisfy({ ratio($0, at(distance + walk)) >= text }) {
+            distance += walk
+        }
+        return (at(distance / 2), at(distance))
     }
 
     /// A ramp's `control` and its label, `control-contrast`: the solid fill, moved away from the canvas until it

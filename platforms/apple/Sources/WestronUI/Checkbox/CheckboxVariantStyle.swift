@@ -64,6 +64,7 @@ private struct CheckboxLookBody<Label: View>: View {
     @Environment(\.isFocused) private var isFocused
     @Environment(\.category) private var category
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.forcedCheckboxStates) private var forcedStates
     /// The space between the check's hit area and its label, which grows with the text.
     @ScaledMetric private var gap: CGFloat = .space50
@@ -91,7 +92,7 @@ private struct CheckboxLookBody<Label: View>: View {
 
     private var check: some View {
         let states = Set(CheckboxState.allCases.filter(isIn))
-        let tokens = CheckboxTokens(category: category, states: states)
+        let tokens = CheckboxTokens(category: category, states: states, highContrast: contrast == .increased)
         let motion = CheckboxMotion(reduceMotion: reduceMotion)
         let scalesDown = CheckboxTokens.scalesDown(states: states)
 

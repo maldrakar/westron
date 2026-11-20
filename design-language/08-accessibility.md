@@ -28,6 +28,18 @@ The reference is WCAG 2 ([WCAG 2.2](https://www.w3.org/TR/WCAG22/)). The kinds a
   westron does not, because a small bold label, such as the overline heading, is still small.
 - **Exempt as WCAG defines it**: text and glyphs that are part of an inactive control, purely decorative, not visible
   to anyone, or part of a picture with significant other content, and logotypes. Nothing else is exempt.
+- **An accepted deviation: the edges of quiet controls in the standard themes.** On 2026-11-20 the owner accepted, for
+  the look of the controls (#85), that a framed text field is marked only by its fill, `color.background.muted`, with
+  no outline, below the 3:1 that [1.4.11](https://www.w3.org/TR/WCAG22/#non-text-contrast) asks of a component's
+  boundary: against `background.canvas`, `surface` and `sunken` it stands 1.11, 1.16 and 1.04 off in light and 1.24,
+  1.14 and 1.30 in dark, where the outline in `border.strong` it replaced measured 3.50 and 4.12 against the canvas
+  (spec/components/text-field, decisions/0002). The unchecked check's quiet ring, `color.border.default`, is under
+  the same deviation, pending the owner's confirmation: 1.27, 1.33 and 1.20 in light, 1.46, 1.34 and 1.53 in dark
+  (spec/components/checkbox, decisions/0003). The secondary button's fill, 1.11 against the canvas in light, was chosen
+  with its look the same day (spec/components/button, decisions/0003). The deviation is deliberate and limited to the
+  standard themes: the high-contrast themes draw `border.strong` on each of them, `status.danger.border` on a
+  destructive secondary button (below). A product that needs 1.4.11
+  in the standard themes asks for a high-contrast option or a component that draws an outline; westron has none yet.
 - **A disabled control is dimmed whole.** westron draws it at `opacity.disabled`, 0.4, fill, border, label and icon
   together, rather than in colors of its own (decisions/0013). It falls under the exemption for inactive controls,
   so it carries no contrast declaration. Its state is also announced as unavailable (below), so dimming is never the
@@ -72,6 +84,11 @@ The reference is WCAG 2 ([WCAG 2.2](https://www.w3.org/TR/WCAG22/)). The kinds a
     text further from the ground (decisions/0012).
   - Every raised surface gets an outline in `color.border.default`, because a shadow alone does not mark an edge
     (decisions/0013).
+  - A secondary button gets an outline in `color.border.strong` (`color.status.danger.border` with the destructive
+    role), because its muted fill stays about 1.1:1 off the canvas, as the high-contrast themes keep steps 1–5
+    (chapter 04, decisions/0013). A framed text field, filled the same way, gets the same outline in
+    `color.border.strong`, and an unchecked check's ring is `color.border.strong` instead of the quiet
+    `color.border.default` (the accepted deviation above).
   - In `dark-hc`, a fill with a white label turns light and its label dark, so that the pair reaches 7:1 and the
     fill still stands out from the dark canvas.
   - On Apple, each colorset carries all four themes and the system switches them. watchOS shows the dark theme
@@ -108,10 +125,10 @@ westron's target is the platform's recommended size. The hit area may be larger 
 | Web | 44×44 CSS px (AAA) | 24×24 CSS px (AA) | [2.5.5](https://www.w3.org/TR/WCAG22/#target-size-enhanced), [2.5.8](https://www.w3.org/TR/WCAG22/#target-size-minimum) |
 | Android | 48×48 dp | — | [Android accessibility](https://developer.android.com/guide/topics/ui/accessibility/apps) |
 
-The value for each platform lives in its platform token file, not in component code. The control heights are there
-(#56): `size.control.m` is 44 on iOS, iPadOS and watchOS, the recommended target, and 32 on macOS, above its
-recommended 28. `size.control.s` is below the recommended size on every platform, 32 on touch and 24 on macOS, so a
-control drawn at it keeps a hit area of the recommended size around what it draws.
+The value for each platform lives in its platform token file, not in component code: `size.target.minimum` is 44 on
+iOS, iPadOS and watchOS and 28 on macOS (decisions/0013, revision of 2026-11-20). The control heights are there too
+(#56), and they are not the target: on iOS and iPadOS `size.control.s` and `m`, 28 and 36, are below it, on watchOS
+`s`, 32, and on macOS `s`, 24, so a control drawn at them keeps a hit area of the target's size around what it draws.
 A component's contract may record an exception: on macOS, Button's size s takes clicks in its drawn 24 pt
 (spec/components/button, decisions/0001).
 

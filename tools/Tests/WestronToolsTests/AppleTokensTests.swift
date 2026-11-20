@@ -81,13 +81,17 @@ struct AppleTokensTests {
         let tokens = try #require(AppleFixture.file(files, AppleTokens.tokensFile))
         #expect(tokens.contains("public enum Category: String, CaseIterable, Sendable {"))
         #expect(!tokens.contains("color.neutral."), "primitives stay out, also the ramps the theme contexts merge in")
-        // The control heights: macOS's pointer sizes behind #if, the touch sizes of iOS and watchOS under #else.
-        for (name, pointer, touch) in [("s", 24, 32), ("m", 32, 44), ("l", 40, 52)] {
+        // The control heights: macOS's pointer sizes and watchOS's behind #if, iOS's under #else (decisions/0013,
+        // revision of 2026-11-20).
+        for (name, pointer, watch, phone) in [("s", 24, 32, 28), ("m", 32, 44, 36), ("l", 40, 52, 50)] {
             let declaration = "public static let \(name) = Westron.Dimension(name: \"size.control.\(name)\", value: "
             #expect(tokens.contains("#if os(macOS)\n") && tokens.contains(declaration + "\(pointer))"))
-            #expect(tokens.contains(declaration + "\(touch))"))
+            #expect(tokens.contains("#elseif os(watchOS)\n") && tokens.contains(declaration + "\(watch))"))
+            #expect(tokens.contains(declaration + "\(phone))"))
         }
-        #expect(!tokens.contains("os(watchOS)"), "watchOS takes the iOS values")
+        // The least hit area: macOS's behind #if, the touch target that iOS and watchOS share under #else.
+        let target = "public static let minimum = Westron.Dimension(name: \"size.target.minimum\", value: "
+        #expect(tokens.contains(target + "28)") && tokens.contains(target + "44)"))
         #expect(tokens.contains(#"public static let disabled = Westron.Number(name: "opacity.disabled", value: 0.4)"#))
     }
 

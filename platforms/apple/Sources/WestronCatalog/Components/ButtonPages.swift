@@ -9,9 +9,10 @@ import WestronUI
 
 // Button's catalog entries, from spec/components/button/button.spec.yaml. The matrix is larger than one screen, so it
 // is split into pages, each of which fits one screenshot on an iPhone 17 in portrait: `button` (variants × sizes ×
-// label, icon and label, icon-only), `button-destructive` (the same in the destructive role), `button-states` and
-// `button-states-destructive` (every state and the combinations the contract excludes), `button-behavior` (live
-// buttons that count accepted presses, close neighbors and focus). The variants, sizes and states come from the
+// label, icon and label, icon-only), `button-destructive` (the same in the destructive role), `button-states` (every
+// state and the combinations the contract excludes), the same in the destructive role in two entries,
+// `button-states-destructive` (the enabled rows) and `button-states-destructive-disabled` (the disabled rows), and
+// `button-behavior` (live buttons that count accepted presses, close neighbors and focus). The variants, sizes and states come from the
 // generated enums, so the pages follow the contract.
 
 extension CatalogEntry {
@@ -26,13 +27,23 @@ extension CatalogEntry {
     }
 
     static let buttonStates = CatalogEntry(id: "button-states", title: "Button: states", section: .components) {
-        ButtonStatesPage(destructive: false)
+        ButtonStatesPage(destructive: false, rows: .all)
     }
 
+    /// The destructive role's states are two entries: at accessibility5 the accessibility audit cannot finish a
+    /// screenful that holds the disabled rows next to the others of this page (Button's decisions/0003, "Finding"),
+    /// and finishes each half. Together they hold every row `button-states` holds.
     static let buttonStatesDestructive = CatalogEntry(
         id: "button-states-destructive", title: "Button: states, destructive role", section: .components
     ) {
-        ButtonStatesPage(destructive: true)
+        ButtonStatesPage(destructive: true, rows: .enabled)
+    }
+
+    static let buttonStatesDestructiveDisabled = CatalogEntry(
+        id: "button-states-destructive-disabled", title: "Button: disabled states, destructive role",
+        section: .components
+    ) {
+        ButtonStatesPage(destructive: true, rows: .disabled)
     }
 
     static let buttonBehavior = CatalogEntry(
@@ -240,7 +251,8 @@ private struct ButtonMatrixPage: View {
             summary: (destructive
                 ? "Button(role: .destructive) recolors every variant in the danger colors. "
                 : "Every variant at every size, at rest. ")
-                + "The height is size.control.* and a minimum; the hit area is at least the platform's target, "
+                + "Capsules; secondary is filled with background.muted, outlined only in high contrast. The height is "
+                + "size.control.* and a minimum; the hit area is at least size.target.minimum, "
                 + "except size s on macOS, which takes clicks in what it draws."
         ) {
             ForEach(ButtonSize.allCases, id: \.self) { size in
@@ -328,12 +340,20 @@ struct FlowLayout: Layout {
         return CGSize(width: width, height: height)
     }
 
+    /// A subview's ideal size, or, where that is wider than the layout, its size at the layout's width: a button wider
+    /// than the page wraps its label between words instead of running off the page (Button's contract).
+    private func size(_ subview: LayoutSubview, width: CGFloat) -> CGSize {
+        let ideal = subview.sizeThatFits(.unspecified)
+        guard ideal.width > width, width.isFinite else { return ideal }
+        return subview.sizeThatFits(ProposedViewSize(width: width, height: nil))
+    }
+
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         var y = bounds.minY
         for line in lines(subviews, width: bounds.width) {
             var x = bounds.minX
             for index in line.indices {
-                let size = subviews[index].sizeThatFits(.unspecified)
+                let size = size(subviews[index], width: bounds.width)
                 subviews[index].place(
                     at: CGPoint(x: x, y: y + line.height / 2), anchor: .leading, proposal: ProposedViewSize(size))
                 x += size.width + spacing
@@ -352,7 +372,7 @@ struct FlowLayout: Layout {
         var lines: [Line] = []
         var line = Line()
         for index in subviews.indices {
-            let size = subviews[index].sizeThatFits(.unspecified)
+            let size = size(subviews[index], width: width)
             let needed = line.indices.isEmpty ? size.width : line.width + spacing + size.width
             if !line.indices.isEmpty && needed > width {
                 lines.append(line)
@@ -370,7 +390,17 @@ struct FlowLayout: Layout {
 /// Every state of the contract alone, and disabled and loading combined with a forced hover and pressed, which they
 /// exclude: those rows must look as disabled and loading alone.
 private struct ButtonStatesPage: View {
+    /// Which rows a page shows.
+    enum Rows {
+        case all
+        /// The rows where the button is enabled.
+        case enabled
+        /// The rows where the button is disabled, alone or with a state it excludes.
+        case disabled
+    }
+
     let destructive: Bool
+    let rows: Rows
 
     /// A row of the matrix: the states it shows, forced or real, on buttons with an icon and a label, a label alone or
     /// icon-only.
@@ -391,7 +421,7 @@ private struct ButtonStatesPage: View {
     /// Rest, each state alone, then each state that excludes hover and pressed combined with each of them; last,
     /// loading on a label without an icon, where the indicator goes before the label and the button widens (P13), and
     /// on icon-only buttons, where the indicator replaces the icon.
-    private static var rows: [Row] {
+    private static var allRows: [Row] {
         let entered = ButtonCatalogState.all.filter(\.isEntered)
         let excluding = entered.filter(\.excludesTint)
         let excluded = entered.filter(\.isTint)
@@ -402,11 +432,12 @@ private struct ButtonStatesPage: View {
 
     var body: some View {
         TokenPage(
-            title: destructive ? "Button · states, destructive" : "Button · states",
-            summary: "Hover, pressed and focus are forced for the screenshot; disabled and loading are real. "
-                + "Disabled and loading exclude hover and pressed. The system draws focus, so its row looks at rest."
+            title: title,
+            summary: summary
         ) {
-            SampleRows(items: Self.rows, name: \.name, monospaced: false) { row in
+            // The row's buttons wrap rather than squeeze: with the padding of #85, three "Delete" buttons of size s
+            // and the longest name are wider than a phone, and a squeezed label breaks inside its word.
+            SampleRows(items: shownRows, name: \.name, monospaced: false, wrapsCells: true) { row in
                 ForEach(ButtonVariant.allCases, id: \.self) { variant in
                     cell(row, variant: variant)
                 }
@@ -414,8 +445,36 @@ private struct ButtonStatesPage: View {
         }
     }
 
+    /// What the page shows: the disabled rows alone say so, since they show no focus or loading.
+    private var summary: String {
+        switch rows {
+        case .disabled:
+            "Disabled is real; hover and pressed are forced on it, and disabled excludes them, so every row keeps the "
+                + "resting fill at opacity.disabled. The enabled rows are on button-states-destructive."
+        case .all, .enabled:
+            "Hover, pressed and focus are forced for the screenshot; disabled and loading are real. "
+                + "Disabled and loading exclude hover and pressed. The system draws focus, so its row looks at rest."
+        }
+    }
+
+    private var shownRows: [Row] {
+        switch rows {
+        case .all: Self.allRows
+        case .enabled: Self.allRows.filter { !$0.states.contains(where: \.isDisabled) }
+        case .disabled: Self.allRows.filter { $0.states.contains(where: \.isDisabled) }
+        }
+    }
+
+    private var title: String {
+        switch (destructive, rows) {
+        case (false, _): "Button · states"
+        case (true, .disabled): "Button · disabled states, destructive"
+        case (true, _): "Button · states, destructive"
+        }
+    }
+
     private func cell(_ row: Row, variant: ButtonVariant) -> some View {
-        // Size s: the states' colors do not depend on the size, and three buttons of s fit beside the names on a phone.
+        // Size s: the states' colors do not depend on the size, and it is the narrowest.
         SampleButton(kind: row.kind, variant: variant, size: .s, destructive: destructive)
             .forcingButtonStates(Set(row.states.filter(\.isForced)))
             .disabled(row.states.contains(where: \.isDisabled))
@@ -495,8 +554,9 @@ private struct ButtonBehaviorPage: View {
                     .accessibilityIdentifier(ButtonCatalogID.iconOnly)
                 }
                 FlowLayout(spacing: .space200) {
+                    // Its ideal width, and no wider than the page: at accessibility sizes its label wraps.
                     Toggle("Loading: Publish, Publish now, Export", isOn: $isPublishing)
-                        .fixedSize()
+                        .fixedSize(horizontal: false, vertical: true)
                         .accessibilityIdentifier(ButtonCatalogID.loadingToggle)
                     // A test control: it presses Publish as assistive technology does.
                     Button("Press Publish via accessibility") {

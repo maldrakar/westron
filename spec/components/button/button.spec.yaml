@@ -1,11 +1,23 @@
 # westron's Button contract (#22), approved by the owner on 2026-11-16; the macOS hit area decided by the owner on
 # 2026-11-18 (#75): decisions/0001-button-contract.md records the owner's answers and the bindings the owner confirmed
-# on top of them.
+# on top of them. Its look revised on 2026-11-20 (#85), the owner's choice from prototype renders, pending the owner's
+# review of this contract and its snapshot matrix together (decisions/0003-the-look-of-2026-11-20.md).
 id: button
 status: approved
 description: >-
   A push button that runs an action: westron's style on the platform's own button, with a label and a leading icon.
-  Hover and pressed tint the container in motion.fade and motion.press, and a press also scales it down to 98 %,
+  It is the platform's capsule at every variant and size, its ends round at any height, so it stays a capsule when
+  the text grows (design-language/04); icon-only is a circle. Every fill is flat and opaque, in westron's colors, with
+  no glass or material. primary is filled with the accent, secondary with color.background.muted and no outline,
+  tertiary has no fill. Under the pointer and pressed, secondary's fill darkens towards its words, a step each; with
+  the destructive role it darkens only as far as the danger words still read, which is much less (the owner's
+  decision of 2026-11-20). In the high-contrast themes a secondary button also draws an outline, color.border.strong
+  (color.status.danger.border with the destructive role) at stroke.thin, over its fill, in every state: the muted
+  fill alone sets it off from the canvas by about 1.1:1, and a control a person must find meets the non-text target
+  there (design-language/02, 08). The bindings below cannot say this, since a case has no contrast key, so this
+  description is the contract for it, as Surface's is for its line. The icon beside the label is the symbol's small
+  scale in the label's text role, its baseline on the label's first text baseline, not centered on it. Hover and
+  pressed tint the container in motion.fade and motion.press, and a press also scales it down to 98 %,
   which Reduce Motion drops (chapter 05). Disabled draws the whole button at opacity.disabled, with no colors of its
   own. A disabled or loading button never enters hover or pressed: its fill stays as at rest and it does not scale,
   on every platform; container.background's leading cases bind that. Loading puts a progress indicator in the icon's
@@ -25,15 +37,16 @@ options:
     values: [primary, secondary, tertiary]
     description: >-
       No default: every use names its variant. primary is filled with the accent, the one main action on a screen;
-      secondary is outlined; tertiary has no background and an accent label.
+      secondary is filled with a quiet gray, the muted fill; tertiary has no background and an accent label.
   size:
     type: enum
     values: [s, m, l]
     default: m
     description: >-
-      The height is size.control.s, m or l: 24, 32 and 40 with a pointer (macOS), 32, 44 and 52 on touch. It is a
-      minimum, so the button grows with its text. The hit area is at least the platform's recommended target
-      (chapter 08), also where the drawn height is smaller, except where the contract's platforms block says otherwise.
+      The height is size.control.s, m or l: 24, 32 and 40 with a pointer (macOS), 28, 36 and 50 on iOS and iPadOS,
+      and 44, the only size, on watchOS. It is a minimum, so the button grows with its text. The hit area is at least
+      size.target.minimum, the platform's recommended target (chapter 08), also where the drawn height is smaller,
+      except where the contract's platforms block says otherwise.
   role:
     type: enum
     values: [default, destructive]
@@ -43,44 +56,45 @@ options:
     type: bool
     default: false
     description: >-
-      The same button showing only its icon: a square whose side equals its height, with the same radius; padding and
-      gap do not apply. The label is still there as the accessible label.
+      The same button showing only its icon: a circle whose diameter equals its height; padding and gap do not apply.
+      The label is still there as the accessible label.
 
 slots: [label, icon]
 states: [hover, focus, pressed, disabled, loading]
 
 tokens:
   container.height: { s: size.control.s, m: size.control.m, l: size.control.l }
-  container.radius: radius.control
-  container.paddingHorizontal: { s: space.100, m: space.150, l: space.200 }
-  container.gap: { s: space.50, m: space.75, l: space.100 }
+  container.shape: capsule
+  container.paddingHorizontal: { s: space.200, m: space.250, l: space.300 }
+  container.gap: { s: space.50, m: space.50, l: space.75 }
   container.background:
     cases:
       # Disabled and loading come first: they exclude hover and pressed, so the resting fill holds.
       - { when: { variant: primary, role: destructive, state: [disabled, loading] }, token: color.status.danger.fill }
       - { when: { variant: primary, state: [disabled, loading] }, token: color.background.accent }
-      - { when: { variant: [secondary, tertiary], state: [disabled, loading] }, token: null }
+      - { when: { variant: secondary, state: [disabled, loading] }, token: color.background.muted }
+      - { when: { variant: tertiary, state: [disabled, loading] }, token: null }
       - { when: { variant: primary, role: destructive, state: pressed }, token: color.status.danger.fill-pressed }
       - { when: { variant: primary, role: destructive, state: hover }, token: color.status.danger.fill-hover }
       - { when: { variant: primary, role: destructive }, token: color.status.danger.fill }
       - { when: { variant: primary, state: pressed }, token: color.background.accent-pressed }
       - { when: { variant: primary, state: hover }, token: color.background.accent-hover }
       - { when: { variant: primary }, token: color.background.accent }
-      - { when: { variant: [secondary, tertiary], state: pressed }, token: color.background.pressed }
-      - { when: { variant: [secondary, tertiary], state: hover }, token: color.background.hover }
-  container.borderColor:
-    cases:
-      - { when: { variant: secondary, role: destructive }, token: color.status.danger.border }
-      - { when: { variant: secondary }, token: color.border.strong }
-  container.borderWidth:
-    cases:
-      - { when: { variant: secondary }, token: stroke.thin }
+      # Under the danger words the muted fill darkens only as far as they still read; under text.primary it darkens
+      # more (the owner's decision of 2026-11-20, decisions/0003).
+      - { when: { variant: secondary, role: destructive, state: pressed }, token: color.background.muted-pressed-colored }
+      - { when: { variant: secondary, role: destructive, state: hover }, token: color.background.muted-hover-colored }
+      - { when: { variant: secondary, state: pressed }, token: color.background.muted-pressed }
+      - { when: { variant: secondary, state: hover }, token: color.background.muted-hover }
+      - { when: { variant: secondary }, token: color.background.muted }
+      - { when: { variant: tertiary, state: pressed }, token: color.background.pressed }
+      - { when: { variant: tertiary, state: hover }, token: color.background.hover }
   container.opacity:
     cases:
       - { when: { state: disabled }, token: opacity.disabled }
   container.pressMotion: motion.press
   container.hoverMotion: motion.fade
-  label.font: { s: typography.footnote.strong, m: typography.subheadline.strong, l: typography.subheadline.strong }
+  label.font: { s: typography.footnote.strong, m: typography.subheadline.strong, l: typography.body.strong }
   label.color:
     cases:
       - { when: { variant: primary, role: destructive }, token: color.status.danger.on-fill }
@@ -88,7 +102,7 @@ tokens:
       - { when: { variant: [secondary, tertiary], role: destructive }, token: color.status.danger.text }
       - { when: { variant: secondary }, token: color.text.primary }
       - { when: { variant: tertiary }, token: color.text.accent }
-  icon.font: { s: typography.footnote.strong, m: typography.subheadline.strong, l: typography.subheadline.strong }
+  icon.font: { s: typography.footnote.strong, m: typography.subheadline.strong, l: typography.body.strong }
   icon.color:
     cases:
       - { when: { variant: primary, role: destructive }, token: color.status.danger.on-fill }
@@ -126,12 +140,21 @@ platforms:
       role is SwiftUI's own ButtonRole, so no enum is generated for it, which would collide with SwiftUI's: a product
       writes Button(role: .destructive), and the style reads configuration.role; any other role draws as default.
       iconOnly is a labeled argument of the style, .buttonStyle(.primary, iconOnly: true): the style hides the title,
-      keeps it as the accessible label and draws the square. A product's own .labelStyle(.iconOnly) is not the way to
-      it: the style's label style overrides it, and the style cannot read it to draw the square (spec/conventions.md).
-      A call without size: takes it from controlSize (spec/conventions.md). The focus ring is the system's, so the focusRing bindings do not apply. Corners are
-      continuous.
+      keeps it as the accessible label and draws the circle. A product's own .labelStyle(.iconOnly) is not the way to
+      it: the style's label style overrides it, and the style cannot read it to draw the circle (spec/conventions.md).
+      A call without size: takes it from controlSize (spec/conventions.md). The focus ring is the system's, so the
+      focusRing bindings do not apply. The shape is SwiftUI's Capsule with its default continuous ends, as the
+      prototype the owner chose drew it; in icon-only's square frame it draws a circle.
+      The icon beside the label is set to .imageScale(.small) and laid out with the label in an HStack aligned on
+      .firstTextBaseline; icon-only draws the glyph at the same small scale. The high-contrast outline follows
+      colorSchemeContrast, as Surface's line does.
     ios:
-      description: Hover only with a pointer, on iPad; an iPhone never enters it.
+      description: >-
+        Hover only with a pointer, on iPad; an iPhone never enters it. The hit area is the system's touch tolerance
+        around the drawn button, which westron does not grow: measured on iOS 26.3 it reached 16 pt past a 32 pt
+        button (#23), and the catalog's ButtonBehaviorTests taps 8 pt below the 28 pt size s, the edge of
+        size.target.minimum, 44 pt, and 4 pt below the 36 pt size m, the edge of the same target; both reach the
+        button.
     macos:
       keyboardIntents: [defaultAction, cancelAction]
       description: >-
@@ -139,7 +162,10 @@ platforms:
         takes clicks in its 24 pt, below the recommended 28 (the owner's decision of 2026-11-18, decisions/0001): a
         click outside the system button's frame misses, a frame grown with an outset and taken back by a negative
         padding takes clicks inside a neighbor closer than 4 pt, and a layout frame of 28 breaks the alignment size s
-        is for. A pointer is precise, and the system's own small controls take clicks in their frame only.
+        is for. A pointer is precise, and the system's own small controls take clicks in their frame only. The drawn
+        button is a capsule, so the corners of its frame outside the capsule take no click: less than the rounded
+        rectangle of radius.control took before 2026-11-20 (on icon-only at s, a click 3 pt in from two edges misses),
+        which follows from the owner's two decisions and waits for the owner's confirmation (decisions/0003).
     watchos:
       options: { size: [m] }
       fallback: { size: m }
@@ -153,12 +179,14 @@ platforms:
       A native <button> with westron's CSS, provisional until phase 6 (#40). The focus ring is an outline in
       focusRing.color and focusRing.width on :focus-visible. Hover only under a pointer, (hover: hover). A native
       <button> still matches :hover while disabled, and :hover and :active while aria-busy, so the CSS excludes them
-      in those states and keeps the resting fill. Corners are circular.
+      in those states and keeps the resting fill. The capsule is a border-radius of half the height or more, so its
+      ends stay round as the button grows.
   linux:
     strategy: style-on-system-control
     base: GtkButton
     description: >-
       Provisional until phase 7: how the variants and the role map to style classes is decided there. The focus ring
-      is the system's, so the focusRing bindings do not apply. Corners are circular.
+      is the system's, so the focusRing bindings do not apply. The capsule is a border-radius of half the height or
+      more, as on the web.
   android:
     status: planned

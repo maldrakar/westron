@@ -1,7 +1,8 @@
 # 0001. The Button contract
 
 Date: 2026-11-16. Status: accepted. The owner answered the interview and, on 2026-11-16, approved the contract with
-every binding and rule proposed on top of the answers (#22).
+every binding and rule proposed on top of the answers (#22). The look (shape, secondary's outline, padding, gap, the
+font at l, the iOS heights) was replaced on 2026-11-20: decisions/0003-the-look-of-2026-11-20.md.
 
 ## Context
 

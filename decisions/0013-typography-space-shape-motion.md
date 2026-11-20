@@ -2,7 +2,8 @@
 
 Date: 2026-11-15. Status: accepted. The owner chose direction B on the direction specimens. Its default density is
 comfortable. Revised 2026-11-16: control heights and the disabled opacity. Revised 2026-11-18: the roles of the
-spacing rhythm and where the page margin applies.
+spacing rhythm and where the page margin applies. Revised 2026-11-20: buttons are capsules, the iOS control heights,
+the minimum hit target; then filled fields, a capsule on one line, and the check's quiet ring.
 
 ## Context
 
@@ -184,6 +185,79 @@ Swift helper for the page margin in this phase", which the coordinator decided u
   `List`, `Form` and bars keep their own insets, as a system control keeps its own look (decisions/0003).
 - **Left for later.** Nesting guides and the labelled area line belong to a phase 4 component; the values of compact
   come with #33.
+
+## Revision of 2026-11-20
+
+At the second gate of phase 3 the owner found the controls' function and colors right and their look not yet (#85).
+The owner compared prototype renders of three button looks with Apple's own buttons on an iPhone 17 and chose one on
+2026-11-20. The Button contract records the bindings
+(`spec/components/button/decisions/0003-the-look-of-2026-11-20.md`).
+
+**The owner's decisions:**
+
+- **Buttons are capsules.** Every variant and size of a button is the platform's capsule, and an icon-only button a
+  circle whose diameter is its height, never a large radius (as chapter 04 already asked of tags). A control westron
+  draws as a button no longer takes `radius.control`; fields and the segmented control still do, and `radius.control`
+  stays 8. Fills are flat and opaque, in westron's colors, with no glass or material.
+- **Secondary is filled, not outlined.** A neutral gray, `color.background.muted`, with its words in
+  `color.text.primary` and no border. Its hover and pressed fills are darker steps of that gray. The destructive role
+  keeps the gray and writes its words in `color.status.danger.text`. Asked on the same day how dark, the owner chose
+  that the plain secondary darkens as in the prototype, which laid its words over the fill at 10 % when pressed, and
+  the destructive one only as far as its red words still read.
+- **Control heights on iOS and iPadOS are 28, 36 and 50** for `s`, `m` and `l`, where they were 32, 44 and 52. They
+  sit beside the system's own buttons, which iOS 26 draws 28, 34 and 50 tall at its small, regular and large sizes, so
+  westron's controls no longer stand a size taller than the system's next to them. The change is in the shared tokens,
+  `size.control.*`, so it applies to every control drawn at those heights, the text field included. macOS keeps 24, 32
+  and 40.
+- **Hit areas do not shrink.** A control's height and its hit area are now separate: `size.control.m` is no longer the
+  touch target on iOS, so the target is a token of its own, below.
+- **Padding and type.** A button's horizontal padding is `space.200`, `space.250` and `space.300` (16, 20, 24) at `s`,
+  `m` and `l`, the same on both sides, on every platform. Its words are `footnote.strong`, `subheadline.strong` and
+  `body.strong`.
+- **The icon sits on the baseline.** Beside a label it is the symbol's small scale in the label's text role, its
+  baseline on the label's first text baseline, with a gap of `space.50`, `space.50` and `space.75` (4, 4, 6).
+- **watchOS is not decided.** The owner did not see the watch: `tokens/platform/watchos.tokens.json` keeps 32, 44 and
+  52, pending the owner's look at it.
+
+**The implementing agent's decisions, pending the owner's review with the snapshot matrix:**
+
+- **`size.target.minimum`.** A platform token for the least side of a control's hit area: 44 on iOS, iPadOS and
+  watchOS, the recommended touch target, and 28 on macOS, the recommended pointer target (chapter 08). The text field
+  and Button take it where they named "the recommended target"; the check keeps the larger of it and
+  `size.control.m`, so its macOS hit area stays 32. Every hit area keeps the size it had, which the catalog's hit-area
+  tests measure.
+- **The muted fill's states.** The palette generator solves two pairs for the neutral ramp, as it solves
+  `fill-pressed` (decisions/0012, revision of 2026-11-20): step 4 moved towards its words, a hover step of 0.04 in
+  OKLCH lightness per state. `background.muted-hover` and `muted-pressed`, under `text.primary`, move one and two
+  steps (in light `#DEE1E7` and `#D1D4DA`; the prototype's pressed fill was about `#D7DAE0`).
+  `background.muted-hover-colored` and `muted-pressed-colored`, under colored words, stop where every ramp's step 11
+  would miss its text target, at about step 5's tone (`#E8ECF1` and `#E5E9EE`, the red words on the pressed one at
+  4.51:1). The names and the derivation are the agent's; how dark, the owner's.
+- **The high-contrast outline.** In the high-contrast themes a secondary button keeps an outline, `color.border.strong`
+  or `color.status.danger.border` at `stroke.thin`: the muted fill stands about 1.1:1 off the canvas, chapter 02 asks
+  that the edge of a control a person must find meets the non-text target, and the high-contrast themes keep steps
+  1–5, so no fill alone can mark that edge there.
+- **The capsule's ends are continuous on Apple.** SwiftUI's `Capsule()`, continuous by default, as the prototype
+  drew it and as chapter 04 asks of Apple's corners; in icon-only's square frame it draws a circle.
+
+**Fields and the check, the same day.** The owner then compared three looks of the framed text field and of the
+unchecked check on prototype renders and chose (spec/components/text-field, decisions/0002; spec/components/checkbox,
+decisions/0003):
+
+- **A framed text field is filled, not outlined:** `color.background.muted`, the secondary button's fill, with no
+  border in the standard themes, and in high contrast `border.strong` at `stroke.thin` around it.
+- **A one-line field is a capsule**, like the buttons beside it; **a field of several lines is a rounded rectangle**,
+  since a capsule's ends would cut into its lines. Fields leave `radius.control`, which stays 8 for the segmented
+  control and the ring around an inline field.
+- **The unchecked check is a quiet ring**, `color.border.default` at `stroke.regular`.
+- **The edges of these quiet controls miss 3:1 in the standard themes**, accepted by the owner for the field;
+  chapter 08 records the deviation with its measured values.
+
+The implementing agent's, pending the owner's review: the multiline field's radius is `radius.150`, 12, a step of the
+existing ladder, with no new role token (`radius.field` aliasing it is the proposal if the owner wants a role); the
+field's horizontal padding is Button's, `space.200`, `space.250` and `space.300`; a multiline field holds its lines off
+its edges by `space.50`, `space.100` and `space.150`, which keeps a field of one line as tall as a single one; in high
+contrast the check's ring is `border.strong`, as the coordinator assumed, awaiting the owner's confirmation.
 
 ## Why
 

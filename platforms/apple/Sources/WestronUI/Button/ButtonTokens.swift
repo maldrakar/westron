@@ -5,13 +5,14 @@
 import SwiftUI
 
 /// The tokens a Button draws with, for one variant, role and set of states: the contract's `cases` bindings, each one
-/// resolved as the contract resolves it, by the first case that matches.
+/// resolved as the contract resolves it, by the first case that matches; and in the high-contrast themes the outline
+/// the contract's description adds to a secondary button.
 struct ButtonTokens: Equatable, Sendable {
     /// `container.background`; nil: no fill.
     var background: Westron.Color?
-    /// `container.borderColor`; nil: no border.
+    /// The high-contrast outline's color; nil: no border. The contract's bindings give no border.
     var borderColor: Westron.Color?
-    /// `container.borderWidth`; nil: no border.
+    /// The high-contrast outline's width; nil: no border.
     var borderWidth: Westron.Dimension?
     /// `container.opacity`; nil: drawn whole.
     var opacity: Westron.Number?
@@ -24,7 +25,8 @@ struct ButtonTokens: Equatable, Sendable {
 
     /// The tokens of a button in `states`, which hold at once. A state the current OS never enters is ignored
     /// (`ButtonState.isEntered`). `destructive` is SwiftUI's `ButtonRole.destructive`; any other role draws as default.
-    init(variant: ButtonVariant, destructive: Bool, states: Set<ButtonState>) {
+    /// `highContrast`: one of the high-contrast themes, `colorSchemeContrast == .increased`.
+    init(variant: ButtonVariant, destructive: Bool, states: Set<ButtonState>, highContrast: Bool) {
         let states = states.filter(\.isEntered)
         let variant = variant.offered
         // The cases of container.background, in the contract's order: disabled and loading first, so that they
@@ -45,7 +47,23 @@ struct ButtonTokens: Equatable, Sendable {
                     ? .background.accentPressed
                     : states.contains(.hover) ? .background.accentHover : .background.accent
             }
-        case .secondary, .tertiary:
+        case .secondary:
+            if excludesTint {
+                background = .background.muted
+            } else if destructive {
+                // Under the danger words the fill darkens only as far as they still read (the owner's decision of
+                // 2026-11-20).
+                background =
+                    states.contains(.pressed)
+                    ? .background.mutedPressedColored
+                    : states.contains(.hover) ? .background.mutedHoverColored : .background.muted
+            } else {
+                background =
+                    states.contains(.pressed)
+                    ? .background.mutedPressed
+                    : states.contains(.hover) ? .background.mutedHover : .background.muted
+            }
+        case .tertiary:
             if excludesTint {
                 background = nil
             } else {
@@ -54,11 +72,12 @@ struct ButtonTokens: Equatable, Sendable {
             }
         }
 
-        switch variant {
-        case .secondary:
+        // The muted fill stands about 1.1:1 off the canvas in every theme, the high-contrast ones included, so there a
+        // secondary button also draws its edge, in every state (the contract's description).
+        if highContrast, variant == .secondary {
             borderColor = destructive ? .status.danger.border : .border.strong
             borderWidth = .stroke.thin
-        case .primary, .tertiary:
+        } else {
             borderColor = nil
             borderWidth = nil
         }
@@ -108,26 +127,27 @@ struct ButtonMetrics: Equatable, Sendable {
         switch size.offered {
         case .s:
             height = .size.control.s
-            paddingHorizontal = .space100
+            paddingHorizontal = .space200
             gap = .space50
             labelFont = .footnote.strong
         case .m:
             height = .size.control.m
-            paddingHorizontal = .space150
-            gap = .space75
+            paddingHorizontal = .space250
+            gap = .space50
             labelFont = .subheadline.strong
         case .l:
             height = .size.control.l
-            paddingHorizontal = .space200
-            gap = .space100
-            labelFont = .subheadline.strong
+            paddingHorizontal = .space300
+            gap = .space75
+            labelFont = .body.strong
         }
         // icon.font equals label.font by size (P4).
         iconFont = labelFont
     }
 
-    /// `container.radius`.
-    static let radius: Westron.Dimension = .radius.control
+    /// The icon's symbol scale, beside a label and in icon-only alike: small, in `icon.font` (the contract's
+    /// description; decisions/0003-the-look-of-2026-11-20).
+    static let iconScale: Image.Scale = .small
 }
 
 extension ButtonSize {

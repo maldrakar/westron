@@ -20,8 +20,10 @@ struct CheckboxTokens: Equatable, Sendable {
 
     /// The tokens of a check in `states`, which hold at once, in the list color `category` of its context; nil: the
     /// accent, the contract's bindings. A list color takes the disc and the mark from `color.category.<name>.control`
-    /// and `.on-control` (the contract's description). A state the current OS never enters is ignored.
-    init(category: Westron.Category?, states: Set<CheckboxState>) {
+    /// and `.on-control` (the contract's description). A state the current OS never enters is ignored. `highContrast`:
+    /// one of the high-contrast themes, `colorSchemeContrast == .increased`, where the ring is `color.border.strong`
+    /// instead of the quiet `color.border.default` the bindings give (the contract's description, decisions/0003).
+    init(category: Westron.Category?, states: Set<CheckboxState>, highContrast: Bool) {
         let states = states.filter(\.isEntered)
         if states.contains(.checked) {
             ringColor = nil
@@ -29,7 +31,7 @@ struct CheckboxTokens: Equatable, Sendable {
             disc = category?.control ?? .background.accent
             mark = category?.onControl ?? .text.onAccent
         } else {
-            ringColor = .border.strong
+            ringColor = highContrast ? .border.strong : .border.default
             ringWidth = .stroke.regular
             disc = nil
             mark = nil
@@ -99,10 +101,11 @@ enum CheckboxMetrics {
         diameter * markPerDiameter
     }
 
-    /// The least side of the check's hit area: `size.control.m`, the recommended touch target, 44 pt, on iOS and
-    /// watchOS, and 32 pt on macOS, above its recommended 28 (chapter 08; tokens/platform). Where the circle is
-    /// smaller, the hit area stays this size around it; where it grows past it with the text, the hit area grows too.
-    static var minimumHitSide: CGFloat { .size.control.m }
+    /// The least side of the check's hit area: the larger of `size.target.minimum`, the recommended target, and
+    /// `size.control.m`, so 44 pt on iOS and watchOS and 32 pt on macOS, above its recommended 28 (chapter 08;
+    /// tokens/platform; the contract, P17). Where the circle is smaller, the hit area stays this size around it; where
+    /// it grows past it with the text, the hit area grows too.
+    static var minimumHitSide: CGFloat { max(.size.target.minimum, .size.control.m) }
 
     /// The hit area's side around a circle of `diameter`.
     static func hitSide(diameter: CGFloat) -> CGFloat {

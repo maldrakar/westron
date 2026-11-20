@@ -65,7 +65,7 @@ extension TextFieldVariant {
         #else
             switch offered {
             case .framed:
-                let outset = CGFloat(TextFieldMetrics.framedRingGap) + CGFloat(Westron.Dimension.stroke.thick)
+                let outset = CGFloat(Westron.Dimension.stroke.thick)
                 return EdgeInsets(top: outset, leading: outset, bottom: outset, trailing: outset)
             case .inline:
                 let across = CGFloat(TextFieldMetrics.inlineRingOutsetHorizontal)
@@ -73,6 +73,18 @@ extension TextFieldVariant {
                 return EdgeInsets(top: upDown, leading: across, bottom: upDown, trailing: across)
             }
         #endif
+    }
+}
+
+/// The axis each westron text field in a view resolved from the field SwiftUI gave its style, the contract's `lines`
+/// (`TextFieldAxis`), one entry per field. Tests and the catalog read it with `onPreferenceChange(_:perform:)`, so that a
+/// SwiftUI that no longer gives the style the field's axis fails a test instead of drawing every field as one line.
+/// Package only: a product never reads it.
+package struct TextFieldResolvedAxes: PreferenceKey {
+    package static var defaultValue: [Axis] { [] }
+
+    package static func reduce(value: inout [Axis], nextValue: () -> [Axis]) {
+        value += nextValue()
     }
 }
 

@@ -79,6 +79,7 @@ private struct ButtonBody: View {
     @Environment(\.isFocused) private var isFocused
     @Environment(\.isLoading) private var isLoading
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.forcedButtonStates) private var forcedStates
     @State private var isHovered = false
 
@@ -99,7 +100,9 @@ private struct ButtonBody: View {
 
     var body: some View {
         let states = Set(ButtonState.allCases.filter(isIn))
-        let tokens = ButtonTokens(variant: variant, destructive: configuration.role == .destructive, states: states)
+        let tokens = ButtonTokens(
+            variant: variant, destructive: configuration.role == .destructive, states: states,
+            highContrast: contrast == .increased)
         let metrics = ButtonMetrics(ButtonSize.resolved(explicit: explicitSize, controlSize: controlSize))
         let scalesDown = ButtonTokens.scalesDown(states: states) && !reduceMotion
 
@@ -124,7 +127,9 @@ private struct ButtonBody: View {
 }
 
 /// The drawn button: its content, padding, frame, fill, border, hit area and opacity. The horizontal padding and the
-/// icon–label gap scale with Dynamic Type from their tokens, relative to the label's text style.
+/// icon–label gap scale with Dynamic Type from their tokens, relative to the label's text style. The shape is the
+/// platform's capsule (`container.shape`), SwiftUI's `Capsule` with its default continuous ends, as the prototype the
+/// owner chose drew it; icon-only, laid out in a square, is a circle.
 private struct ButtonSurface<Label: View>: View {
     let label: Label
     let tokens: ButtonTokens
@@ -153,7 +158,7 @@ private struct ButtonSurface<Label: View>: View {
     }
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: CGFloat(ButtonMetrics.radius), style: .continuous)
+        let shape = Capsule()
 
         ButtonContent(
             label: label, tokens: tokens, metrics: metrics, gap: gap, iconOnly: iconOnly, isLoading: isLoading
@@ -175,16 +180,17 @@ private struct ButtonSurface<Label: View>: View {
         // The hit area (chapter 08: at least the platform's recommended target, except where the contract's platform
         // block says otherwise) is never grown past what is drawn, measured in CatalogUITests/ButtonBehaviorTests.swift
         // (#23) and, on macOS, ButtonHitAreaTests:
-        // - iOS: the system's touch tolerance reaches about 16 pt past a 32 pt button, beyond the 44 pt target, and
-        //   gives a tap between two buttons to the closer one. A content shape grown to the target gave every tap in
-        //   the overlap to the later sibling, even one closer to the first, so westron adds none. A tap inside an
-        //   outlined or unfilled button, off its label, reaches it without one.
+        // - iOS: the system's touch tolerance reached about 16 pt past a 32 pt button (#23), beyond the 44 pt of
+        //   size.target.minimum, and the catalog's test taps 8 pt past a 28 pt one, the target's edge; it gives a
+        //   tap between two buttons to the closer one. A content shape grown to the target gave every tap in the
+        //   overlap to the later sibling, even one closer to the first, so westron adds none. A tap inside an unfilled
+        //   button, off its label, reaches it without one.
         // - watchOS: the only size, m, is drawn at the target.
         // - macOS: the hit area is the drawn button, as the contract's `platforms.apple.macos` records (the owner's
         //   decision of 2026-11-18, #75), so size s takes clicks in its 24 pt, below the recommended 28. Without a
-        //   content shape the system takes clicks only where the button paints: on secondary its label and its 1 pt
-        //   border, on tertiary its label (#75). The interaction shape is the drawn shape, so every click inside what
-        //   is drawn reaches the button and none outside does; hover, too, starts and ends at the drawn edge. A click
+        //   content shape the system takes clicks only where the button paints: on tertiary its label (#75). The
+        //   interaction shape is the drawn capsule, so every click inside what is drawn reaches the button and none
+        //   outside does; hover, too, starts and ends at the drawn edge. A click
         //   outside the frame misses whatever the content shape, and growing the frame does reach the target: padding
         //   the look by 2 pt inside the system button and taking it back outside with a negative padding kept the
         //   drawn and laid out size, and a click 1.5 pt below the drawn button reached it. But the grown frame
@@ -197,7 +203,7 @@ private struct ButtonSurface<Label: View>: View {
         #endif
         .contentShape(.accessibility, shape)
         #if os(macOS) || os(watchOS)
-            // The system's focus ring follows the button's corners.
+            // The system's focus ring follows the button's capsule.
             .contentShape(.focusEffect, shape)
         #endif
         .opacity(tokens.opacity.map(Double.init) ?? 1)
@@ -229,19 +235,15 @@ private struct ButtonContent<Label: View>: View {
         }
     }
 
-    /// The indicator before a label without an icon. On macOS it takes an icon's slot, as it does beside an icon: a
-    /// glyph in `icon.font`, not drawn, sizes the slot, and the indicator fits it (`ButtonProgress`). On iOS and watchOS
-    /// the indicator keeps its own size, which already fits an icon's slot.
-    @ViewBuilder private var indicatorWithoutIcon: some View {
-        #if os(macOS)
-            Image(Westron.Icon.checkCircle)
-                .textRole(metrics.iconFont)
-                .hidden()
-                .accessibilityHidden(true)
-                .overlay { ButtonProgress(color: tokens.progress) }
-        #else
-            ButtonProgress(color: tokens.progress)
-        #endif
+    /// The indicator before a label without an icon. It takes an icon's slot, as it does beside an icon: a glyph in
+    /// `icon.font` at the icon's scale, not drawn, sizes the slot, and the indicator fits it (`ButtonProgress`).
+    private var indicatorWithoutIcon: some View {
+        Image(Westron.Icon.checkCircle)
+            .textRole(metrics.iconFont)
+            .imageScale(ButtonMetrics.iconScale)
+            .hidden()
+            .accessibilityHidden(true)
+            .overlay { ButtonProgress(color: tokens.progress) }
     }
 
     private func styled(isLoading: Bool) -> some View {
@@ -344,7 +346,9 @@ private struct ButtonLabelStyle: LabelStyle {
                     .accessibilityHidden(true)
                     .background { ButtonName(title: configuration.title) }
             } else {
-                HStack(spacing: gap) {
+                // The icon sits on the label's first text baseline, not centered on it (the contract's description):
+                // a symbol's baseline is its glyph's, so it lines up with the words as a letter would.
+                HStack(alignment: .firstTextBaseline, spacing: gap) {
                     icon(configuration)
                         .accessibilityHidden(true)
                     configuration.title
@@ -356,10 +360,12 @@ private struct ButtonLabelStyle: LabelStyle {
         .alignmentGuide(.buttonLabelHasIcon) { $0[VerticalAlignment.center] }
     }
 
-    /// The icon in its text role and color, or, in loading, the indicator over its place.
+    /// The icon in its text role, at the symbol's small scale, and in its color, or, in loading, the indicator over its
+    /// place.
     private func icon(_ configuration: Configuration) -> some View {
         configuration.icon
             .textRole(metrics.iconFont)
+            .imageScale(ButtonMetrics.iconScale)
             .foregroundStyle(tokens.icon)
             .opacity(isLoading ? 0 : 1)
             .overlay {
@@ -370,13 +376,14 @@ private struct ButtonLabelStyle: LabelStyle {
     }
 }
 
-/// The system's spinning progress indicator, at its small control size, in `progress.color`. It is decorative: the
+/// The system's spinning progress indicator in `progress.color`, fitted to the icon's slot. It is decorative: the
 /// button announces loading as its value.
 ///
-/// It is drawn in the icon's slot, which it must fit (`ButtonProgressTests`). macOS draws its spinner at fixed sizes,
-/// 16 pt at the small control size and 10 pt at mini, whatever the frame around it, and its icons are 11 to 14 pt: so
-/// on macOS the largest spinner that fits what it is offered is drawn, which is mini in a button's icon slot (#23). On
-/// iOS the small spinner, 14 pt, fits.
+/// It is drawn in the icon's slot, which it must fit (`ButtonProgressTests`): it fills what it is offered and draws the
+/// spinner scaled down to fit it. The system draws its spinner at fixed sizes whatever the frame around it: on macOS
+/// 16 pt at the small control size and 10 pt at mini, on iOS 14 pt at small. The icon at the symbol's small scale is
+/// smaller than any of them at size s, 9 pt on macOS (#85), so the spinner is drawn at the smaller size the platform
+/// has, mini on macOS (#23) and small elsewhere, and scaled down where it is still larger than the slot.
 ///
 /// macOS draws its spinner in its own gray and ignores `tint`, so the color is laid over the spinner's shape with
 /// `sourceAtop`, inside a compositing group, the same way on every platform. The spinner's spokes are translucent,
@@ -385,22 +392,55 @@ private struct ButtonLabelStyle: LabelStyle {
 /// their fade. One spinner, no mask: a mask over an animating view costs an offscreen pass on every frame.
 struct ButtonProgress: View {
     let color: Westron.Color
+    /// Reports where the spinner is drawn, its scale included, in the slot's coordinates: ButtonProgressTests reads
+    /// it, since the indicator's own frame is the slot whatever it draws.
+    var drawn: (@MainActor (CGRect) -> Void)? = nil
+    /// The spinner's own size, measured before it is scaled.
+    @State private var natural: CGSize?
 
     var body: some View {
+        GeometryReader { proxy in
+            spinner
+                .fixedSize()
+                .onGeometryChange(for: CGSize.self) {
+                    $0.size
+                } action: {
+                    natural = $0
+                }
+                // Inside the scale, so the frame is the drawn one.
+                .onGeometryChange(for: CGRect.self) {
+                    $0.frame(in: .named(ButtonProgress.slotSpace))
+                } action: { frame in
+                    drawn?(frame)
+                }
+                .scaleEffect(natural.map { Self.fittingScale(natural: $0, slot: proxy.size) } ?? 1)
+                .frame(width: proxy.size.width, height: proxy.size.height)
+        }
+        .coordinateSpace(.named(ButtonProgress.slotSpace))
+    }
+
+    /// The slot's coordinate space, for `drawn`.
+    static let slotSpace = "ButtonProgress.slot"
+
+    /// The control size the spinner is drawn at: the smaller of the two the platform draws.
+    static var controlSize: ControlSize {
         #if os(macOS)
-            ViewThatFits {
-                spinner(.small)
-                spinner(.mini)
-            }
+            .mini
         #else
-            spinner(.small)
+            .small
         #endif
     }
 
-    private func spinner(_ size: ControlSize) -> some View {
+    /// How much a spinner of `natural` size is scaled to fit `slot`: never up, down as far as both sides fit.
+    static func fittingScale(natural: CGSize, slot: CGSize) -> CGFloat {
+        guard natural.width > 0, natural.height > 0 else { return 1 }
+        return min(1, slot.width / natural.width, slot.height / natural.height)
+    }
+
+    var spinner: some View {
         ProgressView()
             .progressViewStyle(.circular)
-            .controlSize(size)
+            .controlSize(Self.controlSize)
             .shadow(color: Color(color), radius: 0)
             .shadow(color: Color(color), radius: 0)
             .shadow(color: Color(color), radius: 0)
@@ -413,7 +453,7 @@ struct ButtonProgress: View {
 }
 
 /// A frame whose height is at least `minSide` and grows with the content; with `isSquare`, also as wide as it is
-/// tall, so icon-only stays square when its glyph grows with Dynamic Type.
+/// tall, so icon-only stays a circle when its glyph grows with Dynamic Type.
 private struct ButtonFrame: ViewModifier {
     let minSide: CGFloat
     let isSquare: Bool
