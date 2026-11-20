@@ -40,9 +40,13 @@ extension Westron.Color {
             lightHighContrast: Westron.RGB(hex: 0xF0F3F8),
             darkHighContrast: Westron.RGB(hex: 0x090C10))
 
-        /// A quiet fill inside content: the track of a segmented control, a tag or a badge without a color.
+        /// A quiet fill inside content: the track of a segmented control, a tag or a badge without a color, a secondary
+        /// button, a framed text field. It stands about 1.1:1 off the canvas, so a control found by it alone misses 3:1
+        /// for its edge, as the owner accepted for the text field (design-language/08); in high contrast such a control
+        /// also draws border.strong.
         ///
-        /// Use for: segmented track, neutral tag, neutral badge. Avoid: A row under the pointer: use background.hover.
+        /// Use for: segmented track, neutral tag, neutral badge, secondary button, framed text field. Avoid: A row
+        /// under the pointer: use background.hover.
         public static let muted = Westron.Color(
             name: "color.background.muted",
             light: Westron.RGB(hex: 0xEBEEF4),
@@ -280,7 +284,8 @@ extension Westron.Color {
     /// The colors `color.border.*`.
     public enum border {
         /// Separators and the outline of a card: decorative in standard themes, 3:1 in high contrast, where every
-        /// raised surface gets one.
+        /// raised surface gets one. In the standard themes also the quiet ring of an unchecked check, below 3:1 by the
+        /// deviation design-language/08 records; in high contrast that ring is border.strong.
         public static let `default` = Westron.Color(
             name: "color.border.default",
             light: Westron.RGB(hex: 0xDCDFE5),
@@ -289,9 +294,10 @@ extension Westron.Color {
             darkHighContrast: Westron.RGB(hex: 0x656B72),
             backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
 
-        /// The border of a control that must be seen: a field, a checkbox, a radio ring, and a secondary button in the
-        /// high-contrast themes, where its muted fill alone does not mark its edge against the ground; the ground is
-        /// what that border is measured on, not the fill inside it.
+        /// The border of a control that must be seen: a radio ring; and in the high-contrast themes a framed text field
+        /// and a secondary button, where their muted fill alone does not mark their edge against the ground, and an
+        /// unchecked check's ring, which is border.default in the standard themes. The ground is what that border is
+        /// measured on, not the fill inside it.
         public static let strong = Westron.Color(
             name: "color.border.strong",
             light: Westron.RGB(hex: 0x81868D),
@@ -2568,7 +2574,9 @@ extension Westron.Dimension {
 
     /// The lengths `radius.*`.
     public enum radius {
-        /// A control westron draws: a button, a field, a segmented control. 8 px, a quarter of a 32 px control.
+        /// A control westron draws with corners: a segmented control, the focus ring around an inline text field. 8 px,
+        /// a quarter of a 32 px control. A button and a one-line framed text field are capsules; a multiline framed
+        /// text field takes radius.150 (decisions/0013, revision of 2026-11-20).
         public static let control = Westron.Dimension(name: "radius.control", value: 8)
 
         /// The highlight of a row under the pointer or selected.

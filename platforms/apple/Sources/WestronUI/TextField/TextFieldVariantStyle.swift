@@ -9,7 +9,7 @@
 //   `@preconcurrency` and the witness `@MainActor`: SwiftUI calls it on the main actor while it builds the view.
 // - The configuration drawn inside a custom style is the platform's default field: on macOS a bezeled NSTextField with
 //   the system's focus ring, which `focusEffectDisabled()` does not turn off. Drawn in the system's `.plain` style, it
-//   has neither bezel nor ring, on iOS too, so the style draws it plain and draws its own outline and ring.
+//   has neither bezel nor ring, on iOS too, so the style draws it plain and draws its own fill, outline and ring.
 // - Focus is read with a `@FocusState` the style binds to the field with `.focused(_:)`. `@Environment(\.isFocused)`
 //   in the style describes the field's ancestors, not the field, and stays false. A product's own `.focused(_:)` on the
 //   field keeps working beside the style's: both follow the field, and the product's still moves focus to it.
@@ -18,6 +18,8 @@
 //   that. The contract's `platforms.apple` records it as a platform difference (decisions/0001, I1).
 // - The system field with a prompt exposes no accessibility label from its title, styled or not, so the product
 //   names the field with `.accessibilityLabel(_:)` (the contract's `platforms.apple`; decisions/0001, I2).
+// - The field's axis, the contract's `lines`, has no public accessor: the style reads it from the configuration by
+//   reflection (`TextFieldAxis`; decisions/0002).
 
 import SwiftUI
 
@@ -41,6 +43,7 @@ private struct TextFieldBody: View {
     @Environment(\.controlSize) private var controlSize
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.forcedTextFieldStates) private var forcedStates
+    @Environment(\.colorSchemeContrast) private var contrast
     @FocusState private var isFocused: Bool
 
     /// Whether the field is in a state of its contract, read where the system keeps it, or forced by the catalog
@@ -57,7 +60,7 @@ private struct TextFieldBody: View {
 
     var body: some View {
         let states = Set(TextFieldState.allCases.filter(isIn))
-        let tokens = TextFieldTokens(variant: variant, states: states)
+        let tokens = TextFieldTokens(variant: variant, states: states, highContrast: contrast == .increased)
         #if os(watchOS)
             // The watch's field is the system's as it is, in both variants and at every size (the contract's
             // `watchos` block); a tap opens the system's text input, and there is no focus to draw.
@@ -65,16 +68,45 @@ private struct TextFieldBody: View {
                 .opacity(tokens.opacity.map(Double.init) ?? 1)
         #else
             let metrics = TextFieldMetrics(
-                variant: variant, size: .resolved(explicit: explicitSize, controlSize: controlSize))
+                variant: variant, size: .resolved(explicit: explicitSize, controlSize: controlSize),
+                axis: TextFieldAxis.of(field))
             TextFieldSurface(field: field, variant: variant, tokens: tokens, metrics: metrics, isFocused: $isFocused)
         #endif
     }
 }
 
 #if !os(watchOS)
+    /// The shape of a framed field, which is a capsule on one line and a rounded rectangle on several, both with
+    /// continuous corners; nil `radius`: the capsule. Insetting it, as `strokeBorder` does, takes the inset off the
+    /// corners too, so a stroke stays concentric with the fill; `outset(by:)` grows them, for the ring outside.
+    struct TextFieldShape: InsettableShape {
+        /// The corners' radius; nil: the capsule.
+        var radius: CGFloat?
+        var inset: CGFloat = .zero
+
+        func path(in rect: CGRect) -> Path {
+            let rect = rect.insetBy(dx: inset, dy: inset)
+            if let radius {
+                return RoundedRectangle(cornerRadius: max(.zero, radius - inset), style: .continuous).path(in: rect)
+            }
+            return Capsule(style: .continuous).path(in: rect)
+        }
+
+        func inset(by amount: CGFloat) -> TextFieldShape {
+            var shape = self
+            shape.inset += amount
+            return shape
+        }
+
+        /// The same shape around this one, `amount` outside it on every side.
+        func outset(by amount: CGFloat) -> TextFieldShape {
+            TextFieldShape(radius: radius.map { $0 + amount })
+        }
+    }
+
     /// The drawn field: the system field in its plain style, in the text role and color of `framed` or of the context,
-    /// its padding, height, outline, focus ring, hit area and opacity. The padding scales with Dynamic Type from its
-    /// token, relative to the field's text style.
+    /// its padding, height, fill, high-contrast outline, focus ring, hit area and opacity. The padding scales with
+    /// Dynamic Type from its token, relative to the field's text style.
     private struct TextFieldSurface: View {
         let field: TextField<TextFieldVariantStyle._Label>
         let variant: TextFieldVariant
@@ -82,6 +114,8 @@ private struct TextFieldBody: View {
         let metrics: TextFieldMetrics
         let isFocused: FocusState<Bool>.Binding
         @ScaledMetric private var padding: CGFloat
+        /// The padding above and below a multiline framed field's text, which holds its lines off the field's edges.
+        @ScaledMetric private var verticalPadding: CGFloat
         /// The height the field is drawn at, which grows past its minimum with its text.
         @State private var drawnHeight: CGFloat = .zero
 
@@ -97,19 +131,27 @@ private struct TextFieldBody: View {
             let textStyle = Font.TextStyle((tokens.textFont ?? .body.regular).textStyle)
             _padding = ScaledMetric(
                 wrappedValue: metrics.paddingHorizontal.map(CGFloat.init) ?? .zero, relativeTo: textStyle)
+            _verticalPadding = ScaledMetric(
+                wrappedValue: metrics.paddingVertical.map(CGFloat.init) ?? .zero, relativeTo: textStyle)
         }
 
         var body: some View {
-            let shape = RoundedRectangle(
-                cornerRadius: CGFloat(metrics.radius ?? TextFieldMetrics.ringRadius), style: .continuous)
+            // A framed field's shape: the capsule on one line, the rounded rectangle on several (`container.shape`,
+            // `container.radius`); on `inline`, which has none, the corners its ring takes.
+            let shape = TextFieldShape(
+                radius: metrics.isCapsule ? nil : CGFloat(metrics.radius ?? TextFieldMetrics.ringRadius))
 
             field
                 .textFieldStyle(.plain)
                 .modifier(TextFieldText(font: tokens.textFont, color: tokens.textColor))
                 .focused(isFocused)
                 .padding(.horizontal, padding)
+                .padding(.vertical, verticalPadding)
                 .frame(minHeight: metrics.height.map(CGFloat.init))
                 .background {
+                    if let background = tokens.background {
+                        shape.fill(background)
+                    }
                     if let borderColor = tokens.borderColor, let borderWidth = tokens.borderWidth {
                         shape.strokeBorder(borderColor, lineWidth: CGFloat(borderWidth))
                     }
@@ -129,14 +171,14 @@ private struct TextFieldBody: View {
         }
 
         /// westron's focus ring, which replaces the system's (the contract), drawn outside the field's frame, so the
-        /// field keeps its laid out size (`TextFieldMetrics.ringRadius` says where): on `framed` outside the outline,
-        /// which stays; on `inline`, which has no outline, around the field, clear of its text.
+        /// field keeps its laid out size (`TextFieldMetrics.ringRadius` says where): on `framed` outside the field's
+        /// edge, following its shape; on `inline`, which has no shape, around the field, clear of its text.
         @ViewBuilder
-        private func ring(shape: RoundedRectangle, color: Westron.Color, width: Westron.Dimension) -> some View {
+        private func ring(shape: TextFieldShape, color: Westron.Color, width: Westron.Dimension) -> some View {
             switch variant.offered {
             case .framed:
                 let outset = CGFloat(TextFieldMetrics.framedRingGap) + CGFloat(width)
-                RoundedRectangle(cornerRadius: shape.cornerSize.width + outset, style: .continuous)
+                shape.outset(by: outset)
                     .strokeBorder(color, lineWidth: CGFloat(width))
                     .padding(-outset)
             case .inline:

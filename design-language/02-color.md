@@ -24,10 +24,12 @@ values, the ramps and the rules that solve them are in decisions/0012; the token
 - **Two inks for words, one for quiet glyphs.** `color.text.primary` and `text.secondary` serve words and glyphs
   alike. `color.icon.tertiary` serves chevrons, grips and strike-through lines, never words. Any ink light enough to
   look tertiary fails the text target, so words stop at secondary.
-- **Lines are quiet, borders of controls are not.** `color.border.default` draws separators. In the standard themes
-  it is decoration, since space and alignment also show the grouping. `border.strong` draws the outline of something a
-  person must find, such as a field or a checkbox, and it meets 3:1. A secondary button is found by its muted fill,
-  and draws the outline only in high contrast (chapter 04).
+- **Lines are quiet; controls are found by their fill, or by a strong line in high contrast.** `color.border.default`
+  draws separators. In the standard themes it is decoration, since space and alignment also show the grouping, and it
+  draws the quiet ring of an unchecked check. `border.strong` draws the outline of something a person must find, and
+  it meets 3:1. A secondary button and a framed text field are found by their muted fill, and draw the outline only in
+  high contrast, where the check's ring is `border.strong` too (chapter 04). In the standard themes their edges stay
+  below 3:1, a deviation the owner accepted on 2026-11-20 (chapter 08).
 
 ## One accent: cobalt
 

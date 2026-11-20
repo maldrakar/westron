@@ -35,10 +35,10 @@
       },
       "muted": {
         "$value": "{color.neutral.4}",
-        "$description": "A quiet fill inside content: the track of a segmented control, a tag or a badge without a color.",
+        "$description": "A quiet fill inside content: the track of a segmented control, a tag or a badge without a color, a secondary button, a framed text field. It stands about 1.1:1 off the canvas, so a control found by it alone misses 3:1 for its edge, as the owner accepted for the text field (design-language/08); in high contrast such a control also draws border.strong.",
         "$extensions": {
           "dev.westron.usage": {
-            "use": ["segmented track", "neutral tag", "neutral badge"],
+            "use": ["segmented track", "neutral tag", "neutral badge", "secondary button", "framed text field"],
             "avoid": "A row under the pointer: use background.hover."
           }
         }
@@ -250,7 +250,7 @@
     "border": {
       "default": {
         "$value": "{color.neutral.6}",
-        "$description": "Separators and the outline of a card: decorative in standard themes, 3:1 in high contrast, where every raised surface gets one.",
+        "$description": "Separators and the outline of a card: decorative in standard themes, 3:1 in high contrast, where every raised surface gets one. In the standard themes also the quiet ring of an unchecked check, below 3:1 by the deviation design-language/08 records; in high contrast that ring is border.strong.",
         "$extensions": {
           "dev.westron.contrast": [
             {
@@ -262,7 +262,7 @@
       },
       "strong": {
         "$value": "{color.neutral.8}",
-        "$description": "The border of a control that must be seen: a field, a checkbox, a radio ring, and a secondary button in the high-contrast themes, where its muted fill alone does not mark its edge against the ground; the ground is what that border is measured on, not the fill inside it.",
+        "$description": "The border of a control that must be seen: a radio ring; and in the high-contrast themes a framed text field and a secondary button, where their muted fill alone does not mark their edge against the ground, and an unchecked check's ring, which is border.default in the standard themes. The ground is what that border is measured on, not the fill inside it.",
         "$extensions": {
           "dev.westron.contrast": [
             {

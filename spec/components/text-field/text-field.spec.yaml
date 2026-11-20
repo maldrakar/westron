@@ -1,20 +1,31 @@
 # westron's TextField contract (#30), approved on 2026-11-18 under the owner's delegation of that day:
 # decisions/0001-text-field-contract.md records the owner's answers of 2026-11-18, what the documents already decide,
-# and the proposals approved on top of them, the ones the agent decided under the delegation marked as such.
+# and the proposals approved on top of them, the ones the agent decided under the delegation marked as such. Revised on
+# 2026-11-20 (#85): the look the owner chose, a muted fill with no outline, a capsule on one line and a rounded
+# rectangle on several, and the option lines (decisions/0002-the-look-of-2026-11-20.md).
 id: text-field
 status: approved
 description: >-
   A field a person types text into: westron's style on the platform's own text field, which keeps editing,
-  selection, input methods, the keyboard and the system's text input. framed is a field that stands on its
-  own, such as the name field in a list's row: an outline in color.border.strong, which meets 3:1 against the
-  ground, and no fill of its own, so the ground under it shows. inline is a field set into a text it belongs to, such
-  as the title and the notes inside an open task card: no outline and no padding, in the text role and the text color
-  of its context. Focus is westron's ring, color.border.focus at stroke.thick, around the field in both variants, on
-  iOS, on macOS and on the web; the system's own focus ring is turned off where it has one. watchOS enters no
-  focus. Disabled draws the whole field at opacity.disabled, with no colors of its own (design-language/08). The placeholder is in color.text.placeholder. There is no error
-  state, hint or message in this version: no pilot screen shows one, and a field marked only by a danger border
-  would tell an error by color alone (design-language/08, "Color is never the only signal"). The text, and with it a
-  framed field's height, follows the person's text size (design-language/08, "Settings the person chooses").
+  selection, input methods, the keyboard and the system's text input. framed is a field that stands on its own, such
+  as the name field in a list's row: filled with color.background.muted, the secondary button's fill, with no
+  outline; on one line it is the platform's capsule, its ends round at any height, and on several lines a rounded
+  rectangle, since a capsule's ends would cut into its lines (option lines). The fill stands about 1.1:1 off the
+  canvas in light and 1.2:1 in dark, below the 3:1 that WCAG 1.4.11 asks of a component's boundary: a deviation the
+  owner accepted on 2026-11-20 for the standard themes, which design-language/08 records with the measured values
+  (decisions/0002). In the high-contrast themes a framed field also draws an outline, color.border.strong at
+  stroke.thin, over its fill, in every state, as the secondary button does: the fill stays as quiet there, and a
+  control a person must find meets the non-text target in high contrast. The bindings below cannot say this, since a
+  case has no contrast key, so this description is the contract for it, as Button's is for its outline. inline is a
+  field set into a text it belongs to, such as the title and the notes inside an open task card: no fill, no outline
+  and no padding, in the text role and the text color of its context. Focus is westron's ring, color.border.focus at
+  stroke.thick, around the field in both variants, on iOS, on macOS and on the web; around a framed field it follows
+  the field's shape, the capsule or the rounded rectangle; the system's own focus ring is turned off where it has one.
+  watchOS enters no focus. Disabled draws the whole field at opacity.disabled, with no colors of its own
+  (design-language/08). The placeholder is in color.text.placeholder. There is no error state, hint or message in
+  this version: no pilot screen shows one, and a field marked only by a danger border would tell an error by color
+  alone (design-language/08, "Color is never the only signal"). The text, and with it a framed field's height,
+  follows the person's text size (design-language/08, "Settings the person chooses").
 consumers: [todo-app/lists-screen, todo-app/list-screen]
 
 options:
@@ -33,8 +44,17 @@ options:
       iPadOS, 44 on watchOS, as a minimum, so the field grows with its text; its padding follows the size, and its
       text is body.regular at every size. A field drawn below size.target.minimum, the platform's recommended target,
       28 pt on macOS and 44 pt on iOS, keeps a hit area of that height (design-language/08): at s on macOS, at s and
-      m on iOS. inline takes its height and its text role from its context, so the size changes
-      nothing on it.
+      m on iOS. inline takes its height and its text role from its context, so the size changes nothing on it.
+  lines:
+    type: enum
+    values: [single, multiple]
+    default: single
+    description: >-
+      single is a field of one line, whose text scrolls sideways, such as a list's name; multiple is a field whose
+      text wraps and which grows a line at a time, such as a card's notes. framed draws single as a capsule and
+      multiple as a rounded rectangle of radius.150, its lines held off its top and bottom edges by a padding that
+      makes a field of one line as tall as a single one of its size; inline draws both alike. On Apple it is the
+      system field's own axis (platforms.apple.systemOptions).
 
 slots: [label, placeholder]
 states: [focus, disabled]
@@ -45,20 +65,25 @@ tokens:
       - { when: { variant: framed, size: s }, token: size.control.s }
       - { when: { variant: framed, size: m }, token: size.control.m }
       - { when: { variant: framed, size: l }, token: size.control.l }
+  container.shape:
+    cases:
+      - { when: { variant: framed, lines: single }, token: capsule }
   container.radius:
     cases:
-      - { when: { variant: framed }, token: radius.control }
+      - { when: { variant: framed, lines: multiple }, token: radius.150 }
   container.paddingHorizontal:
     cases:
-      - { when: { variant: framed, size: s }, token: space.100 }
-      - { when: { variant: framed, size: m }, token: space.150 }
-      - { when: { variant: framed, size: l }, token: space.200 }
-  container.borderColor:
+      - { when: { variant: framed, size: s }, token: space.200 }
+      - { when: { variant: framed, size: m }, token: space.250 }
+      - { when: { variant: framed, size: l }, token: space.300 }
+  container.paddingVertical:
     cases:
-      - { when: { variant: framed }, token: color.border.strong }
-  container.borderWidth:
+      - { when: { variant: framed, lines: multiple, size: s }, token: space.50 }
+      - { when: { variant: framed, lines: multiple, size: m }, token: space.100 }
+      - { when: { variant: framed, lines: multiple, size: l }, token: space.150 }
+  container.background:
     cases:
-      - { when: { variant: framed }, token: stroke.thin }
+      - { when: { variant: framed }, token: color.background.muted }
   container.opacity:
     cases:
       - { when: { state: disabled }, token: opacity.disabled }
@@ -91,8 +116,16 @@ platforms:
   apple:
     strategy: style-on-system-control
     base: SwiftUI.TextField
+    systemOptions: { lines: SwiftUI.Axis }
     description: >-
       .textFieldStyle(.framed, size: .s) on the system TextField, and on SecureField, which takes the same modifier.
+      lines is the system field's own axis, so no enum is generated for it and the overload takes no lines: argument:
+      TextField(_:text:axis:) with .vertical is multiple, any other field single. A TextFieldStyle has no public way
+      to read the axis, so the style reads it from the field it is given, the configuration, whose stored axis
+      reflection (Mirror) finds, measured with Xcode 27.1 on iOS 17.5, iOS 26.3 and macOS 26.7 (TextFieldStyleTests);
+      where reflection finds no axis, the style draws single (decisions/0002, pending the owner's confirmation). The
+      shapes are SwiftUI's Capsule and a RoundedRectangle, both with continuous corners, and the high-contrast outline
+      follows colorSchemeContrast, as Button's does.
       The style is a TextFieldStyle, which SwiftUI declares with only the underscored requirement
       _body(configuration:). The probe of #30 with Xcode 27.1, run on iOS 26.3 and macOS 26.7 and compiled for iOS 17,
       macOS 14 and watchOS 10 (no older runtime and no watch runtime to run on): the requirement is not isolated to the
@@ -116,9 +149,9 @@ platforms:
       confirmation, as is the label above; westron
       drawing its own prompt, an API change, stays open for the owner (decisions/0001). westron's focus ring is drawn
       outside the field's laid out frame, so a focused field needs room around it that no clipping parent and no
-      close neighbor takes: on framed space.25 plus stroke.thick beyond the outline on every side, on inline space.100
-      across and space.50 up and down beyond the field (a proposal of the implementation, decisions/0001, I4).
-      Corners are continuous.
+      close neighbor takes: on framed space.25 plus stroke.thick beyond the field's edge on every side, on inline
+      space.100 across and space.50 up and down beyond the field (a proposal of the implementation, decisions/0001,
+      I4). Corners are continuous.
     ios:
       description: >-
         Focus is the field being edited, with the keyboard up. There is no pointer to hover with on an iPhone, and
@@ -141,7 +174,7 @@ platforms:
         sets on its prompt, so there the placeholder is always the system's. A disabled field's text is dimmed twice:
         the system field draws it in its own disabled text color under westron's opacity.disabled, (57, 60, 66)
         against background.canvas (17, 19, 24) in dark where text.primary at opacity.disabled alone would be (96, 101,
-        108); the outline, westron's, is at opacity.disabled alone. Recorded on 2026-11-19 under the owner's
+        108); the fill, westron's, is at opacity.disabled alone. Recorded on 2026-11-19 under the owner's
         delegation of 2026-11-18, pending the owner's confirmation.
     watchos:
       options: { size: [m] }
@@ -149,19 +182,22 @@ platforms:
       states: [disabled]
       description: >-
         The watch's field is the system's as it is: a tap opens the system's text input, there is no focus to draw,
-        and roundedBorder, like westron's outline, has no place there. Both variants draw the system field; the
-        Swift enum keeps every size and the style falls back to m.
+        and roundedBorder, like westron's fill and capsule, has no place there. Both variants and both values of lines
+        draw the system field; the Swift enum keeps every size and the style falls back to m.
   web:
     strategy: style-on-system-control
     base: input
     description: >-
-      Provisional until phase 6 (#40): a native <input> with westron's CSS, a multiline field a <textarea>. The
-      focus ring is an outline in focusRing.color and focusRing.width on :focus-visible. Corners are circular.
+      Provisional until phase 6 (#40): a native <input> with westron's CSS, lines multiple a <textarea>. The
+      focus ring is an outline in focusRing.color and focusRing.width on :focus-visible. Corners are circular; the
+      capsule is a border-radius of half the height or more, so its ends stay round as the field grows. The
+      high-contrast outline applies under prefers-contrast: more.
   linux:
     strategy: style-on-system-control
     base: GtkEntry
     description: >-
-      Provisional until phase 7: the stock GtkEntry with westron's style classes for the variants and the sizes; the
-      focus ring there is decided with the GNOME library. Corners are circular.
+      Provisional until phase 7: the stock GtkEntry with westron's style classes for the variants and the sizes, and
+      for lines multiple a GtkTextView with the same classes; the focus ring there is decided with the GNOME library.
+      Corners are circular; the capsule is a border-radius of half the height or more, as on the web.
   android:
     status: planned

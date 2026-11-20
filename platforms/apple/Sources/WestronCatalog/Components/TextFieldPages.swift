@@ -2,7 +2,8 @@ import SwiftUI
 import WestronUI
 
 // TextField's catalog entries, from spec/components/text-field/text-field.spec.yaml: `text-field` (variants × sizes at
-// rest, empty with a placeholder and with text, then every state at size m), and three live pages with real fields:
+// rest on one line, empty with a placeholder and with text, then multiple lines and every state at size m), and three
+// live pages with real fields:
 // `text-field-behavior` (nothing focused; the UI tests tap and click around the fields), `text-field-focus-framed` and
 // `text-field-focus-inline` (the field focused for real, to show westron's ring and no system ring). The variants,
 // sizes and states come from the generated enums, so the pages follow the contract.
@@ -48,35 +49,62 @@ enum TextFieldCatalogID {
 }
 
 /// A sample field as a product writes it: a label that names what it holds, a prompt, and, for `inline`, the text role
-/// and the color of its context, which a framed field does not take.
+/// and the color of its context, which a framed field does not take. On one line (`axis` horizontal, the contract's
+/// `lines: single`) a list's name; on several (vertical, `multiple`) a list's notes, whose text wraps to two lines.
 struct TextFieldSample: View {
     let variant: TextFieldVariant
     var size: TextFieldSize? = nil
+    var axis: Axis = .horizontal
     @State private var text: String
 
-    init(variant: TextFieldVariant, size: TextFieldSize? = nil, filled: Bool) {
+    init(variant: TextFieldVariant, size: TextFieldSize? = nil, axis: Axis = .horizontal, filled: Bool) {
         self.variant = variant
         self.size = size
-        _text = State(initialValue: filled ? Self.filledText : "")
+        self.axis = axis
+        _text = State(initialValue: filled ? (axis == .vertical ? Self.filledNotes : Self.filledText) : "")
     }
 
-    /// The text of a filled sample; the prompt of an empty one is "Untitled".
+    /// The text of a filled sample on one line; the prompt of an empty one is "Untitled".
     static let filledText = "Groceries"
 
+    /// The text of a filled sample on several lines, two of them; the prompt of an empty one is "Add a note".
+    static let filledNotes = "Milk, bread\nApples"
+
     var body: some View {
-        TextField("List name", text: $text, prompt: Text("Untitled"))
-            .textFieldStyle(variant, size: size)
-            // The product names the field: with a prompt, the system field takes no accessibility label from its
-            // title (decisions/0001, I2). Every field in the catalog is named so.
-            .accessibilityLabel("List name")
-            // The context of an inline field: body text in the primary color. A framed field sets its own.
-            .textRole(.body.regular)
-            .foregroundStyle(.text.primary)
+        Group {
+            if axis == .vertical {
+                TextField("Notes", text: $text, prompt: Text("Add a note"), axis: .vertical)
+                    .textFieldStyle(variant, size: size)
+                    .accessibilityLabel("Notes")
+                    .lineLimit(1...4)
+                    // A matrix sheet is laid out in the screen's height with no scroll view, and a field with a
+                    // vertical axis is the only view in it that can shrink: it keeps its height.
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                TextField("List name", text: $text, prompt: Text("Untitled"))
+                    .textFieldStyle(variant, size: size)
+                    // The product names the field: with a prompt, the system field takes no accessibility label from
+                    // its title (decisions/0001, I2). Every field in the catalog is named so.
+                    .accessibilityLabel("List name")
+            }
+        }
+        // The context of an inline field: body text in the primary color. A framed field sets its own.
+        .textRole(.body.regular)
+        .foregroundStyle(.text.primary)
+    }
+}
+
+extension Axis {
+    /// The field's axis for a value of the contract's `lines`, which is the system's axis on Apple (its
+    /// `systemOptions`): `multiple` is vertical, `single` horizontal.
+    init(textFieldLines lines: String) {
+        self = lines == "multiple" ? .vertical : .horizontal
     }
 }
 
 /// One cell of TextField's snapshot matrix (#24; `ComponentMatrix.textField`, generated from the contract): the real
-/// field with the combination's variant and size, empty with its placeholder and with text, in the combination's state.
+/// field with the combination's variant, size and lines, empty with its placeholder and with text, in the combination's
+/// state.
 /// Focus is forced, since only one field holds the keyboard focus (the live `text-field-focus-*` pages show the real
 /// one); disabled is set with the real `.disabled(_:)`.
 struct TextFieldMatrixCell: View {
@@ -88,12 +116,13 @@ struct TextFieldMatrixCell: View {
 
     var body: some View {
         // Every option at once: an option added to the contract changes `fields` and fails the build here.
-        let (variant, size, stateName) = values.fields
+        let (variant, size, lines, stateName) = values.fields
         let state = stateName.flatMap(TextFieldCatalogState.init(named:))
+        let axis = Axis(textFieldLines: lines)
         // Apart by more than two forced rings reach outside their fields, so they do not touch.
         VStack(alignment: .leading, spacing: .space150) {
-            TextFieldSample(variant: variant, size: size, filled: false)
-            TextFieldSample(variant: variant, size: size, filled: true)
+            TextFieldSample(variant: variant, size: size, axis: axis, filled: false)
+            TextFieldSample(variant: variant, size: size, axis: axis, filled: true)
         }
         // Room for the ring, which is drawn outside the field's frame: forced, it touches neither the next cell nor
         // the picture's edge (the contract's platforms.apple).
@@ -125,7 +154,7 @@ extension ComponentMatrix.Supplement {
         note: "The context of a field is not a contract option. Here, as in the pilot's open task card, the title is "
             + "set in heading.small and the notes, a multiline field (axis: .vertical), in subheadline.regular and "
             + "text.secondary, on a raised surface: an inline field takes them; a framed field keeps its own.",
-        keeps: ["size": "m"],
+        keeps: ["size": "m", "lines": "single"],
         // A card with a title and two lines of notes is taller than a generated cell: at the largest text size two
         // rows of cards fill a picture, so a sheet is split into one picture per column and per two rows.
         rowsPerPicture: 2
@@ -139,27 +168,28 @@ extension ComponentMatrix.Supplement {
         note: "SecureField takes the same .textFieldStyle(_:size:) as TextField (the contract's platforms.apple); the "
             + "kind of field is not a contract option. Each cell holds an empty field and one with a password; iOS "
             + "keeps a secure field's text out of screen captures, so there the second looks empty.",
-        keeps: ["size": "m"]
+        keeps: ["size": "m", "lines": "single"]
     ) { combination in
         TextFieldSecureSample(values: TextFieldMatrixValues(combination))
     }
 
-    /// A field on the surface ground, for the outline's contrast; the generated sheets show it on the canvas. The ground
-    /// is the bare fill, not `.surface(_:)`: the sheet is about the outline against a colour, and `.surface(.raised)`
-    /// would add its shadow and, in high contrast, its line.
+    /// A field on the surface ground, for its fill's contrast; the generated sheets show it on the canvas. The ground is
+    /// the bare fill, not `.surface(_:)`: the sheet is about the field against a colour, and `.surface(.raised)` would
+    /// add its shadow and, in high contrast, its line.
     static let textFieldOnSurface = grounded(.background.surface, name: "surface")
 
-    /// A field on the sunken ground, for the outline's contrast. `.surface(.sunken)` would draw this ground the same,
+    /// A field on the sunken ground, for its fill's contrast. `.surface(.sunken)` would draw this ground the same,
     /// with no shadow or line; it stays on `grounded(_:name:)` so the two sheets are drawn alike.
     static let textFieldOnSunken = grounded(.background.sunken, name: "sunken")
 
     private static func grounded(_ ground: Westron.Color, name: String) -> Self {
         ComponentMatrix.Supplement(
             component: "text-field", id: "on-\(name)", title: "on the \(name) ground",
-            note: "The ground under a field is not a contract option. A framed field has no fill of its own, so the "
-                + "ground shows through; its outline, border.strong, meets 3:1 against it. The generated sheets "
-                + "stand on the canvas ground.",
-            keeps: ["size": "m"]
+            note: "The ground under a field is not a contract option. A framed field's muted fill stands about 1.16:1 "
+                + "off the surface and 1.04:1 off the sunken ground in light, below 3:1, as the owner accepted "
+                + "(decisions/0002); in high contrast its outline, border.strong, meets the target. The generated "
+                + "sheets stand on the canvas ground.",
+            keeps: ["size": "m", "lines": "single"]
         ) { combination in
             TextFieldGroundSample(values: TextFieldMatrixValues(combination), ground: ground)
         }
@@ -175,7 +205,7 @@ private struct TextFieldCardSample: View {
     @State private var notes = "Milk, bread\nApples"
 
     var body: some View {
-        let (variant, size, stateName) = values.fields
+        let (variant, size, _, stateName) = values.fields
         // Apart by more than two forced rings reach outside their fields, so they do not touch.
         VStack(alignment: .leading, spacing: .space150) {
             TextField("Title", text: $title, prompt: Text("Untitled"))
@@ -210,7 +240,7 @@ private struct TextFieldSecureSample: View {
     @State private var password = "correct horse"
 
     var body: some View {
-        let (variant, size, stateName) = values.fields
+        let (variant, size, _, stateName) = values.fields
         VStack(alignment: .leading, spacing: .space150) {
             SecureField("Password", text: $empty, prompt: Text("Required"))
                 .textFieldStyle(variant, size: size)
@@ -233,7 +263,7 @@ private struct TextFieldGroundSample: View {
     let ground: Westron.Color
 
     var body: some View {
-        let (variant, size, stateName) = values.fields
+        let (variant, size, _, stateName) = values.fields
         TextFieldSample(variant: variant, size: size, filled: true)
             .padding(.space150)
             .background(ground, in: RoundedRectangle(cornerRadius: .radius.card, style: .continuous))
@@ -300,15 +330,23 @@ private struct TextFieldMatrixPage: View {
     var body: some View {
         TokenPage(
             title: "TextField",
-            summary: "Each size empty with its placeholder, then with text; each state with text. inline takes the "
+            summary: "Each size on one line, empty with its placeholder, then with text; multiple lines; each state "
+                + "with text. framed is a capsule on one line and a rounded rectangle on several. inline takes the "
                 + "context's role and color (here body.regular, text.primary). Focus is forced here."
         ) {
             SectionRow {
                 ForEach(TextFieldSize.allCases, id: \.self) { size in
                     section("size \(size.rawValue)") {
                         VariantColumns { variant in
-                            TextFieldMatrixCell(TextFieldMatrixValues(variant: variant, size: size, state: nil))
+                            TextFieldMatrixCell(
+                                TextFieldMatrixValues(variant: variant, size: size, lines: "single", state: nil))
                         }
+                    }
+                }
+                section("multiple lines, size m") {
+                    VariantColumns { variant in
+                        TextFieldMatrixCell(
+                            TextFieldMatrixValues(variant: variant, size: .m, lines: "multiple", state: nil))
                     }
                 }
             }
@@ -337,8 +375,8 @@ private struct TextFieldMatrixPage: View {
 
 extension TextFieldMatrixValues {
     /// A combination of the matrix, as its generated sheets name it.
-    init(variant: TextFieldVariant, size: TextFieldSize, state: String?) {
-        self.init(ComponentMatrix.Combination([variant.rawValue, size.rawValue], state: state))
+    init(variant: TextFieldVariant, size: TextFieldSize, lines: String, state: String?) {
+        self.init(ComponentMatrix.Combination([variant.rawValue, size.rawValue, lines], state: state))
     }
 }
 

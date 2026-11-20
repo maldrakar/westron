@@ -21,12 +21,14 @@ struct TextFieldStyleTests {
         var when: [String: String]
         var token: String
 
-        /// Whether a field matches: every condition holds; `state` holds when the field is in that state.
-        func matches(variant: TextFieldVariant, size: TextFieldSize, states: Set<TextFieldState>) -> Bool {
+        /// Whether a field matches: every condition holds; `state` holds when the field is in that state; `lines` is
+        /// the field's axis, `multiple` the vertical one.
+        func matches(variant: TextFieldVariant, size: TextFieldSize, axis: Axis, states: Set<TextFieldState>) -> Bool {
             when.allSatisfy { key, value in
                 switch key {
                 case "variant": value == variant.rawValue
                 case "size": value == size.offered.rawValue
+                case "lines": value == (axis == .vertical ? "multiple" : "single")
                 case "state": states.contains { $0.rawValue == value }
                 default: false
                 }
@@ -88,9 +90,9 @@ struct TextFieldStyleTests {
     @Test("every binding of the contract is drawn by the style, or is the one it cannot draw")
     func everyBindingIsKnown() throws {
         let drawn: Set = [
-            "container.height", "container.radius", "container.paddingHorizontal", "container.borderColor",
-            "container.borderWidth", "container.opacity", "text.font", "text.color", "focusRing.color",
-            "focusRing.width",
+            "container.height", "container.shape", "container.radius", "container.paddingHorizontal",
+            "container.paddingVertical", "container.background", "container.opacity", "text.font", "text.color",
+            "focusRing.color", "focusRing.width",
         ]
         // A TextFieldStyle cannot color the system field's prompt (TextFieldTokens): the contract binds it for the
         // platforms that can, and its `platforms.apple` records the difference (decisions/0001, I1). A binding added
@@ -105,16 +107,23 @@ struct TextFieldStyleTests {
     }
 
     @Test(
-        "every variant × size × combination of states draws the tokens the contract's cases give, first match winning",
+        "every variant × size × lines × combination of states draws the tokens the contract's cases give",
         arguments: TextFieldVariant.allCases, TextFieldSize.allCases)
     func tokensMatchTheContract(variant: TextFieldVariant, size: TextFieldSize) throws {
-        let metrics = TextFieldMetrics(variant: variant, size: size)
+        for axis in [Axis.horizontal, .vertical] {
+            try tokensMatchTheContract(variant: variant, size: size, axis: axis)
+        }
+    }
+
+    func tokensMatchTheContract(variant: TextFieldVariant, size: TextFieldSize, axis: Axis) throws {
+        let metrics = TextFieldMetrics(variant: variant, size: size, axis: axis)
         let bindings: [(name: String, drawn: (TextFieldTokens) -> String?)] = [
             ("container.height", { _ in metrics.height?.name }),
+            ("container.shape", { _ in metrics.isCapsule ? "capsule" : nil }),
             ("container.radius", { _ in metrics.radius?.name }),
             ("container.paddingHorizontal", { _ in metrics.paddingHorizontal?.name }),
-            ("container.borderColor", { $0.borderColor?.name }),
-            ("container.borderWidth", { $0.borderWidth?.name }),
+            ("container.paddingVertical", { _ in metrics.paddingVertical?.name }),
+            ("container.background", { $0.background?.name }),
             ("container.opacity", { $0.opacity?.name }),
             ("text.font", { $0.textFont?.name }),
             ("text.color", { $0.textColor?.name }),
@@ -123,15 +132,15 @@ struct TextFieldStyleTests {
         ]
         #expect(Self.stateCombinations.count == 4)
         for states in Self.stateCombinations {
-            let tokens = TextFieldTokens(variant: variant, states: states)
+            let tokens = TextFieldTokens(variant: variant, states: states, highContrast: false)
             for binding in bindings {
                 let entered = states.filter(\.isEntered)
                 let expected = try Self.cases(binding.name).first {
-                    $0.matches(variant: variant, size: size, states: entered)
+                    $0.matches(variant: variant, size: size, axis: axis, states: entered)
                 }?.token
                 #expect(
                     binding.drawn(tokens) == expected,
-                    "\(binding.name), \(variant) \(size), states \(states.map(\.rawValue).sorted())")
+                    "\(binding.name), \(variant) \(size) \(axis), states \(states.map(\.rawValue).sorted())")
             }
         }
     }
@@ -140,28 +149,88 @@ struct TextFieldStyleTests {
     func inlineTakesItsContext() {
         for size in TextFieldSize.allCases {
             for states in Self.stateCombinations {
-                let tokens = TextFieldTokens(variant: .inline, states: states)
-                #expect(tokens.textFont == nil)
-                #expect(tokens.textColor == nil)
-                #expect(tokens.borderColor == nil)
+                for highContrast in [false, true] {
+                    let tokens = TextFieldTokens(variant: .inline, states: states, highContrast: highContrast)
+                    #expect(tokens.textFont == nil)
+                    #expect(tokens.textColor == nil)
+                    #expect(tokens.background == nil)
+                    #expect(tokens.borderColor == nil)
+                }
             }
-            #expect(TextFieldMetrics(variant: .inline, size: size) == TextFieldMetrics(variant: .inline, size: .m))
-            #expect(TextFieldMetrics(variant: .inline, size: size).height == nil)
-            #expect(TextFieldMetrics(variant: .inline, size: size).paddingHorizontal == nil)
+            for axis in [Axis.horizontal, .vertical] {
+                let metrics = TextFieldMetrics(variant: .inline, size: size, axis: axis)
+                #expect(metrics == TextFieldMetrics(variant: .inline, size: .m, axis: .horizontal))
+                #expect(metrics.height == nil)
+                #expect(metrics.paddingHorizontal == nil)
+                #expect(metrics.paddingVertical == nil)
+                #expect(!metrics.isCapsule && metrics.radius == nil)
+            }
         }
         // framed sets body.regular in text.primary at every size (P3, P13).
-        #expect(TextFieldTokens(variant: .framed, states: []).textFont == .body.regular)
-        #expect(TextFieldTokens(variant: .framed, states: []).textColor == .text.primary)
+        #expect(TextFieldTokens(variant: .framed, states: [], highContrast: false).textFont == .body.regular)
+        #expect(TextFieldTokens(variant: .framed, states: [], highContrast: false).textColor == .text.primary)
+    }
+
+    @Test("a framed field is a capsule on one line and a rounded rectangle of radius.150 on several (decisions/0002)")
+    func framedShape() {
+        for size in TextFieldSize.allCases {
+            let single = TextFieldMetrics(variant: .framed, size: size, axis: .horizontal)
+            let multiple = TextFieldMetrics(variant: .framed, size: size, axis: .vertical)
+            #expect(single.isCapsule && single.radius == nil && single.paddingVertical == nil)
+            #expect(!multiple.isCapsule && multiple.radius == .radius150 && multiple.paddingVertical != nil)
+            // The same height and padding across: a single and a multiple field of one size align their text.
+            #expect(single.height == multiple.height)
+            #expect(single.paddingHorizontal == multiple.paddingHorizontal)
+        }
+    }
+
+    @Test("the style reads the field's axis, the contract's lines, by reflection; without one, a single line")
+    @MainActor func axisOfTheSystemField() {
+        #expect(TextFieldAxis.of(TextField("Notes", text: .constant(""), axis: .vertical)) == .vertical)
+        #expect(
+            TextFieldAxis.of(TextField("Notes", text: .constant(""), prompt: Text("Add a note"), axis: .vertical))
+                == .vertical)
+        #expect(TextFieldAxis.of(TextField("Name", text: .constant(""), axis: .horizontal)) == .horizontal)
+        #expect(TextFieldAxis.of(TextField("Name", text: .constant(""))) == .horizontal)
+        #expect(TextFieldAxis.of(TextField("Name", text: .constant(""), prompt: Text("Untitled"))) == .horizontal)
+        #expect(TextFieldAxis.of(SecureField("Password", text: .constant(""))) == .horizontal)
+        // A value with no stored axis.
+        #expect(TextFieldAxis.of("not a field") == .horizontal)
+    }
+
+    @Test("in the high-contrast themes a framed field draws an outline in border.strong at stroke.thin, in every state")
+    func highContrastOutline() {
+        for variant in TextFieldVariant.allCases {
+            for states in Self.stateCombinations {
+                let standard = TextFieldTokens(variant: variant, states: states, highContrast: false)
+                let high = TextFieldTokens(variant: variant, states: states, highContrast: true)
+                // Only the outline differs; the standard themes draw none (the owner's accepted deviation).
+                #expect(standard.borderColor == nil && standard.borderWidth == nil)
+                var edgeless = high
+                edgeless.borderColor = nil
+                edgeless.borderWidth = nil
+                #expect(edgeless == standard)
+                if variant == .framed {
+                    #expect(high.borderColor == .border.strong)
+                    #expect(high.borderWidth == .stroke.thin)
+                    #expect(high.background == .background.muted)
+                } else {
+                    #expect(high.borderColor == nil && high.borderWidth == nil)
+                }
+            }
+        }
     }
 
     @Test("focus draws westron's ring on iOS and macOS; disabled dims the whole field; the watch never enters focus")
     func states() {
         for variant in TextFieldVariant.allCases {
-            let focused = TextFieldTokens(variant: variant, states: [.focus])
-            let rest = TextFieldTokens(variant: variant, states: [])
+            let focused = TextFieldTokens(variant: variant, states: [.focus], highContrast: false)
+            let rest = TextFieldTokens(variant: variant, states: [], highContrast: false)
             #expect(rest.focusRingColor == nil)
             #expect(rest.opacity == nil)
-            #expect(TextFieldTokens(variant: variant, states: [.disabled]).opacity == .opacity.disabled)
+            #expect(
+                TextFieldTokens(variant: variant, states: [.disabled], highContrast: false).opacity == .opacity.disabled
+            )
             #if os(watchOS)
                 #expect(!TextFieldState.focus.isEntered)
                 #expect(focused == rest)
