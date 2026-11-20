@@ -170,12 +170,14 @@ struct CheckboxStyleTests {
 
     @Test("the hit area is at least the platform's target: 44 pt on iOS and watchOS, 28 on macOS")
     func hitAreaMinimum() {
+        // The sides the hit area had before size.control.m fell below the touch target on iOS (#85): none shrank.
         #if os(macOS)
-            #expect(CheckboxMetrics.minimumHitSide >= 28)
+            #expect(CheckboxMetrics.minimumHitSide == 32)
         #else
-            #expect(CheckboxMetrics.minimumHitSide >= 44)
+            #expect(CheckboxMetrics.minimumHitSide == 44)
         #endif
-        #expect(CheckboxMetrics.minimumHitSide == .size.control.m)
+        #expect(CheckboxMetrics.minimumHitSide >= .size.target.minimum)
+        #expect(CheckboxMetrics.minimumHitSide == max(.size.target.minimum, .size.control.m))
         #expect(CheckboxMetrics.hitSide(diameter: 10) == CheckboxMetrics.minimumHitSide)
         #expect(CheckboxMetrics.hitSide(diameter: 100) == 100)
 

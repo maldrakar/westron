@@ -186,15 +186,16 @@ final class ButtonBehaviorTests: XCTestCase {
         XCTAssertEqual(accepted, 1)
     }
 
-    /// A size s button is drawn smaller than the recommended target: 32 pt tall on iOS (target 44), 24 on macOS
-    /// (target 28). The hit area the contract gives it differs by platform.
+    /// A size s button is drawn smaller than the recommended target, size.target.minimum: 28 pt tall on iOS (target
+    /// 44, 8 pt past each edge; 32 pt before #85), 24 on macOS (target 28). The hit area the contract gives it differs
+    /// by platform.
     ///
-    /// iOS: a tap 5 pt below what is drawn, inside the target, must reach it. The hit area is the system's touch
-    /// tolerance, which westron does not grow (ButtonVariantStyle.swift): measured on iOS 26.3 it reaches 16 pt below
-    /// such a button, and the test fails if the platform ever covers less than the target.
+    /// iOS: a tap 7.5 pt below what is drawn, inside the target, must reach it. The hit area is the system's touch
+    /// tolerance, which westron does not grow (ButtonVariantStyle.swift): measured on iOS 26.3 it reached 16 pt below
+    /// a 32 pt button, and the test fails if the platform ever covers less than the target.
     ///
     /// macOS: the hit area is the drawn button, 24 pt, not the target (the contract's `platforms.apple.macos`, the
-    /// owner's decision of 2026-11-18, #75). A click 1.5 pt inside its bottom edge, off the label of this outlined
+    /// owner's decision of 2026-11-18, #75). A click 1.5 pt inside its bottom edge, off the label of this secondary
     /// button, reaches it; a click 1.5 pt below it, inside what the target would cover, and one 3 pt below, past the
     /// target, miss. Every variant, size and icon-only is clicked the same way in ButtonHitAreaTests.
     @MainActor
@@ -217,8 +218,9 @@ final class ButtonBehaviorTests: XCTestCase {
             pressBelow(3)
             XCTAssertEqual(accepted, 1, "a click 3 pt below the drawn button reached it")
         #else
-            pressBelow(5)
-            XCTAssertEqual(accepted, 1, "a tap 5 pt below the drawn button did not reach it")
+            XCTAssertEqual(small.frame.height, 28, accuracy: 0.5)
+            pressBelow(7.5)
+            XCTAssertEqual(accepted, 1, "a tap 7.5 pt below the drawn button did not reach it")
         #endif
     }
 

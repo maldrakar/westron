@@ -222,15 +222,21 @@ struct TokenAccessorTests {
         #expect(CGFloat.stroke.thick == 2)
     }
 
-    @Test("a control's height is the platform's: a pointer's on macOS, a touch target on iOS and watchOS")
+    @Test("a control's height and its least hit area are the platform's (decisions/0013, revision of 2026-11-20)")
     func controlHeights() {
         let heights = [CGFloat.size.control.s, .size.control.m, .size.control.l]
         #if os(macOS)
             #expect(heights == [24, 32, 40])
-        #else
+            #expect(CGFloat.size.target.minimum == 28)
+        #elseif os(watchOS)
             #expect(heights == [32, 44, 52])
+            #expect(CGFloat.size.target.minimum == 44)
+        #else
+            #expect(heights == [28, 36, 50])
+            #expect(CGFloat.size.target.minimum == 44)
         #endif
         #expect(Westron.Dimension.all.contains(.size.control.m))
+        #expect(Westron.Dimension.all.contains(.size.target.minimum))
     }
 
     @Test("a number is a Double as it is: the opacity of a disabled control")

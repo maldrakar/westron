@@ -151,9 +151,10 @@ private struct TextFieldBody: View {
         /// CatalogUITests/TextFieldBehaviorTests:
         /// - macOS: a click lands only where a view is, so a field at s, drawn 24 pt high, reaches 2 pt past each edge,
         ///   28 pt in all, and no farther. The contract takes the overlap with a neighbor closer than 2 pt (P12).
-        /// - iOS: the touch tolerance of the style's tap gesture (`TextFieldHitArea`) already takes a tap 6 pt past the
-        ///   drawn edge of a field at s, drawn 32 pt high, at the 44 pt target (a one-off probe found it ending between
+        /// - iOS: the touch tolerance of the style's tap gesture (`TextFieldHitArea`) already takes a tap 8 pt past the
+        ///   drawn edge of a field at s, drawn 28 pt high, at the 44 pt target (a one-off probe found it ending between
         ///   16 and 18 pt), so westron grows no frame, as for Button: it would only take more taps meant for a neighbor.
+        ///   At m, drawn 36 pt high, the target is 4 pt past each edge, within the same tolerance.
         private var hitAreaExtra: CGFloat {
             #if os(macOS)
                 guard metrics.height != nil else { return .zero }

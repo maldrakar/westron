@@ -207,13 +207,17 @@ struct TextFieldStyleTests {
             // Chapter 08: 28 pt on macOS; the contract records no exception like Button's.
             #expect(TextFieldMetrics.minimumHitHeight == 28)
         #else
-            // Chapter 08: 44 pt on iOS, iPadOS and watchOS, which is size.control.m there.
+            // Chapter 08: 44 pt on iOS, iPadOS and watchOS.
             #expect(TextFieldMetrics.minimumHitHeight == 44)
-            #expect(TextFieldMetrics.minimumHitHeight == CGFloat(Westron.Dimension.size.control.m))
         #endif
-        // Every size but s is drawn at the target or above it; s is drawn below it, so the field reaches around it.
+        #expect(TextFieldMetrics.minimumHitHeight == CGFloat(Westron.Dimension.size.target.minimum))
+        // s is drawn below the target on every platform, so the field reaches around it; on iOS m is too (36 pt).
         #expect(CGFloat(Westron.Dimension.size.control.s) < TextFieldMetrics.minimumHitHeight)
-        #expect(CGFloat(Westron.Dimension.size.control.m) >= TextFieldMetrics.minimumHitHeight)
+        #if os(iOS)
+            #expect(CGFloat(Westron.Dimension.size.control.m) < TextFieldMetrics.minimumHitHeight)
+        #else
+            #expect(CGFloat(Westron.Dimension.size.control.m) >= TextFieldMetrics.minimumHitHeight)
+        #endif
     }
 
     // MARK: - The catalog's hook

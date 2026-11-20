@@ -28,7 +28,7 @@ final class TextFieldBehaviorTests: XCTestCase {
         private let drawnHeight: CGFloat = 24
         private let target: CGFloat = 28
     #else
-        private let drawnHeight: CGFloat = 32
+        private let drawnHeight: CGFloat = 28
         private let target: CGFloat = 44
     #endif
     private let padding: CGFloat = 8
@@ -130,7 +130,7 @@ final class TextFieldBehaviorTests: XCTestCase {
     @MainActor
     func testTheSmallFieldTakesTheTargetAroundWhatItDraws() {
         let drawn = drawnSmallField
-        // How far the target reaches past the drawn edge: 6 pt on iOS, 2 pt on macOS.
+        // How far the target reaches past the drawn edge: 8 pt on iOS, 2 pt on macOS.
         let reach = (target - drawnHeight) / 2
         let x = drawn.midX
         #if os(macOS)
@@ -142,7 +142,7 @@ final class TextFieldBehaviorTests: XCTestCase {
             XCTAssertEqual(
                 press(at: CGPoint(x: x, y: drawn.minY - reach - 3)), "Focused: none", "past the target above")
         #else
-            // At the edge of the 44 pt target, 6 pt past the drawn edge, above and below; the touch tolerance gives
+            // At the edge of the 44 pt target, 8 pt past the drawn edge, above and below; the touch tolerance gives
             // up well before 24 pt. A one-off probe of #30 found it reaching 16 pt and not 18 pt.
             XCTAssertEqual(press(at: CGPoint(x: x, y: drawn.minY - reach)), "Focused: small", "the target's top edge")
             XCTAssertEqual(
