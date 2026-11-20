@@ -108,15 +108,14 @@ struct TextFieldMetrics: Equatable, Sendable {
 
     /// The corners of the focus ring around an `inline` field. The contract binds the ring's color and width; its
     /// place is the implementation's (decisions/0001, "Open points"). On `framed` the ring stands outside the field's
-    /// edge, `framedRingGap` away, and follows its shape: around a capsule a capsule, around a rounded rectangle one
-    /// whose corners are grown by the distance. Focus adds a line where there was none, so it changes the field's
-    /// shape, not only a color (design-language/08, "Color is never the only signal"); in the high-contrast themes,
-    /// where the field has an outline, one line becomes two. On `inline`, which has no shape of its own, the ring
-    /// stands around the field with the corners of a control.
+    /// frame, its inner edge against the field's edge with no gap (the owner's decision of 2026-11-20, decisions/0002),
+    /// and follows its shape: around a capsule a capsule, around a rounded rectangle one whose corners are grown by the
+    /// ring's width. Focus adds a line where there was none, so it changes the field's shape, not only a color
+    /// (design-language/08, "Color is never the only signal"); in the high-contrast themes, where the field has an
+    /// outline, the ring lies against the outline and the line grows from `stroke.thin` to `stroke.thin` plus
+    /// `stroke.thick`, in a second color. On `inline`, which has no shape of its own, the ring stands around the field
+    /// with the corners of a control.
     static let ringRadius: Westron.Dimension = .radius.control
-
-    /// The gap between a `framed` field's edge and its ring.
-    static let framedRingGap: Westron.Dimension = .space25
 
     /// How far the ring of an `inline` field stands outside its frame across, so that it does not touch the text.
     static let inlineRingOutsetHorizontal: Westron.Dimension = .space100

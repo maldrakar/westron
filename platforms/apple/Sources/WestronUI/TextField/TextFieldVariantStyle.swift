@@ -180,15 +180,17 @@ private struct TextFieldBody: View {
         }
 
         /// westron's focus ring, which replaces the system's (the contract), drawn outside the field's frame, so the
-        /// field keeps its laid out size (`TextFieldMetrics.ringRadius` says where): on `framed` outside the field's
-        /// edge, following its shape; on `inline`, which has no shape, around the field, clear of its text.
+        /// field keeps its laid out size (`TextFieldMetrics.ringRadius` says where): on `framed` just outside the
+        /// field's edge, touching it, following its shape; on `inline`, which has no shape, around the field, clear of
+        /// its text.
         @ViewBuilder
         private func ring(shape: TextFieldShape, color: Westron.Color, width: Westron.Dimension) -> some View {
             switch variant.offered {
             case .framed:
-                let outset = CGFloat(TextFieldMetrics.framedRingGap) + CGFloat(width)
+                // The ring's inner edge is the field's edge: the shape grown by the ring's width, stroked inside.
+                let outset = CGFloat(width)
                 shape.outset(by: outset)
-                    .strokeBorder(color, lineWidth: CGFloat(width))
+                    .strokeBorder(color, lineWidth: outset)
                     .padding(-outset)
             case .inline:
                 shape.strokeBorder(color, lineWidth: CGFloat(width))

@@ -19,8 +19,9 @@ description: >-
   case has no contrast key, so this description is the contract for it, as Button's is for its outline. inline is a
   field set into a text it belongs to, such as the title and the notes inside an open task card: no fill, no outline
   and no padding, in the text role and the text color of its context. Focus is westron's ring, color.border.focus at
-  stroke.thick, around the field in both variants, on iOS, on macOS and on the web; around a framed field it follows
-  the field's shape, the capsule or the rounded rectangle; the system's own focus ring is turned off where it has one.
+  stroke.thick, around the field in both variants, on iOS, on macOS and on the web; around a framed field it lies
+  against the field's edge, outside it with no gap, and follows the field's shape, the capsule or the rounded
+  rectangle; the system's own focus ring is turned off where it has one.
   watchOS enters no focus. Disabled draws the whole field at opacity.disabled, with no colors of its own
   (design-language/08). The placeholder is in color.text.placeholder. There is no error state, hint or message in
   this version: no pilot screen shows one, and a field marked only by a danger border would tell an error by color
@@ -158,7 +159,8 @@ platforms:
       confirmation, as is the label above; westron
       drawing its own prompt, an API change, stays open for the owner (decisions/0001). westron's focus ring is drawn
       outside the field's laid out frame, so a focused field needs room around it that no clipping parent and no
-      close neighbor takes: on framed space.25 plus stroke.thick beyond the field's edge on every side, on inline
+      close neighbor takes: on framed stroke.thick beyond the field's edge on every side, the ring touching the edge
+      with no gap (the owner's decision of 2026-11-20, decisions/0002), on inline
       space.100 across and space.50 up and down beyond the field (a proposal of the implementation, decisions/0001,
       I4). Corners are continuous.
     ios:
@@ -198,7 +200,8 @@ platforms:
     base: input
     description: >-
       Provisional until phase 6 (#40): a native <input> with westron's CSS, lines multiple a <textarea>. The
-      focus ring is an outline in focusRing.color and focusRing.width on :focus-visible. Corners are circular; the
+      focus ring is an outline in focusRing.color and focusRing.width on :focus-visible, at outline-offset 0 on
+      framed, so it touches the field's edge. Corners are circular; the
       capsule is a border-radius of half the height or more, so its ends stay round as the field grows. The
       high-contrast outline applies under prefers-contrast: more.
   linux:
