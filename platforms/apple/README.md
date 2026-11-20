@@ -281,16 +281,26 @@ the last 2 minutes or so before the timeout now fails, with its logs, instead of
 
 `ButtonBehaviorTests`, `CheckboxBehaviorTests`, `TextFieldBehaviorTests` and `IconAccessibilityTests`, in
 `Catalog/CatalogUITests`, check on the catalog's entries what a unit test cannot reach: presses and hit areas, the
-accessibility hierarchy, the keyboard. No `tools/apple/check.sh` target runs them, and neither does CI; run one suite,
-or one test of it, by hand after a change to its component:
+accessibility hierarchy, the keyboard. Each class has branches of its own for iOS and macOS. `tools/apple/check.sh
+behavior` runs them, like the audit: the build first, a step of its own, then one `xcodebuild test-without-building`
+for the classes named (all four by default); it prints each failure with its message, each skip with its reason, the
+test cases and the totals, and stops the simulator's test daemon afterwards. The log goes to
+`.build/logs/behavior-<platform>[-<classes>].log`, the result bundle to `.build/xcode/results/`. There is no retry.
+Run the class of a component after a change to it; macOS needs Automation Mode (below) and takes over the screen.
 
 ```sh
-source tools/apple/xcode-env.sh
-xcodebuild -project platforms/apple/Catalog/Catalog.xcodeproj -scheme Catalog \
-  -destination "platform=iOS Simulator,name=iPhone 17" -derivedDataPath .build/xcode/catalog \
-  -only-testing:CatalogUITests/CheckboxBehaviorTests test    # …/CheckboxBehaviorTests/testPressToggles for one test
-# on macOS: -destination "platform=macOS,arch=$(uname -m)"
+tools/apple/check.sh behavior                            # all four on the iOS simulator
+tools/apple/check.sh behavior ios CheckboxBehaviorTests  # one class or more, by name
+tools/apple/check.sh behavior macos                      # on the Mac
 ```
+
+One test alone has no option; run it with xcodebuild after `source tools/apple/xcode-env.sh`, as
+`-only-testing:CatalogUITests/CheckboxBehaviorTests/testPressToggles` with `-destination "platform=iOS
+Simulator,name=iPhone 17"` and `-derivedDataPath .build/xcode/catalog`.
+
+CI runs them every night next to the full accessibility audit, in `.github/workflows/accessibility-audit.yml`, one
+leg on iOS and one on macOS, under the same rule for skipping a commit already checked; a pull request does not run
+them. A failed leg uploads its logs and its result bundle, with the screenshots XCTest takes at a failure.
 
 ### Accessibility audit
 

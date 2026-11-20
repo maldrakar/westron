@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Checks for the Swift part of westron. CI runs the checks of `all`, and a11y in jobs of its own; the agent's Stop
-# hook runs format, package, platforms and catalog, each only when the changes touch what it checks.
+# Checks for the Swift part of westron. CI runs the checks of `all`, and a11y and behavior in jobs of their own; the
+# agent's Stop hook runs format, package, platforms and catalog, each only when the changes touch what it checks.
 #
 #   tools/apple/check.sh package     swift build + swift test (macOS)
 #   tools/apple/check.sh package-ios the package's unit tests on the iOS simulator (iPhone 17 or $WESTRON_SIM_DEVICE)
@@ -14,9 +14,13 @@
 #                                    then to every n-th of them from the i-th; a run that fails for infrastructure
 #                                    (a stalled simulator) is retried once for the entries it hit, never for a
 #                                    finding (#74); WESTRON_A11Y_FAIL_ONCE=<id> fakes such a failure to show it
+#   tools/apple/check.sh behavior [ios|macos] [class …]
+#                                    the catalog's behaviour UI tests (default: the iOS simulator), the classes named
+#                                    (ButtonBehaviorTests CheckboxBehaviorTests TextFieldBehaviorTests
+#                                    IconAccessibilityTests; default: all); no retry
 #   tools/apple/check.sh format      swift format lint without changes, tools/ included
 #   tools/apple/check.sh fix-format  swift format that rewrites the files, tools/ included
-#   tools/apple/check.sh all         everything except fix-format and a11y (package-ios included)
+#   tools/apple/check.sh all         everything except fix-format, a11y and behavior (package-ios included)
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -98,38 +102,73 @@ stop_test_daemon() {
   xcrun simctl spawn "$udid" launchctl kill SIGKILL system/com.apple.testmanagerd > /dev/null 2>&1 || true
 }
 
-# An interrupted audit: stops its xcodebuild and the simulator's test daemon, then exits with <status>. The `|| true`:
-# under `set -e`, the wait for the killed xcodebuild (status 143) would end the script before the daemon is stopped.
-a11y_interrupted() {
+# Sets `destination` and `udid` for the catalog's UI tests on <platform>: on iOS the simulator $WESTRON_SIM_DEVICE
+# (default iPhone 17), booted if need be; on macOS the Mac, with an empty udid.
+ui_test_destination() {
+  udid=""
+  case "$1" in
+    ios)
+      # shellcheck source=tools/apple/simulator.sh
+      source tools/apple/simulator.sh
+      udid="$(westron_simulator_udid "${WESTRON_SIM_DEVICE:-iPhone 17}")" || return 1
+      destination="id=$udid"
+      ;;
+    macos) destination="platform=macOS,arch=$(uname -m)" ;;
+  esac
+}
+
+# Builds the catalog and its UI tests for <destination> into <build log>, a step of its own, so that a build failure
+# fails the run as one, and every test run uses what this build produced. <what> and <platform> name the run in the
+# message.
+ui_test_build() {
+  local destination="$1" build_log="$2" what="$3" platform="$4"
+  if ! xcodebuild -project platforms/apple/Catalog/Catalog.xcodeproj -scheme Catalog -destination "$destination" \
+    -derivedDataPath .build/xcode/catalog build-for-testing > "$build_log" 2>&1; then
+    grep -E "error:|FAILED" "$build_log" | grep -v "\[MT\]" | tail -40 >&2 || true
+    echo "check.sh: $what: the catalog or its UI tests failed to build ($platform), log: $build_log" >&2
+    return 1
+  fi
+}
+
+# An interrupted UI test run: stops its xcodebuild and the simulator's test daemon, then exits with <status>. The
+# `|| true`: under `set -e`, the wait for the killed xcodebuild (status 143) would end the script before the daemon is
+# stopped.
+ui_test_interrupted() {
   local udid="$1" status="$2"
-  kill "$a11y_xcodebuild" 2> /dev/null || true
-  wait "$a11y_xcodebuild" 2> /dev/null || true
+  kill "$ui_test_xcodebuild" 2> /dev/null || true
+  wait "$ui_test_xcodebuild" 2> /dev/null || true
   stop_test_daemon "$udid"
   exit "$status"
 }
 
-# xcodebuild's lines for a test runner that did not start (a11y_plan), printed with a run's output.
-a11y_runner_failures="Failed to install or launch the test runner|Early unexpected exit"
-
-# Runs xcodebuild <action> for the audit into <log> and <results> on <destination>, with the -only-testing arguments
-# after them; prints what the run reported and returns xcodebuild's status. Without -collect-test-diagnostics never, a
-# failed run waits minutes for a sysdiagnose of the simulator. xcodebuild runs in the background and the script waits
-# for it, so that an interruption reaches the traps at once; however the run ends, the simulator's test daemon is
-# stopped (stop_test_daemon), and an interruption exits with the shell's status for its signal, 130 for INT and 143
-# for TERM.
-a11y_run() {
+# Runs xcodebuild <action> on the catalog's UI tests into <log> and <results> on <destination>, with the -only-testing
+# arguments after them, and returns xcodebuild's status. Without -collect-test-diagnostics never, a failed run waits
+# minutes for a sysdiagnose of the simulator. xcodebuild runs in the background and the script waits for it, so that
+# an interruption reaches the traps at once; however the run ends, the simulator's test daemon is stopped
+# (stop_test_daemon), and an interruption exits with the shell's status for its signal, 130 for INT and 143 for TERM.
+ui_test_run() {
   local action="$1" log="$2" results="$3" destination="$4" udid="$5" status=0
   shift 5
   rm -rf "$results"
   xcodebuild -project platforms/apple/Catalog/Catalog.xcodeproj -scheme Catalog -destination "$destination" \
     -derivedDataPath .build/xcode/catalog -resultBundlePath "$results" -collect-test-diagnostics never \
     "$@" "$action" > "$log" 2>&1 &
-  a11y_xcodebuild=$!
-  trap 'a11y_interrupted "$udid" 130' INT
-  trap 'a11y_interrupted "$udid" 143' TERM
-  wait "$a11y_xcodebuild" || status=$?
+  ui_test_xcodebuild=$!
+  trap 'ui_test_interrupted "$udid" 130' INT
+  trap 'ui_test_interrupted "$udid" 143' TERM
+  wait "$ui_test_xcodebuild" || status=$?
   trap - INT TERM
   stop_test_daemon "$udid"
+  return "$status"
+}
+
+# xcodebuild's lines for a test runner that did not start (a11y_plan), printed with a run's output.
+a11y_runner_failures="Failed to install or launch the test runner|Early unexpected exit"
+
+# Runs the audit (ui_test_run, same arguments); prints what the run reported and returns xcodebuild's status.
+a11y_run() {
+  local log="$2" status=0
+  ui_test_run "$@" || status=$?
   # The issues the audit found, suppressed and deferred, each failure with its kind, then the test cases and the
   # totals, and why a test runner did not start (a11y_plan). The test's lines of which entry starts and finishes are
   # for a11y_plan alone.
@@ -264,15 +303,7 @@ a11y() {
   # The selection is in the names, so that runs of different tests side by side keep their own log and result.
   name="a11y-$platform$selection"
   local log=".build/logs/$name.log" results=".build/xcode/results/$name.xcresult"
-  case "$platform" in
-    ios)
-      # shellcheck source=tools/apple/simulator.sh
-      source tools/apple/simulator.sh
-      udid="$(westron_simulator_udid "${WESTRON_SIM_DEVICE:-iPhone 17}")" || return 1
-      destination="id=$udid"
-      ;;
-    macos) destination="platform=macOS,arch=$(uname -m)" ;;
-  esac
+  ui_test_destination "$platform" || return 1
   # WESTRON_ENTRY=<id>[,<id>…] audits those entries only: to iterate on an entry's issues, or to split a run.
   if [ -n "${WESTRON_ENTRY:-}" ]; then export TEST_RUNNER_WESTRON_ENTRY="$WESTRON_ENTRY"; fi
   # WESTRON_ENTRY_SHARD=<i>/<n> then audits every n-th of them from the i-th: parallel jobs split a slow test with it.
@@ -286,15 +317,8 @@ a11y() {
   if [ -n "${WESTRON_A11Y_FAIL_ONCE:-}" ]; then export TEST_RUNNER_WESTRON_A11Y_FAIL_ONCE="$WESTRON_A11Y_FAIL_ONCE"; fi
   mkdir -p .build/logs .build/xcode/results
   echo "== a11y: $destination${selection:+ (${selection#-})}"
-  # The build is a step of its own, so that a build failure fails the audit as one, and the test runs, the first and
-  # a retry alike, only on what this build produced.
-  local build_log=".build/logs/$name-build.log"
-  if ! xcodebuild -project platforms/apple/Catalog/Catalog.xcodeproj -scheme Catalog -destination "$destination" \
-    -derivedDataPath .build/xcode/catalog build-for-testing > "$build_log" 2>&1; then
-    grep -E "error:|FAILED" "$build_log" | grep -v "\[MT\]" | tail -40 >&2 || true
-    echo "check.sh: a11y: the catalog or its UI tests failed to build ($platform), log: $build_log" >&2
-    return 1
-  fi
+  # The test runs, the first and a retry alike, use only what this build produced.
+  ui_test_build "$destination" ".build/logs/$name-build.log" "a11y" "$platform" || return 1
   local first_status=0
   a11y_run test-without-building "$log" "$results" "$destination" "$udid" "${only[@]}" || first_status=$?
   [ "$first_status" -ne 0 ] || return 0
@@ -379,6 +403,44 @@ a11y() {
   echo "a11y: passed after a retry; the first run's log: $log"
 }
 
+# The catalog's behaviour UI tests (platforms/apple/README.md, "Behaviour UI tests"): presses, hit areas, the
+# accessibility hierarchy, the keyboard, on the catalog's entries. Each class runs on iOS and macOS, with branches of
+# its own for each; macOS needs Automation Mode and the screen to itself. No retry: the nightly CI run reports a
+# failure, and a flaky one is run again by hand.
+behavior_tests=(ButtonBehaviorTests CheckboxBehaviorTests TextFieldBehaviorTests IconAccessibilityTests)
+
+behavior() {
+  local platform=ios destination udid="" test status=0
+  case "${1:-}" in ios | macos) platform="$1"; shift ;; esac
+  local only=() selection=""
+  for test in "$@"; do
+    if [[ " ${behavior_tests[*]} " != *" $test "* ]]; then
+      echo "check.sh: behavior: no test class \"$test\"; the classes: ${behavior_tests[*]}" >&2
+      return 2
+    fi
+    only+=("-only-testing:CatalogUITests/$test")
+    selection+="-$test"
+  done
+  if [ ${#only[@]} -eq 0 ]; then
+    for test in "${behavior_tests[@]}"; do only+=("-only-testing:CatalogUITests/$test"); done
+  fi
+  local name="behavior-$platform$selection"
+  local log=".build/logs/$name.log" results=".build/xcode/results/$name.xcresult"
+  mkdir -p .build/logs .build/xcode/results
+  ui_test_destination "$platform" || return 1
+  echo "== behavior: $destination${selection:+ (${selection#-})}"
+  ui_test_build "$destination" ".build/logs/$name-build.log" "behavior" "$platform" || return 1
+  ui_test_run test-without-building "$log" "$results" "$destination" "$udid" "${only[@]}" || status=$?
+  # Each failure with its message, each skip with its reason, the test cases, the totals of each class and of the run,
+  # and why a test runner did not start.
+  grep -E ": error: |Test skipped|Test Case .*(passed|failed|skipped)|Executed [0-9]+ test|$a11y_runner_failures" \
+    "$log" | grep -v "\[MT\]" || true
+  if [ "$status" -ne 0 ]; then
+    echo "check.sh: behaviour UI tests failed ($platform), log: $log, result: $results" >&2
+    return 1
+  fi
+}
+
 format() {
   swift format lint --strict --recursive --parallel "${swift_sources[@]}"
 }
@@ -393,8 +455,9 @@ case "${1:-}" in
   platforms) platforms ;;
   catalog) catalog ;;
   a11y) shift; a11y "$@" ;;
+  behavior) shift; behavior "$@" ;;
   format) format ;;
   fix-format) fix_format ;;
   all) format; package; package_ios; platforms; catalog ;;
-  *) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+  *) sed -n '2,/^set -euo pipefail/p' "$0" | sed '$d' | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac
