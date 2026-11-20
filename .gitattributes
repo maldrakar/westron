@@ -1,0 +1,2 @@
+# The snapshot references (#92): PNGs in Git LFS. The environment file beside them stays plain text.
+platforms/apple/Snapshots/**/*.png filter=lfs diff=lfs merge=lfs -text

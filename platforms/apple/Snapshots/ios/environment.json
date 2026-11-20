@@ -1,0 +1,5 @@
+{
+  "platform": "ios",
+  "recorded": false,
+  "note": "No references yet: the workflow snapshot-references.yml records them on CI (platforms/apple/Snapshots/README.md)."
+}
