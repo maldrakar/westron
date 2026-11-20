@@ -81,9 +81,11 @@ private struct ControlsPage: View {
                 }
             }
             section("Fills · at rest, hover, pressed") {
-                Grid(alignment: .leading, horizontalSpacing: .space100, verticalSpacing: .space100) {
+                // A row of samples wraps rather than squeezes its labels: three columns of token names are wider than
+                // a phone (the accessibility audit's text clipped check).
+                VStack(alignment: .leading, spacing: .space100) {
                     ForEach(Self.fills, id: \.name) { fill in
-                        GridRow {
+                        FlowLayout(spacing: .space100) {
                             ForEach(fill.states, id: \.name) { state in
                                 VStack(alignment: .leading, spacing: .space25) {
                                     sample(fill.word, fill: state.color, label: fill.label)

@@ -32,6 +32,9 @@ struct ButtonProgressTests {
         let natural = fittingSize(ButtonProgress(color: progress).spinner.fixedSize())
         #expect(natural.width > 0 && natural.height > 0)
         var scaled = false
+        // The drawn frame snaps to pixels: a pixel at 3x, a third of a point, is the most it may stand past the slot.
+        // An unscaled spinner stands out by half a point or more (10 pt in 9 on macOS, 14 in 11 on iOS).
+        let pixel: CGFloat = 0.34
         for icon in [Westron.Icon.check, .xmarkCircleFill, .plus] {
             let slot = fittingSize(
                 Image(icon).textRole(metrics.iconFont).imageScale(ButtonMetrics.iconScale).fixedSize())
@@ -43,8 +46,8 @@ struct ButtonProgressTests {
             let frame = try? #require(drawn.frame, "size \(size.rawValue): the spinner reported no frame")
             guard let frame else { continue }
             let name = "size \(size.rawValue), \(icon.rawValue): the spinner drawn at \(frame) in the slot \(slot)"
-            #expect(frame.minX >= -0.1 && frame.maxX <= slot.width + 0.1, "\(name) overflows the slot across")
-            #expect(frame.minY >= -0.1 && frame.maxY <= slot.height + 0.1, "\(name) overflows the slot up or down")
+            #expect(frame.minX >= -pixel && frame.maxX <= slot.width + pixel, "\(name) overflows the slot across")
+            #expect(frame.minY >= -pixel && frame.maxY <= slot.height + pixel, "\(name) overflows the slot up or down")
             if natural.width > slot.width + 0.5 || natural.height > slot.height + 0.5 {
                 scaled = true
                 #expect(frame.width < natural.width, "\(name) is not scaled down from \(natural)")
