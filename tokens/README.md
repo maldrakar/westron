@@ -14,8 +14,9 @@ semantic/*.tokens.json              roles that do not depend on a mode: colors, 
                                     rhythm's roles (space.card, space.page.narrow, …), radii, strokes, opacities,
                                     shadows, motion
 density/<density>.tokens.json       none yet: compact gets values with the dense components (#33)
-platform/<platform>.tokens.json     only what differs by platform: the control heights, size.control.*; every
-                                    platform's file names the same tokens with the same descriptions
+platform/<platform>.tokens.json     only what differs by platform: the control heights, size.control.*, and the
+                                    least hit area, size.target.minimum; every platform's file names the same tokens
+                                    with the same descriptions
 ```
 
 ## Modes

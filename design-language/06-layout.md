@@ -57,9 +57,10 @@ B spends space generously, on the 8 px base. Each place has a role, and the role
   rows 36 (decisions/0013). On touch platforms, rows are at least the platform's recommended hit target: 44 pt on
   iOS, 48 dp on Android. A row's height is a minimum, so it grows with its text.
 - **Controls come in three heights, set by the input.** `size.control.s`, `m` and `l` are 24, 32 and 40 on macOS,
-  where a pointer drives, and 32, 44 and 52 on iOS, iPadOS and watchOS, where touch does. Size `m` is the 32 px
-  control on a pointer and the 44 pt touch target on touch (chapter 08). The tokens for row heights arrive with the
-  dense components (#33).
+  where a pointer drives; 28, 36 and 50 on iOS and iPadOS, beside the system's own 28, 34 and 50; and 32, 44 and 52 on
+  watchOS, pending the owner's look at the watch (decisions/0013, revision of 2026-11-20). A control's hit area is not
+  its height: it is at least `size.target.minimum`, 44 pt on touch and 28 on macOS (chapter 08). The tokens for row
+  heights arrive with the dense components (#33).
 
 ## Density is a mode
 

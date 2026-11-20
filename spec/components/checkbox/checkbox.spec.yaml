@@ -22,8 +22,8 @@ description: >-
   mark out in motion.fade, with no pop. A press scales the check down to 98 % in motion.press, as every control's
   press does (design-language/05, "Shapes belong to components"), and Reduce Motion drops that scale too. The
   circle has no size option: it is sized by the text role of the label beside it, as an icon is, and grows with the person's text size (design-language/07, "Size
-  relative to text"). Its hit area is at least the platform's recommended target, 44 pt on iOS and watchOS and 28 pt
-  on macOS, also where the circle is smaller (design-language/08). Disabled draws the whole check at
+  relative to text"). Its hit area is at least the platform's recommended target, size.target.minimum, 44 pt on iOS
+  and watchOS and 28 pt on macOS, also where the circle is smaller (design-language/08). Disabled draws the whole check at
   opacity.disabled, with no colors of its own.
 consumers: [todo-app/list-screen]
 
@@ -94,8 +94,9 @@ platforms:
       its focusable element (keyboard focus on macOS: platforms.apple.macos). For assistive technology the body is
       replaced by the system's own Toggle on the same value and label (accessibilityRepresentation), so assistive
       technology is meant to meet the toggle's role and value and no button. The circle's diameter is 1.2 times the line height of the text role that reaches the style, and its hit
-      area is a square of at least size.control.m around it, the label beside it included (decisions/0001, P10, P16,
-      P17). A row whose title is a separate text writes its check with no drawn label, through westron's
+      area is a square of at least size.target.minimum and at least size.control.m around it, the label beside it
+      included (decisions/0001, P10, P16, P17; the minimum target since 2026-11-20, when size.control.m on iOS fell
+      below the touch target, so that no hit area shrank). A row whose title is a separate text writes its check with no drawn label, through westron's
       initializer of the system Toggle that takes no label view and requires the accessible name,
       Toggle(isOn: $task.isDone, accessibilityLabel: task.title).toggleStyle(.check), with a localized twin for a
       LocalizedStringKey; the separate title is hidden from assistive technology, so the name is read once (the
@@ -114,14 +115,14 @@ platforms:
         (CatalogUITests/CheckboxBehaviorTests), not with VoiceOver itself. On iOS 17.5 the check with no drawn
         label was measured the same way, as on iOS 26.3: a switch named by its accessibility label, its value, a
         44 pt square with nothing drawn beside the circle (decisions/0002); the rest of the style runs the same code
-        on iOS 17, not measured there. No hover. The hit area is at least 44 pt, size.control.m.
+        on iOS 17, not measured there. No hover. The hit area is at least 44 pt, size.target.minimum.
     macos:
       description: >-
         The system's checkbox toggle is square; westron's check stays round, as on the other OSes. The
         accessibility hierarchy holds a checkbox with its label and its value, and no button, measured on macOS 26 as
         XCUITest reads the hierarchy (CatalogUITests/CheckboxBehaviorTests), not with VoiceOver itself, the check
         with no drawn label included, a checkbox named by its accessibility label in a 32 pt square
-        (decisions/0002); macOS 14 runs the same code, not measured. The hit area is at least size.control.m, 32 pt, above the recommended 28. Keyboard focus, measured with the
+        (decisions/0002); macOS 14 runs the same code, not measured. The hit area is at least size.control.m, 32 pt, above size.target.minimum, the recommended 28. Keyboard focus, measured with the
         Mac's keyboard navigation off: neither westron's check nor a system Toggle in checkbox style takes focus,
         from Tab or from code; with .focusable() added, both take focus and show the system's ring, and Space
         toggles neither. With keyboard navigation on, Tab and Space are unverified, pending the owner's run of
@@ -131,7 +132,7 @@ platforms:
       description: >-
         No keyboard focus to draw. The style is the same code as on iOS, the system Toggle of the representation
         included, and it compiles for watchOS 10; nothing was measured on watchOS, VoiceOver included. The hit area
-        is at least 44 pt, size.control.m.
+        is at least 44 pt, size.target.minimum and size.control.m.
   web:
     strategy: style-on-system-control
     base: input

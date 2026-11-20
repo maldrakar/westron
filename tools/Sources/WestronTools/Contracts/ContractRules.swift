@@ -348,13 +348,24 @@ struct ContractRules {
         }
     }
 
+    /// The shapes a part's `shape` binds instead of a token, which no radius can draw: `capsule`, the platform's own
+    /// capsule, fully round ends at any height (design-language/04, "A capsule is the platform's capsule").
+    static let shapes = ["capsule"]
+
     /// Token bindings name tokens that exist in every mode and are not primitives; a binding by option value uses
-    /// the values of one enum option.
+    /// the values of one enum option. A part's `shape` binds one of `shapes`, and only a `shape` does.
     mutating func checkTokens() {
         let enums = enumOptions
         for member in document["tokens"]?.members ?? [] {
             let path = DocumentPath.root.key("tokens").key(member.key)
+            let isShape = member.key.hasSuffix(".shape")
+            if isShape && !Self.shapes.contains(member.value.string ?? "") {
+                report(path, "a part's shape is one of \(Self.shapes.joined(separator: ", ")), not a token")
+                continue
+            }
             switch member.value {
+            case .string(let shape) where Self.shapes.contains(shape):
+                if !isShape { report(path, "\(shape) is a shape: bind it to a part's shape, such as container.shape") }
             case .string(let token):
                 checkToken(token, at: path)
             case .object where member.value["cases"] != nil:

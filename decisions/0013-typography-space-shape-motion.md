@@ -2,7 +2,8 @@
 
 Date: 2026-11-15. Status: accepted. The owner chose direction B on the direction specimens. Its default density is
 comfortable. Revised 2026-11-16: control heights and the disabled opacity. Revised 2026-11-18: the roles of the
-spacing rhythm and where the page margin applies.
+spacing rhythm and where the page margin applies. Revised 2026-11-20: buttons are capsules, the iOS control heights,
+the minimum hit target.
 
 ## Context
 
@@ -184,6 +185,60 @@ Swift helper for the page margin in this phase", which the coordinator decided u
   `List`, `Form` and bars keep their own insets, as a system control keeps its own look (decisions/0003).
 - **Left for later.** Nesting guides and the labelled area line belong to a phase 4 component; the values of compact
   come with #33.
+
+## Revision of 2026-11-20
+
+At the second gate of phase 3 the owner found the controls' function and colors right and their look not yet (#85).
+The owner compared prototype renders of three button looks with Apple's own buttons on an iPhone 17 and chose one on
+2026-11-20. The Button contract records the bindings
+(`spec/components/button/decisions/0003-the-look-of-2026-11-20.md`).
+
+**The owner's decisions:**
+
+- **Buttons are capsules.** Every variant and size of a button is the platform's capsule, and an icon-only button a
+  circle whose diameter is its height, never a large radius (as chapter 04 already asked of tags). A control westron
+  draws as a button no longer takes `radius.control`; fields and the segmented control still do, and `radius.control`
+  stays 8. Fills are flat and opaque, in westron's colors, with no glass or material.
+- **Secondary is filled, not outlined.** A neutral gray, `color.background.muted`, with its words in
+  `color.text.primary` and no border. Its hover and pressed fills are darker steps of that gray, two new tokens. The
+  destructive role keeps the gray and writes its words in `color.status.danger.text`.
+- **Control heights on iOS and iPadOS are 28, 36 and 50** for `s`, `m` and `l`, where they were 32, 44 and 52. They
+  sit beside the system's own buttons, which iOS 26 draws 28, 34 and 50 tall at its small, regular and large sizes, so
+  westron's controls no longer stand a size taller than the system's next to them. The change is in the shared tokens,
+  `size.control.*`, so it applies to every control drawn at those heights, the text field included. macOS keeps 24, 32
+  and 40.
+- **Hit areas do not shrink.** A control's height and its hit area are now separate: `size.control.m` is no longer the
+  touch target on iOS, so the target is a token of its own, below.
+- **Padding and type.** A button's horizontal padding is `space.200`, `space.250` and `space.300` (16, 20, 24) at `s`,
+  `m` and `l`, the same on both sides, on every platform. Its words are `footnote.strong`, `subheadline.strong` and
+  `body.strong`.
+- **The icon sits on the baseline.** Beside a label it is the symbol's small scale in the label's text role, its
+  baseline on the label's first text baseline, with a gap of `space.50`, `space.50` and `space.75` (4, 4, 6).
+- **watchOS is not decided.** The owner did not see the watch: `tokens/platform/watchos.tokens.json` keeps 32, 44 and
+  52, pending the owner's look at it.
+
+**The implementing agent's decisions, pending the owner's review with the snapshot matrix:**
+
+- **`size.target.minimum`.** A platform token for the least side of a control's hit area: 44 on iOS, iPadOS and
+  watchOS, the recommended touch target, and 28 on macOS, the recommended pointer target (chapter 08). The text field
+  and Button take it where they named "the recommended target"; the check keeps the larger of it and
+  `size.control.m`, so its macOS hit area stays 32. Every hit area keeps the size it had, which the catalog's hit-area
+  tests measure.
+- **The muted fill's states.** `color.background.muted-hover` and `muted-pressed` alias two members the palette
+  generator solves for the neutral ramp, `muted-hover` and `muted-pressed`, as it solves `fill-pressed`
+  (decisions/0012): step 4 moved towards its words, `muted-pressed` up to two hover steps of 0.04 in OKLCH lightness
+  and no further than every ramp's words, steps 11 and 12, still reach the text target on it, and `muted-hover`
+  halfway. Colored words are solved to just reach their target on step 5, so the words, not the hover steps, set how
+  far the fill darkens: `muted-pressed` lands on step 5's tone (in light `#E5E9EE` against step 5's `#E6E9EF`; the
+  red words on it at 4.51:1). That is less than the owner saw in the prototype, which darkened the pressed fill by a
+  tenth of its words' color; a darker press would need darker red words, which no chapter allows yet. It is an open
+  point for the owner (the Button decision, "Open").
+- **The high-contrast outline.** In the high-contrast themes a secondary button keeps an outline, `color.border.strong`
+  or `color.status.danger.border` at `stroke.thin`: the muted fill stands about 1.1:1 off the canvas, chapter 02 asks
+  that the edge of a control a person must find meets the non-text target, and the high-contrast themes keep steps
+  1–5, so no fill alone can mark that edge there.
+- **The capsule's ends are circular.** SwiftUI's `Capsule()` with circular ends, as the prototype drew it, so that
+  icon-only is a true circle. A continuous capsule draws a square frame as a rounded square.
 
 ## Why
 

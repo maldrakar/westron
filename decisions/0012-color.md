@@ -2,7 +2,8 @@
 
 Date: 2026-11-15. Status: accepted. The owner chose direction B with the cobalt palette on the direction specimens.
 Revised 2026-11-16: pressed fills. Revised 2026-11-18: the fill of a checked control in a list color, chosen by an
-agent on the owner's behalf and pending the owner's confirmation.
+agent on the owner's behalf and pending the owner's confirmation. Revised 2026-11-20: the muted fill under the pointer
+and pressed, pending the owner's review.
 
 ## Context
 
@@ -229,6 +230,36 @@ moves no other color.
 - **Visibly**, a checked amber or olive check is an ochre or a darker olive in light. In light high contrast it is a
   brown or a deep olive with a white mark. A checked red check is a little brighter in dark. A lit tag keeps the bright
   fill.
+
+## Revision of 2026-11-20
+
+**Status of this revision: the implementing agent's, pending the owner's review with Button's snapshot matrix (#85).**
+
+The owner's new look for Button fills the secondary button with `color.background.muted` and asks for darker fills
+under the pointer and pressed (decisions/0013, revision of 2026-11-20). `background.hover` and `pressed`, steps 3
+and 5, sit on either side of the muted step 4 and do not darken it.
+
+- **The neutral ramp gets `muted-hover` and `muted-pressed`.** A muted fill carries words, so it moves the other way
+  from a solid fill: away from the canvas, towards its words. `muted-pressed` is step 4 moved up to two hover steps,
+  0.08 in OKLCH lightness, but no further than every ramp's step 11 and step 12 still reach the text target on it,
+  4.5:1 and 7:1 in high contrast; `muted-hover` is halfway in lightness. Like `fill-pressed`, they are named for the
+  step they belong to, and the ramp keeps its twelve numbered steps.
+- **New semantic colors.** `color.background.muted-hover` and `muted-pressed` alias them. `text.primary` and
+  `status.danger.text` declare them as `text`, `border.strong` and `status.danger.border` as `non-text`, and
+  `status.danger.text` declares `background.muted` too, which the destructive secondary button now carries.
+- **What the solver gives.** Step 11 of every ramp is solved to just reach its target on every step 5, so the words
+  stop the fill there: `muted-pressed` lands on step 5's tone in every theme.
+
+  | Token | Light | Dark | High contrast |
+  |---|---|---|---|
+  | `background.muted` (n4) | `#EBEEF4` | `#22272D` | as its base theme |
+  | `background.muted-hover` | `#E8ECF1` | `#262A31` | as its base theme |
+  | `background.muted-pressed` | `#E5E9EE` | `#2A2E35` | as its base theme |
+
+  The red words on `muted-pressed` measure 4.51 in light, 4.54 in dark, 7.05 in both high-contrast themes. With the
+  new pairs, `tools/westron tokens contrast` measured 321 declared pairs in each theme, and none failed. A darker press,
+  such as the prototype's, would need step 11 solved on a darker ground, which darkens every colored word; that is
+  for the owner.
 
 ## Why
 

@@ -17,14 +17,16 @@ values, the ramps and the rules that solve them are in decisions/0012; the token
   Apple and GNOME. It suits a dense table as well as a calm list. Warm grays read as paper and fit long reading;
   westron's products are mostly tools.
 - **Surfaces differ by small steps.** `muted` is a quiet fill inside content: the track of a segmented control, a tag
-  or a badge without a color. `hover` and `pressed` follow the pointer. Type, space and a soft shadow carry the
+  or a badge without a color, a secondary button. `hover` and `pressed` follow the pointer; a control filled with
+  `muted` darkens to `muted-hover` and `muted-pressed` instead, as far as its words still read on it. Type, space and a soft shadow carry the
   hierarchy (chapter 04), so the surface steps stay small.
 - **Two inks for words, one for quiet glyphs.** `color.text.primary` and `text.secondary` serve words and glyphs
   alike. `color.icon.tertiary` serves chevrons, grips and strike-through lines, never words. Any ink light enough to
   look tertiary fails the text target, so words stop at secondary.
 - **Lines are quiet, borders of controls are not.** `color.border.default` draws separators. In the standard themes
   it is decoration, since space and alignment also show the grouping. `border.strong` draws the outline of something a
-  person must find, such as a field, a checkbox or a secondary button, and it meets 3:1.
+  person must find, such as a field or a checkbox, and it meets 3:1. A secondary button is found by its muted fill,
+  and draws the outline only in high contrast (chapter 04).
 
 ## One accent: cobalt
 

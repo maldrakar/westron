@@ -9,7 +9,7 @@ import SwiftUI
 /// Button's option `variant`, from its contract.
 ///
 /// No default: every use names its variant. primary is filled with the accent, the one main action on a screen;
-/// secondary is outlined; tertiary has no background and an accent label.
+/// secondary is filled with a quiet gray, the muted fill; tertiary has no background and an accent label.
 public enum ButtonVariant: String, CaseIterable, Sendable {
     case primary
     case secondary
@@ -18,9 +18,10 @@ public enum ButtonVariant: String, CaseIterable, Sendable {
 
 /// Button's option `size`, from its contract.
 ///
-/// The height is size.control.s, m or l: 24, 32 and 40 with a pointer (macOS), 32, 44 and 52 on touch. It is a minimum,
-/// so the button grows with its text. The hit area is at least the platform's recommended target (chapter 08), also
-/// where the drawn height is smaller, except where the contract's platforms block says otherwise.
+/// The height is size.control.s, m or l: 24, 32 and 40 with a pointer (macOS), 28, 36 and 50 on iOS and iPadOS, and 44,
+/// the only size, on watchOS. It is a minimum, so the button grows with its text. The hit area is at least
+/// size.target.minimum, the platform's recommended target (chapter 08), also where the drawn height is smaller, except
+/// where the contract's platforms block says otherwise.
 ///
 /// A call without `size:` takes the size from `controlSize`: mini and small → s, regular → m, large and extraLarge → l.
 /// An explicit `size:` wins.
@@ -39,8 +40,8 @@ extension View {
     /// - Parameters:
     ///   - variant: See `ButtonVariant`. Every call names one.
     ///   - size: The size; without it, the size comes from `controlSize` (`ButtonSize.init(_:)`).
-    ///   - iconOnly: The same button showing only its icon: a square whose side equals its height, with the same radius;
-    ///     padding and gap do not apply. By default `false`.
+    ///   - iconOnly: The same button showing only its icon: a circle whose diameter equals its height; padding and gap
+    ///     do not apply. By default `false`.
     public func buttonStyle(_ variant: ButtonVariant, size: ButtonSize? = nil, iconOnly: Bool = false) -> some View {
         buttonStyle(ButtonVariantStyle(variant: variant, size: size, iconOnly: iconOnly))
     }
