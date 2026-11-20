@@ -18,7 +18,8 @@ values, the ramps and the rules that solve them are in decisions/0012; the token
   westron's products are mostly tools.
 - **Surfaces differ by small steps.** `muted` is a quiet fill inside content: the track of a segmented control, a tag
   or a badge without a color, a secondary button. `hover` and `pressed` follow the pointer; a control filled with
-  `muted` darkens to `muted-hover` and `muted-pressed` instead, as far as its words still read on it. Type, space and a soft shadow carry the
+  `muted` darkens to `muted-hover` and `muted-pressed` instead, or, under colored words such as a destructive
+  button's, to `muted-hover-colored` and `muted-pressed-colored`, which stop where those words would no longer read. Type, space and a soft shadow carry the
   hierarchy (chapter 04), so the surface steps stay small.
 - **Two inks for words, one for quiet glyphs.** `color.text.primary` and `text.secondary` serve words and glyphs
   alike. `color.icon.tertiary` serves chevrons, grips and strike-through lines, never words. Any ink light enough to

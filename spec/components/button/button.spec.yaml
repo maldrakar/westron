@@ -9,7 +9,9 @@ description: >-
   It is the platform's capsule at every variant and size, its ends round at any height, so it stays a capsule when
   the text grows (design-language/04); icon-only is a circle. Every fill is flat and opaque, in westron's colors, with
   no glass or material. primary is filled with the accent, secondary with color.background.muted and no outline,
-  tertiary has no fill. In the high-contrast themes a secondary button also draws an outline, color.border.strong
+  tertiary has no fill. Under the pointer and pressed, secondary's fill darkens towards its words, a step each; with
+  the destructive role it darkens only as far as the danger words still read, which is much less (the owner's
+  decision of 2026-11-20). In the high-contrast themes a secondary button also draws an outline, color.border.strong
   (color.status.danger.border with the destructive role) at stroke.thin, over its fill, in every state: the muted
   fill alone sets it off from the canvas by about 1.1:1, and a control a person must find meets the non-text target
   there (design-language/02, 08). The bindings below cannot say this, since a case has no contrast key, so this
@@ -78,6 +80,10 @@ tokens:
       - { when: { variant: primary, state: pressed }, token: color.background.accent-pressed }
       - { when: { variant: primary, state: hover }, token: color.background.accent-hover }
       - { when: { variant: primary }, token: color.background.accent }
+      # Under the danger words the muted fill darkens only as far as they still read; under text.primary it darkens
+      # more (the owner's decision of 2026-11-20, decisions/0003).
+      - { when: { variant: secondary, role: destructive, state: pressed }, token: color.background.muted-pressed-colored }
+      - { when: { variant: secondary, role: destructive, state: hover }, token: color.background.muted-hover-colored }
       - { when: { variant: secondary, state: pressed }, token: color.background.muted-pressed }
       - { when: { variant: secondary, state: hover }, token: color.background.muted-hover }
       - { when: { variant: secondary }, token: color.background.muted }
@@ -147,8 +153,8 @@ platforms:
         Hover only with a pointer, on iPad; an iPhone never enters it. The hit area is the system's touch tolerance
         around the drawn button, which westron does not grow: measured on iOS 26.3 it reached 16 pt past a 32 pt
         button (#23), and the catalog's ButtonBehaviorTests taps 8 pt below the 28 pt size s, the edge of
-        size.target.minimum, 44 pt. Size m, 36 pt, needs 4 pt each side from the same tolerance; it is not measured
-        on its own.
+        size.target.minimum, 44 pt, and 4 pt below the 36 pt size m, the edge of the same target; both reach the
+        button.
     macos:
       keyboardIntents: [defaultAction, cancelAction]
       description: >-
@@ -156,7 +162,10 @@ platforms:
         takes clicks in its 24 pt, below the recommended 28 (the owner's decision of 2026-11-18, decisions/0001): a
         click outside the system button's frame misses, a frame grown with an outset and taken back by a negative
         padding takes clicks inside a neighbor closer than 4 pt, and a layout frame of 28 breaks the alignment size s
-        is for. A pointer is precise, and the system's own small controls take clicks in their frame only.
+        is for. A pointer is precise, and the system's own small controls take clicks in their frame only. The drawn
+        button is a capsule, so the corners of its frame outside the capsule take no click: less than the rounded
+        rectangle of radius.control took before 2026-11-20 (on icon-only at s, a click 3 pt in from two edges misses),
+        which follows from the owner's two decisions and waits for the owner's confirmation (decisions/0003).
     watchos:
       options: { size: [m] }
       fallback: { size: m }

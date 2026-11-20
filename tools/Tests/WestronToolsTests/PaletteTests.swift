@@ -86,15 +86,25 @@ struct PaletteTests {
                 let series = colors["series.\(index)"]!
                 #expect(grounds.allSatisfy { ratio(series, $0) >= 3 }, "\(theme) series.\(index)")
             }
-            // The muted fill under the pointer and pressed moves away from the canvas, step by step, and every ramp's
-            // words still read on it.
-            let muted = ["neutral.4", "neutral.muted-hover", "neutral.muted-pressed"].map { colors[$0]! }
-            let fromCanvas = muted.map { ratio($0, grounds[0]) }
-            #expect(fromCanvas[1] > fromCanvas[0] && fromCanvas[2] > fromCanvas[1], "\(theme) muted: \(fromCanvas)")
+            // The muted fill under the pointer and pressed moves away from the canvas, step by step: under primary
+            // words further than under colored ones. Primary words read on the first pair, every ramp's words on
+            // the second.
+            let target = highContrast ? 7.0 : 4.5
+            let primary = ["neutral.4", "neutral.muted-hover", "neutral.muted-pressed"].map { colors[$0]! }
+            let colored = ["neutral.4", "neutral.muted-hover-colored", "neutral.muted-pressed-colored"].map {
+                colors[$0]!
+            }
+            for (name, fills) in [("muted", primary), ("muted colored", colored)] {
+                let fromCanvas = fills.map { ratio($0, grounds[0]) }
+                #expect(
+                    fromCanvas[1] > fromCanvas[0] && fromCanvas[2] > fromCanvas[1], "\(theme) \(name): \(fromCanvas)")
+            }
+            #expect(ratio(primary[2], grounds[0]) > ratio(colored[2], grounds[0]), "\(theme): pressed fills")
+            #expect(primary.map { ratio(colors["neutral.12"]!, $0) }.min()! >= target, "\(theme) neutral.12 on muted")
             for ramp in ramps {
                 for word in ["11", "12"] {
-                    let least = muted.map { ratio(colors["\(ramp).\(word)"]!, $0) }.min()!
-                    #expect(least >= (highContrast ? 7 : 4.5), "\(theme) \(ramp).\(word) on the muted fills: \(least)")
+                    let least = colored.map { ratio(colors["\(ramp).\(word)"]!, $0) }.min()!
+                    #expect(least >= target, "\(theme) \(ramp).\(word) on the colored muted fills: \(least)")
                 }
             }
         }

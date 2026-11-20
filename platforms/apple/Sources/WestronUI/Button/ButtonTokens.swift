@@ -50,6 +50,13 @@ struct ButtonTokens: Equatable, Sendable {
         case .secondary:
             if excludesTint {
                 background = .background.muted
+            } else if destructive {
+                // Under the danger words the fill darkens only as far as they still read (the owner's decision of
+                // 2026-11-20).
+                background =
+                    states.contains(.pressed)
+                    ? .background.mutedPressedColored
+                    : states.contains(.hover) ? .background.mutedHoverColored : .background.muted
             } else {
                 background =
                     states.contains(.pressed)

@@ -21,8 +21,10 @@
       "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.4187, 0.01125, 258.36], "hex": "#494D53"}},
       "control": {"$value": {"colorSpace": "oklch", "components": [0.5009, 0.01139, 252.89], "hex": "#5F646A"}},
       "control-contrast": {"$value": {"colorSpace": "oklch", "components": [1, 0, "none"], "hex": "#FFFFFF"}},
-      "muted-hover": {"$value": {"colorSpace": "oklch", "components": [0.9415, 0.008, 253.85], "hex": "#E8ECF1"}},
-      "muted-pressed": {"$value": {"colorSpace": "oklch", "components": [0.9324, 0.00802, 253.86], "hex": "#E5E9EE"}}
+      "muted-hover": {"$value": {"colorSpace": "oklch", "components": [0.9092, 0.00877, 264.52], "hex": "#DEE1E7"}},
+      "muted-pressed": {"$value": {"colorSpace": "oklch", "components": [0.8694, 0.00887, 264.52], "hex": "#D1D4DA"}},
+      "muted-hover-colored": {"$value": {"colorSpace": "oklch", "components": [0.9415, 0.008, 253.85], "hex": "#E8ECF1"}},
+      "muted-pressed-colored": {"$value": {"colorSpace": "oklch", "components": [0.9324, 0.00802, 253.86], "hex": "#E5E9EE"}}
     },
     "blue": {
       "1": {"$value": {"colorSpace": "oklch", "components": [0.9843, 0.00738, 260.73], "hex": "#F7FAFF"}},

@@ -17,8 +17,10 @@ import Foundation
 /// | `control-contrast` | the label on `control` | step 9's label where it still reads at 4.5 (7), else the other one |
 /// | 11 | colored or secondary text | 4.5 on every ground and on every step 5; high contrast 7 |
 /// | 12 | primary text | from the source's lightness, 13 on the canvas and 7 on every step 5; high contrast 16 |
-/// | `muted-pressed` | the neutral muted fill (step 4) while pressed | step 4, up to two hover steps from the canvas |
-/// | `muted-hover` | the neutral muted fill under the pointer | halfway between step 4 and `muted-pressed` |
+/// | `muted-pressed` | the neutral muted fill (step 4) pressed, under primary words | step 4, two hover steps on |
+/// | `muted-hover` | the neutral muted fill under the pointer, under primary words | one hover step on |
+/// | `muted-pressed-colored` | the same, under colored words | as far as every step 11 still reads |
+/// | `muted-hover-colored` | the same, under colored words | halfway to `muted-pressed-colored` |
 ///
 /// The grounds are the canvas, raised and sunken surfaces. Each step moves away from the canvas, towards contrast,
 /// the least lightness that meets its targets, keeping its hue and chroma; contrast is measured on the 8-bit sRGB
@@ -38,13 +40,15 @@ import Foundation
 /// ink, the ink for white) and `control` moves on until both targets hold. A dark ink at 7:1 on a fill at 4.5:1 to a
 /// light canvas would need more than 21:1 between the canvas and the ink.
 ///
-/// `muted-hover` and `muted-pressed` belong to the neutral ramp only: the muted fill of a control that is filled with
-/// it, such as a secondary button, under the pointer and pressed. A muted fill carries words, so it moves the other
-/// way from a solid fill: away from the canvas, towards its words. `muted-pressed` moves from step 4 up to two hover
-/// steps, 0.08, but no further than every word that reads on a step 5 still reads on it: step 11 and step 12 of every
-/// ramp at the text target, 4.5 and 7 in high contrast. `muted-hover` is halfway between step 4 and `muted-pressed`
-/// in lightness. Step 11 is solved to just reach its target on every step 5, so the words, not the hover step, set
-/// how far the fill can darken (decisions/0013, revision of 2026-11-20).
+/// The `muted-` states belong to the neutral ramp only: the muted fill of a control that is filled with it, such as a
+/// secondary button, under the pointer and pressed. A muted fill carries words, so it moves the other way from a solid
+/// fill: away from the canvas, towards its words, a hover step (0.04 in OKLCH lightness) per state, as `10` and
+/// `fill-pressed` move from step 9. `muted-hover` and `muted-pressed` carry primary words, step 12 of the neutral ramp:
+/// they move one and two hover steps, and stop short only where those words would miss the text target, 4.5 and 7 in
+/// high contrast. `muted-hover-colored` and `muted-pressed-colored` carry colored words, such as a destructive
+/// button's: `muted-pressed-colored` moves up to two hover steps, but no further than every ramp's step 11 and step 12
+/// still read on it, and `muted-hover-colored` is halfway. Step 11 is solved to just reach its target on every step 5,
+/// so colored words stop that pair near step 5's tone (decisions/0012, 0013, revisions of 2026-11-20).
 public enum PaletteSolver {
     public static let themes = ["light", "dark", "light-hc", "dark-hc"]
 
@@ -256,16 +260,22 @@ public enum PaletteSolver {
         }
 
         // The muted fill under the pointer and pressed, after every ramp's words are known; written with the neutral
-        // ramp, whose group must stay whole in the token file.
+        // ramp, whose group must stay whole in the token file. Under primary words (neutral step 12, the second word
+        // listed) it darkens the whole two hover steps unless they miss; under colored words, as far as they all read.
         let text = highContrast ? Target.text.highContrast : Target.text.standard
         let mutedChroma = ramps[0].chroma[3]
         let mutedStates = mutedFillStates(
+            from: mutedLightness, chroma: mutedChroma, hue: neutral.hue, direction: away, words: [words[1]],
+            text: text)
+        let coloredStates = mutedFillStates(
             from: mutedLightness, chroma: mutedChroma, hue: neutral.hue, direction: away, words: words, text: text)
         let afterNeutral = (entries.lastIndex { $0.path[0] == "neutral" } ?? entries.count - 1) + 1
         entries.insert(
             contentsOf: [
                 Entry(path: ["neutral", "muted-hover"], color: mutedStates.hover),
                 Entry(path: ["neutral", "muted-pressed"], color: mutedStates.pressed),
+                Entry(path: ["neutral", "muted-hover-colored"], color: coloredStates.hover),
+                Entry(path: ["neutral", "muted-pressed-colored"], color: coloredStates.pressed),
             ], at: afterNeutral)
 
         let series = source.series[dark: dark]

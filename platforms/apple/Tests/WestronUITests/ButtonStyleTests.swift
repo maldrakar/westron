@@ -159,6 +159,18 @@ struct ButtonStyleTests {
         #expect(try Self.tokenLines().allSatisfy { !$0.hasPrefix("  container.border") })
     }
 
+    @Test("secondary darkens further under text.primary than under the danger words (the owner's decision, 2026-11-20)")
+    func secondaryFillsByRole() {
+        func fill(_ destructive: Bool, _ states: Set<ButtonState>) -> Westron.Color? {
+            ButtonTokens(variant: .secondary, destructive: destructive, states: states, highContrast: false).background
+        }
+        #expect(fill(false, []) == .background.muted && fill(true, []) == .background.muted)
+        #expect(fill(false, [.hover]) == .background.mutedHover)
+        #expect(fill(false, [.pressed]) == .background.mutedPressed)
+        #expect(fill(true, [.hover]) == .background.mutedHoverColored)
+        #expect(fill(true, [.pressed]) == .background.mutedPressedColored)
+    }
+
     @Test(
         "in the high-contrast themes a secondary button draws its outline in every state, over the same fill",
         arguments: ButtonVariant.allCases, [false, true])

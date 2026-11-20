@@ -66,25 +66,52 @@ extension Westron.Color {
             lightHighContrast: Westron.RGB(hex: 0xE6E9EF),
             darkHighContrast: Westron.RGB(hex: 0x292E34))
 
-        /// The muted fill of a control filled with it, such as a secondary button, under the pointer: halfway between
-        /// background.muted and muted-pressed.
+        /// The muted fill of a control filled with it and labelled in text.primary, such as a secondary button, under
+        /// the pointer: background.muted one hover step towards its words (decisions/0012, 0013).
         ///
-        /// Use for: secondary button under the pointer. Avoid: A row or an unfilled control under the pointer: use
+        /// Use for: secondary button under the pointer. Avoid: A fill under colored words, such as a destructive
+        /// secondary button: use background.muted-hover-colored. A row or an unfilled control under the pointer: use
         /// background.hover.
         public static let mutedHover = Westron.Color(
             name: "color.background.muted-hover",
+            light: Westron.RGB(hex: 0xDEE1E7),
+            dark: Westron.RGB(hex: 0x2C3037),
+            lightHighContrast: Westron.RGB(hex: 0xDEE1E7),
+            darkHighContrast: Westron.RGB(hex: 0x2C3037))
+
+        /// The muted fill of a control filled with it and labelled in text.primary, such as a secondary button, while
+        /// it is pressed: background.muted two hover steps towards its words, as far as text.primary still reads on it
+        /// (decisions/0012, 0013).
+        ///
+        /// Use for: pressed secondary button. Avoid: A fill under colored words, such as a destructive secondary
+        /// button: use background.muted-pressed-colored. A pressed row or an unfilled control: use background.pressed.
+        public static let mutedPressed = Westron.Color(
+            name: "color.background.muted-pressed",
+            light: Westron.RGB(hex: 0xD1D4DA),
+            dark: Westron.RGB(hex: 0x363B41),
+            lightHighContrast: Westron.RGB(hex: 0xD1D4DA),
+            darkHighContrast: Westron.RGB(hex: 0x363B41))
+
+        /// The muted fill of a control filled with it and labelled in colored words, such as a destructive secondary
+        /// button, under the pointer: halfway between background.muted and muted-pressed-colored.
+        ///
+        /// Use for: destructive secondary button under the pointer. Avoid: A fill under text.primary: use
+        /// background.muted-hover, which darkens more.
+        public static let mutedHoverColored = Westron.Color(
+            name: "color.background.muted-hover-colored",
             light: Westron.RGB(hex: 0xE8ECF1),
             dark: Westron.RGB(hex: 0x262A31),
             lightHighContrast: Westron.RGB(hex: 0xE8ECF1),
             darkHighContrast: Westron.RGB(hex: 0x262A31))
 
-        /// The muted fill of a control filled with it, such as a secondary button, while it is pressed:
-        /// background.muted moved towards its words as far as every word that reads on a step 5 still reads on it
-        /// (decisions/0012, 0013).
+        /// The muted fill of a control filled with it and labelled in colored words, such as a destructive secondary
+        /// button, while it is pressed: background.muted moved towards its words as far as every colored word, step 11
+        /// of every ramp, still reads on it, which is about step 5's tone (decisions/0012, 0013).
         ///
-        /// Use for: pressed secondary button. Avoid: A pressed row or an unfilled control: use background.pressed.
-        public static let mutedPressed = Westron.Color(
-            name: "color.background.muted-pressed",
+        /// Use for: pressed destructive secondary button. Avoid: A fill under text.primary: use
+        /// background.muted-pressed, which darkens more.
+        public static let mutedPressedColored = Westron.Color(
+            name: "color.background.muted-pressed-colored",
             light: Westron.RGB(hex: 0xE5E9EE),
             dark: Westron.RGB(hex: 0x2A2E35),
             lightHighContrast: Westron.RGB(hex: 0xE5E9EE),
@@ -263,7 +290,8 @@ extension Westron.Color {
             backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
 
         /// The border of a control that must be seen: a field, a checkbox, a radio ring, and a secondary button in the
-        /// high-contrast themes, where its muted fill alone does not mark its edge.
+        /// high-contrast themes, where its muted fill alone does not mark its edge against the ground; the ground is
+        /// what that border is measured on, not the fill inside it.
         public static let strong = Westron.Color(
             name: "color.border.strong",
             light: Westron.RGB(hex: 0x81868D),
@@ -275,8 +303,6 @@ extension Westron.Color {
                 ["color.background.surface"],
                 ["color.background.sunken"],
                 ["color.background.muted"],
-                ["color.background.muted-hover"],
-                ["color.background.muted-pressed"],
             ])
 
         /// The focus ring, and the outline of a selected item in high contrast.
@@ -321,8 +347,8 @@ extension Westron.Color {
                     ["color.background.sunken"],
                     ["color.status.danger.background"],
                     ["color.background.muted"],
-                    ["color.background.muted-hover"],
-                    ["color.background.muted-pressed"],
+                    ["color.background.muted-hover-colored"],
+                    ["color.background.muted-pressed-colored"],
                 ])
 
             /// The icon or dot of the status danger.
@@ -353,8 +379,8 @@ extension Westron.Color {
                     ["color.background.hover"],
                     ["color.background.pressed"],
                     ["color.background.muted"],
-                    ["color.background.muted-hover"],
-                    ["color.background.muted-pressed"],
+                    ["color.background.muted-hover-colored"],
+                    ["color.background.muted-pressed-colored"],
                     ["color.status.danger.background"],
                 ])
 
@@ -764,6 +790,8 @@ extension Westron.Color {
         background.pressed,
         background.mutedHover,
         background.mutedPressed,
+        background.mutedHoverColored,
+        background.mutedPressedColored,
         background.selected,
         background.accentSubtle,
         background.accent,

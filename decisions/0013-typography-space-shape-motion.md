@@ -200,8 +200,10 @@ The owner compared prototype renders of three button looks with Apple's own butt
   draws as a button no longer takes `radius.control`; fields and the segmented control still do, and `radius.control`
   stays 8. Fills are flat and opaque, in westron's colors, with no glass or material.
 - **Secondary is filled, not outlined.** A neutral gray, `color.background.muted`, with its words in
-  `color.text.primary` and no border. Its hover and pressed fills are darker steps of that gray, two new tokens. The
-  destructive role keeps the gray and writes its words in `color.status.danger.text`.
+  `color.text.primary` and no border. Its hover and pressed fills are darker steps of that gray. The destructive role
+  keeps the gray and writes its words in `color.status.danger.text`. Asked on the same day how dark, the owner chose
+  that the plain secondary darkens as in the prototype, which laid its words over the fill at 10 % when pressed, and
+  the destructive one only as far as its red words still read.
 - **Control heights on iOS and iPadOS are 28, 36 and 50** for `s`, `m` and `l`, where they were 32, 44 and 52. They
   sit beside the system's own buttons, which iOS 26 draws 28, 34 and 50 tall at its small, regular and large sizes, so
   westron's controls no longer stand a size taller than the system's next to them. The change is in the shared tokens,
@@ -224,15 +226,13 @@ The owner compared prototype renders of three button looks with Apple's own butt
   and Button take it where they named "the recommended target"; the check keeps the larger of it and
   `size.control.m`, so its macOS hit area stays 32. Every hit area keeps the size it had, which the catalog's hit-area
   tests measure.
-- **The muted fill's states.** `color.background.muted-hover` and `muted-pressed` alias two members the palette
-  generator solves for the neutral ramp, `muted-hover` and `muted-pressed`, as it solves `fill-pressed`
-  (decisions/0012): step 4 moved towards its words, `muted-pressed` up to two hover steps of 0.04 in OKLCH lightness
-  and no further than every ramp's words, steps 11 and 12, still reach the text target on it, and `muted-hover`
-  halfway. Colored words are solved to just reach their target on step 5, so the words, not the hover steps, set how
-  far the fill darkens: `muted-pressed` lands on step 5's tone (in light `#E5E9EE` against step 5's `#E6E9EF`; the
-  red words on it at 4.51:1). That is less than the owner saw in the prototype, which darkened the pressed fill by a
-  tenth of its words' color; a darker press would need darker red words, which no chapter allows yet. It is an open
-  point for the owner (the Button decision, "Open").
+- **The muted fill's states.** The palette generator solves two pairs for the neutral ramp, as it solves
+  `fill-pressed` (decisions/0012, revision of 2026-11-20): step 4 moved towards its words, a hover step of 0.04 in
+  OKLCH lightness per state. `background.muted-hover` and `muted-pressed`, under `text.primary`, move one and two
+  steps (in light `#DEE1E7` and `#D1D4DA`; the prototype's pressed fill was about `#D7DAE0`).
+  `background.muted-hover-colored` and `muted-pressed-colored`, under colored words, stop where every ramp's step 11
+  would miss its text target, at about step 5's tone (`#E8ECF1` and `#E5E9EE`, the red words on the pressed one at
+  4.51:1). The names and the derivation are the agent's; how dark, the owner's.
 - **The high-contrast outline.** In the high-contrast themes a secondary button keeps an outline, `color.border.strong`
   or `color.status.danger.border` at `stroke.thin`: the muted fill stands about 1.1:1 off the canvas, chapter 02 asks
   that the edge of a control a person must find meets the non-text target, and the high-contrast themes keep steps
