@@ -23,6 +23,7 @@ struct MatrixSheetView: View {
     let sheet: ComponentMatrix.Sheet
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.matrixSheetFrame) private var reportFrame
 
     var body: some View {
         VStack(alignment: .leading, spacing: SampleMetrics.pagePadding) {
@@ -62,6 +63,13 @@ struct MatrixSheetView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(CatalogAccessibilityID.matrixSheet)
+        // The in-process snapshot tests (platforms/apple/Tests/WestronSnapshotTests) cut their picture to the same
+        // frame; they have no accessibility query to find it.
+        .onGeometryChange(for: CGRect.self) { proxy in
+            proxy.frame(in: .global)
+        } action: { frame in
+            reportFrame?(frame)
+        }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(.background.canvas)
         .background(FrozenAnimations())
@@ -142,6 +150,12 @@ struct MatrixSheetView: View {
             }
         }
     }
+}
+
+extension EnvironmentValues {
+    /// Called with the frame of a matrix sheet's content in its window, in points, whenever it changes: what the
+    /// in-process snapshot tests cut their picture to (`@testable`; nothing in the catalog sets it).
+    @Entry var matrixSheetFrame: (@MainActor (CGRect) -> Void)? = nil
 }
 
 /// The mark on a supplement's sheet: what it shows is not a contract option, and the sheet is written by hand.

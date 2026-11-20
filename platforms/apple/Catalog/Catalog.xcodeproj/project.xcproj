@@ -16,12 +16,14 @@
   "files": [
     { "kind": "folder", "path": "Catalog", "target-membership": [ "Catalog" ] },
     { "kind": "folder", "path": "CatalogUITests", "target-membership": [ "CatalogUITests" ] },
+    { "kind": "folder", "path": "../Tests/WestronSnapshotTests", "target-membership": [ "CatalogSnapshotTests" ] },
     {
       "kind": "group",
       "name": "Products",
       "children": [
         { "path": "<PRODUCTS>/Catalog.app", "type": "wrapper.application" },
         { "path": "<PRODUCTS>/CatalogUITests.xctest", "type": "wrapper.cfbundle" },
+        { "path": "<PRODUCTS>/CatalogSnapshotTests.xctest", "type": "wrapper.cfbundle" },
       ],
     },
   ],
@@ -97,6 +99,42 @@
         "SWIFT_VERSION": "6.0",
         "TARGETED_DEVICE_FAMILY": "1,2",
         "TEST_TARGET_NAME": "Catalog",
+      },
+    }, {
+      "name": "CatalogSnapshotTests",
+      "id": "CatalogSnapshotTests",
+      "product": "Products/CatalogSnapshotTests.xctest",
+      "product-type": "bundle.unit-test",
+      "test-host-target": "Catalog",
+      "dependencies": [
+        "Catalog",
+      ],
+      "build-phases": [
+        "compile-sources",
+        "frameworks",
+      ],
+      "package-product-members": [
+        {
+          "product-name": "WestronCatalog",
+          "build-phase": { "build-phase": "frameworks" },
+        },
+      ],
+      "build-settings": {
+        "ALWAYS_SEARCH_USER_PATHS": "NO",
+        "BUNDLE_LOADER": "$(TEST_HOST)",
+        "CODE_SIGN_IDENTITY": "-",
+        "CODE_SIGN_STYLE": "Manual",
+        "GENERATE_INFOPLIST_FILE": "YES",
+        "IPHONEOS_DEPLOYMENT_TARGET": "17.0",
+        "MACOSX_DEPLOYMENT_TARGET": "14.0",
+        "PRODUCT_BUNDLE_IDENTIFIER": "dev.westron.catalog.snapshottests",
+        "PRODUCT_NAME": "CatalogSnapshotTests",
+        "SDKROOT": "auto",
+        "SUPPORTED_PLATFORMS": "iphoneos iphonesimulator macosx",
+        "SUPPORTS_MACCATALYST": "NO",
+        "SWIFT_VERSION": "6.0",
+        "TARGETED_DEVICE_FAMILY": "1,2",
+        "TEST_HOST": "$(BUILT_PRODUCTS_DIR)/Catalog.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Catalog",
       },
     },
   ],
