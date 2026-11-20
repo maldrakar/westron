@@ -210,7 +210,7 @@ private struct ButtonBody: View {
     let configuration: ButtonStyleConfiguration
     let variant: ButtonVariant
     let explicitSize: ButtonSize?
-    let iconOnly: Bool  // the style hides the title and draws a square; VoiceOver still reads the title
+    let iconOnly: Bool  // the style hides the title and draws a circle; VoiceOver still reads the title
 
     @Environment(\.controlSize) private var controlSize  // the size when the call names none
     @Environment(\.isEnabled) private var isEnabled  // disabled: set by .disabled(_:)
@@ -316,11 +316,11 @@ Button { save() } label: {
 
 The style lays the slots out, through a `LabelStyle` of its own where it must place the icon and the title
 differently from the system. Icon-only is the style's own argument, `.buttonStyle(.primary, iconOnly: true)`: the
-style hides the title, keeps it as the accessible label and draws the square.
+style hides the title, keeps it as the accessible label and draws the circle.
 
 A product's own `.labelStyle(.iconOnly)` cannot do this. The label style is an environment value, so the label style
 westron's `ButtonStyle` applies to `configuration.label` inside `makeBody` overrides the product's outer one, and a
-`ButtonStyle` has no public way to read the outer label style, so it could not know to draw the square either. A
+`ButtonStyle` has no public way to read the outer label style, so it could not know to draw the circle either. A
 probe on macOS confirmed both (#22).
 
 ### A label that is not drawn

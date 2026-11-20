@@ -72,6 +72,9 @@ The reference is WCAG 2 ([WCAG 2.2](https://www.w3.org/TR/WCAG22/)). The kinds a
     text further from the ground (decisions/0012).
   - Every raised surface gets an outline in `color.border.default`, because a shadow alone does not mark an edge
     (decisions/0013).
+  - A secondary button gets an outline in `color.border.strong` (`color.status.danger.border` with the destructive
+    role), because its muted fill stays about 1.1:1 off the canvas, as the high-contrast themes keep steps 1–5
+    (chapter 04, decisions/0013).
   - In `dark-hc`, a fill with a white label turns light and its label dark, so that the pair reaches 7:1 and the
     fill still stands out from the dark canvas.
   - On Apple, each colorset carries all four themes and the system switches them. watchOS shows the dark theme
