@@ -86,7 +86,37 @@ struct PaletteTests {
                 let series = colors["series.\(index)"]!
                 #expect(grounds.allSatisfy { ratio(series, $0) >= 3 }, "\(theme) series.\(index)")
             }
+            // The muted fill under the pointer and pressed moves away from the canvas, step by step, and every ramp's
+            // words still read on it.
+            let muted = ["neutral.4", "neutral.muted-hover", "neutral.muted-pressed"].map { colors[$0]! }
+            let fromCanvas = muted.map { ratio($0, grounds[0]) }
+            #expect(fromCanvas[1] > fromCanvas[0] && fromCanvas[2] > fromCanvas[1], "\(theme) muted: \(fromCanvas)")
+            for ramp in ramps {
+                for word in ["11", "12"] {
+                    let least = muted.map { ratio(colors["\(ramp).\(word)"]!, $0) }.min()!
+                    #expect(least >= (highContrast ? 7 : 4.5), "\(theme) \(ramp).\(word) on the muted fills: \(least)")
+                }
+            }
         }
+    }
+
+    @Test("the muted fill's states stop where a word would miss, at most two hover steps from step 4")
+    func mutedFillStates() {
+        let gray = { (lightness: Double) in PaletteSolver.color(lightness, 0, 0) }
+        // A dark word with room to spare: the pressed fill moves the whole two hover steps, the hover fill half.
+        let free = PaletteSolver.mutedFillStates(
+            from: 0.95, chroma: 0, hue: 0, direction: -1, words: [gray(0.2)], text: 4.5)
+        #expect(free.pressed == gray(0.87))
+        #expect(free.hover == gray(0.91))
+        // A word exactly at its target on step 4: the fill cannot darken at all.
+        let stuck = PaletteSolver.mutedFillStates(
+            from: 0.95, chroma: 0, hue: 0, direction: -1, words: [gray(0.5)], text: ratio(gray(0.5), gray(0.95)))
+        #expect(stuck.pressed == gray(0.95) && stuck.hover == gray(0.95))
+        // In between, the word decides how far the fill moves, short of two hover steps.
+        let capped = PaletteSolver.mutedFillStates(
+            from: 0.95, chroma: 0, hue: 0, direction: -1, words: [gray(0.5)], text: ratio(gray(0.5), gray(0.91)))
+        #expect(ratio(gray(0.5), capped.pressed) >= ratio(gray(0.5), gray(0.91)))
+        #expect(capped.pressed != gray(0.95) && capped.pressed != gray(0.87))
     }
 
     @Test("a high-contrast theme keeps its canvas and steps 1–5, and its file lists only what differs")

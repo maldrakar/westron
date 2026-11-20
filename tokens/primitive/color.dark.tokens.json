@@ -20,7 +20,9 @@
       "contrast": {"$value": {"colorSpace": "oklch", "components": [1, 0, "none"], "hex": "#FFFFFF"}},
       "fill-pressed": {"$value": {"colorSpace": "oklch", "components": [0.421, 0.01752, 254.72], "hex": "#474E57"}},
       "control": {"$value": {"colorSpace": "oklch", "components": [0.5121, 0.01747, 260.71], "hex": "#616771"}},
-      "control-contrast": {"$value": {"colorSpace": "oklch", "components": [1, 0, "none"], "hex": "#FFFFFF"}}
+      "control-contrast": {"$value": {"colorSpace": "oklch", "components": [1, 0, "none"], "hex": "#FFFFFF"}},
+      "muted-hover": {"$value": {"colorSpace": "oklch", "components": [0.284, 0.01408, 261.69], "hex": "#262A31"}},
+      "muted-pressed": {"$value": {"colorSpace": "oklch", "components": [0.3001, 0.01388, 261.71], "hex": "#2A2E35"}}
     },
     "blue": {
       "1": {"$value": {"colorSpace": "oklch", "components": [0.1858, 0.01129, 260.65], "hex": "#101318"}},

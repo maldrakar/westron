@@ -266,8 +266,9 @@ extension CGFloat {
     public enum size {
         /// The lengths `size.control.*` in points.
         public enum control {
-            /// The height of a control at size s: 24 on macOS, 32 on iOS, iPadOS and watchOS. On touch platforms it is
-            /// below the recommended target, so its hit area stays the target's size (chapter 08).
+            /// The height of a control at size s: 24 on macOS, 28 on iOS and iPadOS, 32 on watchOS. It is below the
+            /// recommended target on every platform, so its hit area stays size.target.minimum, except where a contract
+            /// records otherwise (chapter 08).
             ///
             /// Use for: small button, small field, control in a toolbar or a table row. Avoid: The default size: use
             /// size.control.m. A row's height: rows have heights of their own.
@@ -276,21 +277,36 @@ extension CGFloat {
             }
 
             /// The height of a control at the default size m: a button, a field, a segmented control. 32 on macOS,
-            /// westron's control (decisions/0013); 44 on iOS, iPadOS and watchOS, the touch target (chapter 08).
+            /// westron's control (decisions/0013); 36 on iOS and iPadOS, beside the system's own 34 (decisions/0013,
+            /// revision of 2026-11-20); 44 on watchOS. A hit area takes size.target.minimum, not this height.
             ///
             /// Use for: button, field, segmented control. Avoid: A row's height: rows have heights of their own. A
-            /// fixed height where text can grow: the height is a minimum.
+            /// fixed height where text can grow: the height is a minimum. A hit area: use size.target.minimum.
             public static var m: CGFloat {
                 CGFloat(Westron.Dimension.size.control.m)
             }
 
             /// The height of a control at size l: the one prominent action of a form, a sheet or an empty state. 40 on
-            /// macOS, 52 on iOS, iPadOS and watchOS.
+            /// macOS, 50 on iOS and iPadOS, 52 on watchOS.
             ///
             /// Use for: prominent button, call to action. Avoid: Every control on a screen: the large size marks the
             /// one action that leads.
             public static var l: CGFloat {
                 CGFloat(Westron.Dimension.size.control.l)
+            }
+        }
+
+        /// The lengths `size.target.*` in points.
+        public enum target {
+            /// The least side of the area that takes a touch or a click on a control, whatever the control draws: 44 on
+            /// iOS, iPadOS and watchOS, the recommended touch target; 32 on macOS, westron's control height m there,
+            /// above the recommended 28 (chapter 08). A contract may record a control whose hit area is smaller, as
+            /// Button's size s on macOS.
+            ///
+            /// Use for: hit area of a control, hit area of a check. Avoid: A drawn size: use size.control.*. A row's
+            /// height: rows have heights of their own.
+            public static var minimum: CGFloat {
+                CGFloat(Westron.Dimension.size.target.minimum)
             }
         }
     }
