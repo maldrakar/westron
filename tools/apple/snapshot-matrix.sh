@@ -193,7 +193,7 @@ prepare_destination() {
 #   (3 min) or the runner crashing while bootstrapping (3.5 min after "Running tests..."); between the test's own lines
 #   no more than 2.3 s (local captures of every component, 1750 s on iOS and 709 s on macOS).
 # - The deadline, WESTRON_MATRIX_DEADLINE minutes from the script's start (unset: none; CI sets it, .github/workflows/
-#   ci.yml): then whatever the script still does, an xcodebuild, the export of the attachments, the page, is stopped,
+#   snapshot-matrix.yml): then whatever the script still does, an xcodebuild, the export of the attachments, the page, is stopped,
 #   and the script says which step it stopped and exits 1, with no retry, so that the logs upload before the timeout.
 stall_after="${WESTRON_MATRIX_STALL_SECONDS:-600}"
 deadline=""
@@ -438,7 +438,7 @@ matrix_plan() {
 
 # A retry starts only within this many minutes of the start of the script, its build included: it captures everything
 # again, so it needs a whole capture's time. CI's snapshot legs time out at 30 minutes plus their estimated capture
-# time with a third more (.github/workflows/ci.yml, `snapshot-components`): a retry that starts by 25 minutes, takes
+# time with a third more (.github/workflows/snapshot-matrix.yml, `snapshot-components`): a retry that starts by 25 minutes, takes
 # about 3 to start the test runner (2.4 on the stalled CI runner, run 44444325775) and captures within the third more,
 # leaves about 2 minutes for the export, the page and the upload. A leg the timeout kills uploads no logs, so CI sets
 # the deadline (above) at those 2 minutes before the timeout: a stall noticed 10 minutes late, in a retry or after a

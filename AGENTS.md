@@ -56,8 +56,11 @@ tools/apple/snapshot-matrix.sh macos                      # the same on macOS
 tools/apple/snapshot-matrix.sh compare <dirA> <dirB>      # pixel diff of two captures; exit 1 when one differs
 tools/apple/snapshot-matrix.sh merge --expect <ids> <out> <dir>…  # captures of one platform taken apart, one page;
                                                           # names on it any expected component none of them holds
+git diff --name-only main...HEAD | tools/apple/audit-scope.sh  # the catalog entries a pull request's audit
+                                                          # covers, from the branch's commits (not uncommitted ones)
 
 tools/check.sh                    # build and test tools/, then the checks below (CI runs it on Linux)
+tools/check.sh spec api-parity    # some of its steps: tools raw-values generate tokens contrast icons spec api-parity
 tools/westron lint raw-values     # no raw values in WestronUI
 tools/westron lint api-parity     # WestronUI's public API is exactly the component API the contracts give
 tools/westron generate            # regenerate code from the sources
@@ -83,6 +86,12 @@ component's matrix from its contract into `WestronCatalog/Generated/`, and the c
 at one, and the supplementary sheets for what no contract option sets ("not a contract option") are hand-written in
 the catalog, not generated (`platforms/apple/README.md`, "Snapshot matrix"). Compare only captures from the same
 environment (decisions/0008).
+CI (decisions/0008, note of 2026-11-20): `.github/workflows/ci.yml` on every pull request and push to `main` (the
+tools, the Apple package and catalog, the catalog screenshots, and on a pull request the accessibility audit of the
+components it changes); `accessibility-audit.yml`, the full audit, every night and by hand
+(`gh workflow run accessibility-audit.yml --ref <branch>`); `snapshot-matrix.yml` on demand only, by hand
+(`gh workflow run snapshot-matrix.yml --ref <branch> [-f components=button,rule]`) or by the label `snapshot-matrix` on
+a pull request.
 
 ## Rules
 

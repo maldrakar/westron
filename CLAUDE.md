@@ -19,7 +19,9 @@ Run them after implementation, before you show the result to the human.
 
 Hooks (`.claude/settings.json`) run on their own:
 - after an edit to a `.swift` file, the file is formatted, and code in `WestronUI` is checked by the raw-values lint;
-- before the work finishes, checks of the affected parts run; until they pass, you cannot finish.
+- before the work finishes, checks of the affected parts run, each only when the changes touch what it reads; until
+  they pass, you cannot finish. `WESTRON_STOP_CHECKS_DRY_RUN=1 .claude/hooks/stop-checks.sh < /dev/null` lists the
+  checks it would run.
 
 Per-platform rules live in `.claude/rules/` and load when the work is in the matching paths.
 

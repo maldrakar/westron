@@ -16,12 +16,25 @@ with no prefix: `0.2.0`, not `v0.2.0`.
 - Uncommitted: !`git status --porcelain | head -20`
 - Last tag: !`git describe --tags --abbrev=0 2>/dev/null || echo "no tags"`
 - Commits since it: !`git log --oneline $(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD | head -40`
-- CI on HEAD: !`gh run list --branch main --limit 3 --json headSha,conclusion,status,workflowName --jq '.[] | "\(.workflowName) \(.headSha[0:7]) \(.status) \(.conclusion)"' 2>/dev/null`
+- CI (`ci.yml`) on HEAD: !`gh run list --workflow ci.yml --commit "$(git rev-parse HEAD)" --limit 3 --json status,conclusion,event,url --jq 'if length == 0 then "no run" else .[] | "\(.status) \(.conclusion) \(.event) \(.url)" end' 2>/dev/null || echo "no run found"`
+- Successful full audits (`accessibility-audit.yml`) on HEAD: !`gh run list --workflow accessibility-audit.yml --commit "$(git rev-parse HEAD)" --status success --json databaseId,event,createdAt,url --jq 'if length == 0 then "none" else .[] | "\(.databaseId) \(.event) \(.createdAt) \(.url)" end' 2>/dev/null || echo "none found"`
 
 ## Steps
 
-1. **Preconditions.** The branch is `main`, the working tree is clean, `main` matches `origin/main` (`git fetch` and compare),
-   and the last CI run on this commit is green. If something is wrong, stop and say what exactly.
+1. **Preconditions.** If something is wrong, stop and say what exactly.
+   - The branch is `main`, the working tree is clean, and `main` matches `origin/main` (`git fetch` and compare).
+   - The last `ci.yml` run on this commit is green. Only that workflow counts here: the nightly audit and the snapshot
+     matrix are workflows of their own (decisions/0008, note of 2026-11-20).
+   - The full accessibility audit passed on exactly this commit: a successful run of `accessibility-audit.yml`
+     (scheduled, or dispatched by hand) whose head commit is `git rev-parse HEAD`, and whose audit legs ran. A
+     scheduled run skips its legs when the commit was already audited, and that run is green too, so check the legs
+     of each run listed above, newest first, until one has them all green:
+     `gh run view <databaseId> --json jobs --jq '[.jobs[] | select(.name != "Accessibility audit — anything new") | .conclusion]'`
+     must be a non-empty list of `success` only (a run whose legs were skipped shows `skipped`). No such run, or no
+     run listed at all (`none`, or `none found` when the query failed), means not green: the release waits. Say so,
+     and offer the human the two ways: run the audit now on `main` (`gh workflow run accessibility-audit.yml --ref
+     main`, an hour or more, then check again), or wait for the nightly run. The snapshot matrix is not a
+     precondition.
 2. **Version.** If the human passed `major|minor|patch` (`$ARGUMENTS`), use that. Otherwise propose one yourself from
    the "Unreleased" section in `CHANGELOG.md` and the commits: before 1.0, a breaking change is a minor bump.
    With no tags, the first version is `0.1.0`. Show the resulting version and wait for confirmation.
