@@ -18,6 +18,7 @@ The westron generators and checks are a separate SwiftPM package (decisions/0009
 | `Sources/westron/` | The executable: argument parsing and output |
 | `apple/xcode-env.sh` | Finds the Xcode from `.xcode-version` and sets `DEVELOPER_DIR` |
 | `apple/check.sh` | Build, tests, format and catalog build for Apple; CI and the Stop hook run the same script |
+| `apple/audit-scope.sh` | The catalog entries a pull request's accessibility audit covers, from its changed paths (`.github/workflows/ci.yml`) |
 | `apple/catalog-screenshot.sh` | Screenshot of a catalog entry on iOS or macOS |
 | `apple/snapshot-matrix.sh` | The snapshot matrix (#24) on iOS or macOS in one test run, with its review page, and the pixel comparison of two captures; `apple/snapshot-pages.swift` builds the pages and compares the images |
 

@@ -126,6 +126,22 @@ Date: 2026-11-14. Status: accepted.
   leg fails with its logs uploaded rather than being cancelled without them; a capture that would have ended in
   those 2 minutes fails too. Decided by the coordinator under the owner's delegation of 2026-11-18, pending the
   owner's confirmation.
+  2026-11-20: a CI run on a pull request took 85–150 minutes, 17 Mac jobs and about 6 runner-hours, most of it the
+  full audit (10 legs, about 3.7 hours) and the snapshot matrix (4 legs and a page job, about 2.2 hours), and the
+  same set ran again on every push to `main`. The owner decided: the full audit runs once a night, the snapshot
+  matrix on demand, and a pull request audits only what it changes. The ten legs move as they are into a workflow
+  of their own, `.github/workflows/accessibility-audit.yml`, on a schedule (02:37 UTC) and by hand on any branch
+  (`gh workflow run accessibility-audit.yml --ref <branch>`); a scheduled run skips the legs when `main`'s head is
+  the commit the last successful scheduled run audited, and runs them if it cannot tell. In `ci.yml`, `audit-scope`
+  maps a pull request's changed paths to catalog entries (`tools/apple/audit-scope.sh`: a component's directory in
+  WestronUI, its generated files, its catalog page and its contract give that component's entries; a Foundations
+  page that shares nothing with other files gives its own), and one job audits them in all five configurations,
+  55 minutes with a retry budget of 50, split into shards of at most 5 entries when there are more; it is skipped
+  when there are none, and on a push to `main`. A change to shared paths (tokens, the shared files of WestronUI, the
+  catalog's host, the scripts) is audited by the night after its merge, or by hand on the branch before it. The
+  snapshot matrix moves to `.github/workflows/snapshot-matrix.yml`, run by hand (optionally for some components) or
+  by the label `snapshot-matrix` on a pull request; its legs, artifacts and page are as before. A pull request now
+  takes 2–3 Mac jobs, up to about 1.4 runner-hours; a push to `main` 2. Decided by the owner.
 
 ## Consequences
 
@@ -206,3 +222,6 @@ Date: 2026-11-14. Status: accepted.
     platform's legs into one page (`snapshot-matrix.sh merge --expect`), which names any component no leg brought, so
     the owner still opens `snapshot-matrix-ios` and `snapshot-matrix-macos`. Decided by the coordinator under the
     owner's delegation of 2026-11-18, pending the owner's confirmation.
+  - 2026-11-20: the matrix compares nothing, so it no longer runs with every pull request and push to `main`; it is
+    captured on demand, by `.github/workflows/snapshot-matrix.yml` (the note of 2026-11-20 under "Screenshots for the
+    agent"). Decided by the owner.
