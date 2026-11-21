@@ -605,10 +605,13 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         ]
         #if os(iOS)
             // The TextField focus pages focus a field for real, so the system keyboard is up while they are audited
-            // (spec/components/text-field). The keyboard's own prediction cells have no description, and at the
+            // (spec/components/text-field). The keyboard's own prediction cells, empty or carrying a suggestion
+            // (`“groceries”`, typographic quotes included, on the CI runner, #96), have no description, and at the
             // accessibility text sizes the keyboard covers the page's last line, its "Focused: …" text and its
             // "Clear focus" button, so the audit measures them on the keyboard's pixels. Neither is the entry's: the
             // fields are audited above the keyboard, and the same lines with no keyboard on `text-field-behavior`.
+            // A prediction cell is told by its class, which the audit names in its detailed description, not by its
+            // label, which is whatever the keyboard suggests; no westron view is a `TUIPredictionViewCell`.
             // The contrast suppression holds only while the keyboard is up and the line reaches below its top; the
             // same line above the keyboard, in any theme or text size, is audited as usual.
             for entryID in ["text-field-focus-framed", "text-field-focus-inline"] {
@@ -616,7 +619,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                     Suppression(
                         .entry(entryID), type: .sufficientElementDescription,
                         reason: "the system keyboard's prediction cell", detail: "TUIPredictionViewCell"
-                    ) { $0 == nil || $0 == "" },
+                    ) { _ in true },
                     Suppression(
                         .entry(entryID), type: .contrast, reason: "a line under the system keyboard",
                         underKeyboard: true
