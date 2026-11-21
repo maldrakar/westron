@@ -156,13 +156,15 @@ jobs:
     # whose log gains no line for 5 minutes (WESTRON_BEHAVIOR_STALL_LIMIT, 300 s) is stopped first, as the iOS leg of
     # run 44863177076 should have been, which went silent for 28 minutes after "Failed to terminate
     # dev.westron.catalog" and met the deadline. Each retry shows as a warning on the run, and the leg's logs go up as
-    # behavior-retried-<platform> even when the retry passed. A test that fails on its own is never retried: it fails
-    # the whole run, and `audit-needed` counts only successful scheduled runs, so the next night runs every job again
-    # on the same commit, and the release waits. For a flaky failure, "Re-run failed jobs" on that run (or `gh run
-    # rerun <id> --failed`) is the cheap remedy: a re-run is a new attempt of the same run, with its id, commit and
-    # event, and once it passes the run counts as successful both for `audit-needed` and for the release skill's check,
-    # which reads the latest attempt's jobs, the ones not re-run carried over as they were (seen on CI run 44461921450,
-    # attempt 2). `gh workflow run` instead starts all twelve Mac jobs again.
+    # behavior-retried-<platform> even when the retry passed. A test XCTest reports a failure of its own for (an error
+    # line or a `failed` line, other than "Failed to terminate") is never retried; one that never finished, because
+    # the run stalled or the runner died under it, runs again. A failed test fails the whole run, and `audit-needed`
+    # counts only successful scheduled runs, so the next night runs every job again on the same commit, and the
+    # release waits. For a flaky failure, "Re-run failed jobs" on that run (or `gh run rerun <id> --failed`) is the
+    # cheap remedy: a re-run is a new attempt of the same run, with its id, commit and event, and once it passes the
+    # run counts as successful both for `audit-needed` and for the release skill's check, which reads the latest
+    # attempt's jobs, the ones not re-run carried over as they were (seen on CI run 44461921450, attempt 2).
+    # `gh workflow run` instead starts all twelve Mac jobs again.
     #
     # Locally on an iPhone 17 simulator (iOS 26.3, 2026-11-20) all 20 tests passed in 182 and 185 s in two runs, 2 of
     # them skipped (a keyboard shortcut the simulator's typeKey does not reach; keyboard focus, measured on macOS), the

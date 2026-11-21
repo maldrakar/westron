@@ -285,8 +285,11 @@ retries (#97). On CI the simulator once failed to terminate the catalog and xcod
 minutes (run 44863177076). The retry is one more `xcodebuild test-without-building` of the same classes, with
 `-skip-testing` for every test that passed or skipped itself, so the test the stall hit runs again, as an audit
 entry a stall hit does; its log and result bundle get `-retry` in their names. It runs too when the test runner
-failed to start, or when a test's only failure is XCTest's "Failed to terminate" of the catalog. It never runs when a
-test failed on its own (an assertion, a crash): the leg fails. There is one retry at most, a warning on the CI run
+failed to start, or when a test's only failure is XCTest's "Failed to terminate" of the catalog. It never runs when
+XCTest reported a failure of a test's own, an error line for it (an assertion, a crash it attributes to the test) or
+its `Test Case … failed` line: the leg fails. A test that never finished, because the run stalled or the test runner
+died under it with neither line for the test, is run again by a retry, as the audit does for an entry it did not
+finish. There is one retry at most, a warning on the CI run
 shows it, and a retry that would not finish before the deadline is not started. `WESTRON_BEHAVIOR_DEADLINE=<minutes>`
 from the script's start stops everything, a retry included, at that time (xcodebuild and the test daemon stopped, a
 line in the output and the log, exit 1): CI sets it 3 minutes before the job's timeout, so that a run gone silent

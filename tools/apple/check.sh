@@ -19,8 +19,9 @@
 #                                    (ButtonBehaviorTests CheckboxBehaviorTests TextFieldBehaviorTests
 #                                    IconAccessibilityTests; default: all); a run that stops making progress
 #                                    (WESTRON_BEHAVIOR_STALL_LIMIT=<seconds>, default 300) or fails for
-#                                    infrastructure runs once more what has not passed, never a test that failed on
-#                                    its own (#97); WESTRON_BEHAVIOR_DEADLINE=<minutes> stops it all at that time
+#                                    infrastructure runs once more what has not passed, never a test XCTest reported
+#                                    a failure of its own for (#97); WESTRON_BEHAVIOR_DEADLINE=<minutes> stops it all
+#                                    at that time
 #   tools/apple/check.sh format      swift format lint without changes, tools/ included
 #   tools/apple/check.sh fix-format  swift format that rewrites the files, tools/ included
 #   tools/apple/check.sh all         everything except fix-format, a11y and behavior (package-ios included)
@@ -410,8 +411,9 @@ a11y() {
 # accessibility hierarchy, the keyboard, on the catalog's entries. Each class runs on iOS and macOS, with branches of
 # its own for each; macOS needs Automation Mode and the screen to itself. A run that fails for infrastructure (it
 # stopped making progress, its test runner did not start, XCTest failed to terminate the catalog) runs once more, in a
-# second xcodebuild run, what has not passed (#97); a test that fails on its own is never retried, and the nightly CI
-# run reports it (.github/workflows/accessibility-audit.yml).
+# second xcodebuild run, what has not passed (#97): a test that never finished runs again, but a test with a failure
+# of its own (behavior_plan) is never retried, and the nightly CI run reports it
+# (.github/workflows/accessibility-audit.yml).
 behavior_tests=(ButtonBehaviorTests CheckboxBehaviorTests TextFieldBehaviorTests IconAccessibilityTests)
 
 # WESTRON_BEHAVIOR_DEADLINE=<minutes> from the script's start (unset: none; CI sets it a few minutes before the job's
@@ -488,21 +490,30 @@ behavior_watchdog() {
   done
 }
 
+# Removes the watchdog's flag file of the current test run, if there is one. `behavior` runs it on the script's exit
+# too, so that a run the deadline or an interruption (ui_test_interrupted) ends leaves no file behind.
+behavior_remove_stall_flag() {
+  if [ -n "${behavior_stall_flag:-}" ]; then
+    rm -f "$behavior_stall_flag"
+    behavior_stall_flag=""
+  fi
+}
+
 # Runs the behaviour tests, ui_test_run's arguments, under the watchdog, and prints what the run reported: each
 # failure with its message, each skip with its reason, the test cases, the totals of each class and of the run, and
 # why a test runner did not start. Returns xcodebuild's status; `behavior_stalled` is the seconds of silence after
 # which the watchdog stopped the run, or empty.
 behavior_run() {
-  local log="$2" flag watchdog status=0
-  flag="$(mktemp "${TMPDIR:-/tmp}/westron-behavior-stall.XXXXXX")"
+  local log="$2" watchdog status=0
+  behavior_stall_flag="$(mktemp "${TMPDIR:-/tmp}/westron-behavior-stall.XXXXXX")"
   behavior_log="$log"
-  behavior_watchdog "$log" "$behavior_stall_limit" "$flag" &
+  behavior_watchdog "$log" "$behavior_stall_limit" "$behavior_stall_flag" &
   watchdog=$!
   ui_test_run "$@" || status=$?
   kill "$watchdog" 2> /dev/null || true
   wait "$watchdog" 2> /dev/null || true
-  behavior_stalled="$(cat "$flag")"
-  rm -f "$flag"
+  behavior_stalled="$(cat "$behavior_stall_flag")"
+  behavior_remove_stall_flag
   grep -E ": error: |Test skipped|Test Case .*(passed|failed|skipped)|Executed [0-9]+ test|$a11y_runner_failures" \
     "$log" | grep -v "\[MT\]" || true
   if [ -n "$behavior_stalled" ]; then
@@ -522,8 +533,13 @@ behavior_run() {
 #                     audit entry a stall hit is), the test runner failed to start (a11y_runner_failures), or a test's
 #                     every failure is XCTest's "Failed to terminate" of the catalog, which preceded the stall on CI
 #                     (run 44863177076) and which the audit classifies as infrastructure;
-#   fail <reason>     anything else: a test that failed on its own (an assertion, a crash, a failure with no message),
-#                     or a failure nothing explains, such as a stall after every test had finished.
+#   fail <reason>     anything else: a test that failed on its own, that is one with an error line of its own other
+#                     than "Failed to terminate" (an assertion, a crash XCTest attributes to it) or a `Test Case …
+#                     failed` line with no such error, or a failure nothing explains, such as a stall after every
+#                     test had finished.
+# Only those two kinds of line tell a test's failure. A test that never finished, because the run stalled or the test
+# runner died under it and xcodebuild reported that with neither line for the test, is run again when the run is
+# retried, as the audit does for an entry it did not finish.
 behavior_plan() {
   local log="$1" stalled="$2"
   awk -v stalled="$stalled" -v runner_failures="$a11y_runner_failures" '
@@ -602,7 +618,8 @@ behavior() {
   mkdir -p .build/logs .build/xcode/results
   # An earlier run's retry would pass for this one's (CI uploads the logs when there is a retry's).
   rm -rf ".build/logs/$name-retry.log" ".build/xcode/results/$name-retry.xcresult"
-  behavior_log="$log" behavior_platform="$platform" behavior_udid=""
+  behavior_log="$log" behavior_platform="$platform" behavior_udid="" behavior_stall_flag=""
+  trap behavior_remove_stall_flag EXIT
   if [ -n "${WESTRON_BEHAVIOR_DEADLINE:-}" ]; then
     if ! [[ "$WESTRON_BEHAVIOR_DEADLINE" =~ ^[1-9][0-9]*$ ]]; then
       echo "check.sh: behavior: WESTRON_BEHAVIOR_DEADLINE=\"$WESTRON_BEHAVIOR_DEADLINE\": expected whole minutes" >&2
