@@ -221,8 +221,10 @@ extension View {
     /// Marks a matrix cell whose content takes the width it is offered by design: running text that wraps between its
     /// words (Text's roles, a surface's sample text) or a field that fills its row. The snapshot tests check every
     /// other cell against its ideal width, so that a sheet never squeezes a control below the width it needs, such as
-    /// a button until its label breaks inside a word (the Button contract leaves that width unsupported); a cell
-    /// marked with this is not checked so. It changes nothing drawn.
+    /// a button until its label breaks inside a word (the Button contract leaves that width unsupported): a squeeze
+    /// that fewer columns to a picture cure splits the sheet, and one left with one column to a picture fails the run.
+    /// A cell marked with this is not checked so: a word of its text that breaks inside itself, or a field's truncated
+    /// placeholder or value, is not caught, and is left to the eye in the review. It changes nothing drawn.
     func matrixCellTakesOfferedWidth() -> some View {
         preference(key: MatrixCellTakesOfferedWidth.self, value: true)
     }

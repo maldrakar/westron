@@ -99,8 +99,8 @@ struct SnapshotMatrixRenderTests {
         // The pictures drawn again at the end (`checksReproducible`): each component's first picture in each capture.
         var again: [(file: String, key: String, capture: ComponentMatrix.Capture)] = []
         // By sheet and text size, the most columns of one picture that leave no cell squeezed: decided in the first
-        // capture at that text size, by drawing (`columnsPerPicture`), and kept for the others, so that every theme
-        // has the same pictures.
+        // capture at that text size whose draws all succeed, by drawing (`columnsPerPicture`), and kept for the
+        // others, so that every theme has the same pictures.
         var columnCaps: [String: Int] = [:]
         for capture in captures {
             for (componentIndex, groups) in components.enumerated() {
@@ -115,7 +115,8 @@ struct SnapshotMatrixRenderTests {
                         } else {
                             let decided = await columnsPerPicture(
                                 sheet, of: matrix, capture: capture, metrics: metrics, since: start)
-                            columnCaps[decision] = decided.columns
+                            // Nil, when a draw failed and showed nothing to decide by: the next capture decides.
+                            if let columns = decided.columns { columnCaps[decision] = columns }
                             drawn = decided.drawn
                         }
                         for (pictureIndex, picture) in drawn.enumerated() {
@@ -234,19 +235,24 @@ struct SnapshotMatrixRenderTests {
     /// where a cell still squeezed fails its picture. So whether a sheet is split follows from whether its cells fit
     /// side by side on the device, not from a list of sheets: on an iPhone 17 the 3 × 6 sheet of Button's size l in
     /// the destructive role, whose button with an icon and "Delete" needs about 122 of a column's 112 points, is taken
-    /// a column to a picture at the default text size, as every sheet is at accessibility5. The pictures drawn with
-    /// more columns are dropped; the log names each such step.
+    /// two columns to a picture at the default text size, primary and secondary, then tertiary. The pictures drawn
+    /// with more columns are dropped; the log names each such step.
+    ///
+    /// A draw that failed shows no cells, so it cannot tell whether they fit: where the other pictures show no
+    /// squeezed cell, the split is left undecided (nil), the failed picture fails as the render failure it is, and the
+    /// next capture at the text size decides, rather than one taking the full columns on no evidence.
     func columnsPerPicture(
         _ sheet: ComponentMatrix.Sheet, of matrix: ComponentMatrix, capture: ComponentMatrix.Capture,
         metrics: String?, since start: Date
-    ) async -> (columns: Int, drawn: [DrawnPicture]) {
+    ) async -> (columns: Int?, drawn: [DrawnPicture]) {
         var cap = sheet.columns.count
         while true {
             let pictures = matrix.pictures(of: sheet, at: capture.textSize, columns: cap)
             let drawn = await draw(pictures, of: matrix, capture: capture, metrics: metrics, since: start)
             let widest = pictures.map(\.columns.count).max() ?? 1
-            let squeezed = drawn.reduce(0) { $0 + ((try? $1.result.get())?.squeezed.count ?? 0) }
-            guard squeezed > 0, widest > 1 else { return (cap, drawn) }
+            let rendered = drawn.compactMap { try? $0.result.get() }
+            let squeezed = rendered.reduce(0) { $0 + $1.squeezed.count }
+            guard squeezed > 0, widest > 1 else { return (rendered.count == drawn.count ? cap : nil, drawn) }
             print(
                 "snapshot: \(matrix.key(of: sheet)) at \(capture.textSize.rawValue): \(squeezed) cells squeezed with "
                     + "\(widest) columns to a picture; drawn again with \(widest - 1)")

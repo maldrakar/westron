@@ -180,9 +180,13 @@ still drives every generated sheet and combination:
   `label-without-icon_size-l_role-destructive_iconOnly-false` (a button of size l with "Delete" and an icon, or with
   the loading indicator, needs about 122 points of a column's 112), each two parts, primary and secondary, then
   tertiary. Such a part's header says what it holds and why, and leaves the notes to the review page, as a supplement's
-  sheet with its notes all but fills the screen. A cell that takes the width it is offered by design, running text
-  that wraps between its words (Text's roles, a surface's sample) or a field that fills its row (Text field's cells),
-  is marked with `matrixCellTakesOfferedWidth()` and not checked so.
+  sheet with its notes all but fills the screen. A squeeze that fewer columns to a picture cure does not fail the run:
+  the sheet is split, which shows as pictures added and removed in `compare` and in CI's `snapshots` check against the
+  references; the run fails only when a cell is still squeezed with one column to a picture. A cell that takes the
+  width it is offered by design, running text that wraps between its words (Text's roles, a surface's sample) or a
+  field that fills its row (Text field's cells), is marked with `matrixCellTakesOfferedWidth()` and not checked so:
+  for Text's roles and a surface's sample text a word that breaks inside itself, and for a text field a truncated
+  placeholder or value, is not caught by the check and is left to the eye in the review.
   macOS has no Dynamic Type: SwiftUI draws a cell the same at every `dynamicTypeSize` there, `-WestronDynamicType`
   included (`ComponentMatrixTests` checks it), so a Mac is captured at `large` alone and its page says why.
 - **Supplementary sheets** show what no contract option sets. A component's catalog code adds a
