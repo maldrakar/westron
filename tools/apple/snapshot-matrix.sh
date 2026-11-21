@@ -199,11 +199,12 @@ render() {
   finished=$SECONDS
 
   # The test's failures, each with its message, its summary line, and on macOS the languages before the pin, the text
-  # metrics at the start and the end, the pictures drawn again at the end, and the process's state when a check of
-  # reproducibility failed (#99).
+  # metrics at the start and the end, the pictures drawn again at the end, the summary of the check of the text fields'
+  # laid-out heights (#99), and the process's state when a check of reproducibility failed (#99). On CI this output,
+  # not the log, is what the job shows.
   awk '/\[MT\]/ { next }
     /✘ .*recorded an issue/ { if ((getline line) > 0 && line ~ /^↳ /) print line; next }
-    / draws: |^snapshot: [0-9]+ images|^snapshot: (languages before|text metrics|drawn again|state)|: error: |\*\* TEST/ {
+    / draws: |^snapshot: [0-9]+ images|^snapshot: (languages before|text metrics|drawn again|text fields|state)|: error: |\*\* TEST/ {
       print
     }' \
     "$log" >&2
