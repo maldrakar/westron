@@ -268,15 +268,20 @@ mechanism** (`MeasuredFonts.swift` has it in full, with the evidence): SwiftUI t
 of the three fonts looked up last, keyed by the address of the font object it measures the line with; when SwiftUI's
 font cache lets that font go, it is freed, a font made later may be allocated at its address, and while the old entry
 is among the three the new font takes its height. Shown: the internals, by symbol lookup and disassembly in the SwiftUI
-of Xcode 27.1; the state forced by a test, locally and on the runner; and on the runner without the fix, the state
-arising by itself in 13 of 443 short processes, 12 of them with a trace showing exactly this (run 44942981800).
-Inferred: that the two CI failures, which had no trace, were this. **The fix**: `MeasuredFonts` keeps alive, for the
-rest of the render's process, every font object whose line a layout manager measures, from before the first picture is
-laid out, so no font can take an address the cache knows. **The forcing test**, `fieldsKeepTheirLineThroughFontChurn`
-(`FieldLineHeightTests.swift`), runs in every macOS render, `--component` ones and the workflow Snapshot references
-too (about 8 s locally, 21 to 35 s on the runner); it checks that every field keeps its own height and that the font
-SwiftUI measures each field's line with is one `MeasuredFonts` keeps. With the fix on it cannot show that the forcing
-still forces; after an update of Xcode or macOS run it without the fix, which must fail it:
+framework of this Mac's macOS 26.7.1, the one a process runs (Xcode's SDK holds only `SwiftUI.tbd`, which does not
+export them; the runner's macOS 27.0.1 SwiftUI was not disassembled, and there the traces and the forcing test show the
+mechanism); the state forced by a test, locally and on the runner; on the runner without the fix, the state arising by
+itself in 13 of 443 short processes, 12 of them with a trace showing exactly this (run 44942981800); and with the fix,
+the same short-process loop on the runner (probe run 44948217745) with 0 of 458 processes in the state (27,680
+pictures). Inferred: that the two CI failures, which had no trace, were this. **The fix**: `MeasuredFonts` keeps alive,
+for the rest of the render's process, every font object whose line a layout manager measures, from before the first
+picture is laid out, so no font can take an address the cache knows. **The forcing test**,
+`fieldsKeepTheirLineThroughFontChurn` (`FieldLineHeightTests.swift`), runs in every macOS render, `--component` ones and
+the workflow Snapshot references too (about 8 s locally, 21 to 35 s on the runner); it checks that every field keeps its
+own height and that the font SwiftUI measures each field's line with is one `MeasuredFonts` keeps; its line in the log,
+`snapshot: font churn (#99)`, gives the attempts, the fields off their line and the fonts kept, and the script prints it
+too, so it is in the output of the CI job `snapshots`. With the fix on it cannot show that the forcing still forces;
+after an update of Xcode or macOS run it without the fix, which must fail it:
 `WESTRON_FONT_CHURN_UNFIXED=1 WESTRON_SNAPSHOTS=.build/font-churn swift test --filter fieldsKeepTheirLine`. Products
 are not covered: the same SwiftUI behaviour can lay out a product's `TextField` off its line (#113). Checks still name
 the state, so that if it ever shows again it does not read as a change to a pull request. **The fields' heights**

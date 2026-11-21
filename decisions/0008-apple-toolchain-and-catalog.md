@@ -347,11 +347,16 @@ Date: 2026-11-14. Status: accepted.
     keyed by the address of the font object it measures the line with (not the `NSTextField`'s own `font` object). When
     SwiftUI's font cache lets that font go, it is freed, a font made later may be allocated at its address, and while the
     old entry is among the three the new font takes its height; a lookup that misses measures it anew and corrects it.
-    Shown: the internals exist under those names in the SwiftUI of Xcode 27.1 (symbol lookup and disassembly); a test
+    Shown: the internals exist under those names in the SwiftUI framework of macOS 26.7.1, the operating system's one
+    that a process runs (symbol lookup and disassembly on a local Mac; Xcode's SDK holds only `SwiftUI.tbd`, which
+    does not export them; the runner's macOS 27.0.1 SwiftUI was not disassembled, and there the mechanism is shown by
+    the traces and the forcing test only); a test
     that churns SwiftUI's font cache forces the state, without the fix locally and on 4 of 4 runner VMs (run
     44941092448, 30 to 311 fields off their line in 2000 attempts), with it on none; and on the runner without the fix
     the state came up by itself in 13 of 443 short processes (run 44942981800), 12 of them with a trace showing a
-    field's font looked up at an address last measured as another font, the thirteenth consistent with it. Inferred,
+    field's font looked up at an address last measured as another font, the thirteenth consistent with it; with the
+    fix, the same short-process loop on the runner (probe run 44948217745, matched to run 44942981800) had 0 of 458
+    processes in the state (27,680 pictures), against 13 of 443 without it. Inferred,
     not shown: that runs 44885247356 and 44917113978, which had no trace, were this, and when SwiftUI's font cache lets
     a font go in a render. The fix is in the render's process only (`MeasuredFonts` in the snapshot tests): every font
     object whose line a layout manager measures is kept alive for the rest of the process, from before the first
