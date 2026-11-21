@@ -260,19 +260,35 @@ than 1.5 s, is taken twice and must agree pixel for pixel (on macOS `CARenderer`
 server to cut a draw short, so a slow draw there is only slow). Between draws, and while a sheet settles, the test gives the
 main thread back to its run loop, so that UIKit and SwiftUI release each picture's window and controller; without
 that, every window stayed alive and the CI runner drew the last pictures of the run blank (decisions/0008, the note
-of 2026-11-21). On macOS a run once drew seven text-field pictures otherwise than every other run of the same code
-(#99, seen on pull request #98); its cause is not identified. The test pins the process's language and locale
+of 2026-11-21). On macOS some CI runs draw text-field pictures otherwise than every other run of the same code
+(#99, runs 44885247356 and 44917113978). What is known of that state, from a probe on the runner: SwiftUI lays out the
+AppKit text field under a `TextField` 1 pt off the height AppKit itself gives for it (17 pt where the field's
+`intrinsicContentSize` and `cell.cellSize` say 16; on another runner 16 for a field in Onest whose line is 17), and the
+process stays in it; its cause is not identified, and it has never shown on a local Mac. Checks name it rather than
+fix it, so that it does not read as a change to a pull request. **The fields' heights** (`FieldHeights`): after each
+picture's layout and before its draw, the test walks the window's views and compares every AppKit text field's
+laid-out height with AppKit's own for it, its cell's size at the field's width (`cell.cellSize(forBounds:)`) and, for
+a field that does not wrap, its `intrinsicContentSize`; a field off by more than half a pixel fails the picture with
+the issue "the render was in the state of #99", which gives the picture, how far into the run, and each field's frame,
+sizes, font (with its ascender, descender and leading) and text or prompt. The picture is still written and compared
+as usual. Over the full matrix in the normal state every field agrees: 432 fields in the 40 text-field pictures
+(one-line, empty with a prompt, `SecureField`, multi-line of one and two lines, at every size), and the log ends with
+the count (`snapshot: text fields' laid-out heights against AppKit's (#99)`). An `NSTextView` is not checked (the
+matrix has none), nor a multi-line field past its `lineLimit`, which would be laid out shorter than its lines by
+design (the matrix has none either; one added would fail the check until exempted). Its unit tests,
+`FieldHeightsTests`, run in `swift test`. **The language.** The test pins the process's language and locale
 (`AppleLanguages` `en`, `AppleLocale` `en_US`, in its argument domain, as `-testLanguage en -testRegion en_US` does on
-iOS), since AppKit measures a line of text by the languages, a proven dependency but not that run's explanation; the
-log has the languages and locale the process had before the pin (`snapshot: languages before the pin`) and the text
-metrics at the start and the end (`snapshot: text metrics`). Two checks name such a state if it comes again, rather
-than fix it: a picture fails, named, when a fresh AppKit field cell measures a line of body text otherwise than at
-the start of the run (the issue "drawn while the process measured text otherwise than at the start of the run"; a
-proxy for the fields drawn, so the picture may still be the same as a normal render); and each component's first
-picture in each capture is drawn again at the end and must give the same pixels, within a level (`snapshot: drawn
-again at the end`). Either failure logs the process's state then (`snapshot: state`: the metrics, the languages, the
+iOS), since AppKit measures a line of text by the languages, a proven dependency but not #99's explanation; the log
+has the languages and locale the process had before the pin (`snapshot: languages before the pin`) and the text
+metrics at the start and the end (`snapshot: text metrics`), and a picture fails, named, when a fresh AppKit field
+cell measures a line of body text otherwise than at the start of the run (the issue "drawn while the process measured
+text otherwise than at the start of the run"). That names a change of the process's text metrics, not #99's state, in
+which a fresh cell measures as usual (run 44917113978 logged 16 pt at its start and end). **Drawn again**: each
+component's first picture in each capture is drawn again at the end and must give the same pixels, within a level
+(`snapshot: drawn again at the end`): a state that ends within the run fails it; one that lasts to the end, as #99's
+has, passes it. Each failure logs the process's state then (`snapshot: state`: the metrics, the languages, the
 capture's theme and the app's appearance, the accessibility display options, the key window and first responder, the
-time into the run). The tests run only when `WESTRON_SNAPSHOTS` names the output directory (on the simulator through
+time into the run). The matrix's tests run only when `WESTRON_SNAPSHOTS` names the output directory (on the simulator through
 `TEST_RUNNER_WESTRON_SNAPSHOTS`), so `swift test` and `tools/apple/check.sh package` skip them;
 `WESTRON_SNAPSHOTS_COMPONENT` takes some components.
 

@@ -60,6 +60,8 @@ struct SnapshotPicture {
     /// How many draws it took, and what each one gave.
     let attempts: Int
     let log: [String]
+    /// What the check of #99 found in the draw kept (`FieldHeights`, macOS); empty on iOS.
+    let fields: FieldHeightReport
 }
 
 enum SnapshotRenderError: Error, CustomStringConvertible {
@@ -89,6 +91,8 @@ struct SnapshotDraw {
     let cells: [CGRect]
     /// The cells drawn narrower than they need, described.
     let squeezed: [String]
+    /// The AppKit text fields' laid-out heights against AppKit's own, read before the draw (`FieldHeights`, macOS).
+    let fields: FieldHeightReport
 }
 
 /// Why a draw gave no picture.
@@ -232,7 +236,7 @@ enum SnapshotRenderer {
             && draw.sheet.maxX <= window.maxX
         return SnapshotPicture(
             image: draw.image, size: draw.size, fits: fits, found: drawn.count, squeezed: draw.squeezed,
-            attempts: attempts, log: log)
+            attempts: attempts, log: log, fields: draw.fields)
     }
 
     /// The part of a window's picture of `scale` pixels a point that holds the sheet: the window's width, from the
@@ -250,7 +254,8 @@ enum SnapshotRenderer {
 
     /// A draw from what the window drew and what the sheet reported.
     static func result(
-        _ whole: CGImage, probe: MatrixSheetProbe, window: CGSize, scale: CGFloat
+        _ whole: CGImage, probe: MatrixSheetProbe, window: CGSize, scale: CGFloat,
+        fields: FieldHeightReport = FieldHeightReport()
     ) throws -> Result<SnapshotDraw, SnapshotMiss> {
         guard let (image, size) = cut(whole, to: probe.sheet, window: window, scale: scale) else {
             throw SnapshotRenderError.noImage("the sheet's frame \(probe.sheet) is outside the window")
@@ -262,7 +267,7 @@ enum SnapshotRenderer {
         return .success(
             SnapshotDraw(
                 image: image, size: size, window: window, sheet: probe.sheet, cells: Array(probe.cells.values),
-                squeezed: squeezed))
+                squeezed: squeezed, fields: fields))
     }
 
     #if os(iOS)
@@ -363,9 +368,11 @@ enum SnapshotRenderer {
             hosting.layoutSubtreeIfNeeded()
             hosting.displayIfNeeded()
             guard probe.sheet.height > 0 else { return .failure(.noFrame) }
+            // After the layout and before the draw, which does not change it: the state of #99, if the process is in it.
+            let fields = FieldHeights.check(hosting)
             let size = CatalogScene.windowSize
             guard let whole = try caRender(hosting, size: size) else { return .failure(.drawFailed) }
-            return try result(whole, probe: probe, window: size, scale: scale)
+            return try result(whole, probe: probe, window: size, scale: scale, fields: fields)
         }
 
         /// Draws a view's layer tree through Core Animation's renderer into a Metal texture, whose rows are bottom up.
@@ -462,8 +469,8 @@ enum SnapshotRenderer {
         /// field's line of body text is 16 pt with English, 17.3 with Vietnamese or Arabic among the languages, 18.3
         /// with Thai, 21 with Burmese; measured with Xcode 27.1 on macOS 26.7), and a fresh font after a change of the
         /// machine's preferences takes the new ones. The posted notification makes Core Text read them now. This
-        /// removes a proven dependency; it does not explain #99, whose fields grew by 1 pt, not by a language's 1.3 or
-        /// more, and whose cause is not identified.
+        /// removes a proven dependency; it does not explain #99, where AppKit measured the fields as usual (16 pt) and
+        /// SwiftUI laid them out 1 pt off that (`FieldHeights`), and whose cause is not identified.
         static func pinLanguage() {
             var arguments = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
             arguments["AppleLanguages"] = pinnedLanguages
@@ -478,12 +485,13 @@ enum SnapshotRenderer {
         }
 
         /// What a fresh AppKit text field cell, the kind of system field under SwiftUI's TextField, measures one line
-        /// of body text and an empty field with a prompt at now, with the process's languages. It is a proxy, not the
+        /// of body text and an empty field with a prompt at now, with the process's languages: a change of the
+        /// process's text metrics during the run, such as a change of its languages, shows here. It is a proxy, not the
         /// fields drawn: SwiftUI keeps the font it resolved, so a picture drawn while this differs from the start of
-        /// the run may still be the same as a normal render. In run 44885247356 (#99, on pull request #98) every
-        /// system field of seven pictures in a row was 1 pt taller than in every other run and nothing else in them
-        /// changed; whether a fresh cell measured as those fields did is not known, so this names that state only if it
-        /// shows here too.
+        /// the run may still be the same as a normal render. It does not name the state of #99: there AppKit measures
+        /// the fields drawn as usual and SwiftUI lays them out 1 pt off it, and a fresh cell measured as at the start
+        /// throughout run 44917113978, whose text-field sheet differed from its references all the same;
+        /// `FieldHeights` names it.
         static var textMetrics: String? {
             let font = NSFont.preferredFont(forTextStyle: .body)
             let line = NSTextFieldCell(textCell: "Groceries")
@@ -499,8 +507,12 @@ enum SnapshotRenderer {
         /// (SnapshotMatrixRenderTests, "Reproducible within the run").
         static let checksReproducible = true
 
+        /// Whether each picture's AppKit text fields are checked against AppKit's own heights (`FieldHeights`, #99).
+        static let checksFieldHeights = true
+
         /// Prints, as one `snapshot: state` line, what could identify the process's state on the runner when a check of
-        /// reproducibility fails (#99): the text metrics and languages, the capture's theme (nil: none, at the end), the
+        /// #99 fails (the fields' heights, the text metrics, the pictures drawn again at the end): the text metrics and
+        /// languages, the capture's theme (nil: none, at the end), the
         /// app's appearance, which follows the system's and not the picture's (each picture's window sets its own),
         /// the accessibility display options, the key window and its first responder, the windows, the time into the
         /// run and the memory. It reads them only; the pictures do not see it. macOS has no Bold Text setting to read.
@@ -533,12 +545,13 @@ enum SnapshotRenderer {
 
     #if !os(macOS)
         /// On iOS xcodebuild pins the language and the region (`-testLanguage en -testRegion en_US`), and no render
-        /// has been seen to differ within a run (388 of 388 the same in every CI run), so neither the text metrics
-        /// nor a second draw are checked.
+        /// has been seen to differ within a run (388 of 388 the same in every CI run), so neither the text metrics,
+        /// the fields' heights nor a second draw are checked.
         static func pinLanguage() {}
         static var languagesBeforePin: String? { nil }
         static var textMetrics: String? { nil }
         static let checksReproducible = false
+        static let checksFieldHeights = false
         static func printState(at moment: String, theme: String?, since start: Date) {}
     #endif
 
