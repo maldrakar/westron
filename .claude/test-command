@@ -1,3 +1,7 @@
-# The command the orchestrator test gate runs before an implementer subagent hands its work back.
-# It goes through the script so that the Xcode from .xcode-version is used, not the one xcode-select points at.
-tools/apple/check.sh package
+# The command the orchestrator test gate runs before an implementer subagent hands its work back: the first line that
+# is not a comment, run with `bash -c` in the implementer's worktree, a non-zero exit blocks the handback.
+# It is the Stop hook's script in its branch mode: the checks of everything the branch changed since its merge base with
+# main (committed, uncommitted and new files), each only when the changes touch what it reads, in the checkout it is
+# started in. The Swift checks go through tools/apple/check.sh, so the Xcode from .xcode-version is used, not the one
+# xcode-select points at. A branch that changes nothing a check reads (documents only) passes with nothing run.
+.claude/hooks/stop-checks.sh --branch main

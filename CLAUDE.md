@@ -24,6 +24,12 @@ Hooks (`.claude/settings.json`) run on their own:
   cannot finish. `WESTRON_STOP_CHECKS_DRY_RUN=1 .claude/hooks/stop-checks.sh < /dev/null` lists the checks it would
   run.
 
+The `Stop` hook sees only the main session's uncommitted changes. An implementer subagent, which commits in its own
+worktree, is checked by the orchestrator's test gate instead: it runs the line in `.claude/test-command`,
+`.claude/hooks/stop-checks.sh --branch main`, the same checks over everything the branch changed since its merge base
+with `main`, committed or not, in the checkout it starts in. There a failure fails every time; the dry run works with
+`--branch` too.
+
 Per-platform rules live in `.claude/rules/` and load when the work is in the matching paths.
 
 Commits and pushes only when the human asks. Work happens in a branch, with one pull request per issue, unless the
