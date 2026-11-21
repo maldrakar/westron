@@ -340,7 +340,8 @@ enum SnapshotRenderer {
 
         /// A borderless window with the view as its content, never ordered in, laid out.
         static func show(_ view: some View, dark: Bool) throws -> NSWindow {
-            // Before the first field is laid out: SwiftUI's line height of a field is keyed by its font's address (#99).
+            // Before the first field is laid out: SwiftUI's line height of a field is keyed by the address of the font
+            // object it measures the line with, not the field's own `font` (#99).
             MeasuredFonts.keep()
             _ = NSApplication.shared
             let size = CatalogScene.windowSize
@@ -472,7 +473,8 @@ enum SnapshotRenderer {
         /// with Thai, 21 with Burmese; measured with Xcode 27.1 on macOS 26.7), and a fresh font after a change of the
         /// machine's preferences takes the new ones. The posted notification makes Core Text read them now. This
         /// removes a proven dependency; it does not explain #99, where AppKit measured the fields as usual (16 pt) and
-        /// SwiftUI laid them out 1 pt off that (`FieldHeights`), with another font's line height (`MeasuredFonts`).
+        /// SwiftUI laid them out 1 pt off that (`FieldHeights`), most likely with another font's line height
+        /// (`MeasuredFonts`).
         static func pinLanguage() {
             var arguments = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
             arguments["AppleLanguages"] = pinnedLanguages

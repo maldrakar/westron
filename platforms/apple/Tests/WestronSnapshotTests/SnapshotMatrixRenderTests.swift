@@ -17,9 +17,11 @@
 //
 // On macOS some CI runs draw text-field pictures otherwise than every other run of the same code (#99: runs
 // 44885247356 and 44917113978). What is known of that state: SwiftUI lays out the AppKit text field under a TextField
-// 1 pt off the height AppKit itself gives for it (17 pt for 16, or 16 for Onest's 17). The cause: SwiftUI took the
-// field's line height from another font that had been at its font object's address, which the render now prevents
-// (`MeasuredFonts`). Checks still name such a state, so that it does not read as a change to a pull request:
+// 1 pt off the height AppKit itself gives for it (17 pt for 16, or 16 for Onest's 17). The mechanism shown on the
+// runner since (`MeasuredFonts`): SwiftUI took the field's line height from a cache keyed by the address of the font
+// object it measures the field's line with, where another font had been; that those two runs, which had no trace, were
+// the same is inferred. The render now keeps every measured font alive, which removes that mechanism. Checks still
+// name such a state, so that it does not read as a change to a pull request:
 // - every picture's AppKit text fields are compared, after layout and before the draw, with AppKit's own height for
 //   them (`FieldHeights`); a picture with a field off it fails as "the render was in the state of #99", with each
 //   field's sizes, font and text. Its summary (`snapshot: text fields' laid-out heights`) counts the run's pictures
@@ -32,7 +34,7 @@
 //   in which a fresh cell measures as usual;
 // - each component's first picture in each capture is drawn again at the end and must give the same pixels
 //   (`checkReproducible`): a state that ends within the run, as the first one seemed to. One that lasts to the end of
-//   the run, as the state of #99 has on the runner, draws the same again and passes it.
+//   the run, as the state of #99 did in run 44917113978, draws the same again and passes it.
 // Each failure prints the process's state at that moment (`SnapshotRenderer.printState(at:theme:since:)`, a
 // `snapshot: state` line).
 
@@ -300,12 +302,12 @@ struct SnapshotMatrixRenderTests {
     /// differs from what it drew the first time by more than a level in a channel (the tolerance of
     /// `tools/apple/snapshot-matrix.sh compare`), and prints the process's state then. A check against the references
     /// holds only if the same code draws the same pictures; in run 44885247356 (#99) seven pictures of one run
-    /// differed from every other run's with no change in the code (since prevented: `MeasuredFonts`). This does not prevent
-    /// that: when a drawn-again picture falls in such a state, or its first draw did, it fails here, named as such,
-    /// rather than reading as a change to the pull request. A state that lasts from before the first draw to the end
-    /// of the run draws the same twice and passes here (run 44917113978); `FieldHeights` names the one seen so. The
-    /// drawn-again pictures go through that check too: a finding fails the picture and prints the state, as in the
-    /// run, and their tally is returned for the check's summary.
+    /// differed from every other run's with no change in the code (most likely the state `MeasuredFonts` now removes).
+    /// This does not prevent that: when a drawn-again picture falls in such a state, or its first draw did, it fails
+    /// here, named as such, rather than reading as a change to the pull request. A state that lasts from before the
+    /// first draw to the end of the run draws the same twice and passes here (run 44917113978); `FieldHeights` names
+    /// the one seen so. The drawn-again pictures go through that check too: a finding fails the picture and prints the
+    /// state, as in the run, and their tally is returned for the check's summary.
     func checkReproducible(
         _ pictures: [(file: String, key: String, capture: ComponentMatrix.Capture)], in output: URL,
         after drawn: Int, since start: Date

@@ -4,9 +4,11 @@
 // On the CI runner the macOS render has, on some runs, drawn the text-field sheets otherwise than every other run of
 // the same code. A probe there (run 44932481160) caught the state: SwiftUI laid out the AppKit `NSTextField` under a
 // SwiftUI `TextField` 17 pt high while the field's own `intrinsicContentSize` and `cell.cellSize` said 16 (font
-// .SFNS-Regular 13), and on another runner a field in Onest 13, whose line is 17, was laid out 16. Once in it, the
-// process stays in it, in every theme. Its cause, SwiftUI's line height of another font that had been at the field's
-// font object's address, is prevented in the render and forced in a test (`MeasuredFonts`); this check stays.
+// .SFNS-Regular 13), and on another runner a field in Onest 13, whose line is 17, was laid out 16. The mechanism, as
+// far as it is shown (`MeasuredFonts`): SwiftUI takes a field's line height from a cache keyed by the address of the
+// font object it measures the field's line with (not the `NSTextField`'s own `font` object), and a font made at the
+// address of one freed takes the freed one's height. The render keeps every measured font alive, which removes that,
+// and a test forces the state (`FieldLineHeightTests.swift`); this check stays, to name the state if it shows again.
 //
 // What AppKit gives as a field's height is its cell's size at the field's width, `cell.cellSize(forBounds:)` with the
 // laid-out width and no limit on the height: for a one-line field that is also `cell.cellSize` and

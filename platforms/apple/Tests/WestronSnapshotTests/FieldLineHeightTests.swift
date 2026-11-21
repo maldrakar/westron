@@ -6,14 +6,23 @@
 // resolves new fonts in SwiftUI's font cache until it lets the Onest field's font go, which frees it unless something
 // keeps it; then lays out the framed field again, which makes its font anew, often at an address a font measured a
 // moment ago held. With nothing keeping the fonts, the framed field comes out 17 high in some of the attempts, in every
-// run (macOS 26.7: 22 and 53 of 2000 attempts, about 9 s each). With `MeasuredFonts` keeping them, in none.
+// run so far: locally (macOS 26.7) and on 4 of 4 runner VMs in run 44941092448, 30 to 311 fields off their line in
+// 2000 attempts. With `MeasuredFonts` keeping them, in none.
 //
-// It runs in the render's process (WESTRON_SNAPSHOTS), before or after the matrix in the same serialized suite, where
-// the fonts are kept from before any field is laid out: in a process whose fields were laid out before
-// `MeasuredFonts.keep()`, a height measured then may still be in the cache. To see the state, run it alone without the
-// fonts kept, which fails it:
+// With the fonts kept, no font is ever freed, so a pass cannot tell "the fix holds" from "the churn no longer makes
+// SwiftUI's cache let a font go": the font is freed in 0 attempts either way. What the fixed side does check: that the
+// font SwiftUI measures each field's line with (the one `MeasuredFontObserver` sees) is one `MeasuredFonts` keeps, so
+// it fails if SwiftUI stops measuring through `-[NSLayoutManager defaultLineHeightForFont:]`. That the forcing still
+// forces only the run without the fix shows; run it by hand after an update of Xcode or macOS, and it must fail with
+// fields off their line:
 //
 //     WESTRON_FONT_CHURN_UNFIXED=1 WESTRON_SNAPSHOTS=.build/font-churn swift test --filter fieldsKeepTheirLine
+//
+// It runs in every macOS render's process (WESTRON_SNAPSHOTS: `--component` renders and the workflow Snapshot
+// references too), before or after the matrix in the same serialized suite, where the fonts are kept from before any
+// field is laid out: in a process whose fields were laid out before `MeasuredFonts.keep()`, a height measured then may
+// still be in the cache. It costs about 8 s of a local render, and 21.3 to 34.8 s of a render of about 190 to 230 s on
+// the runner (run 44941092448); the fonts it makes, kept, are a part of the render's footprint (`MeasuredFonts`).
 
 #if os(macOS)
     import AppKit
@@ -51,10 +60,10 @@
             observer.start()
             defer { observer.stop() }
 
-            /// Lays out one field and returns how it disagrees with AppKit, if it does, and the font SwiftUI measured,
-            /// not retained.
-            func layOut(_ kind: ChurnedField.Kind) -> (wrong: String?, font: WeakFont) {
-                var result: (String?, WeakFont) = (nil, WeakFont(nil))
+            /// Lays out one field and returns how it disagrees with AppKit, if it does, the font SwiftUI measured, not
+            /// retained, and, with the fonts kept, why that font is not one `MeasuredFonts` keeps, if it is not.
+            func layOut(_ kind: ChurnedField.Kind) -> (wrong: String?, font: WeakFont, notKept: String?) {
+                var result: (String?, WeakFont, String?) = (nil, WeakFont(nil), nil)
                 autoreleasepool {
                     observer.measured = nil
                     hosting.rootView = ChurnedField(kind: kind)
@@ -66,7 +75,17 @@
                         return "\(field.font?.fontName ?? "?") field laid out \(field.frame.height) pt high, its line "
                             + "\(own)"
                     }
-                    result = (wrong.isEmpty ? nil : wrong.joined(separator: "; "), WeakFont(observer.measured))
+                    var notKept: String?
+                    if !unfixed {
+                        if let measured = observer.measured {
+                            if !MeasuredFonts.keeps(measured) {
+                                notKept = "\(measured.fontName) \(measured.pointSize) measured, not kept"
+                            }
+                        } else {
+                            notKept = "no font seen measured"
+                        }
+                    }
+                    result = (wrong.isEmpty ? nil : wrong.joined(separator: "; "), WeakFont(observer.measured), notKept)
                     observer.measured = nil
                     hosting.rootView = ChurnedField(kind: nil)
                     hosting.layoutSubtreeIfNeeded()
@@ -75,12 +94,16 @@
             }
 
             var wrong: [String] = []
+            var notKept: [String] = []
             var freed = 0
             let began = Date()
             for attempt in 1...attempts {
-                if let why = layOut(.framed).wrong { wrong.append("attempt \(attempt), first: \(why)") }
-                let (why, onest) = layOut(.inline)
+                let first = layOut(.framed)
+                if let why = first.wrong { wrong.append("attempt \(attempt), first: \(why)") }
+                if let why = first.notKept { notKept.append("attempt \(attempt), framed: \(why)") }
+                let (why, onest, onestNotKept) = layOut(.inline)
                 if let why { wrong.append("attempt \(attempt), inline: \(why)") }
+                if let why = onestNotKept { notKept.append("attempt \(attempt), inline: \(why)") }
                 var steps = 0
                 // New fonts until SwiftUI's cache lets the inline field's font go, or 40 of them.
                 while onest.font != nil, steps < 40 {
@@ -88,7 +111,9 @@
                     churn.next()
                 }
                 if onest.font == nil { freed += 1 }
-                if let why = layOut(.framed).wrong { wrong.append("attempt \(attempt), again: \(why)") }
+                let again = layOut(.framed)
+                if let why = again.wrong { wrong.append("attempt \(attempt), again: \(why)") }
+                if let why = again.notKept { notKept.append("attempt \(attempt), again: \(why)") }
             }
             let windowsAfter = NSApplication.shared.windows.count
             print(
@@ -98,10 +123,13 @@
                     attempts, Date().timeIntervalSince(began), freed, wrong.count, MeasuredFonts.count, windowsBefore,
                     windowsAfter))
             #expect(windowsAfter <= windowsBefore + 1, "the test leaves windows behind")
-            if !unfixed {
-                #expect(
-                    MeasuredFonts.count > 0, "no font measured through NSLayoutManager: SwiftUI measures otherwise now")
-            }
+            // The fix holds only while SwiftUI measures each field's line through the selector `MeasuredFonts` swaps.
+            #expect(
+                notKept.isEmpty,
+                """
+                \(notKept.count) fields' fonts not kept by MeasuredFonts, so SwiftUI measures otherwise now: \
+                \(notKept.prefix(5).joined(separator: " | "))
+                """)
             #expect(wrong.isEmpty, "\(wrong.count) fields off their line: \(wrong.prefix(5).joined(separator: " | "))")
         }
     }

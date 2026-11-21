@@ -260,13 +260,28 @@ than 1.5 s, is taken twice and must agree pixel for pixel (on macOS `CARenderer`
 server to cut a draw short, so a slow draw there is only slow). Between draws, and while a sheet settles, the test gives the
 main thread back to its run loop, so that UIKit and SwiftUI release each picture's window and controller; without
 that, every window stayed alive and the CI runner drew the last pictures of the run blank (decisions/0008, the note
-of 2026-11-21). On macOS some CI runs draw text-field pictures otherwise than every other run of the same code
-(#99, runs 44885247356 and 44917113978). What is known of that state, from a probe on the runner: SwiftUI lays out the
+of 2026-11-21). On macOS some CI runs drew text-field pictures otherwise than every other run of the same code
+(#99, runs 44885247356 and 44917113978). A probe on the runner (run 44932481160) caught the state: SwiftUI laid out the
 AppKit text field under a `TextField` 1 pt off the height AppKit itself gives for it (17 pt where the field's
-`intrinsicContentSize` and `cell.cellSize` say 16; on another runner 16 for a field in Onest whose line is 17), and the
-process stays in it; its cause is not identified, and it has never shown on a local Mac. Checks name it rather than
-fix it, so that it does not read as a change to a pull request. **The fields' heights** (`FieldHeights`): after each
-picture's layout and before its draw, the test walks the window's views and compares every AppKit text field's
+`intrinsicContentSize` and `cell.cellSize` say 16; on another runner 16 for a field in Onest whose line is 17). **The
+mechanism** (`MeasuredFonts.swift` has it in full, with the evidence): SwiftUI takes a field's line height from a cache
+of the three fonts looked up last, keyed by the address of the font object it measures the line with; when SwiftUI's
+font cache lets that font go, it is freed, a font made later may be allocated at its address, and while the old entry
+is among the three the new font takes its height. Shown: the internals, by symbol lookup and disassembly in the SwiftUI
+of Xcode 27.1; the state forced by a test, locally and on the runner; and on the runner without the fix, the state
+arising by itself in 13 of 443 short processes, 12 of them with a trace showing exactly this (run 44942981800).
+Inferred: that the two CI failures, which had no trace, were this. **The fix**: `MeasuredFonts` keeps alive, for the
+rest of the render's process, every font object whose line a layout manager measures, from before the first picture is
+laid out, so no font can take an address the cache knows. **The forcing test**, `fieldsKeepTheirLineThroughFontChurn`
+(`FieldLineHeightTests.swift`), runs in every macOS render, `--component` ones and the workflow Snapshot references
+too (about 8 s locally, 21 to 35 s on the runner); it checks that every field keeps its own height and that the font
+SwiftUI measures each field's line with is one `MeasuredFonts` keeps. With the fix on it cannot show that the forcing
+still forces; after an update of Xcode or macOS run it without the fix, which must fail it:
+`WESTRON_FONT_CHURN_UNFIXED=1 WESTRON_SNAPSHOTS=.build/font-churn swift test --filter fieldsKeepTheirLine`. Products
+are not covered: the same SwiftUI behaviour can lay out a product's `TextField` off its line (#113). Checks still name
+the state, so that if it ever shows again it does not read as a change to a pull request. **The fields' heights**
+(`FieldHeights`): after each picture's layout and before its draw, the test walks the window's views and compares
+every AppKit text field's
 laid-out height with AppKit's own for it, its cell's size at the field's width (`cell.cellSize(forBounds:)`) and, for
 a field that does not wrap, its `intrinsicContentSize`; a field off by more than half a pixel fails the picture with
 the issue "the render was in the state of #99", which gives the picture, how far into the run, and each field's frame,
@@ -290,7 +305,7 @@ text otherwise than at the start of the run"). That names a change of the proces
 which a fresh cell measures as usual (run 44917113978 logged 16 pt at its start and end). **Drawn again**: each
 component's first picture in each capture is drawn again at the end and must give the same pixels, within a level
 (`snapshot: drawn again at the end`): a state that ends within the run fails it; one that lasts to the end, as #99's
-has, passes it. Each failure logs the process's state then (`snapshot: state`: the metrics, the languages, the
+did in run 44917113978, passes it. Each failure logs the process's state then (`snapshot: state`: the metrics, the languages, the
 capture's theme and the app's appearance, the accessibility display options, the key window and first responder, the
 time into the run). The matrix's tests run only when `WESTRON_SNAPSHOTS` names the output directory (on the simulator through
 `TEST_RUNNER_WESTRON_SNAPSHOTS`), so `swift test` and `tools/apple/check.sh package` skip them;
