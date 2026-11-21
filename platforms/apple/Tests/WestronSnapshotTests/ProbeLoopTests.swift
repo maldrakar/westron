@@ -118,6 +118,14 @@
                 fresh.font = font
                 fresh.isBezeled = false
                 fresh.isBordered = false
+                var chain: [String] = []
+                var view: NSView? = field
+                for _ in 0..<4 {
+                    guard let current = view else { break }
+                    chain.append("\(String(describing: type(of: current)).prefix(40)) \(current.frame)")
+                    view = current.superview
+                }
+                print("probe-dump:   chain " + chain.joined(separator: " < "))
                 let descriptor = CTFontCopyFontDescriptor(font as CTFont)
                 let attributes = CTFontDescriptorCopyAttributes(descriptor) as NSDictionary
                 print(
@@ -135,6 +143,7 @@
         func loop() async throws {
             let seconds = try #require(probeLoopSeconds)
             NotificationLog.shared.begin()
+            if ProcessInfo.processInfo.environment["WESTRON_PROBE_TRACE"] == "1" { SizeTrace.install() }
             SnapshotRenderer.pinLanguage()
             let matrix = ComponentMatrix.textField
             let groups = [matrix] + matrix.supplements
@@ -156,6 +165,7 @@
                                 let key = group.key(of: picture)
                                 let id = "\(key).\(capture.name)"
                                 await SnapshotRenderer.pause(0)
+                                SizeTrace.lines.removeAll(keepingCapacity: true)
                                 let probe = MatrixSheetProbe()
                                 let began = Date()
                                 let window = try autoreleasepool {
@@ -180,9 +190,15 @@
                                         format: "probe-pic: %@ round %d %@ %.3f s heights [%@] %@",
                                         NotificationLog.shared.stamp(), round, id, Date().timeIntervalSince(began),
                                         heights, NotificationLog.flags()))
+                                if round <= 2, id == ProcessInfo.processInfo.environment["WESTRON_PROBE_TRACE_ID"] {
+                                    for line in SizeTrace.lines { print("probe-trace-normal: " + line) }
+                                }
                                 if let first = baseline[id] {
                                     if first != fields {
                                         deviations += 1
+                                        if deviations <= 12 {
+                                            for line in SizeTrace.lines { print("probe-trace:   " + line) }
+                                        }
                                         Self.dump(
                                             root, window: window,
                                             why: "\(id) round \(round): fields differ from round 1: now [\(heights)], "

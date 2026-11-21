@@ -1,7 +1,6 @@
-# TEMPORARY probe for #99, on the probe branch only: lays out the macOS text-field sheets again and again on freshly
-# booted CI runners, through the minutes in which run 44930354209 saw the system change its accessibility display
-# options (about 464 s after boot), and logs the accessibility state, to catch the +1 pt state. Then it toggles the
-# accessibility display options itself while the loop runs.
+# TEMPORARY probe for #99, on the probe branch only: lays out the macOS text-field sheets again and again on CI
+# runners, in many short processes (the state, when it comes, is decided early in a process and kept, run 44932481160),
+# with a trace of every size AppKit gives a text field, printed for each picture whose fields differ from its first.
 name: Probe 99
 on:
   push:
@@ -21,39 +20,21 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     steps:
       - name: Uptime
-        run: date; uptime; sysctl -n kern.boottime
+        run: date; uptime
       - uses: actions/checkout@v7
-      - name: Runner state
-        run: |
-          mkdir -p .build/probe
-          { date; uptime; sw_vers; defaults read com.apple.universalaccess || true; defaults read -g AppleInterfaceStyle || true;
-            defaults read -g AppleInterfaceStyleSwitchesAutomatically || true; } > .build/probe/runner.txt 2>&1
-          (log stream --style compact --predicate 'subsystem BEGINSWITH "com.apple.Accessibility" OR process == "universalaccessd" OR eventMessage CONTAINS[c] "contrast" OR eventMessage CONTAINS[c] "universalaccess" OR eventMessage CONTAINS "AppleInterface"' > .build/probe/log-stream.txt 2>&1 &)
       - name: Build
         run: swift build --build-tests
-      - name: Loop, layout only (draw on vm 3)
+      - name: Loops in short processes
         timeout-minutes: 15
         run: |
-          date; uptime
-          draw=0; [ "${{ matrix.vm }}" = 3 ] && draw=1
-          WESTRON_PROBE_DRAW=$draw WESTRON_PROBE_LOOP=540 swift test --skip-build --filter ProbeLoopTests > .build/probe/loop.log 2>&1 || true
-          date; uptime
-          grep -E "probe-note: workspace|probe-dump: t|probe: end" .build/probe/loop.log | head -40 || true
-          defaults read com.apple.universalaccess > .build/probe/universalaccess-after.txt 2>&1 || true
-      - name: Loop while toggling the accessibility display options
-        timeout-minutes: 5
-        run: |
-          (
-            for key in increaseContrast reduceTransparency differentiateWithoutColor; do
-              sleep 12; echo "$(date +%T) $key on: $(defaults write com.apple.universalaccess $key -bool true 2>&1; echo $?)"
-              sleep 12; echo "$(date +%T) $key off: $(defaults write com.apple.universalaccess $key -bool false 2>&1; echo $?)"
-            done
-          ) > .build/probe/toggles.txt 2>&1 &
-          WESTRON_PROBE_DRAW=0 WESTRON_PROBE_LOOP=90 swift test --skip-build --filter ProbeLoopTests > .build/probe/toggle-loop.log 2>&1 || true
-          cat .build/probe/toggles.txt
-          grep -E "probe-note: workspace|probe-dump: t|probe: end" .build/probe/toggle-loop.log | head -40 || true
+          mkdir -p .build/probe
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            WESTRON_PROBE_TRACE=1 WESTRON_PROBE_DRAW=0 WESTRON_PROBE_LOOP=50 \
+              swift test --skip-build --filter ProbeLoopTests > ".build/probe/loop-$i.log" 2>&1 || true
+            echo "$i: $(grep 'probe: end' .build/probe/loop-$i.log)"
+          done
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
-          name: probe-loop-${{ matrix.vm }}
+          name: probe-trace-${{ matrix.vm }}
           path: .build/probe
