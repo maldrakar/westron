@@ -226,6 +226,46 @@ struct ComponentMatrixTests {
         #endif
     }
 
+    @Test("a cap of columns to a picture splits a sheet whose cells do not fit side by side; each part is found by key")
+    func columnCap() throws {
+        let matrix = try #require(ComponentMatrix.all.first { $0.component == "button" })
+        let sheet = try #require(matrix.sheets.first { $0.id == "size-l_role-destructive_iconOnly-false" })
+        #expect(matrix.pictures(of: sheet, at: .large, columns: 3).map(\.id) == [sheet.id], "a cap that fits all")
+        let parts = matrix.pictures(of: sheet, at: .large, columns: 2)
+        #expect(parts.map(\.id) == [1, 2].map { "\(sheet.id)_part-\($0)-of-2" })
+        #expect(parts.map(\.columns) == [["primary", "secondary"], ["tertiary"]])
+        #expect(parts.allSatisfy { matrix.rows(of: $0) == matrix.rows(of: sheet) }, "every row in each part")
+        #expect(parts.map(matrix.drawnCount(in:)).reduce(0, +) == matrix.drawnCount(in: sheet))
+        for part in parts {
+            let found = try #require(ComponentMatrix.sheet(key: matrix.key(of: part)))
+            #expect(found.sheet.columns == part.columns && found.sheet.rows == part.rows)
+        }
+        #expect(
+            matrix.pictures(of: sheet, at: .large, columns: 1).map(\.columns) == [
+                ["primary"], ["secondary"], ["tertiary"],
+            ]
+        )
+        #if !os(macOS)
+            // A cap never undoes a text size's own split: at accessibility5 on iOS, a column to a picture.
+            #expect(
+                matrix.pictures(of: sheet, at: .accessibility5, columns: 2).map(\.id)
+                    == matrix.pictures(of: sheet, at: .accessibility5).map(\.id))
+        #endif
+        // Columns go as evenly as they can, so that a part's name, which counts the parts, tells its columns: five of
+        // at most four to a picture go three and two, as of at most three.
+        let columns = ["a", "b", "c", "d", "e"]
+        let wide = ComponentMatrix(
+            component: "fixture", options: [.init("variant", values: columns)], states: [], unbound: [],
+            columns: "variant", platforms: [], excluded: [], advisedAgainst: [],
+            combinations: columns.map { ComponentMatrix.Combination([$0], state: nil) },
+            sheets: [.init("all", fixed: [], columns: columns, rows: [nil])]
+        ) { _ in EmptyView() }
+        let all = try #require(wide.sheets.first)
+        for cap in [3, 4] {
+            #expect(wide.pictures(of: all, at: .large, columns: cap).map(\.columns) == [["a", "b", "c"], ["d", "e"]])
+        }
+    }
+
     @Test("Button's supplement: a label without an icon on the generated axes, kept apart from the contract's matrix")
     func supplement() throws {
         let matrix = try #require(ComponentMatrix.all.first { $0.component == "button" })

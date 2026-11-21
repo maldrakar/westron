@@ -72,6 +72,8 @@ struct SurfaceMatrixCell: View {
         // contract has no states, so the state is always rest.
         let (variant, outlined, _) = values.fields
         SurfaceSample(variant: variant, outlined: outlined)
+            // Its sample text wraps between its short words in the column it is given.
+            .matrixCellTakesOfferedWidth()
     }
 }
 
@@ -120,6 +122,7 @@ extension ComponentMatrix.Supplement {
         keeps: ["outlined": "true"]
     ) {
         SurfaceNesting(variant: SurfaceMatrixValues($0).fields.variant)
+            .matrixCellTakesOfferedWidth()
     }
 }
 

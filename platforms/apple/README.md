@@ -141,8 +141,9 @@ every option's values (a bool as `false` and `true`, an option that is the syste
 included, and for an option whose values are tokens the group's tokens in token order, Text's seventeen roles),
 rest and each state alone, the combinations a constraint of severity `error` leaves out, what each Apple OS draws
 differently (`platforms.apple`), and the sheets. A sheet fixes every option but the variant (or, without one, the first
-option that is not a bool): its values are the columns, rest and the states the rows, at most 3 × 6, so it fits an
-iPhone 17 in portrait and the macOS window. Text, with no states, has six sheets of one row: five of three roles each, and the last of two.
+option that is not a bool): its values are the columns, rest and the states the rows, at most 3 × 6, which fits the
+macOS window and, in most sheets, an iPhone 17 in portrait at the default text size; a sheet whose cells do not fit
+side by side is captured in parts (below, "Text sizes"). Text, with no states, has six sheets of one row: five of three roles each, and the last of two.
 Surface has two sheets of one row, the three kinds with `outlined` false and true; Rule one, both axes. Icon, with no
 states and an option whose values are icons, runs the registry's glyphs down the rows, six to a sheet, and its
 `scale` across: six sheets (spec/conventions.md, "Own components").
@@ -169,6 +170,19 @@ still drives every generated sheet and combination:
   each (`pictures(of:at:)`, `_part-<n>-of-<count>` in the file name), with a short header that says what the part holds.
   The parts are laid out for the default device, iPhone 17 in portrait, which six rows just fit: on another device
   (`--device`), a shorter one above all, the capture may fail its check that every cell is inside the picture there.
+  At every text size a sheet is also split where its cells do not fit side by side: the snapshot test draws the
+  sheet, and when a cell is narrower than its ideal width ("squeezed"), it takes a column fewer to a picture and draws
+  it again, down to one column, and keeps that split for the other themes at that text size
+  (`pictures(of:at:columns:)`, SnapshotMatrixRenderTests `columnsPerPicture`; the columns go as evenly as they can, so
+  a part's name tells its columns and `-WestronMatrixSheet` finds it). The Button contract leaves a width below the
+  label's longest word unsupported: the product provides the room, so a sheet must too. On an iPhone 17 at `large` two
+  sheets need it, Button's `size-l_role-destructive_iconOnly-false` and its supplement's
+  `label-without-icon_size-l_role-destructive_iconOnly-false` (a button of size l with "Delete" and an icon, or with
+  the loading indicator, needs about 122 points of a column's 112), each two parts, primary and secondary, then
+  tertiary. Such a part's header says what it holds and why, and leaves the notes to the review page, as a supplement's
+  sheet with its notes all but fills the screen. A cell that takes the width it is offered by design, running text
+  that wraps between its words (Text's roles, a surface's sample) or a field that fills its row (Text field's cells),
+  is marked with `matrixCellTakesOfferedWidth()` and not checked so.
   macOS has no Dynamic Type: SwiftUI draws a cell the same at every `dynamicTypeSize` there, `-WestronDynamicType`
   included (`ComponentMatrixTests` checks it), so a Mac is captured at `large` alone and its page says why.
 - **Supplementary sheets** show what no contract option sets. A component's catalog code adds a
@@ -212,12 +226,14 @@ at `xSmall` and `accessibility5`. On iOS a window in the app's scene, over the a
 fixed at 2 whatever the screens', is drawn by Core Animation's renderer (`CARenderer`) into a Metal texture.
 `ImageRenderer`, `cacheDisplay` and `CALayer.render(in:)` misdraw system controls, so none of them is used. Core
 Animation is frozen in the sheet's window as before, so a spinner draws one frame. The sheet reports its layout to
-the tests through `MatrixSheetProbe`, an environment value only they set: the frame of its content and of each cell.
+the tests through `MatrixSheetProbe`, an environment value only they set: the frame of its content and of each cell,
+and each cell's ideal width, measured on a hidden copy of the cell behind it, which draws nothing.
 The picture is cut to the content: the window's width, from the top of the sheet (under the status bar's safe area on
 iOS; no status bar or home indicator is drawn) down to its bottom and the reach of the deepest shadow token below it
 (`shadow.dragged`, 56 pt), as far as the window goes; it is opaque RGB. A picture fails by name when a cell lies
-outside the window on either axis ("cut off" on the page), when a cell draws nothing (the drawn cells are counted
-against the matrix), or when four draws give no complete picture: a draw with no frame reported, `drawHierarchy`
+outside the window on either axis ("cut off" on the page), when a cell is drawn narrower than its ideal width even
+one column to a picture ("squeezed", with the cells and their widths in the issue), when a cell draws nothing (the
+drawn cells are counted against the matrix), or when four draws give no complete picture: a draw with no frame reported, `drawHierarchy`
 returning false, or fewer than three colors is taken again with a longer pause, and a retry, or on iOS a draw slower
 than 1.5 s, is taken twice and must agree pixel for pixel (on macOS `CARenderer` draws in the process, with no render
 server to cut a draw short, so a slow draw there is only slow). Between draws, and while a sheet settles, the test gives the
@@ -242,15 +258,15 @@ time into the run). The tests run only when `WESTRON_SNAPSHOTS` names the output
 The script builds the tests incrementally, runs them (`swift test --filter WestronSnapshotTests` on macOS; on iOS one
 `xcodebuild test-without-building -only-testing:CatalogSnapshotTests -testLanguage en -testRegion en_US` on `iPhone
 17` or `$WESTRON_SIM_DEVICE`), and writes to `.build/snapshot-matrix/<platform>/` (`--out` to change it) the PNGs,
-`<component>.<sheet>.<theme>.png` at `large` and `<component>.<sheet>[_part-<n>-of-<count>].light.<text size>.png` at
-the others, the manifest `matrix.json`, `environment.json` and the review page `index.html` (sheets down; across, each
+`<component>.<sheet>[_part-<n>-of-<count>].<theme>.png` at `large` and
+`<component>.<sheet>[_part-<n>-of-<count>].light.<text size>.png` at the others, the manifest `matrix.json`, `environment.json` and the review page `index.html` (sheets down; across, each
 text size with its themes, the parts of a sheet side by side; the supplements in sections of their own; with the
 environment and each picture's size). It prints the images per component, the build and render times and the page's
 path, and fails when a picture failed or is missing. The log, `.build/logs/snapshot-matrix-<platform>.log`, has a
 line per picture with its time, the process's memory and its windows (`snapshot: <file> 0.091 s, 90 MB, 1 windows`),
 and a line with each draw's outcome for a picture that took more than one (`snapshot: <file> draws: #1 blank (1
-color) after 8.02 s; #2 drawn in 0.31 s, the same again in 0.30 s`). Locally (an M4 Pro, macOS 26.7.1, the iPhone 17 simulator on iOS 26.3.1) the 388 iOS images render in
-40 s and the 196 macOS images in 13 s; two renders of one commit were byte-identical. On the CI runner, a 3-core VM,
+color) after 8.02 s; #2 drawn in 0.31 s, the same again in 0.30 s`). Locally (an M4 Pro, macOS 26.7.1, the iPhone 17 simulator on iOS 26.3.1) the 396 iOS images render in
+46 s and the 196 macOS images in 13 s; two renders of one commit were byte-identical. On the CI runner, a 3-core VM,
 the spike of 2026-11-20 measured 0.85 s an iOS image and 1.1 s a macOS one.
 
 **Comparing.** `compare <before> <after>` compares two directories image by image and writes `before/`, `after/`,

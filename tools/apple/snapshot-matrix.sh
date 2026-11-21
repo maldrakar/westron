@@ -13,11 +13,13 @@
 # dark-hc at the default text size, and on iOS in light at xSmall and accessibility5 (macOS has no Dynamic Type); with
 # --component, of the components it names only (repeated or comma-separated). On macOS they run under `swift test` in
 # an offscreen window; on iOS in the catalog app on the simulator (--device, default iPhone 17 or $WESTRON_SIM_DEVICE),
-# as the unit-test bundle CatalogSnapshotTests, built incrementally. The PNGs, named <component>.<sheet>.<theme>.png and
-# <component>.<sheet>[_part-<n>-of-<count>].light.<text size>.png, the manifest matrix.json, environment.json (the
-# environment, below) and the review page index.html go to DIR, by default .build/snapshot-matrix/<platform>/; the
-# script prints the images per component, the time, and the path of index.html last, and fails when a picture failed
-# (a blank render drawn again until it gave up, a sheet that does not fit) or an image is missing. Log:
+# as the unit-test bundle CatalogSnapshotTests, built incrementally. The PNGs, named
+# <component>.<sheet>[_part-<n>-of-<count>].<theme>.png and <component>.<sheet>[_part-<n>-of-<count>].light.<text
+# size>.png (a part where the sheet's cells do not fit side by side, or at accessibility5 on the screen), the manifest
+# matrix.json, environment.json (the environment, below) and the review page index.html go to DIR, by default
+# .build/snapshot-matrix/<platform>/; the script prints the images per component, the time, and the path of index.html
+# last, and fails when a picture failed (a blank render drawn again until it gave up, a sheet that does not fit, a cell
+# squeezed below the width it needs even one column to a picture) or an image is missing. Log:
 # .build/logs/snapshot-matrix-<platform>.log, with each picture's time.
 # The sheets are laid out for the default device, iPhone 17 in portrait: at accessibility5 a part of one column and six
 # rows just fits it, so another --device, a shorter one above all, may fail the check that every cell is inside the
@@ -93,7 +95,7 @@ environment_json() {
 }
 
 # Prints what makes the render in <dir> unfit to check or record, one line each: a picture of the manifest without a
-# result (its render failed), short of cells or cut off, and a PNG the manifest does not name or a named one that is
+# result (its render failed), short of cells, cut off or with cells squeezed below the width they need, and a PNG the manifest does not name or a named one that is
 # not there. Nothing when the render is complete.
 incomplete() {
   local dir="$1"
@@ -101,6 +103,7 @@ incomplete() {
     | if .found == null then "\(.file): no picture (its render failed)"
       elif .found != .cells then "\(.file): \(.found) of \(.cells) cells drew something"
       elif .fits == false then "\(.file): cut off"
+      elif (.squeezed // 0) > 0 then "\(.file): \(.squeezed) cells squeezed below the width they need"
       else empty end' "$dir/matrix.json"
   diff <(jq -r '.. | objects | select(has("file")) | .file' "$dir/matrix.json" | sort) \
     <(find "$dir" -maxdepth 1 -name '*.png' -exec basename {} \; | sort) \
