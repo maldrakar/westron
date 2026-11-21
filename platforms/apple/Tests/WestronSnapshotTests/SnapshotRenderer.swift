@@ -213,6 +213,9 @@ enum SnapshotRenderer {
     > {
         await pause(0)
         let probe = MatrixSheetProbe()
+        #if os(macOS)
+            FieldProbe.beforeShow()
+        #endif
         let window = try autoreleasepool {
             try show(try view(key: key, capture: capture, probe: probe), dark: capture.theme.isDark)
         }
@@ -220,7 +223,7 @@ enum SnapshotRenderer {
         #if os(macOS)
             FieldProbe.force(window, capture: capture)
         #endif
-        await pause(settle)
+        if !FieldProbe.modes.contains("noPause") { await pause(settle) }
         #if os(macOS)
             FieldProbe.forceAfterSettle(window, capture: capture)
         #endif

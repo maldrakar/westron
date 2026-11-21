@@ -49,8 +49,33 @@
             observers.append(
                 NSWorkspace.shared.notificationCenter.addObserver(forName: nil, object: nil, queue: .main) { note in
                     let line = "probe-note: workspace \(note.name.rawValue)"
-                    MainActor.assumeIsolated { print("\(NotificationLog.shared.stamp()) " + line) }
+                    MainActor.assumeIsolated {
+                        print("\(NotificationLog.shared.stamp()) " + line + " now " + NotificationLog.flags())
+                        print("probe-note:   universalaccess " + NotificationLog.universalAccess())
+                    }
                 })
+            print("probe-note: at start " + NotificationLog.flags())
+            print("probe-note:   universalaccess " + NotificationLog.universalAccess())
+            let screens = NSScreen.screens.map { "\($0.localizedName) \($0.frame) scale \($0.backingScaleFactor)" }
+            print("probe-note:   screens \(screens)")
+        }
+
+        static func flags() -> String {
+            let w = NSWorkspace.shared
+            return
+                "IC\(w.accessibilityDisplayShouldIncreaseContrast ? 1 : 0) RT\(w.accessibilityDisplayShouldReduceTransparency ? 1 : 0) "
+                + "DWC\(w.accessibilityDisplayShouldDifferentiateWithoutColor ? 1 : 0) RM\(w.accessibilityDisplayShouldReduceMotion ? 1 : 0) "
+                + "INV\(w.accessibilityDisplayShouldInvertColors ? 1 : 0) app \(NSApplication.shared.effectiveAppearance.name.rawValue) "
+                + "screens \(NSScreen.screens.count)"
+        }
+
+        static func universalAccess() -> String {
+            let values =
+                CFPreferencesCopyMultiple(
+                    nil, "com.apple.universalaccess" as CFString, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+                as NSDictionary as? [String: Any] ?? [:]
+            return values.sorted { $0.key < $1.key }.map { "\($0.key)=\(String(describing: $0.value).replacingOccurrences(of: "\n", with: " ").prefix(60))" }
+                .joined(separator: " ")
         }
     }
 
@@ -139,16 +164,22 @@
                                         dark: capture.theme.isDark)
                                 }
                                 await SnapshotRenderer.pause(SnapshotRenderer.settle(attempt: 0))
-                                let drawn = try autoreleasepool { try SnapshotRenderer.draw(window, probe: probe) }
+                                let drawn: Result<SnapshotDraw, SnapshotMiss>
+                                if ProcessInfo.processInfo.environment["WESTRON_PROBE_DRAW"] == "0" {
+                                    window.contentView!.layoutSubtreeIfNeeded()
+                                    drawn = .failure(.drawFailed)
+                                } else {
+                                    drawn = try autoreleasepool { try SnapshotRenderer.draw(window, probe: probe) }
+                                }
                                 let root = window.contentView!
                                 let fields = Self.measure(root)
                                 pictures += 1
                                 let heights = fields.map { String(format: "%g", $0.height) }.joined(separator: ",")
                                 print(
                                     String(
-                                        format: "probe-pic: %@ round %d %@ %.3f s heights [%@]",
+                                        format: "probe-pic: %@ round %d %@ %.3f s heights [%@] %@",
                                         NotificationLog.shared.stamp(), round, id, Date().timeIntervalSince(began),
-                                        heights))
+                                        heights, NotificationLog.flags()))
                                 if let first = baseline[id] {
                                     if first != fields {
                                         deviations += 1

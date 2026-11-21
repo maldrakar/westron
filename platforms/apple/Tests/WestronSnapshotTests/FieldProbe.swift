@@ -16,8 +16,56 @@
             ((view as? NSTextField).map { [$0] } ?? []) + view.subviews.flatMap { fields($0) }
         }
 
+        static let spareFont = URL(fileURLWithPath: "/System/Library/Fonts/Supplemental/Arial.ttf")
+
+        static func fontChange() {
+            var error: Unmanaged<CFError>?
+            let registered = CTFontManagerRegisterFontsForURL(spareFont as CFURL, .process, &error)
+            let unregistered = CTFontManagerUnregisterFontsForURL(spareFont as CFURL, .process, &error)
+            print("probe: font change: registered \(registered), unregistered \(unregistered)")
+        }
+
+        static func a11yNote() {
+            NSWorkspace.shared.notificationCenter.post(
+                name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: NSWorkspace.shared)
+        }
+
+        static func colorsNote() {
+            NotificationCenter.default.post(name: NSColor.systemColorsDidChangeNotification, object: nil)
+        }
+
+        static func beforeShow() {
+            if modes.contains("fontChangeBefore") { fontChange() }
+            if modes.contains("a11yBefore") { a11yNote() }
+            if modes.contains("colorsBefore") { colorsNote() }
+        }
+
         static func force(_ window: NSWindow, capture: ComponentMatrix.Capture) {
             let modes = modes
+            if modes.contains("fontChangeAfterShow") { fontChange() }
+            if modes.contains("a11yAfterShow") { a11yNote() }
+            if modes.contains("colorsAfterShow") { colorsNote() }
+            if modes.contains("methods"), let field = fields(window.contentView!).first {
+                var cls: AnyClass? = type(of: field)
+                while let c = cls, c != NSTextField.self {
+                    var count: UInt32 = 0
+                    let list = class_copyMethodList(c, &count)
+                    let names = (0..<Int(count)).map { NSStringFromSelector(method_getName(list![$0])) }
+                    print("probe: methods of \(c): \(names.sorted().joined(separator: " "))")
+                    if let cell = field.cell {
+                        var cellCount: UInt32 = 0
+                        let cellList = class_copyMethodList(type(of: cell), &cellCount)
+                        let cellNames = (0..<Int(cellCount)).map { NSStringFromSelector(method_getName(cellList![$0])) }
+                        print("probe: methods of cell \(type(of: cell)): \(cellNames.sorted().joined(separator: " "))")
+                    }
+                    cls = class_getSuperclass(c)
+                }
+                exit(0)
+            }
+            if modes.contains("reportEarly"), let root = window.contentView {
+                print("probe: early report")
+                for line in report(root) { print("probe: early  " + line) }
+            }
             let hc = capture.theme == .lightHighContrast || capture.theme == .darkHighContrast
             if modes.contains("hcAppearance"), hc {
                 window.appearance = NSAppearance(

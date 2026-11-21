@@ -1,5 +1,7 @@
-# TEMPORARY probe for #99, on the probe branch only: renders the macOS text-field sheets on the CI runner with the
-# field report and logs what the process is told (notifications) and what fontd does, to catch the +1 pt state.
+# TEMPORARY probe for #99, on the probe branch only: lays out the macOS text-field sheets again and again on freshly
+# booted CI runners, through the minutes in which run 44930354209 saw the system change its accessibility display
+# options (about 464 s after boot), and logs the accessibility state, to catch the +1 pt state. Then it toggles the
+# accessibility display options itself while the loop runs.
 name: Probe 99
 on:
   push:
@@ -8,59 +10,50 @@ permissions:
   contents: read
 jobs:
   loop:
-    name: Loop of the text-field sheets
+    name: Loop ${{ matrix.vm }}
     runs-on: xcode-27
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        vm: [1, 2, 3]
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     steps:
+      - name: Uptime
+        run: date; uptime; sysctl -n kern.boottime
       - uses: actions/checkout@v7
       - name: Runner state
         run: |
           mkdir -p .build/probe
-          { date; uptime; sw_vers; sysctl -n machdep.cpu.brand_string; system_profiler SPDisplaysDataType;
-            defaults read -g; defaults read com.apple.universalaccess || true; } > .build/probe/runner.txt 2>&1
-          (log stream --style compact --predicate 'process == "fontd" OR subsystem BEGINSWITH "com.apple.FontServices" OR subsystem CONTAINS "CoreText" OR eventMessage CONTAINS[c] "font"' > .build/probe/log-stream.txt 2>&1 &)
+          { date; uptime; sw_vers; defaults read com.apple.universalaccess || true; defaults read -g AppleInterfaceStyle || true;
+            defaults read -g AppleInterfaceStyleSwitchesAutomatically || true; } > .build/probe/runner.txt 2>&1
+          (log stream --style compact --predicate 'subsystem BEGINSWITH "com.apple.Accessibility" OR process == "universalaccessd" OR eventMessage CONTAINS[c] "contrast" OR eventMessage CONTAINS[c] "universalaccess" OR eventMessage CONTAINS "AppleInterface"' > .build/probe/log-stream.txt 2>&1 &)
       - name: Build
         run: swift build --build-tests
-      - name: Loop
-        timeout-minutes: 20
+      - name: Loop, layout only (draw on vm 3)
+        timeout-minutes: 15
         run: |
           date; uptime
-          WESTRON_PROBE_LOOP=840 swift test --skip-build --filter ProbeLoopTests > .build/probe/loop.log 2>&1 || true
+          draw=0; [ "${{ matrix.vm }}" = 3 ] && draw=1
+          WESTRON_PROBE_DRAW=$draw WESTRON_PROBE_LOOP=540 swift test --skip-build --filter ProbeLoopTests > .build/probe/loop.log 2>&1 || true
           date; uptime
-          grep -c "probe-pic" .build/probe/loop.log || true
-          grep -E "probe-dump|differ|probe: end" .build/probe/loop.log | head -80 || true
+          grep -E "probe-note: workspace|probe-dump: t|probe: end" .build/probe/loop.log | head -40 || true
+          defaults read com.apple.universalaccess > .build/probe/universalaccess-after.txt 2>&1 || true
+      - name: Loop while toggling the accessibility display options
+        timeout-minutes: 5
+        run: |
+          (
+            for key in increaseContrast reduceTransparency differentiateWithoutColor; do
+              sleep 12; echo "$(date +%T) $key on: $(defaults write com.apple.universalaccess $key -bool true 2>&1; echo $?)"
+              sleep 12; echo "$(date +%T) $key off: $(defaults write com.apple.universalaccess $key -bool false 2>&1; echo $?)"
+            done
+          ) > .build/probe/toggles.txt 2>&1 &
+          WESTRON_PROBE_DRAW=0 WESTRON_PROBE_LOOP=90 swift test --skip-build --filter ProbeLoopTests > .build/probe/toggle-loop.log 2>&1 || true
+          cat .build/probe/toggles.txt
+          grep -E "probe-note: workspace|probe-dump: t|probe: end" .build/probe/toggle-loop.log | head -40 || true
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
-          name: probe-loop
-          path: .build/probe
-  matrix:
-    name: Full macOS render, three times
-    runs-on: xcode-27
-    timeout-minutes: 40
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
-    steps:
-      - uses: actions/checkout@v7
-      - name: Runner state
-        run: |
-          mkdir -p .build/probe
-          { date; uptime; sw_vers; system_profiler SPDisplaysDataType; defaults read -g; } > .build/probe/runner.txt 2>&1
-          (log stream --style compact --predicate 'process == "fontd" OR subsystem BEGINSWITH "com.apple.FontServices" OR subsystem CONTAINS "CoreText" OR eventMessage CONTAINS[c] "font"' > .build/probe/log-stream.txt 2>&1 &)
-      - name: Render three times
-        timeout-minutes: 30
-        run: |
-          for i in 1 2 3; do
-            date; uptime
-            WESTRON_FIELD_REPORT=1 tools/apple/snapshot-matrix.sh macos --out ".build/probe/render-$i" || true
-            cp .build/logs/snapshot-matrix-macos.log ".build/probe/render-$i.log"
-            find ".build/probe/render-$i" -name '*.png' ! -name 'text-field.*' -delete
-          done
-          for i in 2 3; do tools/apple/snapshot-matrix.sh compare .build/probe/render-1 ".build/probe/render-$i" | tail -12 || true; done
-      - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() }}
-        with:
-          name: probe-matrix
+          name: probe-loop-${{ matrix.vm }}
           path: .build/probe
