@@ -331,5 +331,16 @@ Date: 2026-11-14. Status: accepted.
     same pixels. Either failure logs what could identify the state: the metrics and languages, the capture's theme and
     the app's appearance, the accessibility display options, the key window and first responder, and the time into the
     run.
+    Neither noticed the second occurrence, on `main` (run 44917113978: one text-field sheet in light-hc): a fresh cell
+    measured 16 pt at the start and the end, and the pictures drawn again agreed with their first draws. A probe on
+    the runner (run 44932481160) then caught the state: SwiftUI laid out the AppKit field under a `TextField` 17 pt
+    high while the field's own `intrinsicContentSize` and `cell.cellSize` said 16 (on another runner, 16 for a field in
+    Onest whose line is 17), and the process stayed in it. So the laid-out height disagrees with AppKit's own by 1 pt;
+    the cause is still unknown. A third check names exactly that: after each picture's layout and before its draw,
+    every AppKit text field's laid-out height is compared with its cell's size at its width and, for a field that does
+    not wrap, its `intrinsicContentSize`; off by more than half a pixel, the picture fails as "the render was in the
+    state of #99", with each field's sizes, font and text, and is still compared as usual. Over a normal macOS render
+    every field agrees. The two earlier checks stay: the pin and the fresh cell guard a proven dependency on the
+    languages, and the drawing again a state that ends within the run.
   The details (the tolerance of one level, the cut to the sheet, the exit statuses, the gate on an environment variable)
   were chosen in the implementation, pending the owner's confirmation.
