@@ -449,7 +449,9 @@ enum SnapshotRenderer {
         /// and Core Text read them when they make a font: the line height of a text style follows them (the system
         /// field's line of body text is 16 pt with English, 17.3 with Vietnamese or Arabic among the languages, 18.3
         /// with Thai, 21 with Burmese; measured with Xcode 27.1 on macOS 26.7), and a fresh font after a change of the
-        /// machine's preferences takes the new ones. The posted notification makes Core Text read them now.
+        /// machine's preferences takes the new ones. The posted notification makes Core Text read them now. This
+        /// removes a proven dependency; it does not explain #99, whose fields grew by 1 pt, not by a language's 1.3 or
+        /// more, and whose cause is not identified.
         static func pinLanguage() {
             var arguments = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
             arguments["AppleLanguages"] = pinnedLanguages
@@ -460,8 +462,9 @@ enum SnapshotRenderer {
 
         /// What AppKit's text field, the system field under SwiftUI's TextField, measures one line of body text and an
         /// empty field with a prompt at now, with the process's languages: a picture is comparable only with the
-        /// metrics the run began with (#98: in run 44885247356 every system field of seven pictures in a row was 1 pt
-        /// taller than in every other run, and nothing else in them changed).
+        /// metrics the run began with. In run 44885247356 (#99, on pull request #98) every system field of seven
+        /// pictures in a row was 1 pt taller than in every other run and nothing else in them changed; whether a fresh
+        /// cell measured as those fields did is not known, so this names that state only if it shows here too.
         static var textMetrics: String? {
             let font = NSFont.preferredFont(forTextStyle: .body)
             let line = NSTextFieldCell(textCell: "Groceries")
@@ -476,6 +479,30 @@ enum SnapshotRenderer {
         /// Whether the run draws a few pictures a second time at its end and requires the same pixels
         /// (SnapshotMatrixRenderTests, "Reproducible within the run").
         static let checksReproducible = true
+
+        /// Prints, as one `snapshot: state` line, what could identify the process's state on the runner when a check of
+        /// reproducibility fails (#99): the text metrics and languages, the appearance, the accessibility display
+        /// options, the key window and its first responder, the windows, the time into the run and the memory. It
+        /// reads them only; the pictures do not see it. macOS has no Bold Text setting to read.
+        static func printState(at moment: String, since start: Date) {
+            let app = NSApplication.shared
+            let workspace = NSWorkspace.shared
+            func name(_ object: AnyObject?) -> String { object.map { String(describing: type(of: $0)) } ?? "none" }
+            let parts = [
+                textMetrics ?? "no text metrics",
+                "the app's appearance \(app.effectiveAppearance.name.rawValue), drawing in "
+                    + NSAppearance.currentDrawing().name.rawValue,
+                "increase contrast \(workspace.accessibilityDisplayShouldIncreaseContrast), reduce transparency "
+                    + "\(workspace.accessibilityDisplayShouldReduceTransparency), differentiate without color "
+                    + "\(workspace.accessibilityDisplayShouldDifferentiateWithoutColor), reduce motion "
+                    + "\(workspace.accessibilityDisplayShouldReduceMotion), invert colors "
+                    + "\(workspace.accessibilityDisplayShouldInvertColors)",
+                "key window \(name(app.keyWindow)), its first responder \(name(app.keyWindow?.firstResponder)), "
+                    + "main window \(name(app.mainWindow)), \(app.windows.count) windows",
+                String(format: "%.1f s into the run, %d MB", Date().timeIntervalSince(start), footprint),
+            ]
+            print("snapshot: state at \(moment): " + parts.joined(separator: "; "))
+        }
     #else
         static func show(_ view: some View, dark: Bool) throws -> Never { throw SnapshotRenderError.noHost }
         static func hide(_ window: Never) {}
@@ -492,6 +519,7 @@ enum SnapshotRenderer {
         static func pinLanguage() {}
         static var textMetrics: String? { nil }
         static let checksReproducible = false
+        static func printState(at moment: String, since start: Date) {}
     #endif
 
     /// The process's physical memory footprint in megabytes, as the system counts it against its limit.

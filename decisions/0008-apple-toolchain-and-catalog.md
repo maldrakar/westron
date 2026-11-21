@@ -312,18 +312,21 @@ Date: 2026-11-14. Status: accepted.
     review surface of the second gate (decisions/0005) is the job's report of what changed against the references, and
     the full page of the render, an artifact of every run. The UI test `SnapshotMatrixTests` and the capture's retry,
     stall and deadline machinery are removed, and so is `merge`.
-  - **Reproducible within a run** (#98). A pull request that changed no compiled code failed the check on macOS (run
-    44885247356): seven text-field pictures in a row, in dark-hc, had every AppKit text field (the system field under
-    SwiftUI's TextField) one point taller for a line, and nothing else in them or in the other 189 changed; the run
-    before and after it, and every other run of the same code, matched. It ended within one picture, so it was the
-    process's state on the runner at that time, not the sheets, their order or the theme; it was not reproduced
-    locally, and its cause is not known. What is known: under `swift test` the process took the Mac's languages, which
+  - **Reproducible within a run** (#99). Pull request #98, which changed no compiled code, failed the check on macOS
+    (run 44885247356): seven text-field pictures in a row, in dark-hc, had every AppKit text field (the system field
+    under SwiftUI's TextField) one point taller for a line, and nothing else in them or in the other 189 changed; every
+    other run of the same code matched. It ended within one picture, so it was the process's state on the runner at
+    that time, not the sheets, their order or the theme. It was not reproduced locally, and its cause is not
+    identified; nothing below fixes it. What is known: under `swift test` the process took the Mac's languages, which
     the in-process render had stopped pinning (the UI test's launch arguments did), and AppKit measures a text style's
     line by them (16 pt with English, 17.3, 18.3 or 21 with some others among the languages), taking them anew after a
-    change of the machine's preferences. So on macOS the test pins `AppleLanguages` `en` and `AppleLocale` `en_US` in
-    its argument domain, as xcodebuild's `-testLanguage en -testRegion en_US` does on iOS; a picture fails, named, when
-    a field's line measures otherwise than at the start of the run; and each component's first picture in each capture
-    is drawn again at the end and must give the same pixels, so that a process that draws otherwise fails as such
-    instead of reading as a change to the pull request.
+    change of the machine's preferences. That dependency is removed: on macOS the test pins `AppleLanguages` `en` and
+    `AppleLocale` `en_US` in its argument domain, as xcodebuild's `-testLanguage en -testRegion en_US` does on iOS. It
+    does not account for run 44885247356, whose fields grew by 1 pt, not the 1.3 pt or more a language gives. Two
+    checks are there to name the state when it occurs again, instead of letting it read as a change to a pull
+    request: a picture fails, named, when an AppKit field's line measures otherwise than at the start of the run; and
+    each component's first picture in each capture is drawn again at the end and must give the same pixels. Either
+    failure logs what could identify the state: the metrics and languages, the appearance, the accessibility display
+    options, the key window and first responder, and the time into the run.
   The details (the tolerance of one level, the cut to the sheet, the exit statuses, the gate on an environment variable)
   were chosen in the implementation, pending the owner's confirmation.

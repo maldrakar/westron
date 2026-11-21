@@ -13,10 +13,13 @@
 // Each picture's line in the log has its time, the process's memory and its windows, so that a leak shows as growth;
 // a picture that took more than one draw, or a check draw, has a line with each draw's outcome.
 //
-// On macOS the run is held to its own reproducibility (#98): the process's languages and locale are pinned, as
-// xcodebuild pins them on iOS; a picture fails when AppKit measures text otherwise than at the start of the run
-// (`SnapshotRenderer.textMetrics`); and each component's first picture in each capture is drawn again at the end and
-// must give the same pixels (`checkReproducible`).
+// On macOS one CI run drew seven text-field pictures otherwise than every other run of the same code (#99, seen on
+// pull request #98, run 44885247356), and why is not identified. The process's languages and locale are pinned, as
+// xcodebuild pins them on iOS, which removes a proven dependency of AppKit's text metrics but does not explain that
+// run. Two checks name such a state if it comes again, rather than prevent it: a picture fails when AppKit measures
+// text otherwise than at the start of the run (`SnapshotRenderer.textMetrics`), and each component's first picture in
+// each capture is drawn again at the end and must give the same pixels (`checkReproducible`). Either failure prints
+// the process's state at that moment (`SnapshotRenderer.state(since:)`, a `snapshot: state` line).
 
 import Foundation
 import SwiftUI
@@ -103,6 +106,7 @@ struct SnapshotMatrixRenderTests {
                                     "drawn while the process measured text otherwise than at the start of the run, "
                                     + "so it is not comparable: \(now), at the start \(metrics)"
                                 Issue.record("\(file): \(why)")
+                                SnapshotRenderer.printState(at: file, since: start)
                             }
                             do {
                                 let rendered = try await SnapshotRenderer.render(
@@ -148,10 +152,11 @@ struct SnapshotMatrixRenderTests {
         }
         let total = Date().timeIntervalSince(start)
         if SnapshotRenderer.checksReproducible {
-            await checkReproducible(again, in: output)
+            await checkReproducible(again, in: output, since: start)
         }
         if let metrics, let now = SnapshotRenderer.textMetrics {
             print("snapshot: text metrics at the end: \(now == metrics ? "the same" : now)")
+            if now != metrics { SnapshotRenderer.printState(at: "the end", since: start) }
         }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -168,12 +173,14 @@ struct SnapshotMatrixRenderTests {
 
     /// Reproducible within the run: draws the pictures again, after every other, and fails by name each one that
     /// differs from what it drew the first time by more than a level in a channel (the tolerance of
-    /// `tools/apple/snapshot-matrix.sh compare`). A check against the references holds only if the same code draws
-    /// the same pictures; in run 44885247356 (#98) seven pictures of one run differed from every other run's with no
-    /// change in the code, so a picture of a process in that state fails here, named as such, rather than reading as
-    /// a change to the pull request.
+    /// `tools/apple/snapshot-matrix.sh compare`), and prints the process's state then. A check against the references
+    /// holds only if the same code draws the same pictures; in run 44885247356 (#99) seven pictures of one run
+    /// differed from every other run's with no change in the code, for a reason not identified. This does not prevent
+    /// that: when a drawn-again picture falls in such a state, or its first draw did, it fails here, named as such,
+    /// rather than reading as a change to the pull request.
     func checkReproducible(
-        _ pictures: [(file: String, key: String, capture: ComponentMatrix.Capture)], in output: URL
+        _ pictures: [(file: String, key: String, capture: ComponentMatrix.Capture)], in output: URL,
+        since start: Date
     ) async {
         let began = Date()
         var differing: [String] = []
@@ -192,6 +199,7 @@ struct SnapshotMatrixRenderTests {
                 }
                 differing.append(picture.file)
                 Issue.record("\(picture.file): not reproducible within the run: \(why)")
+                SnapshotRenderer.printState(at: picture.file + ", drawn again", since: start)
             } catch {
                 Issue.record("\(picture.file): drawn again: \(error)")
             }
