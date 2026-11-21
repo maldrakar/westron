@@ -1,5 +1,5 @@
 # westron's Button contract (#22), approved by the owner on 2026-11-16; the macOS hit area decided by the owner on
-# 2026-11-18 (#75): decisions/0001-button-contract.md records the owner's answers and the bindings the owner confirmed
+# 2026-11-18 (#75) and the iOS one on 2026-11-21 (#102): decisions/0001-button-contract.md records the owner's answers and the bindings the owner confirmed
 # on top of them. Its look revised on 2026-11-20 (#85), the owner's choice from prototype renders, pending the owner's
 # review of this contract and its snapshot matrix together (decisions/0003-the-look-of-2026-11-20.md).
 id: button
@@ -46,7 +46,8 @@ options:
       The height is size.control.s, m or l: 24, 32 and 40 with a pointer (macOS), 28, 36 and 50 on iOS and iPadOS,
       and 44, the only size, on watchOS. It is a minimum, so the button grows with its text. The hit area is at least
       size.target.minimum, the platform's recommended target (chapter 08), also where the drawn height is smaller,
-      except where the contract's platforms block says otherwise.
+      except where the contract's platforms block says otherwise (on macOS the drawn button; on iOS the system's touch
+      tolerance, which a control nearby shares).
   role:
     type: enum
     values: [default, destructive]
@@ -152,9 +153,14 @@ platforms:
       description: >-
         Hover only with a pointer, on iPad; an iPhone never enters it. The hit area is the system's touch tolerance
         around the drawn button, which westron does not grow: measured on iOS 26.3 it reached 16 pt past a 32 pt
-        button (#23), and the catalog's ButtonBehaviorTests taps 8 pt below the 28 pt size s, the edge of
+        button (#23), and with no other control near it reaches 15 to 19 pt past a button of size s or m on iOS 26.3
+        and 27.0 alike (#102). The catalog's ButtonBehaviorTests taps 8 pt below the 28 pt size s, the edge of
         size.target.minimum, 44 pt, and 4 pt below the 36 pt size m, the edge of the same target; both reach the
-        button.
+        button. Another control closer than about 16 pt shares the gap with the button, each taking about half of
+        it: with a Toggle row 12 pt below a size s button, the reach below it was 8 pt on iOS 26.3 and 7 on 27.0,
+        so the test's tap failed on 27.0 until the catalog moved the row away. So a size s button
+        reaches the full target only where no other control is within about 16 pt of it (the owner's decision of
+        2026-11-21, decisions/0001).
     macos:
       keyboardIntents: [defaultAction, cancelAction]
       description: >-

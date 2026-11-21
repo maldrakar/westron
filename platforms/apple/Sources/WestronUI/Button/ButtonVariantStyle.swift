@@ -180,9 +180,11 @@ private struct ButtonSurface<Label: View>: View {
         // The hit area (chapter 08: at least the platform's recommended target, except where the contract's platform
         // block says otherwise) is never grown past what is drawn, measured in CatalogUITests/ButtonBehaviorTests.swift
         // (#23) and, on macOS, ButtonHitAreaTests:
-        // - iOS: the system's touch tolerance reached about 16 pt past a 32 pt button (#23), beyond the 44 pt of
-        //   size.target.minimum, and the catalog's test taps 8 pt past a 28 pt one, the target's edge; it gives a
-        //   tap between two buttons to the closer one. A content shape grown to the target gave every tap in the
+        // - iOS: the system's touch tolerance reached about 16 pt past a 32 pt button (#23), and 15 to 19 pt past
+        //   one of size s or m on iOS 26.3 and 27.0 alike (#102), beyond the 44 pt of size.target.minimum; the
+        //   catalog's test taps 8 pt past a 28 pt one, the target's edge, with no other control near. It gives a tap
+        //   between two buttons to the closer one, so a control closer than about 16 pt takes part of the button's
+        //   tolerance (the contract's `platforms.apple.ios`, the owner's decision of 2026-11-21). A content shape grown to the target gave every tap in the
         //   overlap to the later sibling, even one closer to the first, so westron adds none. A tap inside an unfilled
         //   button, off its label, reaches it without one.
         // - watchOS: the only size, m, is drawn at the target.

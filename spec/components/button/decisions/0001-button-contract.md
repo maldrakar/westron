@@ -65,8 +65,8 @@ and the parity lint (#21) are proved on it before a second component starts. The
 ### Sizes and shape
 
 - **Chosen: `s`, `m`, `l`, default `m`.** The heights are `size.control.s|m|l`: 24, 32 and 40 with a pointer, 32,
-  44 and 52 on touch. The hit area is at least the platform's recommended target (chapter 08), except on macOS
-  (below).
+  44 and 52 on touch. The hit area is at least the platform's recommended target (chapter 08), except on macOS and,
+  next to another control, on iOS (below).
 - **The hit area on macOS** (decided 2026-11-18, after the Apple implementation, #75).
   - Size s is drawn 24 pt tall, below macOS's recommended 28. On macOS a click outside the system button's frame
     misses, whatever the content shape, so reaching the target means growing the frame (measured in the catalog's
@@ -83,6 +83,26 @@ and the parity lint (#21) are proved on it before a second component starts. The
     clicks in the review of #69); the style cannot see its neighbors. A layout frame of 28 pt breaks the alignment
     that size s exists for, in toolbars and table rows. A pointer is precise, and the system's own small controls
     take clicks in their frame only.
+- **The hit area on iOS** (decided 2026-11-21, after the behaviour tests failed on CI's iOS 27.0 simulator, #102).
+  - Size s is drawn 28 pt tall, below the 44 pt target; size m, 36. On iOS westron does not grow the hit area and
+    relies on the system's touch tolerance (`ButtonVariantStyle.swift`). The catalog's `ButtonBehaviorTests` tap 8 pt
+    below size s "Add", the target's edge, passed on iOS 26.3 and failed every time on iOS 27.0 (run 44888969666).
+  - Measured with taps at 1 pt steps around the buttons of that catalog page, same layout and frames on both
+    versions: with no other control near, the tolerance reaches 15 to 19 pt past a button of size s or m on iOS 26.3
+    and 27.0 alike, past the target. Next to another control the system shares the gap between the two: with the
+    page's Toggle row 12 pt below "Add", the reach below it was 8 pt on 26.3 (8.33 missed) and 7 on 27.0; a button
+    20 pt above it left 10, one 16 pt away 7. The test's tap sat on the boundary with the Toggle row, which moved by
+    under a point on 27.0: it measured the arbitration with a neighbor, not the contract.
+  - Considered: growing the hit area in the style to the target on iOS; keeping the system's tolerance and fixing
+    the catalog page and the test.
+  - **Chosen: the system's tolerance stays the hit area on iOS; westron still does not grow it.** The catalog page
+    keeps other controls clear of the test's tap ("Add" is the last button, the Toggle row above the buttons), and
+    the test asserts that no other control is within 16 pt of the tap. The contract's `platforms.apple.ios` records
+    the iOS 27.0 measurement and that another control closer than about 16 pt takes part of the tolerance, so a size s
+    button reaches the full target only where no control is that close.
+  - Why: the tolerance did not shrink on iOS 27, and it already reaches past the target where nothing else is near. A
+    hit area grown in the style overlaps a neighbor and gives every tap in the overlap to the later sibling, even one
+    closer to the first (#23), where the system gives it to the closer one.
 - **Chosen: `radius.control` everywhere,** icon-only included.
 - **Narrower than the longest word** (decided 2026-11-17, after the Apple implementation, #23).
   - Considered, side by side in the catalog at sizes m and l, at the default text size and at accessibility3: a

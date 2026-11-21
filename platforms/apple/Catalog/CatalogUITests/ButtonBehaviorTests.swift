@@ -208,15 +208,21 @@ final class ButtonBehaviorTests: XCTestCase {
     /// by platform.
     ///
     /// iOS: a tap 8 pt below what is drawn, at the target's edge, must reach it. The hit area is the system's touch
-    /// tolerance, which westron does not grow (ButtonVariantStyle.swift): measured on iOS 26.3 it reached 16 pt below
-    /// a 32 pt button, and the test fails if the platform ever covers less than the target.
+    /// tolerance, which westron does not grow (ButtonVariantStyle.swift), and the test fails if the platform ever covers
+    /// less than the target. With no other control near, the tolerance reached 15 to 19 pt past a button of size s or m on both
+    /// iOS 26.3 and 27.0 (#102). A control closer than about 16 pt shares the gap with the button, each taking about
+    /// half: with the page's Toggle row 12 pt below "Add", the reach below it was 8 pt on iOS 26.3 and 7 on 27.0, so
+    /// this tap sat on the boundary between the two and failed on 27.0. The page now keeps every other control clear of
+    /// the tap ("Add" is the last button, the Toggle row above the buttons), so the test measures the system's
+    /// tolerance, not the arbitration with a neighbor, and the first assertion guards that: no other control within
+    /// 16 pt of the tap.
     ///
     /// macOS: the hit area is the drawn button, 24 pt, not the target (the contract's `platforms.apple.macos`, the
     /// owner's decision of 2026-11-18, #75). A click 1.5 pt inside its bottom edge, off the label of this secondary
     /// button, reaches it; a click 1.5 pt below it, inside what the target would cover, and one 3 pt below, past the
     /// target, miss. Every variant, size and icon-only is clicked the same way in ButtonHitAreaTests.
     @MainActor
-    func testSmallButtonHitArea() {
+    func testSmallButtonHitArea() throws {
         let small = button(ID.small)
         func pressBelow(_ below: CGFloat) {
             press(
@@ -236,6 +242,22 @@ final class ButtonBehaviorTests: XCTestCase {
             XCTAssertEqual(accepted, 1, "a click 3 pt below the drawn button reached it")
         #else
             XCTAssertEqual(small.frame.height, 28, accuracy: 0.5)
+            // The precondition: no other control within 16 pt of the tap, or the tap measures the neighbor's share.
+            let tap = CGPoint(x: small.frame.midX, y: small.frame.maxY + 8)
+            let controls: Set<XCUIElement.ElementType> = [
+                .button, .switch, .toggle, .textField, .secureTextField, .slider, .stepper, .link, .segmentedControl,
+            ]
+            func near(_ element: XCUIElementSnapshot) -> [String] {
+                let frame = element.frame
+                let dx = max(frame.minX - tap.x, 0, tap.x - frame.maxX)
+                let dy = max(frame.minY - tap.y, 0, tap.y - frame.maxY)
+                let isNear =
+                    controls.contains(element.elementType) && element.identifier != ID.small
+                    && (dx * dx + dy * dy).squareRoot() < 16
+                return (isNear ? ["\(element.identifier) \(element.frame)"] : []) + element.children.flatMap(near)
+            }
+            let crowding = try near(app.snapshot())
+            XCTAssertEqual(crowding, [], "a control within 16 pt of the tap 8 pt below \"Add\" shares its tolerance")
             pressBelow(8)
             XCTAssertEqual(accepted, 1, "a tap 8 pt below the drawn button, at the target's edge, did not reach it")
         #endif
