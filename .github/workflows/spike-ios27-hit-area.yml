@@ -1,0 +1,50 @@
+name: Spike — iOS 27 hit area (#102)
+# SPIKE for #102, not for merging: runs the hit-area probe (CatalogUITests/ButtonHitAreaProbe) on the iOS simulator of
+# a CI Mac, the only place with the iOS 27 runtime, and prints its lines in the step's output. Built and run as the
+# behaviour job of accessibility-audit.yml runs its tests (`tools/apple/check.sh probe-102 <test>`), one leg per test
+# method: locally a tap of the probe takes about 2 s, so on the runner, at about 3 times that, the whole probe (about
+# 320 taps) would not fit one job after a build of 6–17 min. Each leg: one sweep of about 92 taps, about 10 min.
+on:
+  push:
+    branches: [spike/ios27-hit-area]
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: Hit-area probe (${{ matrix.test }})
+    runs-on: xcode-27
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - test1ExactSmallButtonTap
+          - test2SmallButtonSweep
+          - test3MediumButtonSweep
+          - test4IconOnlySmallButtonSweep
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - name: Simulators and runtimes
+        run: |
+          xcrun simctl list runtimes
+          xcrun simctl list devices available | grep -E "iPhone 17( |$)" || true
+      - name: Probe
+        # Stops before the job's timeout, so the steps below still run; the log is written as the probe goes.
+        timeout-minutes: 34
+        run: tools/apple/check.sh probe-102 ${{ matrix.test }}
+      - name: Probe lines
+        if: always()
+        run: |
+          grep -hE "^probe(-[a-z]+)?: " .build/logs/probe-102-${{ matrix.test }}.log || echo "no probe lines"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: probe-102-${{ matrix.test }}
+          path: |
+            .build/logs/probe-102-*.log
+            .build/xcode/results/probe-102-*.xcresult
+          if-no-files-found: ignore

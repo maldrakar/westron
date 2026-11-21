@@ -693,6 +693,28 @@ behavior() {
   echo "behavior: passed after a retry; the first run's log: $log"
 }
 
+# SPIKE for #102, not for merging: the hit-area probe (CatalogUITests/ButtonHitAreaProbe) on the iOS simulator, built
+# and run as `behavior ios` runs its tests, with no retry; prints the probe's lines from the log. With test methods
+# named (`probe-102 test2SmallButtonSweep`), only those, into a log and a result named after them.
+probe_102() {
+  local destination udid="" status=0 test only=() name=probe-102
+  for test in "$@"; do
+    only+=("-only-testing:CatalogUITests/ButtonHitAreaProbe/$test")
+    name+="-$test"
+  done
+  [ ${#only[@]} -gt 0 ] || only=("-only-testing:CatalogUITests/ButtonHitAreaProbe")
+  local log=".build/logs/$name.log" results=".build/xcode/results/$name.xcresult"
+  mkdir -p .build/logs .build/xcode/results
+  ui_test_destination ios || return 1
+  echo "== probe-102: $destination ${*:-all}"
+  ui_test_build "$destination" .build/logs/probe-102-build.log "probe-102" ios || return 1
+  ui_test_run test-without-building "$log" "$results" "$destination" "$udid" "${only[@]}" || status=$?
+  grep -E "^probe(-[a-z]+)?: " "$log" || echo "check.sh: probe-102: no probe lines in $log" >&2
+  grep -E ": error: |Test Case .* (passed|failed)|\*\* TEST" "$log" | grep -v "\[MT\]" || true
+  [ "$status" -eq 0 ] || echo "check.sh: probe-102: xcodebuild failed ($status), log: $log, result: $results" >&2
+  return "$status"
+}
+
 format() {
   swift format lint --strict --recursive --parallel "${swift_sources[@]}"
 }
@@ -708,6 +730,7 @@ case "${1:-}" in
   catalog) catalog ;;
   a11y) shift; a11y "$@" ;;
   behavior) shift; behavior "$@" ;;
+  probe-102) shift; probe_102 "$@" ;;
   format) format ;;
   fix-format) fix_format ;;
   all) format; package; package_ios; platforms; catalog ;;
