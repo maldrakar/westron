@@ -336,7 +336,8 @@ enum SnapshotRenderer {
         /// A borderless window with the view as its content, never ordered in, laid out.
         static func show(_ view: some View, dark: Bool) throws -> NSWindow {
             // Before the first field is laid out: SwiftUI's line height of a field is keyed by its font's address (#99).
-            MeasuredFonts.keep()
+            // PROBE ONLY: WESTRON_PROBE_NO_KEEP=1 leaves the fonts unkept, to see the state.
+            if ProcessInfo.processInfo.environment["WESTRON_PROBE_NO_KEEP"] != "1" { MeasuredFonts.keep() }
             _ = NSApplication.shared
             let size = CatalogScene.windowSize
             let hosting = NSHostingView(rootView: view)

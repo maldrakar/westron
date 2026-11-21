@@ -1,0 +1,86 @@
+# TEMPORARY probe for #99, on the probe branch only (second probe): on fresh macOS runners,
+# 1. the text-field sheets laid out again and again in one long process WITHOUT the fix, with a trace of SwiftUI's
+#    line-height lookups from the first layout on, to catch the natural state and see which font's line it took;
+# 2. the forcing test without the fix (expected to fail with fields 17 pt high) and with it (expected to pass);
+# 3. the whole macOS render WITH the fix, checked against the references.
+name: Probe 99 cache
+on:
+  push:
+    branches: [probe/snapshot-99-cache]
+permissions:
+  contents: read
+jobs:
+  probe:
+    name: Probe ${{ matrix.vm }}
+    runs-on: xcode-27
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        vm: [1, 2, 3, 4]
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - name: Uptime
+        run: date; uptime; sw_vers; sysctl -n hw.ncpu hw.memsize
+      - uses: actions/checkout@v7
+      - name: Build
+        run: swift build --build-tests
+      - name: Natural loop without the fix, traced
+        timeout-minutes: 12
+        run: |
+          mkdir -p .build/probe
+          date; uptime
+          WESTRON_PROBE_NO_KEEP=1 WESTRON_PROBE_LOOP=480 \
+            swift test --skip-build --filter ProbeLoopTests > .build/probe/loop.log 2>&1 || true
+          grep -E "probe: |probe-dev" .build/probe/loop.log | head -40 || true
+      - name: Forcing test without the fix (expected to fail)
+        timeout-minutes: 5
+        run: |
+          WESTRON_FONT_CHURN_UNFIXED=1 WESTRON_SNAPSHOTS=$PWD/.build/font-churn \
+            swift test --skip-build --filter fieldsKeepTheirLine > .build/probe/churn-unfixed.log 2>&1 || true
+          grep -E "font churn|Test run" .build/probe/churn-unfixed.log || true
+      - name: Forcing test with the fix (expected to pass)
+        timeout-minutes: 5
+        run: |
+          status=0
+          WESTRON_SNAPSHOTS=$PWD/.build/font-churn \
+            swift test --skip-build --filter fieldsKeepTheirLine > .build/probe/churn-fixed.log 2>&1 || status=$?
+          grep -E "font churn|Test run" .build/probe/churn-fixed.log || true
+          echo "exit $status" | tee -a .build/probe/churn-fixed.log
+      - name: Render (macOS), with the fix
+        timeout-minutes: 15
+        run: tools/apple/snapshot-matrix.sh macos || echo "render exit $?"
+      - name: Reference object ids
+        if: ${{ !cancelled() }}
+        run: |
+          git lfs install --local
+          git lfs ls-files --long --include 'platforms/apple/Snapshots/**' --exclude '' | cut -d' ' -f1 | sort \
+            > .build/snapshot-references.lfs-ids
+      - uses: actions/cache/restore@v6
+        if: ${{ !cancelled() }}
+        with:
+          path: .git/lfs
+          key: snapshot-references-${{ hashFiles('.build/snapshot-references.lfs-ids') }}
+          restore-keys: snapshot-references-
+      - name: References from Git LFS (macOS)
+        if: ${{ !cancelled() }}
+        run: git lfs pull --include 'platforms/apple/Snapshots/macos/**' --exclude ''
+      - name: Check against the references (macOS)
+        if: ${{ !cancelled() }}
+        run: |
+          status=0
+          tools/apple/snapshot-matrix.sh check macos --from .build/snapshot-matrix/macos > .build/probe/check.log 2>&1 \
+            || status=$?
+          tail -20 .build/probe/check.log
+          echo "check exit $status" | tee -a .build/probe/check.log
+          grep -E "snapshot: (font churn|drawn again|text metrics|[0-9]+ images)" .build/logs/*.log | tail -10 || true
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: probe-cache-${{ matrix.vm }}
+          path: |
+            .build/probe
+            .build/logs
+            .build/snapshot-matrix/check-macos
+          if-no-files-found: warn
