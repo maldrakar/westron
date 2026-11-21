@@ -7,15 +7,51 @@
 # could not fix the failure and must explain the reason to the human. Exit code 2 returns the failed check and the tail
 # of its output to the agent.
 #
+# --branch [<base>] (default base: main) is the same selection for work that is already committed, as the
+# orchestrator's test gate runs it (.claude/test-command) in an implementer's worktree before it hands back. It works
+# in the git checkout of the current directory, not in CLAUDE_PROJECT_DIR (the gate's points at the main checkout).
+# Affected means everything since the merge base of HEAD with <base>, committed or not, and new files; a renamed
+# file counts under both names. A missing base or merge base fails, and so does a missing Xcode. A failure fails
+# every time (exit 1): there is no "unchanged since the last failure" release. A success is remembered by its own
+# fingerprint (HEAD, the merge base, the uncommitted changes and new files), apart from the Stop hook's.
+#
 # WESTRON_STOP_CHECKS_DRY_RUN=1 prints the checks it would run, one per line, and exits 0 without running them or
-# writing the fingerprint.
+# writing the fingerprint, in either mode.
 set -uo pipefail
 
-root="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
-cd "$root" || exit 0
-cat > /dev/null # the input JSON is not needed: a repeat without edits is recognized by the fingerprint
+mode=stop
+base=main
+case "$#:${1:-}" in
+  0:) ;;
+  1:--branch) mode=branch ;;
+  2:--branch) mode=branch base="$2" ;;
+  *)
+    echo "usage: stop-checks.sh [--branch [<base>]]" >&2
+    exit 64
+    ;;
+esac
 
-changed="$(git -c core.quotePath=false status --porcelain --untracked-files=all | cut -c4- | sed 's/.* -> //')"
+if [ "$mode" = branch ]; then
+  fail() {
+    echo "stop-checks --branch: $1" >&2
+    exit 1
+  }
+  root="$(git rev-parse --show-toplevel 2> /dev/null)" || fail "$PWD is not in a git checkout"
+  cd "$root" || fail "cannot enter $root"
+  git rev-parse --verify --quiet "$base^{commit}" > /dev/null || fail "the base ref '$base' does not exist in $root"
+  merge_base="$(git merge-base HEAD "$base")" || fail "HEAD and '$base' have no merge base in $root"
+  tracked="$(git -c core.quotePath=false diff --name-only --no-renames "$merge_base" --)" ||
+    fail "git could not list the changes since $merge_base in $root"
+  untracked="$(git -c core.quotePath=false ls-files --others --exclude-standard)" ||
+    fail "git could not list the new files in $root"
+  changed="$(printf '%s\n%s\n' "$tracked" "$untracked" | grep -v '^$' | sort -u)"
+else
+  root="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
+  cd "$root" || exit 0
+  cat > /dev/null # the input JSON is not needed: a repeat without edits is recognized by the fingerprint
+
+  changed="$(git -c core.quotePath=false status --porcelain --untracked-files=all | cut -c4- | sed 's/.* -> //')"
+fi
 [ -n "$changed" ] || exit 0
 
 has() { grep -qE "$1" <<< "$changed"; }
@@ -98,6 +134,42 @@ fi
 
 if [ -n "${WESTRON_STOP_CHECKS_DRY_RUN:-}" ]; then
   printf '%s\n' "${checks[@]}"
+  exit 0
+fi
+
+if [ "$mode" = branch ]; then
+  (source tools/apple/xcode-env.sh) 2> /dev/null ||
+    fail "Xcode $(cat .xcode-version) not found, so the checks cannot run: ${checks[*]}"
+
+  mkdir -p .build/agent
+  fingerprint="$( {
+    echo "branch"
+    printf '%s\n' "${checks[@]}"
+    git rev-parse HEAD
+    echo "$merge_base"
+    git diff HEAD --no-ext-diff --binary
+    git ls-files --others --exclude-standard -z | xargs -0 shasum 2> /dev/null
+  } | shasum | cut -d' ' -f1)"
+  passed=".build/agent/branch-checks.passed"
+  if [ -f "$passed" ] && [ "$(cat "$passed")" = "$fingerprint" ]; then
+    echo "stop-checks --branch: passed before with these changes: ${checks[*]}"
+    exit 0
+  fi
+
+  for check in "${checks[@]}"; do
+    log=".build/agent/branch-check.log"
+    echo "stop-checks --branch: $check"
+    if ! bash -c "$check" > "$log" 2>&1; then
+      {
+        echo "Check failed: $check"
+        grep -v "\[MT\]" "$log" | tail -40
+        echo "Changes since $base ($(git rev-parse --short "$merge_base")) in $root. Fix it and run again."
+      } >&2
+      exit 1
+    fi
+  done
+
+  echo "$fingerprint" > "$passed"
   exit 0
 fi
 
