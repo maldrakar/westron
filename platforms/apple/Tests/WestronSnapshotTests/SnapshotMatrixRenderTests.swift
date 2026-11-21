@@ -16,7 +16,8 @@
 // a picture that took more than one draw, or a check draw, has a line with each draw's outcome.
 //
 // On macOS one CI run drew seven text-field pictures otherwise than every other run of the same code (#99, seen on
-// pull request #98, run 44885247356), and why is not identified. The process's languages and locale are pinned, as
+// pull request #98, run 44885247356): SwiftUI took a field's line height from another font that had been at its font
+// object's address, which the render now prevents (`MeasuredFonts`). The process's languages and locale are pinned, as
 // xcodebuild pins them on iOS, which removes a proven dependency of AppKit's text metrics but does not explain that
 // run; the languages before the pin are logged. Two checks name such a state if it comes again, rather than prevent
 // it: a picture fails when a fresh AppKit field cell measures text otherwise than at the start of the run
