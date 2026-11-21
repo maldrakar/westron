@@ -23,8 +23,8 @@
 //   them (`FieldHeights`); a picture with a field off it fails as "the render was in the state of #99", with each
 //   field's sizes, font and text. Its summary (`snapshot: text fields' laid-out heights`) counts the run's pictures
 //   and, apart, those drawn again at the end, which it follows; after it come the text metrics at the end and the
-//   count of images. This is the check that names the state seen on the runner; the picture is still written and
-//   compared as usual;
+//   count of images. It is in the log and in tools/apple/snapshot-matrix.sh's output, so in the CI job's too. This is
+//   the check that names the state seen on the runner; the picture is still written and compared as usual;
 // - the process's languages and locale are pinned, as xcodebuild pins them on iOS, which removes a proven dependency
 //   of AppKit's text metrics, and a picture fails when a fresh AppKit field cell measures text otherwise than at the
 //   start of the run (`SnapshotRenderer.textMetrics`): a change of the process's text metrics, not the state of #99,

@@ -276,7 +276,8 @@ the run's 196 (one-line, empty with a prompt, `SecureField`, multi-line of one a
 in the 4 text-field pictures among the 28 drawn again at the end, which go through the check too. The log gives both
 counts, apart, in one line (`snapshot: text fields' laid-out heights against AppKit's (#99)`), after the pictures
 drawn again (`snapshot: drawn again at the end`) and before the text metrics at the end and the count of images that
-closes the log. An `NSTextView` is not checked (the
+closes the log; the script prints that line too, so it is in the output of the CI job `snapshots`, where the log is
+not. An `NSTextView` is not checked (the
 matrix has none), nor a multi-line field past its `lineLimit`, which would be laid out shorter than its lines by
 design (the matrix has none either; one added would fail the check until exempted). Its unit tests,
 `FieldHeightsTests`, run in `swift test`. **The language.** The test pins the process's language and locale
