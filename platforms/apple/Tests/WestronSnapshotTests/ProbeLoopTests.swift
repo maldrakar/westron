@@ -129,7 +129,7 @@
                 let descriptor = CTFontCopyFontDescriptor(font as CTFont)
                 let attributes = CTFontDescriptorCopyAttributes(descriptor) as NSDictionary
                 print(
-                    "probe-dump:   field \"\(field.stringValue.prefix(20))\" now: intrinsic \(field.intrinsicContentSize) "
+                    "probe-dump:   field \(Unmanaged.passUnretained(field).toOpaque()) cell \(field.cell.map { String(describing: Unmanaged.passUnretained($0).toOpaque()) } ?? "nil") \"\(field.stringValue.prefix(20))\" now: intrinsic \(field.intrinsicContentSize) "
                         + "cellSize \(field.cell?.cellSize ?? .zero) needsLayout \(field.needsLayout) "
                         + "fresh field with its font: intrinsic \(fresh.intrinsicContentSize); font object "
                         + "\(Unmanaged.passUnretained(font).toOpaque()) descriptor \(attributes.description.replacingOccurrences(of: "\n", with: " ").prefix(600))"

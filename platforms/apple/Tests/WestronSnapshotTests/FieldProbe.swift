@@ -34,7 +34,37 @@
             NotificationCenter.default.post(name: NSColor.systemColorsDidChangeNotification, object: nil)
         }
 
+        static var fakeReduceTransparency = false
+        static var fakeIncreaseContrast = false
+        static var swizzled = false
+
+        /// Makes the process believe the accessibility display options are as set here.
+        static func swizzleA11y() {
+            guard !swizzled else { return }
+            swizzled = true
+            for name in ["accessibilityDisplayShouldReduceTransparency", "accessibilityDisplayShouldIncreaseContrast"] {
+                let selector = NSSelectorFromString(name)
+                guard let method = class_getInstanceMethod(NSWorkspace.self, selector) else { continue }
+                let contrast = name.contains("Contrast")
+                let block: @convention(block) (AnyObject) -> Bool = { _ in
+                    MainActor.assumeIsolated { contrast ? FieldProbe.fakeIncreaseContrast : FieldProbe.fakeReduceTransparency }
+                }
+                method_setImplementation(method, imp_implementationWithBlock(block))
+            }
+        }
+
+        static var pictureCount = 0
+
         static func beforeShow() {
+            pictureCount += 1
+            if modes.contains("rt") || modes.contains("ic") || modes.contains("rtFlip") || modes.contains("icFlip") {
+                swizzleA11y()
+                fakeReduceTransparency = modes.contains("rt")
+                fakeIncreaseContrast = modes.contains("ic")
+                if modes.contains("rtFlip") { fakeReduceTransparency = pictureCount % 2 == 0 }
+                if modes.contains("icFlip") { fakeIncreaseContrast = pictureCount % 2 == 0 }
+                if modes.contains("rtFlip") || modes.contains("icFlip") || pictureCount == 1 { a11yNote() }
+            }
             if modes.contains("fontChangeBefore") { fontChange() }
             if modes.contains("a11yBefore") { a11yNote() }
             if modes.contains("colorsBefore") { colorsNote() }

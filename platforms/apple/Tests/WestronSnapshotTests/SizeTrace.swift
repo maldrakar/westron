@@ -9,19 +9,10 @@
         static var lines: [String] = []
         static var installed = false
 
+        /// The object's class and address only: reading a field's font or text here would change what is retained
+        /// and when, and so the state this traces.
         static func describe(_ object: AnyObject) -> String {
-            var font: NSFont?
-            var text = ""
-            if let field = object as? NSTextField {
-                font = field.font
-                text = field.stringValue
-            } else if let cell = object as? NSCell {
-                font = cell.font
-                text = cell.stringValue
-            }
-            let pointer = font.map { String(describing: Unmanaged.passUnretained($0).toOpaque()) } ?? "nil"
-            return "\(type(of: object)) \(Unmanaged.passUnretained(object).toOpaque()) font \(font?.fontName ?? "nil") "
-                + "\(font?.pointSize ?? 0) @\(pointer) \"\(text.prefix(14))\""
+            "\(type(of: object)) \(Unmanaged.passUnretained(object).toOpaque())"
         }
 
         static func record(_ line: String) {
