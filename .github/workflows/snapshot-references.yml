@@ -128,6 +128,21 @@ jobs:
             tools/apple/snapshot-matrix.sh check "$platform" --from ".build/snapshot-matrix/$platform" \
               --out ".build/snapshot-matrix/recorded-$platform"
           done
+      - name: Why nothing was recorded
+        # A render that failed, or a picture without a result, stops the recording before it writes anything:
+        # `record` refuses an incomplete render, and the steps after a failed one do not run.
+        if: failure()
+        run: |
+          {
+            echo "Nothing was recorded: a step failed before the references were written."
+            grep -h -E '^↳ |^snapshot-matrix: .*(failed|incomplete)' .build/logs/snapshot-matrix-*.log 2> /dev/null \
+              | sed 's/^↳ /  /' | head -20 || true
+          } | tee .build/not-recorded.txt
+          echo "::error title=Snapshot references not recorded::$(head -c 900 .build/not-recorded.txt | tr '\n' ' ')"
+      - name: Keep only this commit's references in the LFS cache
+        # As in ci.yml's `snapshots`: with lfs.fetchexclude emptied, or prune deletes the current objects too.
+        if: ${{ !cancelled() }}
+        run: git -c lfs.fetchexclude= lfs prune || echo "::warning::git lfs prune failed; the LFS cache keeps older references too."
       - name: Tell the pull request
         if: ${{ github.event_name == 'pull_request' && !cancelled() }}
         env:
@@ -141,7 +156,12 @@ jobs:
           elif [ "$COMMITTED" = false ]; then
             body="The snapshot references already match this branch's render; nothing was committed ([run]($run))."
           else
-            body="Recording the snapshot references failed ([run]($run)); the label is removed, add it again to retry."
+            reasons="$(sed 1d .build/not-recorded.txt 2> /dev/null | head -12)"
+            body="Nothing was recorded: a step failed before the references were written ([run]($run)). ${reasons:+The pictures or steps that failed:
+          \`\`\`
+          $reasons
+          \`\`\`
+          }The label is removed; fix the cause and add it again."
           fi
           gh pr comment "$PR" --body "$body"
       - uses: actions/upload-artifact@v7

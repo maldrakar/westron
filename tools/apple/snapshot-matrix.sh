@@ -69,7 +69,9 @@ references_of() { echo "$root/platforms/apple/Snapshots/$1"; }
 
 # Prints, as JSON, what besides the code changes a render of <platform> (with the simulator <udid> on iOS): the Mac's
 # macOS and processor (Core Animation draws on its GPU, the simulator's too), Xcode, and on iOS the simulator's runtime
-# and device type. The render adds the scale and the number of images.
+# and device type. The render adds the scale and the number of images. On a GitHub runner it also names the runner
+# image and its version (`image`), for the reader only: an image's weekly version changes no picture by itself, so it
+# is not compared.
 environment_json() {
   local platform="$1" udid="${2:-}" xcode runtime="" device="" ids
   xcode="$(xcodebuild -version | awk 'NR == 1 { v = $2 } NR == 2 { b = $3 } END { print v " (" b ")" }')"
@@ -84,9 +86,26 @@ environment_json() {
   fi
   jq -n --arg platform "$platform" --arg macos "$(sw_vers -productVersion) ($(sw_vers -buildVersion))" \
     --arg machine "$(sysctl -n machdep.cpu.brand_string)" --arg xcode "$xcode" --arg runtime "$runtime" \
-    --arg device "$device" '
+    --arg device "$device" --arg image "${ImageOS:+$ImageOS ${ImageVersion:-}}" '
     {platform: $platform, macos: $macos, machine: $machine, xcode: $xcode}
-    + (if $runtime != "" then {runtime: $runtime, device: $device} else {} end)'
+    + (if $runtime != "" then {runtime: $runtime, device: $device} else {} end)
+    + (if $image != "" then {image: $image} else {} end)'
+}
+
+# Prints what makes the render in <dir> unfit to check or record, one line each: a picture of the manifest without a
+# result (its render failed), short of cells or cut off, and a PNG the manifest does not name or a named one that is
+# not there. Nothing when the render is complete.
+incomplete() {
+  local dir="$1"
+  jq -r '.components[].groups[].sheets[].images[][]
+    | if .found == null then "\(.file): no picture (its render failed)"
+      elif .found != .cells then "\(.file): \(.found) of \(.cells) cells drew something"
+      elif .fits == false then "\(.file): cut off"
+      else empty end' "$dir/matrix.json"
+  diff <(jq -r '.. | objects | select(has("file")) | .file' "$dir/matrix.json" | sort) \
+    <(find "$dir" -maxdepth 1 -name '*.png' -exec basename {} \; | sort) \
+    | sed -n 's/^< \(.*\)/\1: named in the manifest, no PNG/p; s/^> \(.*\)/\1: a PNG the manifest does not name/p' \
+    || true
 }
 
 # Prints the keys whose values differ between two environment files, one per line, `key: <a> / <b>`: neither the
@@ -169,7 +188,7 @@ render() {
   # The test's failures, each with its message, and its summary line.
   awk '/\[MT\]/ { next }
     /✘ .*recorded an issue/ { if ((getline line) > 0 && line ~ /^↳ /) print line; next }
-    /came back blank|^snapshot: [0-9]+ images|: error: |\*\* TEST/ { print }' "$log" >&2
+    / draws: |^snapshot: [0-9]+ images|: error: |\*\* TEST/ { print }' "$log" >&2
   if [ ! -f "$out/matrix.json" ]; then
     echo "snapshot-matrix: the test wrote no manifest (status $test_status), log: $log" >&2
     render_status=1
@@ -275,6 +294,15 @@ case "${1:-}" in
     if [ "$(jq -r .platform "$render_dir/environment.json")" != "$platform" ]; then
       echo "snapshot-matrix: $render_dir is not a render of $platform" >&2
       exit 2
+    fi
+    # A render with a failed picture is neither checked nor recorded: a missing PNG would read as a removed sheet, and
+    # record would delete its reference.
+    problems="$(incomplete "$render_dir")"
+    if [ -n "$problems" ]; then
+      echo "snapshot-matrix: $command: the render in $render_dir is incomplete, so nothing is" \
+        "$([ "$command" = check ] && echo compared || echo recorded):" >&2
+      while IFS= read -r line; do echo "  $line"; done <<< "$problems" >&2
+      exit 1
     fi
 
     if [ "$command" = check ]; then
