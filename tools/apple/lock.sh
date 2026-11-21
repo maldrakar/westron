@@ -31,10 +31,11 @@ westron_lock_dir() {
 }
 
 # Prints when process <pid> started, with no spaces, or `-` when ps cannot tell (a container without ps): with the pid
-# it tells the holder from a later process that got the same pid.
+# it tells the holder from a later process that got the same pid. In the C locale and UTC: ps writes the time in the
+# caller's locale and time zone, and a waiter started from another terminal must read the holder's time as it wrote it.
 westron_lock_started() {
   local started
-  started="$(ps -o lstart= -p "$1" 2> /dev/null | tr -d ' ')" || true
+  started="$(LC_ALL=C TZ=UTC0 ps -o lstart= -p "$1" 2> /dev/null | tr -d ' ')" || true
   echo "${started:--}"
 }
 
@@ -69,6 +70,14 @@ westron_lock_take_over() {
   fi
 }
 
+# Releases the lock <key> before the script exits, when it holds it itself (not when a script that ran it does): for a
+# target that is done with the resource while the script goes on, as `check.sh all` after package-ios.
+westron_unlock() {
+  local lock
+  lock="$(westron_lock_dir)/$1" || return 1
+  [ "$(readlink "$lock" 2> /dev/null | cut -d ' ' -f 1)" != "$$" ] || rm -f "$lock"
+}
+
 # Removes the locks this script took (westron_lock), on its exit.
 westron_lock_release() {
   local lock
@@ -80,12 +89,14 @@ westron_lock_release() {
 
 # Takes the lock <key> on <what> (named in the messages) for the rest of the script, waiting while another process
 # holds it. The lock is a symbolic link whose target names the holder: creating one is atomic, so of two scripts that
-# start together one gets it, and it is read in one call. It goes on the script's exit, normal, failed or interrupted:
-# an EXIT trap, added to the one the script has (one set after this would replace it, and the lock would then go when
-# the next script finds its holder dead). Nothing goes when a process is killed with SIGKILL: its lock is taken over.
+# start together one gets it, and it is read in one call. It goes on the script's exit, normal or failed, and on
+# SIGTERM or an INT the script traps: an EXIT trap, added to the one the script has (one set after this would replace
+# it). Where nothing runs that trap, the lock stays behind its dead holder and the next script takes it over at once:
+# a process killed with SIGKILL, and Ctrl-C while bash 3.2 waits for a foreground command, of which it dies without
+# running the EXIT trap.
 westron_lock() {
   local key="$1" what="$2" name="${0##*/}" limit="${WESTRON_LOCK_TIMEOUT:-5400}" dir lock mine target pid since
-  local command process_started started=$SECONDS waited="" trap_exit
+  local command process_started started=$SECONDS waited="" trap_exit error vanished=0
   if ! [[ "$limit" =~ ^[0-9]+$ ]]; then
     echo "$name: WESTRON_LOCK_TIMEOUT=\"$limit\": expected whole seconds" >&2
     return 2
@@ -96,7 +107,7 @@ westron_lock() {
   command="${command:-$0}"
   mine="$$ $(date +%s) $(westron_lock_started $$) ${command:0:400} (in $PWD)"
   while :; do
-    if ln -sn "$mine" "$lock" 2> /dev/null; then
+    if error="$(ln -sn "$mine" "$lock" 2>&1)"; then
       westron_locks_taken+=("$lock")
       export WESTRON_LOCK_HOLDERS="${WESTRON_LOCK_HOLDERS:+$WESTRON_LOCK_HOLDERS }$$"
       if [ "${westron_lock_trapped:-}" != "$$" ]; then
@@ -115,8 +126,17 @@ westron_lock_release' EXIT
       fi
       return 0
     fi
-    # Gone between the two calls: its holder has just released it.
-    target="$(readlink "$lock" 2> /dev/null)" || continue
+    # No lock to read: its holder has just released it, between the two calls, and the next try takes it; when that
+    # happens three times running, ln fails for another reason (a folder it cannot write to).
+    if ! target="$(readlink "$lock" 2> /dev/null)"; then
+      vanished=$((vanished + 1))
+      if [ "$vanished" -ge 3 ]; then
+        echo "$name: cannot take the lock on $what: $error" >&2
+        return 1
+      fi
+      continue
+    fi
+    vanished=0
     pid="${target%% *}"
     if ! westron_lock_alive "$target"; then
       echo "$name: the lock on $what was left by pid $pid, which no longer runs; taking it over" >&2

@@ -62,6 +62,8 @@ package_ios() {
   xcodebuild -scheme Westron-Package -destination "id=$udid" -derivedDataPath .build/xcode/package \
     -collect-test-diagnostics never test > "$log" 2>&1 || status=$?
   stop_test_daemon "$udid"
+  # Done with the simulator: `all` goes on to platforms and catalog, which need none.
+  westron_unlock "simulator-$udid"
   # The failures, each issue with the first line under it (its message), and the totals of each test target.
   awk '/\[MT\]/ { next }
     /✘ .*recorded an issue/ { print; if ((getline line) > 0 && line ~ /^↳ /) print line; next }
@@ -142,8 +144,9 @@ ui_test_build() {
 }
 
 # Takes the lock of the UI tests' destination (tools/apple/lock.sh), the simulator <udid> or, with an empty one, the
-# Mac's screen, after the build, which needs neither, and before the test run's watchdog and time budget, which a wait
-# would use up. Sets ui_test_waited to the seconds it waited.
+# Mac's screen, after the build, which needs neither, and before behavior's watchdog starts, which a wait would trip.
+# Sets ui_test_waited to the seconds it waited: a11y moves the start of its retry budget by them. behavior's
+# WESTRON_BEHAVIOR_DEADLINE still counts the wait; only CI sets it, and nothing waits there.
 ui_test_lock() {
   local before=$SECONDS
   if [ -n "$1" ]; then westron_lock_simulator "$1"; else westron_lock_screen; fi || return 1

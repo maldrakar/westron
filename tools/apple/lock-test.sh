@@ -7,8 +7,10 @@
 #
 # Cases: two holders at once run one after the other, the second saying whom it waits for; a lock whose holder was
 # killed with SIGKILL is taken over at once; a script that holds the lock, and the scripts it runs, take it again
-# without waiting; a wait past WESTRON_LOCK_TIMEOUT fails with a message; the lock goes on a normal exit, beside the
-# script's own EXIT trap, and on SIGTERM.
+# without waiting; a wait past WESTRON_LOCK_TIMEOUT fails with a message; a waiter in another locale and time zone
+# than the holder's waits too, not taking the lock over; the lock goes on a normal exit, beside the script's own EXIT
+# trap, on SIGTERM, and on westron_unlock while its script goes on; a lock that cannot be created fails at once with
+# ln's message.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -136,7 +138,9 @@ else
 fi
 
 echo "== a wait past WESTRON_LOCK_TIMEOUT"
-"$BASH" -c "$load"'trap "kill \$sleeper" EXIT; westron_lock test "the test resource"; touch "$1"
+# The holder in the C locale, three hours west of UTC (a POSIX TZ, which needs no time zone database), for the case
+# after this one.
+LC_ALL=C TZ=ABC+3 "$BASH" -c "$load"'trap "kill \$sleeper" EXIT; westron_lock test "the test resource"; touch "$1"
   sleep 30 & sleeper=$!; wait' holder "$work/holder.locked" 2> "$work/holder.err" &
 holder=$!
 background+=("$holder")
@@ -154,10 +158,58 @@ else
   fail "the wait did not end at the limit with a message (status $status)"
 fi
 
+echo "== a waiter in another locale and time zone than the holder's"
+# ps writes a process's start in the caller's locale and time zone; the lock must compare it in fixed ones. Russian if
+# the system has it (macOS does; a Linux container may not, and then the time zone alone differs).
+# The list is read first: `grep -q` would end `locale -a` early, and pipefail would fail the pipe.
+foreign_locale="$(locale -a 2> /dev/null || true)"
+foreign_locale="$(grep -ix "ru_RU.utf-\{0,1\}8" <<< "$foreign_locale" | head -1 || true)"
+foreign_locale="${foreign_locale:-C}"
+status=0
+LC_ALL="$foreign_locale" TZ=XYZ-5:45 WESTRON_LOCK_TIMEOUT=1 \
+  run foreigner 'westron_lock test "the test resource" && echo "foreigner: took it"' \
+  > "$work/foreigner.out" 2> "$work/foreigner.err" || status=$?
+show "$work/foreigner.err"
+if [ "$status" -ne 0 ] && [ ! -s "$work/foreigner.out" ] && ! grep -q "no longer runs" "$work/foreigner.err" \
+  && grep -q "^foreigner: waiting for the test resource: pid $holder" "$work/foreigner.err"; then
+  ok "under LC_ALL=$foreign_locale TZ=XYZ-5:45 it waited for the holder in LC_ALL=C TZ=ABC+3"
+else
+  fail "a waiter in another locale or time zone took the lock of a live holder over (status $status)"
+fi
+
 echo "== a holder stopped with SIGTERM"
 kill -TERM "$holder"
 wait "$holder" 2> /dev/null || true
 if free; then ok "the lock went with it"; else fail "the lock stayed after SIGTERM"; fi
+
+echo "== westron_unlock while the script goes on"
+run unlocker 'westron_lock test "the test resource"; westron_unlock test
+  WESTRON_LOCK_HOLDERS= WESTRON_LOCK_TIMEOUT=0 "$BASH" -c "$1"'"'"'westron_lock test "the test resource" \
+    && echo "stranger: took it while the unlocker ran"'"'"' stranger' "$load" > "$work/unlock.out" 2> "$work/unlock.err" \
+  || true
+show "$work/unlock.out"
+show "$work/unlock.err"
+if grep -q "stranger: took it" "$work/unlock.out" && [ ! -s "$work/unlock.err" ] && free; then
+  ok "another script took the lock at once"
+else
+  fail "the lock stayed after westron_unlock"
+fi
+
+echo "== a lock that cannot be created"
+# A name past the longest a file system takes: ln fails with something else than "File exists", for root too (CI runs
+# as root in its container, where a folder's mode would not stop it).
+long="$(printf 'x%.0s' $(seq 1 300))"
+status=0
+started=$SECONDS
+WESTRON_LOCK_TIMEOUT=2 run unwritable "westron_lock $long \"the long resource\" && echo \"unwritable: took it\"" \
+  > "$work/unwritable.out" 2> "$work/unwritable.err" || status=$?
+cut -c 1-160 "$work/unwritable.err" | sed 's/^/    /'
+if [ "$status" -eq 1 ] && [ ! -s "$work/unwritable.out" ] && [ $((SECONDS - started)) -lt 2 ] \
+  && grep -q "^unwritable: cannot take the lock on the long resource: " "$work/unwritable.err"; then
+  ok "it failed at once with ln's message"
+else
+  fail "a lock that cannot be created did not fail at once with a message (status $status)"
+fi
 
 if [ "$failures" -ne 0 ]; then
   echo "lock-test: $failures failed" >&2
