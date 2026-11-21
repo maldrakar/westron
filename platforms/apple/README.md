@@ -211,14 +211,20 @@ at `xSmall` and `accessibility5`. On iOS a window in the app's scene, over the a
 `drawHierarchy(in:afterScreenUpdates:)`; on macOS a borderless window that is never ordered in, with its backing scale
 fixed at 2 whatever the screens', is drawn by Core Animation's renderer (`CARenderer`) into a Metal texture.
 `ImageRenderer`, `cacheDisplay` and `CALayer.render(in:)` misdraw system controls, so none of them is used. Core
-Animation is frozen in the sheet's window as before, so a spinner draws one frame. The picture is cut to the sheet's
-content, the frame `MatrixSheetView` reports through `EnvironmentValues.matrixSheetFrame`: the window's width, from the
-top of the sheet (under the status bar's safe area on iOS; no status bar or home indicator is drawn) to its bottom, its
-own padding included; it is opaque RGB. A sheet whose cells run past the window fails ("cut off" on the page), and a
-blank picture, which `drawHierarchy` has returned for slow sheets on the CI runner, is drawn again up to four times,
-with a longer pause each, then fails by name. The tests run only when `WESTRON_SNAPSHOTS` names the output directory
-(on the simulator through `TEST_RUNNER_WESTRON_SNAPSHOTS`), so `swift test` and `tools/apple/check.sh package` skip
-them; `WESTRON_SNAPSHOTS_COMPONENT` takes some components.
+Animation is frozen in the sheet's window as before, so a spinner draws one frame. The sheet reports its layout to
+the tests through `MatrixSheetProbe`, an environment value only they set: the frame of its content and of each cell.
+The picture is cut to the content: the window's width, from the top of the sheet (under the status bar's safe area on
+iOS; no status bar or home indicator is drawn) down to its bottom and the reach of the deepest shadow token below it
+(`shadow.dragged`, 56 pt), as far as the window goes; it is opaque RGB. A picture fails by name when a cell lies
+outside the window on either axis ("cut off" on the page), when a cell draws nothing (the drawn cells are counted
+against the matrix), or when four draws give no complete picture: a draw with no frame reported, `drawHierarchy`
+returning false, or fewer than three colors is taken again with a longer pause, and a draw slower than 1.5 s, or a
+retry, is taken twice and must agree pixel for pixel. Between draws, and while a sheet settles, the test gives the
+main thread back to its run loop, so that UIKit and SwiftUI release each picture's window and controller; without
+that, every window stayed alive and the CI runner drew the last pictures of the run blank (decisions/0008, the note
+of 2026-11-21). The tests run only when `WESTRON_SNAPSHOTS` names the output directory (on the simulator through
+`TEST_RUNNER_WESTRON_SNAPSHOTS`), so `swift test` and `tools/apple/check.sh package` skip them;
+`WESTRON_SNAPSHOTS_COMPONENT` takes some components.
 
 The script builds the tests incrementally, runs them (`swift test --filter WestronSnapshotTests` on macOS; on iOS one
 `xcodebuild test-without-building -only-testing:CatalogSnapshotTests -testLanguage en -testRegion en_US` on `iPhone
@@ -227,8 +233,10 @@ The script builds the tests incrementally, runs them (`swift test --filter Westr
 the others, the manifest `matrix.json`, `environment.json` and the review page `index.html` (sheets down; across, each
 text size with its themes, the parts of a sheet side by side; the supplements in sections of their own; with the
 environment and each picture's size). It prints the images per component, the build and render times and the page's
-path, and fails when a picture failed or is missing. The log, `.build/logs/snapshot-matrix-<platform>.log`, has each
-picture's time. Locally (an M4 Pro, macOS 26.7.1, the iPhone 17 simulator on iOS 26.3.1) the 388 iOS images render in
+path, and fails when a picture failed or is missing. The log, `.build/logs/snapshot-matrix-<platform>.log`, has a
+line per picture with its time, the process's memory and its windows (`snapshot: <file> 0.091 s, 90 MB, 1 windows`),
+and a line with each draw's outcome for a picture that took more than one (`snapshot: <file> draws: #1 blank (1
+color) after 8.02 s; #2 drawn in 0.31 s, the same again in 0.30 s`). Locally (an M4 Pro, macOS 26.7.1, the iPhone 17 simulator on iOS 26.3.1) the 388 iOS images render in
 40 s and the 196 macOS images in 13 s; two renders of one commit were byte-identical. On the CI runner, a 3-core VM,
 the spike of 2026-11-20 measured 0.85 s an iOS image and 1.1 s a macOS one.
 
@@ -247,13 +255,15 @@ number of images (`Snapshots/README.md`). They are recorded on the CI runner onl
 `.build/snapshot-matrix/check-<platform>/`; with no references yet it exits 3, and in another environment it says what
 differs and exits 4 without comparing: on your Mac that is the usual outcome, so render before and after your change
 and `compare` them. `record <platform>` writes a render into the references, keeping a reference within the tolerance
-of its new picture, so a drift does not rewrite it. `.lfsconfig` keeps the references out of what Git LFS fetches by
+of its new picture, so a drift does not rewrite it. Both refuse a render with a failed picture (exit 1, naming it):
+a missing PNG would read as a removed sheet, and `record` would delete its reference. `.lfsconfig` keeps the references out of what Git LFS fetches by
 default (they would be pointers in a clone; `git lfs pull --include "platforms/apple/Snapshots/**" --exclude ""` gets
 them).
 
 **CI.** The job `snapshots` in `ci.yml` renders both platforms on every pull request and push to `main`, pulls the
 references through a cache of `.git/lfs`, and checks: a difference fails it and uploads `snapshot-diff`, the report;
-no references, or references from another runner image, pass with a warning that they need recording. Every run
+no references, or references from another runner image, pass on a pull request with a warning that they need
+recording, and fail a push to `main`. Every run
 uploads `snapshot-matrix`, the full page of both platforms. A look that changes on purpose is recorded with the label
 `record-snapshots` on the pull request; the workflow commits the references to its branch and comments how to run the
 checks again (a commit pushed by a workflow starts none).
