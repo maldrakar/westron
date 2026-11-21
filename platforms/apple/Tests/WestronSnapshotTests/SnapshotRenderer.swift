@@ -12,10 +12,11 @@
 //   and `cacheDisplay` misdraw system controls (a text field's placeholder, a spinner, a capsule's stroke, shadows).
 //
 // The sheet is laid out as in the app and reports its own layout (`MatrixSheetProbe`): the frame of its content and of
-// each cell drawn. The picture is cut to the content, the window's width, from the top of the sheet (under the status
-// bar's safe area on iOS) down to the sheet's bottom and the reach of the deepest shadow token below it, as far as the
-// window goes. A cell outside the window, on either axis, makes the picture "cut off"; a cell that drew nothing makes
-// it short of cells. Each attempt's outcome is logged.
+// each cell drawn, and the width each cell needs. The picture is cut to the content, the window's width, from the top
+// of the sheet (under the status bar's safe area on iOS) down to the sheet's bottom and the reach of the deepest shadow
+// token below it, as far as the window goes. A cell outside the window, on either axis, makes the picture "cut off"; a
+// cell that drew nothing makes it short of cells; a cell narrower than it needs makes it "squeezed". Each attempt's
+// outcome is logged.
 //
 // The main thread goes back to its run loop before every draw and while a sheet settles (`pause`), instead of turning
 // the run loop from inside one long call. Run 44835019906 on the CI runner (a VM with 3 cores and 7 GB) drew the last
@@ -53,6 +54,9 @@ struct SnapshotPicture {
     let fits: Bool
     /// The cells that drew something: a frame of their own with an area.
     let found: Int
+    /// The cells drawn narrower than they need, each `primary, l, destructive, false, hover: 112 of 121.7 pt`
+    /// (`MatrixSheetProbe.squeezed`); empty when every cell has its width.
+    let squeezed: [String]
     /// How many draws it took, and what each one gave.
     let attempts: Int
     let log: [String]
@@ -83,6 +87,8 @@ struct SnapshotDraw {
     /// The sheet's and the cells' frames in the window, as the sheet reported them.
     let sheet: CGRect
     let cells: [CGRect]
+    /// The cells drawn narrower than they need, described.
+    let squeezed: [String]
 }
 
 /// Why a draw gave no picture.
@@ -225,7 +231,8 @@ enum SnapshotRenderer {
             drawn.allSatisfy { window.contains($0) } && draw.sheet.minX >= window.minX
             && draw.sheet.maxX <= window.maxX
         return SnapshotPicture(
-            image: draw.image, size: draw.size, fits: fits, found: drawn.count, attempts: attempts, log: log)
+            image: draw.image, size: draw.size, fits: fits, found: drawn.count, squeezed: draw.squeezed,
+            attempts: attempts, log: log)
     }
 
     /// The part of a window's picture of `scale` pixels a point that holds the sheet: the window's width, from the
@@ -248,9 +255,14 @@ enum SnapshotRenderer {
         guard let (image, size) = cut(whole, to: probe.sheet, window: window, scale: scale) else {
             throw SnapshotRenderError.noImage("the sheet's frame \(probe.sheet) is outside the window")
         }
+        let squeezed = probe.squeezed.map { cell in
+            let name = (cell.combination.values + [cell.combination.state ?? "rest"]).joined(separator: ", ")
+            return String(format: "%@: %.1f of %.1f pt", name, cell.width, cell.needs)
+        }
         return .success(
             SnapshotDraw(
-                image: image, size: size, window: window, sheet: probe.sheet, cells: Array(probe.cells.values)))
+                image: image, size: size, window: window, sheet: probe.sheet, cells: Array(probe.cells.values),
+                squeezed: squeezed))
     }
 
     #if os(iOS)

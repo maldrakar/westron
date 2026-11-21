@@ -53,7 +53,9 @@ Only the human can enable it, once:
 Open every PNG (Read) and check:
 
 - every variant, size and state from the contract `spec/components/<id>/<id>.spec.yaml` is present (the matrix's
-  `index.html` gives the count of combinations and flags a missing or cut-off sheet);
+  `index.html` gives the count of combinations and flags a missing or cut-off sheet, or one whose cells are squeezed
+  below the width they need, such as a button whose label breaks inside a word; a sheet whose cells do not fit side by
+  side at a text size is taken in parts there, `_part-<n>-of-<count>`, so look at every part);
 - nothing "gets lost" in the dark theme: text is readable, borders are visible;
 - at `accessibility3` text is not clipped and does not overlap, and the layout is not broken;
 - iOS and macOS look like one system, and the differences match the contract's `platforms` block;

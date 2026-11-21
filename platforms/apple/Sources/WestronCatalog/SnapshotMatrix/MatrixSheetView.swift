@@ -12,9 +12,10 @@ import WestronUI
 /// the real component drawn by its `<Component>MatrixCell`, or, on a supplement's sheet, by the supplement's cell; such
 /// a sheet is marked "Not a contract option".
 ///
-/// The sheet is laid out to fit one screenshot with nothing cut off: on macOS the state names are a column of their
-/// own, in the catalog's wide window; on an iPhone in portrait each state name is a line above its row, so the cells
-/// have the full width. Only the cells follow the text size of the capture: the sheet's own text, its title, notes and
+/// The sheet is laid out to fit one screenshot with nothing cut off (one that does not fit at a text size, or whose cells
+/// do not fit side by side, is taken in parts, `ComponentMatrix.pictures(of:at:columns:)`, each with a short header):
+/// on macOS the state names are a column of their own, in the catalog's wide window; on an iPhone in portrait each
+/// state name is a line above its row, so the cells have the full width. Only the cells follow the text size of the capture: the sheet's own text, its title, notes and
 /// the names of columns and rows, stays at the default size, so that the room goes to the component and the sheet
 /// says so. Core Animation is frozen in the sheet's window (`FrozenAnimations`), so that a loading indicator stands
 /// still and two captures compare pixel for pixel.
@@ -81,10 +82,21 @@ struct MatrixSheetView: View {
             Text("\(matrix.component) · \(matrix.title(of: sheet))")
                 .textRole(.heading.small)
                 .foregroundStyle(.text.primary)
-            if let part = matrix.partTitle(of: sheet) {
-                // A part is taken where the cells grow so large that a sheet does not fit: it says what it holds and
-                // leaves the notes to the whole sheet, so that the room goes to the cells.
+            if let part = matrix.partTitle(of: sheet), dynamicTypeSize.isAccessibilitySize {
+                // At an accessibility size a part is taken where the cells grow so large that a sheet does not fit:
+                // it says what it holds and leaves the notes to the whole sheet, so that the room goes to the cells.
                 note("\(textSizeNote ?? "") This picture is \(part). The notes are on the whole sheet.")
+            } else if let part = matrix.partTitle(of: sheet) {
+                // Elsewhere a part is taken where the sheet's columns side by side would squeeze its cells below the
+                // width they need (SnapshotMatrixRenderTests): no picture at this text size holds the whole sheet, and
+                // a supplement's sheet with its notes all but fills an iPhone's screen, so a part says what it holds
+                // and why, and leaves the notes to the review page, which has them.
+                note(
+                    [
+                        textSizeNote,
+                        "This picture is \(part). Side by side the columns would squeeze the cells. The notes are on "
+                            + "the review page.",
+                    ].compactMap { $0 }.joined(separator: " "))
             } else {
                 note(
                     matrix.supplement == nil
@@ -133,6 +145,25 @@ struct MatrixSheetView: View {
                         } action: { frame in
                             probe?.cells[combination] = frame
                         }
+                        .background {
+                            if let probe {
+                                // The width the cell needs, for the snapshot tests alone: a copy at its ideal size,
+                                // hidden, behind the cell, so that it draws nothing and takes no room.
+                                matrix.content(combination)
+                                    .fixedSize()
+                                    .onGeometryChange(for: CGFloat.self) { proxy in
+                                        proxy.size.width
+                                    } action: { width in
+                                        probe.needs[combination] = width
+                                    }
+                                    .onPreferenceChange(MatrixCellTakesOfferedWidth.self) { takes in
+                                        MainActor.assumeIsolated {
+                                            if takes { probe.takeOfferedWidth.insert(combination) }
+                                        }
+                                    }
+                                    .hidden()
+                            }
+                        }
                     Group {
                         if let advisedAgainst {
                             TokenDetail("advised against: constraints[\(advisedAgainst)]")
@@ -154,12 +185,49 @@ struct MatrixSheetView: View {
 
 /// What a matrix sheet reports of its own layout, in its window's points, for the in-process snapshot tests
 /// (platforms/apple/Tests/WestronSnapshotTests, `@testable`), which have no accessibility query: the frame of the
-/// sheet's content, which they cut their picture to, and the frame of each cell drawn, which they count against the
-/// matrix and check against the window. Nothing in the catalog sets it.
+/// sheet's content, which they cut their picture to, the frame of each cell drawn, which they count against the matrix
+/// and check against the window, and the width each cell needs, which they check its frame against. Nothing in the
+/// catalog sets it, and only with it does the sheet measure what a cell needs.
 @MainActor
 final class MatrixSheetProbe {
     var sheet = CGRect.zero
     var cells: [ComponentMatrix.Combination: CGRect] = [:]
+    /// By cell, its ideal width: what it takes when nothing squeezes it, such as a button's label on one line.
+    var needs: [ComponentMatrix.Combination: CGFloat] = [:]
+    /// The cells that take the width they are offered by design (`matrixCellTakesOfferedWidth()`): their ideal width
+    /// is not a need.
+    var takeOfferedWidth: Set<ComponentMatrix.Combination> = []
+
+    /// The cells drawn narrower than their ideal width, by more than half a point, with both widths, in the order of
+    /// the sheet's cells; a cell that takes the width it is offered by design is not among them.
+    var squeezed: [(combination: ComponentMatrix.Combination, width: CGFloat, needs: CGFloat)] {
+        cells.sorted { ($0.value.minY, $0.value.minX) < ($1.value.minY, $1.value.minX) }
+            .compactMap { combination, frame in
+                guard !takeOfferedWidth.contains(combination), let needs = needs[combination],
+                    frame.width > 0, frame.width < needs - 0.5
+                else { return nil }
+                return (combination, frame.width, needs)
+            }
+    }
+}
+
+/// Whether a matrix cell takes the width it is offered by design (`matrixCellTakesOfferedWidth()`).
+struct MatrixCellTakesOfferedWidth: PreferenceKey {
+    static let defaultValue = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
+}
+
+extension View {
+    /// Marks a matrix cell whose content takes the width it is offered by design: running text that wraps between its
+    /// words (Text's roles, a surface's sample text) or a field that fills its row. The snapshot tests check every
+    /// other cell against its ideal width, so that a sheet never squeezes a control below the width it needs, such as
+    /// a button until its label breaks inside a word (the Button contract leaves that width unsupported): a squeeze
+    /// that fewer columns to a picture cure splits the sheet, and one left with one column to a picture fails the run.
+    /// A cell marked with this is not checked so: a word of its text that breaks inside itself, or a field's truncated
+    /// placeholder or value, is not caught, and is left to the eye in the review. It changes nothing drawn.
+    func matrixCellTakesOfferedWidth() -> some View {
+        preference(key: MatrixCellTakesOfferedWidth.self, value: true)
+    }
 }
 
 extension EnvironmentValues {

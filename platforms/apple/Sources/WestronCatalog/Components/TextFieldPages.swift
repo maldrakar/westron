@@ -139,6 +139,8 @@ struct TextFieldMatrixCell: View {
         // the picture's edge (the contract's platforms.apple).
         .padding(variant.focusRingClearance)
         .forcingTextFieldState(state)
+        // A field fills the width it is offered.
+        .matrixCellTakesOfferedWidth()
     }
 }
 
@@ -166,6 +168,7 @@ extension ComponentMatrix.Supplement {
         rowsPerPicture: 1
     ) { combination in
         TextFieldCardSample(values: TextFieldMatrixValues(combination))
+            .matrixCellTakesOfferedWidth()
     }
 
     /// The same style on SecureField.
@@ -177,6 +180,7 @@ extension ComponentMatrix.Supplement {
         keeps: ["size": "m", "lines": "single"]
     ) { combination in
         TextFieldSecureSample(values: TextFieldMatrixValues(combination))
+            .matrixCellTakesOfferedWidth()
     }
 
     /// A field on the surface ground, for its fill's contrast; the generated sheets show it on the canvas. The ground is
@@ -198,6 +202,7 @@ extension ComponentMatrix.Supplement {
             keeps: ["size": "m", "lines": "single"]
         ) { combination in
             TextFieldGroundSample(values: TextFieldMatrixValues(combination), ground: ground)
+                .matrixCellTakesOfferedWidth()
         }
     }
 }

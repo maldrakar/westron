@@ -74,6 +74,8 @@ struct Image: Codable {
     var cells: Int
     var found: Int?
     var fits: Bool?
+    /// How many cells are drawn narrower than they need; nil in a manifest from before the check.
+    var squeezed: Int?
     var size: [Double]?
 }
 
@@ -322,6 +324,10 @@ func table(
                     if picture.fits == false {
                         marks.append("cut off")
                         problems.append("\(name): a cell is not wholly inside the window")
+                    }
+                    if let squeezed = picture.squeezed, squeezed > 0 {
+                        marks.append("\(squeezed) cells squeezed")
+                        problems.append("\(name): \(squeezed) cells narrower than they need")
                     }
                     if !marks.isEmpty {
                         body += "<div class=\"bad\">\(html(marks.joined(separator: "; ")))</div>"

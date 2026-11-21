@@ -43,6 +43,8 @@ struct TextMatrixCell: View {
         // contract has no states, so the state is always rest.
         let (role, _) = values.fields
         TextRoleSample(role: role)
+            // Running text: it wraps between its words in the column it is given.
+            .matrixCellTakesOfferedWidth()
     }
 }
 

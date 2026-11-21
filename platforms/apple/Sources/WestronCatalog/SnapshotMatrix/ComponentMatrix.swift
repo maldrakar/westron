@@ -11,8 +11,9 @@ import SwiftUI
 /// theme at the smallest and the largest text size (`Capture`).
 ///
 /// Two things here are the catalog's, not the contract's (#72): a text size at which a generated sheet does not fit one
-/// picture splits it into parts (`pictures(of:at:)`), and a component's catalog code may add supplementary sheets for
-/// what no contract option sets (`Supplement`, `supplements`), hand-written on the generated axes and marked as such.
+/// picture, or whose cells do not fit side by side on the device, splits it into parts (`pictures(of:at:columns:)`),
+/// and a component's catalog code may add supplementary sheets for what no contract option sets (`Supplement`,
+/// `supplements`), hand-written on the generated axes and marked as such.
 /// Neither changes the generated matrix: the contract still drives every generated sheet and combination.
 public struct ComponentMatrix: Sendable {
     struct Option: Sendable {
@@ -77,8 +78,8 @@ public struct ComponentMatrix: Sendable {
         let columns: [String]
         /// The states of the rows, nil for rest; with a row option (`rowOption`), its values.
         let rows: [String?]
-        /// For a part of a sheet that does not fit one picture at a text size (`pictures(of:at:)`), its number from 1
-        /// and the number of parts; nil for a whole sheet.
+        /// For a part of a sheet that does not fit one picture at a text size (`pictures(of:at:columns:)`), its number
+        /// from 1 and the number of parts; nil for a whole sheet.
         public let part: (number: Int, count: Int)?
 
         init(
@@ -146,10 +147,11 @@ public struct ComponentMatrix: Sendable {
         /// others, which show how the component grows with the text, not its colors.
         public var themes: [Theme] { self == .large ? Theme.allCases : [.light] }
 
-        /// The most columns and rows of one picture at this size; nil when a generated sheet (at most 3 × 6) fits
-        /// whole. At accessibility5 a button of size l with an icon and a label takes about 320 of an iPhone 17's 402
-        /// points, so a picture holds one column of a sheet: its six rows fit the screen's height under a short
-        /// header (`MatrixSheetView`).
+        /// The most columns and rows of one picture at this size, whatever the cells; nil when a generated sheet (at
+        /// most 3 × 6) may fit whole, and the snapshot tests split it only where its cells do not fit side by side
+        /// (`pictures(of:at:columns:)`). At accessibility5 a button of size l with an icon and a label takes about 320
+        /// of an iPhone 17's 402 points, so a picture holds one column of a sheet: its six rows fit the screen's height
+        /// under a short header (`MatrixSheetView`).
         var limit: (columns: Int, rows: Int)? {
             #if os(macOS)
                 nil
@@ -362,13 +364,16 @@ public struct ComponentMatrix: Sendable {
 
     /// The pictures a sheet is captured in at a text size: the sheet itself where it fits, otherwise its parts, the
     /// columns and the rows the current OS draws taken `TextSize.limit` at a time, column by column, top to bottom.
-    /// The split is the catalog's, not the contract's: it depends on the text size alone, so the parts are the same on
-    /// every run.
-    public func pictures(of sheet: Sheet, at size: TextSize) -> [Sheet] {
-        guard let limit = size.limit else { return [sheet] }
+    /// `columns` caps the columns of one picture further, where the sheet's cells do not fit side by side at that text
+    /// size: the snapshot tests find that by drawing the sheet and checking each cell's width against the width it
+    /// needs (SnapshotMatrixRenderTests, "squeezed"), and take fewer columns to a picture until they fit. The split is
+    /// the catalog's, not the contract's: on one device the parts are the same on every run.
+    public func pictures(of sheet: Sheet, at size: TextSize, columns: Int? = nil) -> [Sheet] {
+        let columnLimit = min(size.limit?.columns ?? sheet.columns.count, columns ?? sheet.columns.count)
         let rows = rows(of: sheet)
-        let rowLimit = min(limit.rows, supplement?.rowsPerPicture ?? limit.rows)
-        let parts = Self.chunks(sheet.columns, of: limit.columns).flatMap { columns in
+        // Rows are split only at a text size whose cells are too tall for a sheet's rows to fit the screen's height.
+        let rowLimit = size.limit.map { min($0.rows, supplement?.rowsPerPicture ?? $0.rows) } ?? max(rows.count, 1)
+        let parts = Self.groups(sheet.columns, ofAtMost: max(columnLimit, 1)).flatMap { columns in
             Self.chunks(rows, of: rowLimit).map { (columns: columns, rows: $0) }
         }
         guard parts.count > 1 else { return [sheet] }
@@ -381,6 +386,22 @@ public struct ComponentMatrix: Sendable {
 
     private static func chunks<T>(_ items: [T], of size: Int) -> [[T]] {
         stride(from: 0, to: items.count, by: size).map { Array(items[$0..<min($0 + size, items.count)]) }
+    }
+
+    /// The items in as few groups of at most `size` as there can be, the groups as even as they can be, the larger
+    /// first: five columns of at most three to a picture go three and two, of at most four three and two as well. So
+    /// a part's name, which counts the parts, tells which columns it holds (`sheet(key:)`).
+    private static func groups<T>(_ items: [T], ofAtMost size: Int) -> [[T]] {
+        guard !items.isEmpty else { return [] }
+        let count = (items.count + size - 1) / size
+        var groups: [[T]] = []
+        var start = 0
+        for index in 0..<count {
+            let length = items.count / count + (index < items.count % count ? 1 : 0)
+            groups.append(Array(items[start..<start + length]))
+            start += length
+        }
+        return groups
     }
 
     private var columnIndex: Int? { options.firstIndex { $0.name == columnOption } }
@@ -501,11 +522,19 @@ public struct ComponentMatrix: Sendable {
     }
 
     /// A sheet by its key, `button.size-s_role-default_iconOnly-false`, among the sheets the current OS draws, their
-    /// parts at every text size, and the supplements' sheets and parts.
+    /// parts at every text size and with every cap of columns to a picture (`pictures(of:at:columns:)`), and the
+    /// supplements' sheets and parts. Two splits that give a part the same name give it the same columns and rows.
     public static func sheet(key: String) -> (matrix: ComponentMatrix, sheet: Sheet)? {
         for matrix in all.flatMap({ [$0] + $0.supplements }) {
             for sheet in matrix.sheets {
-                let pictures = [sheet] + TextSize.allCases.flatMap { matrix.pictures(of: sheet, at: $0) }
+                guard key == matrix.key(of: sheet) || key.hasPrefix(matrix.key(of: sheet) + "_part-") else { continue }
+                let pictures =
+                    [sheet]
+                    + TextSize.allCases.flatMap { size in
+                        (1...max(sheet.columns.count, 1)).reversed().flatMap {
+                            matrix.pictures(of: sheet, at: size, columns: $0)
+                        }
+                    }
                 if let found = pictures.first(where: { matrix.key(of: $0) == key }) { return (matrix, found) }
             }
         }
