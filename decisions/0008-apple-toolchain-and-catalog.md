@@ -342,5 +342,28 @@ Date: 2026-11-14. Status: accepted.
     state of #99", with each field's sizes, font and text, and is still compared as usual. Over a normal macOS render
     every field agrees. The two earlier checks stay: the pin and the fresh cell guard a proven dependency on the
     languages, and the drawing again a state that ends within the run.
+    2026-11-21 (#99): the mechanism is found, and the render removes it. SwiftUI lays out a system text field between
+    limits set from the height of a line of its font, which it takes from a cache of the three fonts looked up last,
+    keyed by the address of the font object it measures the line with (not the `NSTextField`'s own `font` object). When
+    SwiftUI's font cache lets that font go, it is freed, a font made later may be allocated at its address, and while the
+    old entry is among the three the new font takes its height; a lookup that misses measures it anew and corrects it.
+    Shown: the internals exist under those names in the SwiftUI framework of macOS 26.7.1, the operating system's one
+    that a process runs (symbol lookup and disassembly on a local Mac; Xcode's SDK holds only `SwiftUI.tbd`, which
+    does not export them; the runner's macOS 27.0.1 SwiftUI was not disassembled, and there the mechanism is shown by
+    the traces and the forcing test only); a test
+    that churns SwiftUI's font cache forces the state, without the fix locally and on 4 of 4 runner VMs (run
+    44941092448, 30 to 311 fields off their line in 2000 attempts), with it on none; and on the runner without the fix
+    the state came up by itself in 13 of 443 short processes (run 44942981800), 12 of them with a trace showing a
+    field's font looked up at an address last measured as another font, the thirteenth consistent with it; with the
+    fix, the same short-process loop on the runner (probe run 44948217745, matched to run 44942981800) had 0 of 458
+    processes in the state (27,680 pictures), against 13 of 443 without it. Inferred,
+    not shown: that runs 44885247356 and 44917113978, which had no trace, were this, and when SwiftUI's font cache lets
+    a font go in a render. The fix is in the render's process only (`MeasuredFonts` in the snapshot tests): every font
+    object whose line a layout manager measures is kept alive for the rest of the process, from before the first
+    picture is laid out, so no font can take an address the cache knows. The forcing test runs in every macOS render
+    (about 8 s locally, 21 to 35 s of about 190 to 230 on the runner) and, run by hand with
+    `WESTRON_FONT_CHURN_UNFIXED=1`, shows that the forcing still forces, to be done after an update of Xcode or macOS.
+    `FieldHeights` stays, to name the state if it ever shows again. Products are not covered: the same SwiftUI
+    behaviour can lay out a product's `TextField` off its line (#113).
   The details (the tolerance of one level, the cut to the sheet, the exit statuses, the gate on an environment variable)
   were chosen in the implementation, pending the owner's confirmation.
