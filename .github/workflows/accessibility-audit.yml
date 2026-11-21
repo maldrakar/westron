@@ -152,12 +152,17 @@ jobs:
     # TextFieldBehaviorTests and IconAccessibilityTests, each with branches of its own for iOS and macOS, so one leg on
     # each, gated by `audit-needed` as the audit is.
     #
-    # No retry. A failed test fails the whole run, and `audit-needed` counts only successful scheduled runs, so the
-    # next night runs every job again on the same commit, and the release waits. For a flaky failure, "Re-run failed
-    # jobs" on that run (or `gh run rerun <id> --failed`) is the cheap remedy: a re-run is a new attempt of the same
-    # run, with its id, commit and event, and once it passes the run counts as successful both for `audit-needed` and
-    # for the release skill's check, which reads the latest attempt's jobs, the ones not re-run carried over as they
-    # were (seen on CI run 44461921450, attempt 2). `gh workflow run` instead starts all twelve Mac jobs again.
+    # A run that fails for infrastructure is retried once by check.sh, for the tests that have not passed (#97): one
+    # whose log gains no line for 5 minutes (WESTRON_BEHAVIOR_STALL_LIMIT, 300 s) is stopped first, as the iOS leg of
+    # run 44863177076 should have been, which went silent for 28 minutes after "Failed to terminate
+    # dev.westron.catalog" and met the deadline. Each retry shows as a warning on the run, and the leg's logs go up as
+    # behavior-retried-<platform> even when the retry passed. A test that fails on its own is never retried: it fails
+    # the whole run, and `audit-needed` counts only successful scheduled runs, so the next night runs every job again
+    # on the same commit, and the release waits. For a flaky failure, "Re-run failed jobs" on that run (or `gh run
+    # rerun <id> --failed`) is the cheap remedy: a re-run is a new attempt of the same run, with its id, commit and
+    # event, and once it passes the run counts as successful both for `audit-needed` and for the release skill's check,
+    # which reads the latest attempt's jobs, the ones not re-run carried over as they were (seen on CI run 44461921450,
+    # attempt 2). `gh workflow run` instead starts all twelve Mac jobs again.
     #
     # Locally on an iPhone 17 simulator (iOS 26.3, 2026-11-20) all 20 tests passed in 182 and 185 s in two runs, 2 of
     # them skipped (a keyboard shortcut the simulator's typeKey does not reach; keyboard focus, measured on macOS), the
@@ -165,7 +170,9 @@ jobs:
     # 7–9 min, after 6–17 min of build and setup: at most about 26 min, so a timeout of 40. A leg the timeout kills
     # uploads no logs, and a macOS UI test run has gone silent on CI for an hour (run 44461921450), so the step stops
     # itself 3 minutes before it (WESTRON_BEHAVIOR_DEADLINE: xcodebuild and the test daemon stopped, a line in the log,
-    # exit 1) and the failure upload runs.
+    # exit 1) and the failure upload runs. A retry fits before it: the worst usual one, a stall in the first test after
+    # 17 min, ends by 17 + 5 (the stall limit) + 1.5 (xcodebuild and the runner) + 9 (every test again) = 32.5 min, and
+    # a later stall leaves fewer tests to run. check.sh starts no retry it does not expect to finish by the deadline.
     #
     # The macOS leg was not run when this job was added (its tests take over the screen, and the Mac was in use), so
     # its first night is its first run on CI: Automation Mode is on for the runner (decisions/0008), as the snapshot
@@ -191,6 +198,21 @@ jobs:
           # 3 minutes before the job's timeout, in minutes from the step's start: the failure upload below still runs.
           WESTRON_BEHAVIOR_DEADLINE: 37
         run: tools/apple/check.sh behavior ${{ matrix.platform }}
+      # As the audit's legs: a leg that retried keeps its logs, the first run's and the retry's, even when the retry
+      # passed; whether there is a retry's log is a shell step's output, not `hashFiles()`.
+      - name: Retry logs
+        id: retried
+        if: ${{ !cancelled() }}
+        run: |
+          if ls .build/logs/behavior-*-retry.log > /dev/null 2>&1; then
+            echo "logs=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && steps.retried.outputs.logs == 'true' }}
+        with:
+          name: behavior-retried-${{ matrix.platform }}
+          path: .build/logs/behavior-*.log
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

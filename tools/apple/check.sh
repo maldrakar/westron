@@ -17,7 +17,10 @@
 #   tools/apple/check.sh behavior [ios|macos] [class …]
 #                                    the catalog's behaviour UI tests (default: the iOS simulator), the classes named
 #                                    (ButtonBehaviorTests CheckboxBehaviorTests TextFieldBehaviorTests
-#                                    IconAccessibilityTests; default: all); no retry
+#                                    IconAccessibilityTests; default: all); a run that stops making progress
+#                                    (WESTRON_BEHAVIOR_STALL_LIMIT=<seconds>, default 300) or fails for
+#                                    infrastructure runs once more what has not passed, never a test that failed on
+#                                    its own (#97); WESTRON_BEHAVIOR_DEADLINE=<minutes> stops it all at that time
 #   tools/apple/check.sh format      swift format lint without changes, tools/ included
 #   tools/apple/check.sh fix-format  swift format that rewrites the files, tools/ included
 #   tools/apple/check.sh all         everything except fix-format, a11y and behavior (package-ios included)
@@ -405,15 +408,17 @@ a11y() {
 
 # The catalog's behaviour UI tests (platforms/apple/README.md, "Behaviour UI tests"): presses, hit areas, the
 # accessibility hierarchy, the keyboard, on the catalog's entries. Each class runs on iOS and macOS, with branches of
-# its own for each; macOS needs Automation Mode and the screen to itself. No retry: the nightly CI run reports a
-# failure, and a flaky one is re-run there with "Re-run failed jobs" (.github/workflows/accessibility-audit.yml).
+# its own for each; macOS needs Automation Mode and the screen to itself. A run that fails for infrastructure (it
+# stopped making progress, its test runner did not start, XCTest failed to terminate the catalog) runs once more, in a
+# second xcodebuild run, what has not passed (#97); a test that fails on its own is never retried, and the nightly CI
+# run reports it (.github/workflows/accessibility-audit.yml).
 behavior_tests=(ButtonBehaviorTests CheckboxBehaviorTests TextFieldBehaviorTests IconAccessibilityTests)
 
 # WESTRON_BEHAVIOR_DEADLINE=<minutes> from the script's start (unset: none; CI sets it a few minutes before the job's
 # timeout, since a job the timeout kills uploads no logs, and a macOS UI test run has gone silent on CI for an hour,
 # run 44461921450): at it, the timer below stops the run's xcodebuild and signals the script (USR1), which says so in
-# its output and the log, stops the test daemon and exits 1. The timer ends with the script; bash 3.2 has no BASHPID,
-# so it polls the script's pid rather than being waited for.
+# its output and the log, stops the test daemon and exits 1. It bounds a retry too. The timer ends with the script;
+# bash 3.2 has no BASHPID, so it polls the script's pid rather than being waited for.
 behavior_deadline_timer() {
   local deadline="$1"
   while kill -0 $$ 2> /dev/null; do
@@ -424,6 +429,14 @@ behavior_deadline_timer() {
     fi
     sleep 1
   done
+}
+
+# On macOS the test runner and the catalog belong to launchd, not to xcodebuild: after a run that was stopped, they
+# are stopped by their path.
+behavior_stop_macos_apps() {
+  if [ "$behavior_platform" = macos ]; then
+    pkill -f "$root/.build/xcode/catalog/Build/Products/" 2> /dev/null || true
+  fi
 }
 
 # The script's side of the deadline. A foreground build ends first (the timer stopped it), a test run's wait at once.
@@ -438,12 +451,130 @@ behavior_at_deadline() {
   pkill -P $$ -x xcodebuild 2> /dev/null || true
   echo "check.sh: behavior: $why, so that the logs upload before the job's timeout; log: $behavior_log" >&2
   printf '\ncheck.sh: behavior: %s\n' "$why" >> "$behavior_log"
-  # On macOS the test runner and the catalog belong to launchd, not to xcodebuild: they are stopped by their path.
-  if [ "$behavior_platform" = macos ]; then
-    pkill -f "$root/.build/xcode/catalog/Build/Products/" 2> /dev/null || true
-  fi
+  behavior_stop_macos_apps
   stop_test_daemon "$behavior_udid"
   exit 1
+}
+
+# WESTRON_BEHAVIOR_STALL_LIMIT=<seconds> (default 300): a test run whose log gains no line for this long, xcodebuild's
+# own `[MT]` messages aside, has stopped making progress and is stopped (#97). On CI (run 44863177076, iOS) XCTest
+# failed to terminate the catalog ("Failed to terminate dev.westron.catalog", 69 s after it began to try), then
+# xcodebuild wrote nothing for 28 minutes, until the deadline. A run that works never comes near the limit: XCTest
+# writes a line for each step of a test (an activity, `t = …s`): the longest gap between two of them was 4.8 s in that
+# run's tests that passed and 1.4 s locally (22 tests, 2026-11-21, where the log, read every second, never went 5 s
+# without a line), and starting the test runner took about 20 s on CI. The longest silences XCTest makes on its own
+# end in a timeout of its own: the 69 s of that termination, or a test runner that started no test case for 3.5
+# minutes on CI before it crashed and xcodebuild reported it (a11y_plan). Five minutes is
+# above all of them with room for a runner 2–3 times slower than a local Mac, and a stall then costs 5 minutes of the
+# leg rather than all of it, with time left for the retry.
+behavior_stall_limit="${WESTRON_BEHAVIOR_STALL_LIMIT:-300}"
+
+# Watches <log> while a test run writes it: every 5 s it counts the log's lines other than xcodebuild's `[MT]` ones,
+# and when the count has not changed for <limit> seconds, writes those seconds to <flag> and stops the run's
+# xcodebuild, which ends ui_test_run's wait. Started in the background around one test run and killed after it; like
+# the deadline timer it polls the script's pid, so that it ends with the script.
+behavior_watchdog() {
+  local log="$1" limit="$2" flag="$3" lines count=none since=$SECONDS
+  while kill -0 $$ 2> /dev/null; do
+    lines="$(grep -vc "\[MT\]" "$log" 2> /dev/null || true)"
+    if [ "$lines" != "$count" ]; then
+      count="$lines" since=$SECONDS
+    elif [ $((SECONDS - since)) -ge "$limit" ]; then
+      echo "$((SECONDS - since))" > "$flag"
+      pkill -P $$ -x xcodebuild 2> /dev/null || true
+      return 0
+    fi
+    sleep 5
+  done
+}
+
+# Runs the behaviour tests, ui_test_run's arguments, under the watchdog, and prints what the run reported: each
+# failure with its message, each skip with its reason, the test cases, the totals of each class and of the run, and
+# why a test runner did not start. Returns xcodebuild's status; `behavior_stalled` is the seconds of silence after
+# which the watchdog stopped the run, or empty.
+behavior_run() {
+  local log="$2" flag watchdog status=0
+  flag="$(mktemp "${TMPDIR:-/tmp}/westron-behavior-stall.XXXXXX")"
+  behavior_log="$log"
+  behavior_watchdog "$log" "$behavior_stall_limit" "$flag" &
+  watchdog=$!
+  ui_test_run "$@" || status=$?
+  kill "$watchdog" 2> /dev/null || true
+  wait "$watchdog" 2> /dev/null || true
+  behavior_stalled="$(cat "$flag")"
+  rm -f "$flag"
+  grep -E ": error: |Test skipped|Test Case .*(passed|failed|skipped)|Executed [0-9]+ test|$a11y_runner_failures" \
+    "$log" | grep -v "\[MT\]" || true
+  if [ -n "$behavior_stalled" ]; then
+    local why="stopped the run: its log showed no progress for $behavior_stalled s"
+    why+=" (WESTRON_BEHAVIOR_STALL_LIMIT=$behavior_stall_limit)"
+    echo "check.sh: behavior: $why; log: $log" >&2
+    printf '\ncheck.sh: behavior: %s\n' "$why" >> "$log"
+    behavior_stop_macos_apps
+  fi
+  return "$status"
+}
+
+# What a failed run in <log> leaves to do; <stalled> is non-empty when the watchdog stopped it. Prints one line:
+#   retry [<test>,…]  run once more every test of the selection but these, the ones that passed or skipped
+#                     themselves (Class/method). Only when no test failed on its own and something infrastructural
+#                     explains the failure: the run stalled (the test it hit had not finished, and is retried, as an
+#                     audit entry a stall hit is), the test runner failed to start (a11y_runner_failures), or a test's
+#                     every failure is XCTest's "Failed to terminate" of the catalog, which preceded the stall on CI
+#                     (run 44863177076) and which the audit classifies as infrastructure;
+#   fail <reason>     anything else: a test that failed on its own (an assertion, a crash, a failure with no message),
+#                     or a failure nothing explains, such as a stall after every test had finished.
+behavior_plan() {
+  local log="$1" stalled="$2"
+  awk -v stalled="$stalled" -v runner_failures="$a11y_runner_failures" '
+    # "Class/method" from "-[CatalogUITests.Class method]" in the line.
+    function test_name(  rest) {
+      rest = substr($0, index($0, "-[CatalogUITests.") + 17)
+      rest = substr(rest, 1, index(rest, "]") - 1)
+      sub(/ /, "/", rest)
+      return rest
+    }
+    /\[MT\]/ { next }
+    /^Test Case .* (passed|skipped) \(/ { done[test_name()] = 1; next }
+    /^Test Case .* failed \(/ { failed[test_name()] = 1; next }
+    /: error: -\[CatalogUITests\./ {
+      if (index($0, "] : Failed to terminate ")) infrastructure[test_name()] = 1
+      else own[test_name()] = 1
+      next
+    }
+    $0 ~ runner_failures { runner = 1 }
+    /^Test Suite .Selected tests. (passed|failed) at / { finished = 1 }
+    END {
+      for (t in failed) if (!(t in infrastructure)) own[t] = 1
+      for (t in own) list = list (list == "" ? "" : ", ") t
+      if (list != "") { print "fail a test failed on its own: " list; exit }
+      for (t in infrastructure) retried = 1
+      if (finished && !retried) {
+        print (stalled != "" ? "fail every test had finished when the run stalled" \
+          : "fail every test finished, and no failure of a test explains it")
+        exit
+      }
+      if (stalled == "" && !runner && !retried) { print "fail no failure of a test explains it"; exit }
+      for (t in done) skip = skip (skip == "" ? "" : ",") t
+      print "retry " skip
+    }' "$log"
+}
+
+# How long, in seconds, a retry of <count> tests would take, judged from the first run in <log>: 90 s to start
+# xcodebuild and the test runner, as for the audit (a11y_retry_estimate), then for each test the mean time of the tests
+# the first run finished with a margin of 25 %, or 30 s when none finished (on CI, run 44863177076, iOS, the six that
+# finished took 8.7–24.7 s, mean 15.7).
+behavior_retry_estimate() {
+  local log="$1" count="$2"
+  awk -v count="$count" '
+    /^Test Case .* (passed|skipped) \(/ && match($0, /\(([0-9.]+) seconds\)/) {
+      finished++
+      seconds += substr($0, RSTART + 1, RLENGTH - 10)
+    }
+    END {
+      per = finished > 0 ? seconds / finished * 1.25 : 30
+      printf "%d\n", 90 + count * per
+    }' "$log"
 }
 
 behavior() {
@@ -458,12 +589,19 @@ behavior() {
     only+=("-only-testing:CatalogUITests/$test")
     selection+="-$test"
   done
+  [ $# -gt 0 ] || set -- "${behavior_tests[@]}"
   if [ ${#only[@]} -eq 0 ]; then
-    for test in "${behavior_tests[@]}"; do only+=("-only-testing:CatalogUITests/$test"); done
+    for test in "$@"; do only+=("-only-testing:CatalogUITests/$test"); done
+  fi
+  if ! [[ "$behavior_stall_limit" =~ ^[1-9][0-9]*$ ]]; then
+    echo "check.sh: behavior: WESTRON_BEHAVIOR_STALL_LIMIT=\"$behavior_stall_limit\": expected whole seconds" >&2
+    return 2
   fi
   local name="behavior-$platform$selection"
   local log=".build/logs/$name.log" results=".build/xcode/results/$name.xcresult"
   mkdir -p .build/logs .build/xcode/results
+  # An earlier run's retry would pass for this one's (CI uploads the logs when there is a retry's).
+  rm -rf ".build/logs/$name-retry.log" ".build/xcode/results/$name-retry.xcresult"
   behavior_log="$log" behavior_platform="$platform" behavior_udid=""
   if [ -n "${WESTRON_BEHAVIOR_DEADLINE:-}" ]; then
     if ! [[ "$WESTRON_BEHAVIOR_DEADLINE" =~ ^[1-9][0-9]*$ ]]; then
@@ -477,16 +615,65 @@ behavior() {
   ui_test_destination "$platform" || return 1
   behavior_udid="$udid"
   echo "== behavior: $destination${selection:+ (${selection#-})}"
+  # The test runs, the first and a retry alike, use only what this build produced.
   ui_test_build "$destination" ".build/logs/$name-build.log" "behavior" "$platform" || return 1
-  ui_test_run test-without-building "$log" "$results" "$destination" "$udid" "${only[@]}" || status=$?
-  # Each failure with its message, each skip with its reason, the test cases, the totals of each class and of the run,
-  # and why a test runner did not start.
-  grep -E ": error: |Test skipped|Test Case .*(passed|failed|skipped)|Executed [0-9]+ test|$a11y_runner_failures" \
-    "$log" | grep -v "\[MT\]" || true
-  if [ "$status" -ne 0 ]; then
+  behavior_run test-without-building "$log" "$results" "$destination" "$udid" "${only[@]}" || status=$?
+  [ "$status" -ne 0 ] || return 0
+
+  # The run failed. What has not passed runs once more only when infrastructure explains the failure (behavior_plan).
+  local plan skipped skip=() count=0 estimate why retry_log retry_results
+  plan="$(behavior_plan "$log" "$behavior_stalled")"
+  if [ "${plan%% *}" != retry ]; then
+    echo "check.sh: behavior: not retried: ${plan#fail }" >&2
     echo "check.sh: behaviour UI tests failed ($platform), log: $log, result: $results" >&2
     return 1
   fi
+  skipped="${plan#retry}"
+  skipped="${skipped# }"
+  for test in ${skipped//,/ }; do skip+=("-skip-testing:CatalogUITests/$test"); done
+  # The tests left, counted in the classes' sources, for the estimate alone: the retry itself names what to skip.
+  for test in "$@"; do
+    count=$((count + $(grep -cE "^ *func test[A-Za-z0-9_]*\(" "platforms/apple/Catalog/CatalogUITests/$test.swift")))
+  done
+  count=$((count - ${#skip[@]}))
+  [ "$count" -gt 0 ] || count=1
+  if [ -n "$behavior_stalled" ]; then
+    why="stopped after $behavior_stalled s with no progress"
+  elif grep -qE "$a11y_runner_failures" "$log"; then
+    why="failed for infrastructure: the test runner did not start"
+  else
+    why="failed for infrastructure: XCTest failed to terminate the catalog"
+  fi
+  # Only if the retry can finish before the deadline, when one is set: past it the retry would only be stopped.
+  if [ -n "${WESTRON_BEHAVIOR_DEADLINE:-}" ]; then
+    estimate="$(behavior_retry_estimate "$log" "$count")"
+    if [ $((SECONDS + estimate)) -gt $((WESTRON_BEHAVIOR_DEADLINE * 60)) ]; then
+      echo "check.sh: behavior: the run $why, not retried: $((SECONDS / 60)) min $((SECONDS % 60)) s have gone" \
+        "and a retry of $count tests would take about $((estimate / 60)) min $((estimate % 60)) s more, past the" \
+        "deadline of $WESTRON_BEHAVIOR_DEADLINE min (WESTRON_BEHAVIOR_DEADLINE)" >&2
+      echo "check.sh: behaviour UI tests failed ($platform), log: $log, result: $results" >&2
+      return 1
+    fi
+  fi
+  echo "behavior: retrying $count tests that have not passed: the first run $why; its output is above (log: $log)"
+  if [ -n "${GITHUB_ACTIONS:-}" ]; then
+    echo "::warning title=Behaviour UI tests retried::$platform: the first run $why, so the $count tests that had" \
+      "not passed ran once more. The first run's output is in this step's; its log is uploaded as the" \
+      "behavior-retried-$platform artifact."
+  fi
+  retry_log=".build/logs/$name-retry.log" retry_results=".build/xcode/results/$name-retry.xcresult"
+  # The simulator may have died with the run; it is found, and booted again if need be.
+  if [ "$platform" = ios ]; then
+    udid="$(westron_simulator_udid "${WESTRON_SIM_DEVICE:-iPhone 17}")" || return 1
+    destination="id=$udid" behavior_udid="$udid"
+  fi
+  if ! behavior_run test-without-building "$retry_log" "$retry_results" "$destination" "$udid" "${only[@]}" \
+    ${skip[@]+"${skip[@]}"}; then
+    echo "check.sh: behavior: failed again on its retry, log: $retry_log, result: $retry_results" >&2
+    echo "check.sh: behaviour UI tests failed ($platform), the first run's log: $log, result: $results" >&2
+    return 1
+  fi
+  echo "behavior: passed after a retry; the first run's log: $log"
 }
 
 format() {

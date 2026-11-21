@@ -277,11 +277,21 @@ accessibility hierarchy, the keyboard. Each class has branches of its own for iO
 behavior` runs them, like the audit: the build first, a step of its own, then one `xcodebuild test-without-building`
 for the classes named (all four by default); it prints each failure with its message, each skip with its reason, the
 test cases and the totals, and stops the simulator's test daemon afterwards. The log goes to
-`.build/logs/behavior-<platform>[-<classes>].log`, the result bundle to `.build/xcode/results/`. There is no retry.
-`WESTRON_BEHAVIOR_DEADLINE=<minutes>` from the script's start stops the run at that time (xcodebuild and the test
-daemon stopped, a line in the output and the log, exit 1): CI sets it 3 minutes before the job's timeout, so that a
-run gone silent still uploads its logs. Run the class of a component after a change to it; macOS needs Automation
-Mode (below) and takes over the screen.
+`.build/logs/behavior-<platform>[-<classes>].log`, the result bundle to `.build/xcode/results/`.
+
+A run whose log gains no line for `WESTRON_BEHAVIOR_STALL_LIMIT` seconds (default 300; xcodebuild's own `[MT]`
+messages do not count) has stopped making progress: the script stops it, says so in its output and the log, and
+retries (#97). On CI the simulator once failed to terminate the catalog and xcodebuild then wrote nothing for 28
+minutes (run 44863177076). The retry is one more `xcodebuild test-without-building` of the same classes, with
+`-skip-testing` for every test that passed or skipped itself, so the test the stall hit runs again, as an audit
+entry a stall hit does; its log and result bundle get `-retry` in their names. It runs too when the test runner
+failed to start, or when a test's only failure is XCTest's "Failed to terminate" of the catalog. It never runs when a
+test failed on its own (an assertion, a crash): the leg fails. There is one retry at most, a warning on the CI run
+shows it, and a retry that would not finish before the deadline is not started. `WESTRON_BEHAVIOR_DEADLINE=<minutes>`
+from the script's start stops everything, a retry included, at that time (xcodebuild and the test daemon stopped, a
+line in the output and the log, exit 1): CI sets it 3 minutes before the job's timeout, so that a run gone silent
+still uploads its logs. Run the class of a component after a change to it; macOS needs Automation Mode (below) and
+takes over the screen.
 
 ```sh
 tools/apple/check.sh behavior                            # all four on the iOS simulator
@@ -295,14 +305,15 @@ Simulator,name=iPhone 17"` and `-derivedDataPath .build/xcode/catalog`.
 
 CI runs them every night next to the full accessibility audit, in `.github/workflows/accessibility-audit.yml`, one
 leg on iOS and one on macOS, under the same rule for skipping a commit already checked; a pull request does not run
-them. A failed leg uploads its logs and its result bundle, with the screenshots XCTest takes at a failure. A failed
-test fails the whole nightly run, so the next night runs every job again on the same commit, and a release of that
-commit waits (`.claude/skills/release/SKILL.md`). For a flaky failure, "Re-run failed jobs" on that run (`gh run rerun
-<id> --failed`) is the cheap remedy: the new attempt keeps the run's id and commit, and once it passes the run counts
-as successful for both (seen with CI run 44461921450); `gh workflow run` starts all twelve Mac jobs again. On macOS
-`CheckboxBehaviorTests.testKeyboardFocusAndSpace` skips itself when the system's keyboard navigation is off, as it
-likely is on the runner: a green macOS leg may not have run it, and its output shows the skip. The macOS leg had not
-run on CI when it was added.
+them. A failed leg uploads its logs and its result bundle, with the screenshots XCTest takes at a failure; a leg that
+retried uploads its logs, the first run's and the retry's, even when the retry passed (`behavior-retried-<platform>`).
+A failed test fails the whole nightly run, so the next night runs every job again on the same commit, and a release
+of that commit waits (`.claude/skills/release/SKILL.md`). For a flaky failure, "Re-run failed jobs" on that run (`gh
+run rerun <id> --failed`) is the cheap remedy: the new attempt keeps the run's id and commit, and once it passes the
+run counts as successful for both (seen with CI run 44461921450); `gh workflow run` starts all twelve Mac jobs again.
+On macOS `CheckboxBehaviorTests.testKeyboardFocusAndSpace` skips itself when the system's keyboard navigation is off,
+as it likely is on the runner: a green macOS leg may not have run it, and its output shows the skip. The macOS leg had
+not run on CI when it was added.
 
 ### Accessibility audit
 
