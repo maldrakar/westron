@@ -335,6 +335,8 @@ enum SnapshotRenderer {
 
         /// A borderless window with the view as its content, never ordered in, laid out.
         static func show(_ view: some View, dark: Bool) throws -> NSWindow {
+            // Before the first field is laid out: SwiftUI's line height of a field is keyed by its font's address (#99).
+            MeasuredFonts.keep()
             _ = NSApplication.shared
             let size = CatalogScene.windowSize
             let hosting = NSHostingView(rootView: view)
@@ -463,7 +465,7 @@ enum SnapshotRenderer {
         /// with Thai, 21 with Burmese; measured with Xcode 27.1 on macOS 26.7), and a fresh font after a change of the
         /// machine's preferences takes the new ones. The posted notification makes Core Text read them now. This
         /// removes a proven dependency; it does not explain #99, whose fields grew by 1 pt, not by a language's 1.3 or
-        /// more, and whose cause is not identified.
+        /// more: that was SwiftUI's line height of another font's object at the same address (`MeasuredFonts`).
         static func pinLanguage() {
             var arguments = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
             arguments["AppleLanguages"] = pinnedLanguages
