@@ -76,6 +76,12 @@ tools/westron tokens check        # token files and the resolver: schema, subset
 tools/westron tokens contrast     # WCAG 2 contrast of every declared pair in every theme (--all for the table)
 ```
 
+The scripts that use the iOS simulator or the Mac's screen (`check.sh package-ios`, `a11y`, `behavior`,
+`catalog-screenshot.sh`, the iOS render of `snapshot-matrix.sh`) queue for it across every worktree on this Mac: a
+second run prints once whom it waits for and waits, at most `WESTRON_LOCK_TIMEOUT` seconds (default 5400), then fails
+saying so. Start them and let them queue; add no sleeps, retries or checks for other runs of your own
+(`platforms/apple/README.md`, "One run at a time").
+
 A screenshot is how you see your work: open the PNG and look at it before you say "done".
 Parameters: `--entry <id>` (default `environment`), `--appearance light|dark`, `--contrast standard|high`,
 `--dynamic-type xSmall…accessibility5`, `--device "<simulator>"` (default `iPhone 17` or `$WESTRON_SIM_DEVICE`),

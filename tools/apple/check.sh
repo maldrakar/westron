@@ -25,12 +25,18 @@
 #   tools/apple/check.sh format      swift format lint without changes, tools/ included
 #   tools/apple/check.sh fix-format  swift format that rewrites the files, tools/ included
 #   tools/apple/check.sh all         everything except fix-format, a11y and behavior (package-ios included)
+#
+# package-ios, a11y and behavior queue for the iOS simulator, and on macOS for the Mac's screen, while another run
+# anywhere on this Mac uses it: they say whom they wait for and wait, at most WESTRON_LOCK_TIMEOUT seconds (default
+# 5400; tools/apple/lock.sh).
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$root"
 # shellcheck source=tools/apple/xcode-env.sh
 source tools/apple/xcode-env.sh
+# shellcheck source=tools/apple/lock.sh
+source tools/apple/lock.sh
 
 swift_sources=(Package.swift platforms/apple tools/Package.swift tools/Sources tools/Tests)
 min_ios="$(sed -n 's/.*\.iOS(\.v\([0-9]*\)).*/\1/p' Package.swift).0"
@@ -51,10 +57,13 @@ package_ios() {
   udid="$(westron_simulator_udid "${WESTRON_SIM_DEVICE:-iPhone 17}")" || return 1
   mkdir -p .build/logs
   echo "== package-ios: id=$udid"
+  westron_lock_simulator "$udid" || return 1
   # Without -collect-test-diagnostics never, a failed run waits minutes for a sysdiagnose of the simulator.
   xcodebuild -scheme Westron-Package -destination "id=$udid" -derivedDataPath .build/xcode/package \
     -collect-test-diagnostics never test > "$log" 2>&1 || status=$?
   stop_test_daemon "$udid"
+  # Done with the simulator: `all` goes on to platforms and catalog, which need none.
+  westron_unlock "simulator-$udid"
   # The failures, each issue with the first line under it (its message), and the totals of each test target.
   awk '/\[MT\]/ { next }
     /✘ .*recorded an issue/ { print; if ((getline line) > 0 && line ~ /^↳ /) print line; next }
@@ -132,6 +141,16 @@ ui_test_build() {
     echo "check.sh: $what: the catalog or its UI tests failed to build ($platform), log: $build_log" >&2
     return 1
   fi
+}
+
+# Takes the lock of the UI tests' destination (tools/apple/lock.sh), the simulator <udid> or, with an empty one, the
+# Mac's screen, after the build, which needs neither, and before behavior's watchdog starts, which a wait would trip.
+# Sets ui_test_waited to the seconds it waited: a11y moves the start of its retry budget by them. behavior's
+# WESTRON_BEHAVIOR_DEADLINE still counts the wait; only CI sets it, and nothing waits there.
+ui_test_lock() {
+  local before=$SECONDS
+  if [ -n "$1" ]; then westron_lock_simulator "$1"; else westron_lock_screen; fi || return 1
+  ui_test_waited=$((SECONDS - before))
 }
 
 # An interrupted UI test run: stops its xcodebuild and the simulator's test daemon, then exits with <status>. The
@@ -323,6 +342,9 @@ a11y() {
   echo "== a11y: $destination${selection:+ (${selection#-})}"
   # The test runs, the first and a retry alike, use only what this build produced.
   ui_test_build "$destination" ".build/logs/$name-build.log" "a11y" "$platform" || return 1
+  ui_test_lock "$udid" || return 1
+  # The retry's budget counts from the start without the wait: on CI nothing waits.
+  a11y_started=$((a11y_started + ui_test_waited))
   local first_status=0
   a11y_run test-without-building "$log" "$results" "$destination" "$udid" "${only[@]}" || first_status=$?
   [ "$first_status" -ne 0 ] || return 0
@@ -375,6 +397,7 @@ a11y() {
     if [ "$platform" = ios ]; then
       udid="$(westron_simulator_udid "${WESTRON_SIM_DEVICE:-iPhone 17}")" || return 1
       destination="id=$udid"
+      ui_test_lock "$udid" || return 1
     fi
     if [ "$entries" != "*" ]; then
       # The entries to retry are already the shard's, so the shard is not taken again.
@@ -634,6 +657,7 @@ behavior() {
   echo "== behavior: $destination${selection:+ (${selection#-})}"
   # The test runs, the first and a retry alike, use only what this build produced.
   ui_test_build "$destination" ".build/logs/$name-build.log" "behavior" "$platform" || return 1
+  ui_test_lock "$udid" || return 1
   behavior_run test-without-building "$log" "$results" "$destination" "$udid" "${only[@]}" || status=$?
   [ "$status" -ne 0 ] || return 0
 
@@ -683,6 +707,7 @@ behavior() {
   if [ "$platform" = ios ]; then
     udid="$(westron_simulator_udid "${WESTRON_SIM_DEVICE:-iPhone 17}")" || return 1
     destination="id=$udid" behavior_udid="$udid"
+    ui_test_lock "$udid" || return 1
   fi
   if ! behavior_run test-without-building "$retry_log" "$retry_results" "$destination" "$udid" "${only[@]}" \
     ${skip[@]+"${skip[@]}"}; then
