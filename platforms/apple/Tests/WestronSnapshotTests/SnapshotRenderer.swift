@@ -217,8 +217,20 @@ enum SnapshotRenderer {
             try show(try view(key: key, capture: capture, probe: probe), dark: capture.theme.isDark)
         }
         defer { autoreleasepool { hide(window) } }
+        #if os(macOS)
+            FieldProbe.force(window, capture: capture)
+        #endif
         await pause(settle)
+        #if os(macOS)
+            FieldProbe.forceAfterSettle(window, capture: capture)
+        #endif
         let drawn = try autoreleasepool { try draw(window, probe: probe) }
+        #if os(macOS)
+            if ProcessInfo.processInfo.environment["WESTRON_FIELD_REPORT"] != nil, let root = window.contentView {
+                print("probe: \(key).\(capture.name) settle \(settle) \(NotificationLog.shared.stamp())")
+                for line in FieldProbe.report(root) { print("probe:   " + line) }
+            }
+        #endif
         guard case .success(let draw) = drawn else { return drawn }
         let colors = colorCount(draw.image, upTo: 3)
         return colors < 3 ? .failure(.blank(colors: colors)) : .success(draw)
@@ -330,7 +342,10 @@ enum SnapshotRenderer {
         static let scale: CGFloat = 2
 
         final class FixedScaleWindow: NSWindow {
-            override var backingScaleFactor: CGFloat { SnapshotRenderer.scale }
+            override var backingScaleFactor: CGFloat {
+                FieldProbe.modes.contains("scale1")
+                    ? 1 : FieldProbe.modes.contains("noOverride") ? super.backingScaleFactor : SnapshotRenderer.scale
+            }
         }
 
         /// A borderless window with the view as its content, never ordered in, laid out.

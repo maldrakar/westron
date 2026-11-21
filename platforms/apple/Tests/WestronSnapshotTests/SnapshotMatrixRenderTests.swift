@@ -89,6 +89,9 @@ struct SnapshotMatrixRenderTests {
         if let languages = SnapshotRenderer.languagesBeforePin {
             print("snapshot: languages before the pin: \(languages)")
         }
+        #if os(macOS)
+            if ProcessInfo.processInfo.environment["WESTRON_FIELD_REPORT"] != nil { NotificationLog.shared.begin() }
+        #endif
         SnapshotRenderer.pinLanguage()
         let metrics = SnapshotRenderer.textMetrics
         if let metrics { print("snapshot: text metrics at the start: \(metrics)") }

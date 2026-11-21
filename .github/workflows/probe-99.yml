@@ -1,0 +1,66 @@
+# TEMPORARY probe for #99, on the probe branch only: renders the macOS text-field sheets on the CI runner with the
+# field report and logs what the process is told (notifications) and what fontd does, to catch the +1 pt state.
+name: Probe 99
+on:
+  push:
+    branches: [probe/snapshot-99-fields]
+permissions:
+  contents: read
+jobs:
+  loop:
+    name: Loop of the text-field sheets
+    runs-on: xcode-27
+    timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+      - name: Runner state
+        run: |
+          mkdir -p .build/probe
+          { date; uptime; sw_vers; sysctl -n machdep.cpu.brand_string; system_profiler SPDisplaysDataType;
+            defaults read -g; defaults read com.apple.universalaccess || true; } > .build/probe/runner.txt 2>&1
+          (log stream --style compact --predicate 'process == "fontd" OR subsystem BEGINSWITH "com.apple.FontServices" OR subsystem CONTAINS "CoreText" OR eventMessage CONTAINS[c] "font"' > .build/probe/log-stream.txt 2>&1 &)
+      - name: Build
+        run: swift build --build-tests
+      - name: Loop
+        timeout-minutes: 20
+        run: |
+          date; uptime
+          WESTRON_PROBE_LOOP=840 swift test --skip-build --filter ProbeLoopTests > .build/probe/loop.log 2>&1 || true
+          date; uptime
+          grep -c "probe-pic" .build/probe/loop.log || true
+          grep -E "probe-dump|differ|probe: end" .build/probe/loop.log | head -80 || true
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: probe-loop
+          path: .build/probe
+  matrix:
+    name: Full macOS render, three times
+    runs-on: xcode-27
+    timeout-minutes: 40
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+      - name: Runner state
+        run: |
+          mkdir -p .build/probe
+          { date; uptime; sw_vers; system_profiler SPDisplaysDataType; defaults read -g; } > .build/probe/runner.txt 2>&1
+          (log stream --style compact --predicate 'process == "fontd" OR subsystem BEGINSWITH "com.apple.FontServices" OR subsystem CONTAINS "CoreText" OR eventMessage CONTAINS[c] "font"' > .build/probe/log-stream.txt 2>&1 &)
+      - name: Render three times
+        timeout-minutes: 30
+        run: |
+          for i in 1 2 3; do
+            date; uptime
+            WESTRON_FIELD_REPORT=1 tools/apple/snapshot-matrix.sh macos --out ".build/probe/render-$i" || true
+            cp .build/logs/snapshot-matrix-macos.log ".build/probe/render-$i.log"
+            find ".build/probe/render-$i" -name '*.png' ! -name 'text-field.*' -delete
+          done
+          for i in 2 3; do tools/apple/snapshot-matrix.sh compare .build/probe/render-1 ".build/probe/render-$i" | tail -12 || true; done
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: probe-matrix
+          path: .build/probe
