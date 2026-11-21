@@ -209,10 +209,11 @@ final class ButtonBehaviorTests: XCTestCase {
     ///
     /// iOS: a tap 8 pt below what is drawn, at the target's edge, must reach it. The hit area is the system's touch
     /// tolerance, which westron does not grow (ButtonVariantStyle.swift), and the test fails if the platform ever covers
-    /// less than the target. With no other control near, the tolerance reached 15 to 19 pt past a button of size s or m on both
-    /// iOS 26.3 and 27.0 (#102). A control closer than about 16 pt shares the gap with the button, each taking about
-    /// half: with the page's Toggle row 12 pt below "Add", the reach below it was 8 pt on iOS 26.3 and 7 on 27.0, so
-    /// this tap sat on the boundary between the two and failed on 27.0. The page now keeps every other control clear of
+    /// less than the target. With no other control near, the tolerance reached 16 to 19 pt past a button of size s or m
+    /// on both iOS 26.3 and 27.0 (#102). A control closer than about 16 pt shares the gap with the button, which gets
+    /// only part of it: in the measured cases 10 pt of a 20 pt gap, 7 of 16, and 8 (iOS 26.3) or 7.67 (27.0) of the
+    /// 12 pt gap to the page's Toggle row, then below "Add". This tap sat on the boundary between the button's share and
+    /// the row's, one pixel nearer the button on 27.0, and failed there. The page now keeps every other control clear of
     /// the tap ("Add" is the last button, the Toggle row above the buttons), so the test measures the system's
     /// tolerance, not the arbitration with a neighbor, and the first assertion guards that: no other control within
     /// 16 pt of the tap.

@@ -87,12 +87,15 @@ and the parity lint (#21) are proved on it before a second component starts. The
   - Size s is drawn 28 pt tall, below the 44 pt target; size m, 36. On iOS westron does not grow the hit area and
     relies on the system's touch tolerance (`ButtonVariantStyle.swift`). The catalog's `ButtonBehaviorTests` tap 8 pt
     below size s "Add", the target's edge, passed on iOS 26.3 and failed every time on iOS 27.0 (run 44888969666).
-  - Measured with taps at 1 pt steps around the buttons of that catalog page, same layout and frames on both
-    versions: with no other control near, the tolerance reaches 15 to 19 pt past a button of size s or m on iOS 26.3
-    and 27.0 alike, past the target. Next to another control the system shares the gap between the two: with the
-    page's Toggle row 12 pt below "Add", the reach below it was 8 pt on 26.3 (8.33 missed) and 7 on 27.0; a button
-    20 pt above it left 10, one 16 pt away 7. The test's tap sat on the boundary with the Toggle row, which moved by
-    under a point on 27.0: it measured the arbitration with a neighbor, not the contract.
+  - Measured with taps at 1 pt steps around the buttons of that catalog page, and below "Add" at a third of a point,
+    one pixel at 3x, with the same layout and frames on both versions ("Add" at (137.33, 316, 72.67, 28), the test's
+    tap at (173.67, 352); run 44901333659 on 27.0): with no other control near, the tolerance reaches 16 to 19 pt
+    past a button of size s or m on iOS 26.3 and 27.0 alike, past the target. Next to another control the system
+    shares the gap between the two, and the button gets only part of it: 10 pt of a 20 pt gap to a button above
+    "Add", 7 of 16 to a button beside it, and of the 12 pt gap to the page's Toggle row below "Add", 8 pt on 26.3
+    (8.00 reached, 8.33 missed) and 7.67 on 27.0 (7.67 reached, 8.00 missed). The test's tap sat on the boundary
+    between the button's share of that gap and the row's, and the boundary moved one pixel nearer the button on
+    27.0: the test measured the arbitration with a neighbor, not the contract.
   - Considered: growing the hit area in the style to the target on iOS; keeping the system's tolerance and fixing
     the catalog page and the test.
   - **Chosen: the system's tolerance stays the hit area on iOS; westron still does not grow it.** The catalog page
@@ -154,6 +157,9 @@ and the parity lint (#21) are proved on it before a second component starts. The
 - The focus ring is the system's on Apple and GTK; on the web it is an outline in `color.border.focus`.
 - On macOS, Return and Escape trigger the default and cancel actions.
 - On macOS the hit area is the drawn button, so size s takes clicks in its 24 pt (above).
+- On iOS the hit area is the system's touch tolerance, which westron does not grow; another control within about
+  16 pt shares it, so a size s button reaches the full target only where no control is that close (above, decided
+  2026-11-21, #102).
 - **Known issue on Apple (#23): the `trash` glyph and the accessibility audit.** With `trash` as the destructive
   samples' icon, the Dynamic Type accessibility audit of the catalog's `button-destructive` page times out ("Audit
   failed to complete in time") on the screenful of size m and l samples at accessibility5, on the code before and

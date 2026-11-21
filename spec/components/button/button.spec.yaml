@@ -153,14 +153,14 @@ platforms:
       description: >-
         Hover only with a pointer, on iPad; an iPhone never enters it. The hit area is the system's touch tolerance
         around the drawn button, which westron does not grow: measured on iOS 26.3 it reached 16 pt past a 32 pt
-        button (#23), and with no other control near it reaches 15 to 19 pt past a button of size s or m on iOS 26.3
+        button (#23), and with no other control near it reaches 16 to 19 pt past a button of size s or m on iOS 26.3
         and 27.0 alike (#102). The catalog's ButtonBehaviorTests taps 8 pt below the 28 pt size s, the edge of
         size.target.minimum, 44 pt, and 4 pt below the 36 pt size m, the edge of the same target; both reach the
-        button. Another control closer than about 16 pt shares the gap with the button, each taking about half of
-        it: with a Toggle row 12 pt below a size s button, the reach below it was 8 pt on iOS 26.3 and 7 on 27.0,
-        so the test's tap failed on 27.0 until the catalog moved the row away. So a size s button
-        reaches the full target only where no other control is within about 16 pt of it (the owner's decision of
-        2026-11-21, decisions/0001).
+        button. Another control closer than about 16 pt shares the gap with the button, which gets only part of it:
+        in the measured cases 10 pt of a 20 pt gap, 7 of 16, and, with a Toggle row 12 pt below a size s button, 8 pt
+        on iOS 26.3 and 7.67 on 27.0, one pixel less, so the test's tap at 8 pt failed on 27.0 until the catalog moved
+        the row away. So a size s button reaches the full target only where no other control is within about 16 pt of
+        it (the owner's decision of 2026-11-21, decisions/0001).
     macos:
       keyboardIntents: [defaultAction, cancelAction]
       description: >-
