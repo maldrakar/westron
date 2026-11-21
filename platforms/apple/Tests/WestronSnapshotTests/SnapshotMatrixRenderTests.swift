@@ -21,8 +21,10 @@
 // name such a state, rather than prevent it, so that it does not read as a change to a pull request:
 // - every picture's AppKit text fields are compared, after layout and before the draw, with AppKit's own height for
 //   them (`FieldHeights`); a picture with a field off it fails as "the render was in the state of #99", with each
-//   field's sizes, font and text, and the log ends with a count (`snapshot: text fields' laid-out heights`). This is
-//   the check that names the state seen on the runner; the picture is still written and compared as usual;
+//   field's sizes, font and text. Its summary (`snapshot: text fields' laid-out heights`) counts the run's pictures
+//   and, apart, those drawn again at the end, which it follows; after it come the text metrics at the end and the
+//   count of images. This is the check that names the state seen on the runner; the picture is still written and
+//   compared as usual;
 // - the process's languages and locale are pinned, as xcodebuild pins them on iOS, which removes a proven dependency
 //   of AppKit's text metrics, and a picture fails when a fresh AppKit field cell measures text otherwise than at the
 //   start of the run (`SnapshotRenderer.textMetrics`): a change of the process's text metrics, not the state of #99,
@@ -104,11 +106,8 @@ struct SnapshotMatrixRenderTests {
         var count = 0
         var bytes = 0
         var times: [(file: String, seconds: TimeInterval)] = []
-        // The check of #99 over the whole run (macOS, `FieldHeights`): the fields compared, the pictures that have
-        // any, and those it found in that state.
-        var fields = 0
-        var withFields = 0
-        var inState: [String] = []
+        // The check of #99 over the pictures of the run, before those drawn again at the end (macOS, `FieldHeights`).
+        var fields = FieldHeightTally()
         // The pictures drawn again at the end (`checksReproducible`): each component's first picture in each capture.
         var again: [(file: String, key: String, capture: ComponentMatrix.Capture)] = []
         // By sheet and text size, the most columns of one picture that leave no cell squeezed: decided in the first
@@ -146,10 +145,8 @@ struct SnapshotMatrixRenderTests {
                                 image.squeezed = rendered.squeezed.count
                                 image.size = [rendered.size.width, rendered.size.height].map(Double.init)
                                 image.attempts = rendered.attempts
-                                fields += rendered.fields.checked
-                                if rendered.fields.checked > 0 { withFields += 1 }
+                                fields.add(rendered.fields, of: file)
                                 if !rendered.fields.findings.isEmpty {
-                                    inState.append(file)
                                     Issue.record(
                                         Comment(
                                             rawValue: rendered.fields.issue(
@@ -196,15 +193,18 @@ struct SnapshotMatrixRenderTests {
             }
         }
         let total = Date().timeIntervalSince(start)
+        // The pictures drawn again go through the check of #99 too, counted apart, so its summary follows them.
+        var fieldsAgain: FieldHeightTally?
+        if SnapshotRenderer.checksReproducible {
+            fieldsAgain = await checkReproducible(again, in: output, after: count, since: start)
+        }
         if SnapshotRenderer.checksFieldHeights {
+            let inState = fields.inState + (fieldsAgain?.inState ?? [])
             print(
-                "snapshot: text fields' laid-out heights against AppKit's (#99): \(fields) fields in \(withFields) of "
-                    + "\(count) pictures; "
+                "snapshot: text fields' laid-out heights against AppKit's (#99): \(fields.summary) of the run"
+                    + (fieldsAgain.map { ", and \($0.summary) drawn again at the end" } ?? "") + "; "
                     + (inState.isEmpty
                         ? "none in the state of #99" : "the state of #99 in: " + inState.joined(separator: ", ")))
-        }
-        if SnapshotRenderer.checksReproducible {
-            await checkReproducible(again, in: output, after: count, since: start)
         }
         if let metrics, let now = SnapshotRenderer.textMetrics {
             print("snapshot: text metrics at the end: \(now == metrics ? "the same" : now)")
@@ -303,24 +303,29 @@ struct SnapshotMatrixRenderTests {
     /// that: when a drawn-again picture falls in such a state, or its first draw did, it fails here, named as such,
     /// rather than reading as a change to the pull request. A state that lasts from before the first draw to the end
     /// of the run draws the same twice and passes here (run 44917113978); `FieldHeights` names the one seen so. The
-    /// drawn-again pictures go through that check too.
+    /// drawn-again pictures go through that check too: a finding fails the picture and prints the state, as in the
+    /// run, and their tally is returned for the check's summary.
     func checkReproducible(
         _ pictures: [(file: String, key: String, capture: ComponentMatrix.Capture)], in output: URL,
         after drawn: Int, since start: Date
-    ) async {
+    ) async -> FieldHeightTally {
         let began = Date()
         var differing: [String] = []
+        var fields = FieldHeightTally()
         for (index, picture) in pictures.enumerated() {
             guard let first = SnapshotRenderer.read(output.appendingPathComponent(picture.file)) else { continue }
             do {
                 let drawnAt = Date()
                 let again = try await SnapshotRenderer.render(key: picture.key, capture: picture.capture)
+                fields.add(again.fields, of: picture.file + ", drawn again")
                 if !again.fields.findings.isEmpty {
                     Issue.record(
                         Comment(
                             rawValue: again.fields.issue(
                                 file: picture.file + ", drawn again", picture: drawn + index + 1,
                                 seconds: drawnAt.timeIntervalSince(start))))
+                    SnapshotRenderer.printState(
+                        at: picture.file + ", drawn again", theme: picture.capture.name, since: start)
                 }
                 let why: String
                 if let pixels = SnapshotRenderer.differingPixels(first, again.image) {
@@ -344,7 +349,27 @@ struct SnapshotMatrixRenderTests {
                 format: "snapshot: drawn again at the end: %d pictures in %.1f s, %@", pictures.count,
                 Date().timeIntervalSince(began),
                 differing.isEmpty ? "each the same" : "differing: " + differing.joined(separator: ", ")))
+        return fields
     }
+}
+
+/// The check of #99 (`FieldHeights`) over a set of pictures: the AppKit text fields it compared, the pictures that
+/// have any, the pictures drawn, and those it found in the state of #99.
+struct FieldHeightTally {
+    var fields = 0
+    var withFields = 0
+    var pictures = 0
+    var inState: [String] = []
+
+    mutating func add(_ report: FieldHeightReport, of file: String) {
+        pictures += 1
+        fields += report.checked
+        if report.checked > 0 { withFields += 1 }
+        if !report.findings.isEmpty { inState.append(file) }
+    }
+
+    /// As the log gives it: "432 fields in 40 of 196 pictures".
+    var summary: String { "\(fields) fields in \(withFields) of \(pictures) pictures" }
 }
 
 /// The manifest the review page reads (tools/apple/snapshot-pages.swift, `Manifest`).

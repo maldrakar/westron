@@ -92,7 +92,14 @@
             hosting.layoutSubtreeIfNeeded()
             let report = FieldHeights.check(hosting)
             #expect(report.checked == 4)
-            #expect(report.findings == [])
+            // These fields are laid out by SwiftUI as in the matrix, so a finding here is the process in the state of
+            // #99 (as on the runner), not a fault of the check: the failure says so, in the render's words.
+            #expect(
+                report.findings == [],
+                Comment(
+                    rawValue: "the test was in the state of #99: \(report.findings.count) of \(report.checked) AppKit "
+                        + "text fields laid out at a height other than AppKit's own for them; that is the state of "
+                        + "the process, not a fault of FieldHeights: " + report.findings.joined(separator: "; ")))
         }
     }
 #endif

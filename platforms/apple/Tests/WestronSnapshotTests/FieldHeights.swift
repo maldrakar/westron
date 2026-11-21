@@ -13,12 +13,14 @@
 // the other two give one line however many it wraps to (a field 244 pt wide with a 400 pt line is laid out 32 pt high
 // for its two lines, and `cellSize` and `intrinsicContentSize` say 16). In a normal render the laid-out height is that
 // height for every field the matrix draws, and for every one-line field it is also the intrinsic height (measured over
-// the full macOS matrix, 480 fields in 40 pictures: one-line fields with text and empty with a prompt, `SecureField`,
-// multi-line fields of one and two lines, at every size, in SF 11 and 13 and Onest 13). So every picture's view tree is
-// walked after its layout, before its draw, and a field laid out at a height that differs from AppKit's by more than
-// half a pixel (the grid SwiftUI places frames on) is a finding. Not checked: an `NSTextView`, of which the matrix has
-// none. A multi-line field whose text runs past its `lineLimit` would be laid out shorter than its lines by design;
-// the matrix has none, and one added would show here as a finding, to exempt by that rule.
+// a full macOS render, which counts each field once in each picture that draws it: 432 fields in the 40 text-field
+// pictures of the run's 196, and 48 more in the 4 text-field pictures among the 28 drawn again at the end; one-line
+// fields with text and empty with a prompt, `SecureField`, multi-line fields of one and two lines, at every size, in
+// SF 11 and 13 and Onest 13). So every picture's view tree is walked after its layout, before its draw, and a field
+// laid out at a height that differs from AppKit's by more than half a pixel (the grid SwiftUI places frames on) is a
+// finding. Not checked: an `NSTextView`, of which the matrix has none. A multi-line field whose text runs past its
+// `lineLimit` would be laid out shorter than its lines by design; the matrix has none, and one added would show here
+// as a finding, to exempt by that rule.
 //
 // It only reads: no picture changes. Not compiled for iOS, where no such state has been seen.
 

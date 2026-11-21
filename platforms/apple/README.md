@@ -271,9 +271,12 @@ laid-out height with AppKit's own for it, its cell's size at the field's width (
 a field that does not wrap, its `intrinsicContentSize`; a field off by more than half a pixel fails the picture with
 the issue "the render was in the state of #99", which gives the picture, how far into the run, and each field's frame,
 sizes, font (with its ascender, descender and leading) and text or prompt. The picture is still written and compared
-as usual. Over the full matrix in the normal state every field agrees: 432 fields in the 40 text-field pictures
-(one-line, empty with a prompt, `SecureField`, multi-line of one and two lines, at every size), and the log ends with
-the count (`snapshot: text fields' laid-out heights against AppKit's (#99)`). An `NSTextView` is not checked (the
+as usual. Over the full matrix in the normal state every field agrees: 432 fields in the 40 text-field pictures of
+the run's 196 (one-line, empty with a prompt, `SecureField`, multi-line of one and two lines, at every size), and 48
+in the 4 text-field pictures among the 28 drawn again at the end, which go through the check too. The log gives both
+counts, apart, in one line (`snapshot: text fields' laid-out heights against AppKit's (#99)`), after the pictures
+drawn again (`snapshot: drawn again at the end`) and before the text metrics at the end and the count of images that
+closes the log. An `NSTextView` is not checked (the
 matrix has none), nor a multi-line field past its `lineLimit`, which would be laid out shorter than its lines by
 design (the matrix has none either; one added would fail the check until exempted). Its unit tests,
 `FieldHeightsTests`, run in `swift test`. **The language.** The test pins the process's language and locale
