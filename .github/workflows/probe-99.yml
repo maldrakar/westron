@@ -1,7 +1,7 @@
-# TEMPORARY probe for #99, on the probe branch only (second probe, run 2): whether the natural state comes from SwiftUI's
-# line-height cache keyed by font addresses. The font cache that lets fonts go places them by a hash Swift seeds anew
-# in each process, so this runs many short processes rather than one long one: each lays out the text-field sheets
-# about once WITHOUT the fix, with the trace of line-height lookups from its first layout on, for 25 minutes per VM.
+# TEMPORARY probe for #99, on the probe branch only (run 3): the matched control of run 44942981800. The same loop of
+# short processes, each laying out the text-field sheets with the trace from its first layout on, for 25 minutes per
+# VM, but WITH the fix (MeasuredFonts.keep() in SnapshotRenderer.show, before the first layout). Each process's
+# fields off their line and fonts kept go to processes.txt.
 name: Probe 99 cache
 on:
   push:
@@ -33,8 +33,10 @@ jobs:
           i=0
           while [ "$(date +%s)" -lt "$end" ]; do
             i=$((i + 1))
-            WESTRON_PROBE_NO_KEEP=1 WESTRON_PROBE_LOOP=8 \
+            WESTRON_PROBE_LOOP=8 \
               swift test --skip-build --filter ProbeLoopTests > ".build/probe/loop-$i.log" 2>&1 || true
+            { printf 'process %d: ' "$i"; grep -E "^probe: (start|end)" ".build/probe/loop-$i.log" | tr '\n' ' '; echo; } \
+              >> .build/probe/processes.txt
             if grep -q "probe-dev" ".build/probe/loop-$i.log"; then
               echo "process $i: deviations"; grep -E "probe-dev" ".build/probe/loop-$i.log" | head -5
             else
@@ -46,6 +48,6 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
-          name: probe-cache-run2-${{ matrix.vm }}
+          name: probe-cache-run3-${{ matrix.vm }}
           path: .build/probe
           if-no-files-found: warn

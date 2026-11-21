@@ -35,6 +35,7 @@
             var round = 0
             var pictures = 0
             var deviations = 0
+            var fieldsOff = 0
             var dumps = 0
             let deadline = start.addingTimeInterval(seconds)
             while Date() < deadline {
@@ -65,6 +66,7 @@
                                 let offLine = found.filter { field in
                                     !(field.cell?.wraps ?? false) && field.frame.height != field.cell?.cellSize.height
                                 }
+                                fieldsOff += offLine.count
                                 let changed = baseline[id].map { $0 != heights } ?? false
                                 if baseline[id] == nil { baseline[id] = heights }
                                 let text = heights.map { String(format: "%g", $0) }.joined(separator: ",")
@@ -107,7 +109,7 @@
             }
             print(
                 "probe: end t=\(Date().timeIntervalSince(start)) rounds \(round) pictures \(pictures) deviations "
-                    + "\(deviations) fonts kept \(MeasuredFonts.count) measured addresses \(LineHeightTrace.misses.count)"
+                    + "\(deviations) fields off their line \(fieldsOff) fonts kept \(MeasuredFonts.count) measured addresses \(LineHeightTrace.misses.count)"
             )
         }
     }
