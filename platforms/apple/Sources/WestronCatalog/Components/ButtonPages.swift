@@ -505,6 +505,24 @@ private struct ButtonBehaviorPage: View {
                     .textRole(.body.regular)
                     .foregroundStyle(.text.primary)
                     .accessibilityIdentifier(ButtonCatalogID.count)
+                // Above the buttons, not below them: ButtonBehaviorTests taps 8 pt below "Add", and a control closer
+                // than about 16 pt to a button shares the system's touch tolerance with it (#102).
+                FlowLayout(spacing: .space200) {
+                    // Its ideal width, and no wider than the page: at accessibility sizes its label wraps.
+                    Toggle("Loading: Publish, Publish now, Export", isOn: $isPublishing)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier(ButtonCatalogID.loadingToggle)
+                    // A test control: it presses Publish as assistive technology does.
+                    Button("Press Publish via accessibility") {
+                        accessibilityPress = [ButtonCatalogID.loading, ButtonCatalogID.loadingWithoutIcon]
+                            .map { AccessibilityPress.press(identifier: $0) }.joined(separator: ", ")
+                    }
+                    .buttonStyle(.tertiary)
+                    .accessibilityIdentifier(ButtonCatalogID.accessibilityPress)
+                    .accessibilityValue(accessibilityPress)
+                }
+                .textRole(.footnote.regular)
+                .foregroundStyle(.text.secondary)
                 FlowLayout(spacing: .space200) {
                     Button("Save") { accepted += 1 }
                         .buttonStyle(.primary)
@@ -541,34 +559,20 @@ private struct ButtonBehaviorPage: View {
                     Button {
                         accepted += 1
                     } label: {
-                        Label("Add", icon: .plus)
-                    }
-                    .buttonStyle(.secondary, size: .s)
-                    .accessibilityIdentifier(ButtonCatalogID.small)
-                    Button {
-                        accepted += 1
-                    } label: {
                         Label("Save", icon: .check)
                     }
                     .buttonStyle(.primary, iconOnly: true)
                     .accessibilityIdentifier(ButtonCatalogID.iconOnly)
-                }
-                FlowLayout(spacing: .space200) {
-                    // Its ideal width, and no wider than the page: at accessibility sizes its label wraps.
-                    Toggle("Loading: Publish, Publish now, Export", isOn: $isPublishing)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityIdentifier(ButtonCatalogID.loadingToggle)
-                    // A test control: it presses Publish as assistive technology does.
-                    Button("Press Publish via accessibility") {
-                        accessibilityPress = [ButtonCatalogID.loading, ButtonCatalogID.loadingWithoutIcon]
-                            .map { AccessibilityPress.press(identifier: $0) }.joined(separator: ", ")
+                    // Last, so that it is on the flow's last line and no control lies within 16 pt of the tap 8 pt
+                    // below it: below are the next section's title and, off to the side, its buttons (#102).
+                    Button {
+                        accepted += 1
+                    } label: {
+                        Label("Add", icon: .plus)
                     }
-                    .buttonStyle(.tertiary)
-                    .accessibilityIdentifier(ButtonCatalogID.accessibilityPress)
-                    .accessibilityValue(accessibilityPress)
+                    .buttonStyle(.secondary, size: .s)
+                    .accessibilityIdentifier(ButtonCatalogID.small)
                 }
-                .textRole(.footnote.regular)
-                .foregroundStyle(.text.secondary)
             }
             section("Close neighbors: two size s icon-only buttons \(Int(CGFloat.space100)) pt apart") {
                 HStack(spacing: .space100) {

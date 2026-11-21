@@ -130,7 +130,8 @@ iOS, iPadOS and watchOS and 28 on macOS (decisions/0013, revision of 2026-11-20)
 (#56), and they are not the target: on iOS and iPadOS `size.control.s` and `m`, 28 and 36, are below it, on watchOS
 `s`, 32, and on macOS `s`, 24, so a control drawn at them keeps a hit area of the target's size around what it draws.
 A component's contract may record an exception: on macOS, Button's size s takes clicks in its drawn 24 pt
-(spec/components/button, decisions/0001).
+(spec/components/button, decisions/0001). On iOS that area is the system's touch tolerance, which another control
+within about 16 pt shares (Button's contract, `platforms.apple.ios`, #102).
 
 ## Keyboard and focus
 
