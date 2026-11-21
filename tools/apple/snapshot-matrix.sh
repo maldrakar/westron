@@ -46,12 +46,17 @@
 # A reference within the tolerance of its new picture stays as it was, so a drift does not rewrite it; in another
 # environment only the same pixels keep one. CI records them (.github/workflows/snapshot-references.yml): references
 # recorded elsewhere would not match the runner's renders.
+# On iOS the render queues for the simulator while another run on this Mac uses it: it says whom it waits for and
+# waits, at most WESTRON_LOCK_TIMEOUT seconds (default 5400; tools/apple/lock.sh). On macOS it needs no screen (its
+# window is never ordered in), so it takes no lock.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$root"
 # shellcheck source=tools/apple/xcode-env.sh
 source tools/apple/xcode-env.sh
+# shellcheck source=tools/apple/lock.sh
+source tools/apple/lock.sh
 
 usage() { sed -n '2,/^set /{/^#/p;}' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
@@ -176,6 +181,11 @@ render() {
     if ! xcodebuild "${xcodebuild_args[@]}" build-for-testing >> "$log" 2>&1; then
       grep -E "error:|BUILD FAILED" "$log" | grep -v "\[MT\]" | head -20 >&2 || true
       echo "snapshot-matrix: build failed, log: $log" >&2
+      render_status=1
+      return 0
+    fi
+    # Before the render's clock starts: a wait for another run is not render time.
+    if ! westron_lock_simulator "$udid"; then
       render_status=1
       return 0
     fi

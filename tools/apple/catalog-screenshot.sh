@@ -8,14 +8,18 @@
 # By default the PNG goes to .build/screenshots/<platform>-<id>[-<theme>][-hc][-<size>].png, the xcodebuild log to
 # .build/logs/.
 # macOS: Automation Mode must be enabled once per machine (see platforms/apple/README.md).
+# While another run on this Mac uses the simulator (iOS) or the screen (macOS), it says whom it waits for and waits,
+# at most WESTRON_LOCK_TIMEOUT seconds (default 5400; tools/apple/lock.sh).
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$root"
 # shellcheck source=tools/apple/xcode-env.sh
 source tools/apple/xcode-env.sh
+# shellcheck source=tools/apple/lock.sh
+source tools/apple/lock.sh
 
-usage() { sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
 platform="${1:-}"
 [ "$platform" = ios ] || [ "$platform" = macos ] || usage
@@ -46,9 +50,6 @@ if [ "$platform" = ios ]; then
   # shellcheck source=tools/apple/simulator.sh
   source tools/apple/simulator.sh
   udid="$(westron_simulator_udid "$device")" || exit 1
-  # The same status bar on every screenshot.
-  xcrun simctl status_bar "$udid" override --time 9:41 --batteryState charged --batteryLevel 100 \
-    --wifiBars 3 --cellularMode active --cellularBars 4 --dataNetwork wifi
   destination="id=$udid"
 else
   destination="platform=macOS,arch=$(uname -m)"
@@ -61,6 +62,16 @@ if ! xcodebuild "${xcodebuild_args[@]}" build-for-testing > "$log" 2>&1; then
   grep -E "error:|BUILD FAILED" "$log" | head -20 >&2 || true
   echo "catalog-screenshot: build failed, log: $log" >&2
   exit 1
+fi
+
+# The build needs neither the simulator nor the screen; the capture does.
+if [ "$platform" = ios ]; then
+  westron_lock_simulator "$udid" || exit 1
+  # The same status bar on every screenshot.
+  xcrun simctl status_bar "$udid" override --time 9:41 --batteryState charged --batteryLevel 100 \
+    --wifiBars 3 --cellularMode active --cellularBars 4 --dataNetwork wifi
+else
+  westron_lock_screen || exit 1
 fi
 
 screenshot_failed() {

@@ -102,6 +102,22 @@ with <n> tests in <m> suites passed"); `ButtonShortcutTests` is macOS-only, so i
 although it needs a simulator: an incremental run takes about 12 s locally, and an iOS-only failure should stop the
 same command that stops a macOS one. Only the accessibility audit, half an hour long, stays out of `all`.
 
+## One run at a time: the simulator and the screen
+
+Several agents run these scripts on one Mac at once, each in a worktree of its own, and two test runs on one simulator
+fail or stall each other, as a macOS UI test captures whatever window is on top (#107). So `check.sh package-ios`,
+`a11y` and `behavior`, `catalog-screenshot.sh` and the iOS render of `snapshot-matrix.sh` take a lock on what they use
+alone, the simulator (by its UDID) or, on macOS, the Mac's screen, after their build and until they exit
+(`tools/apple/lock.sh`). A run that finds it held prints once whom it waits for (pid, command and folder, since when)
+and waits, at most `WESTRON_LOCK_TIMEOUT` seconds (default 5400, 90 minutes: above the longest CI job, 55, with room
+for a longer local audit), then fails saying who still holds it. With nobody else running it waits for nothing. A
+lock whose process died, even by SIGKILL, is taken over; a script under one that holds the lock goes on. The macOS
+render of the snapshot matrix draws in a window that is never ordered in, so it takes no lock. The lock serializes
+these scripts only: a person using the screen still spoils a macOS capture. The locks are symbolic links in the
+user's temporary folder, `$(getconf DARWIN_USER_TEMP_DIR)westron-locks/`, shared by every worktree and session.
+`tools/apple/lock-test.sh` tests the helper without a simulator, on macOS or Linux (`tools/check.sh locks`, so CI
+runs it).
+
 ## Catalog
 
 Open in Xcode 27.1: `platforms/apple/Catalog/Catalog.xcodeproj`. Without arguments, the catalog shows navigation
