@@ -460,11 +460,18 @@ enum SnapshotRenderer {
             NotificationCenter.default.post(name: NSLocale.currentLocaleDidChangeNotification, object: nil)
         }
 
-        /// What AppKit's text field, the system field under SwiftUI's TextField, measures one line of body text and an
-        /// empty field with a prompt at now, with the process's languages: a picture is comparable only with the
-        /// metrics the run began with. In run 44885247356 (#99, on pull request #98) every system field of seven
-        /// pictures in a row was 1 pt taller than in every other run and nothing else in them changed; whether a fresh
-        /// cell measured as those fields did is not known, so this names that state only if it shows here too.
+        /// The process's languages and locale before `pinLanguage`, that is the machine's: the runner's own, for the log.
+        static var languagesBeforePin: String? {
+            "\(Locale.preferredLanguages.joined(separator: ", ")); locale \(Locale.current.identifier)"
+        }
+
+        /// What a fresh AppKit text field cell, the kind of system field under SwiftUI's TextField, measures one line
+        /// of body text and an empty field with a prompt at now, with the process's languages. It is a proxy, not the
+        /// fields drawn: SwiftUI keeps the font it resolved, so a picture drawn while this differs from the start of
+        /// the run may still be the same as a normal render. In run 44885247356 (#99, on pull request #98) every
+        /// system field of seven pictures in a row was 1 pt taller than in every other run and nothing else in them
+        /// changed; whether a fresh cell measured as those fields did is not known, so this names that state only if it
+        /// shows here too.
         static var textMetrics: String? {
             let font = NSFont.preferredFont(forTextStyle: .body)
             let line = NSTextFieldCell(textCell: "Groceries")
@@ -481,17 +488,17 @@ enum SnapshotRenderer {
         static let checksReproducible = true
 
         /// Prints, as one `snapshot: state` line, what could identify the process's state on the runner when a check of
-        /// reproducibility fails (#99): the text metrics and languages, the appearance, the accessibility display
-        /// options, the key window and its first responder, the windows, the time into the run and the memory. It
-        /// reads them only; the pictures do not see it. macOS has no Bold Text setting to read.
-        static func printState(at moment: String, since start: Date) {
+        /// reproducibility fails (#99): the text metrics and languages, the capture's theme (nil: none, at the end), the
+        /// app's appearance, which follows the system's and not the picture's (each picture's window sets its own),
+        /// the accessibility display options, the key window and its first responder, the windows, the time into the
+        /// run and the memory. It reads them only; the pictures do not see it. macOS has no Bold Text setting to read.
+        static func printState(at moment: String, theme: String?, since start: Date) {
             let app = NSApplication.shared
             let workspace = NSWorkspace.shared
             func name(_ object: AnyObject?) -> String { object.map { String(describing: type(of: $0)) } ?? "none" }
             let parts = [
                 textMetrics ?? "no text metrics",
-                "the app's appearance \(app.effectiveAppearance.name.rawValue), drawing in "
-                    + NSAppearance.currentDrawing().name.rawValue,
+                "the capture's theme \(theme ?? "none"), the app's appearance \(app.effectiveAppearance.name.rawValue)",
                 "increase contrast \(workspace.accessibilityDisplayShouldIncreaseContrast), reduce transparency "
                     + "\(workspace.accessibilityDisplayShouldReduceTransparency), differentiate without color "
                     + "\(workspace.accessibilityDisplayShouldDifferentiateWithoutColor), reduce motion "
@@ -517,9 +524,10 @@ enum SnapshotRenderer {
         /// has been seen to differ within a run (388 of 388 the same in every CI run), so neither the text metrics
         /// nor a second draw are checked.
         static func pinLanguage() {}
+        static var languagesBeforePin: String? { nil }
         static var textMetrics: String? { nil }
         static let checksReproducible = false
-        static func printState(at moment: String, since start: Date) {}
+        static func printState(at moment: String, theme: String?, since start: Date) {}
     #endif
 
     /// The process's physical memory footprint in megabytes, as the system counts it against its limit.

@@ -185,11 +185,14 @@ render() {
   fi
   finished=$SECONDS
 
-  # The test's failures, each with its message, its summary line, and on macOS the text metrics at the start and the
-  # end, the pictures drawn again at the end, and the process's state when a check of reproducibility failed (#99).
+  # The test's failures, each with its message, its summary line, and on macOS the languages before the pin, the text
+  # metrics at the start and the end, the pictures drawn again at the end, and the process's state when a check of
+  # reproducibility failed (#99).
   awk '/\[MT\]/ { next }
     /✘ .*recorded an issue/ { if ((getline line) > 0 && line ~ /^↳ /) print line; next }
-    / draws: |^snapshot: [0-9]+ images|^snapshot: (text metrics|drawn again|state)|: error: |\*\* TEST/ { print }' \
+    / draws: |^snapshot: [0-9]+ images|^snapshot: (languages before|text metrics|drawn again|state)|: error: |\*\* TEST/ {
+      print
+    }' \
     "$log" >&2
   if [ ! -f "$out/matrix.json" ]; then
     echo "snapshot-matrix: the test wrote no manifest (status $test_status), log: $log" >&2

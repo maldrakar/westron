@@ -16,10 +16,12 @@
 // On macOS one CI run drew seven text-field pictures otherwise than every other run of the same code (#99, seen on
 // pull request #98, run 44885247356), and why is not identified. The process's languages and locale are pinned, as
 // xcodebuild pins them on iOS, which removes a proven dependency of AppKit's text metrics but does not explain that
-// run. Two checks name such a state if it comes again, rather than prevent it: a picture fails when AppKit measures
-// text otherwise than at the start of the run (`SnapshotRenderer.textMetrics`), and each component's first picture in
-// each capture is drawn again at the end and must give the same pixels (`checkReproducible`). Either failure prints
-// the process's state at that moment (`SnapshotRenderer.state(since:)`, a `snapshot: state` line).
+// run; the languages before the pin are logged. Two checks name such a state if it comes again, rather than prevent
+// it: a picture fails when a fresh AppKit field cell measures text otherwise than at the start of the run
+// (`SnapshotRenderer.textMetrics`, a proxy for the fields drawn, so such a picture may still be the same as a normal
+// render), and each component's first picture in each capture is drawn again at the end and must give the same pixels
+// (`checkReproducible`). Either failure prints the process's state at that moment
+// (`SnapshotRenderer.printState(at:theme:since:)`, a `snapshot: state` line).
 
 import Foundation
 import SwiftUI
@@ -82,6 +84,9 @@ struct SnapshotMatrixRenderTests {
                     })
             })
 
+        if let languages = SnapshotRenderer.languagesBeforePin {
+            print("snapshot: languages before the pin: \(languages)")
+        }
         SnapshotRenderer.pinLanguage()
         let metrics = SnapshotRenderer.textMetrics
         if let metrics { print("snapshot: text metrics at the start: \(metrics)") }
@@ -103,10 +108,11 @@ struct SnapshotMatrixRenderTests {
                             let began = Date()
                             if let metrics, let now = SnapshotRenderer.textMetrics, now != metrics {
                                 let why =
-                                    "drawn while the process measured text otherwise than at the start of the run, "
-                                    + "so it is not comparable: \(now), at the start \(metrics)"
+                                    "drawn while the process measured text otherwise than at the start of the run "
+                                    + "(a fresh AppKit field cell, a proxy for the fields drawn), so the picture may "
+                                    + "differ from a normal render: \(now), at the start \(metrics)"
                                 Issue.record("\(file): \(why)")
-                                SnapshotRenderer.printState(at: file, since: start)
+                                SnapshotRenderer.printState(at: file, theme: capture.name, since: start)
                             }
                             do {
                                 let rendered = try await SnapshotRenderer.render(
@@ -156,7 +162,7 @@ struct SnapshotMatrixRenderTests {
         }
         if let metrics, let now = SnapshotRenderer.textMetrics {
             print("snapshot: text metrics at the end: \(now == metrics ? "the same" : now)")
-            if now != metrics { SnapshotRenderer.printState(at: "the end", since: start) }
+            if now != metrics { SnapshotRenderer.printState(at: "the end", theme: nil, since: start) }
         }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -199,7 +205,8 @@ struct SnapshotMatrixRenderTests {
                 }
                 differing.append(picture.file)
                 Issue.record("\(picture.file): not reproducible within the run: \(why)")
-                SnapshotRenderer.printState(at: picture.file + ", drawn again", since: start)
+                SnapshotRenderer.printState(
+                    at: picture.file + ", drawn again", theme: picture.capture.name, since: start)
             } catch {
                 Issue.record("\(picture.file): drawn again: \(error)")
             }
