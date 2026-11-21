@@ -72,9 +72,6 @@ struct SurfaceMatrixCell: View {
         // contract has no states, so the state is always rest.
         let (variant, outlined, _) = values.fields
         SurfaceSample(variant: variant, outlined: outlined)
-            // One element that contains the sample's texts, so the sheet's cell identifier marks the cell once; the
-            // texts inside stay as they are, since a surface adds nothing for assistive technology.
-            .accessibilityElement(children: .contain)
     }
 }
 
@@ -123,7 +120,6 @@ extension ComponentMatrix.Supplement {
         keeps: ["outlined": "true"]
     ) {
         SurfaceNesting(variant: SurfaceMatrixValues($0).fields.variant)
-            .accessibilityElement(children: .contain)
     }
 }
 

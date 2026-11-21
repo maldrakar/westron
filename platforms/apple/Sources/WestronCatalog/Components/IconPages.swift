@@ -121,7 +121,6 @@ extension ComponentMatrix.Supplement {
             }
         }
         .imageScale(Image.Scale(contract: scale))
-        .accessibilityElement(children: .contain)
     }
 
     static let iconColorRoles = ComponentMatrix.Supplement(

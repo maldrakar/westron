@@ -7,6 +7,11 @@
 // It runs only when WESTRON_SNAPSHOTS names the directory to write to (on the iOS simulator, through xcodebuild,
 // TEST_RUNNER_WESTRON_SNAPSHOTS), so `swift test` and `tools/apple/check.sh package` skip it; tools/apple/snapshot-matrix.sh
 // sets it. WESTRON_SNAPSHOTS_COMPONENT=<id>[,<id>…] takes some components only.
+//
+// A picture fails, by name, when a cell draws nothing (the sheet reports each cell's frame, `MatrixSheetProbe`), when a
+// cell or the sheet runs past the window ("cut off"), or when four draws give no complete picture (SnapshotRenderer).
+// Each picture's line in the log has its time, the process's memory and its windows, so that a leak shows as growth;
+// a picture that took more than one draw, or a check draw, has a line with each draw's outcome.
 
 import Foundation
 import SwiftUI
@@ -24,7 +29,7 @@ let snapshotOutput: URL? = ProcessInfo.processInfo.environment["WESTRON_SNAPSHOT
 struct SnapshotMatrixRenderTests {
 
     @Test("every sheet in every capture")
-    func matrix() throws {
+    func matrix() async throws {
         let output = try #require(snapshotOutput)
         try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
         var matrices = ComponentMatrix.all
@@ -84,22 +89,23 @@ struct SnapshotMatrixRenderTests {
                                 file: file, part: matrix.partTitle(of: picture), cells: cells)
                             let began = Date()
                             do {
-                                let rendered = try SnapshotRenderer.render(
+                                let rendered = try await SnapshotRenderer.render(
                                     key: matrix.key(of: picture), capture: capture)
                                 bytes += try SnapshotRenderer.write(
                                     rendered.image, to: output.appendingPathComponent(file))
-                                // The cells are the matrix's own views, drawn by construction: the UI test counted
-                                // them on screen; here what can go wrong is the sheet running off the window.
-                                image.found = cells
+                                image.found = rendered.found
                                 image.fits = rendered.fits
                                 image.size = [rendered.size.width, rendered.size.height].map(Double.init)
                                 image.attempts = rendered.attempts
-                                if !rendered.fits {
-                                    Issue.record(
-                                        "\(file): the sheet does not fit the window; its last cells are cut off")
+                                if rendered.found != cells {
+                                    Issue.record("\(file): \(rendered.found) of \(cells) cells drew something")
                                 }
-                                if rendered.attempts > 1 {
-                                    print("snapshot: \(file) came back blank, drawn \(rendered.attempts) times")
+                                if !rendered.fits {
+                                    Issue.record("\(file): cut off: a cell or the sheet runs past the window")
+                                }
+                                // Every draw beyond the first, and the check draw of a slow one, with its outcome.
+                                if rendered.log.count > 1 || rendered.log.first?.contains("same again") == true {
+                                    print("snapshot: \(file) draws: " + rendered.log.joined(separator: "; "))
                                 }
                                 count += 1
                             } catch {
@@ -108,7 +114,11 @@ struct SnapshotMatrixRenderTests {
                             let seconds = Date().timeIntervalSince(began)
                             image.seconds = (seconds * 1000).rounded() / 1000
                             times.append((file, seconds))
-                            print(String(format: "snapshot: %@ %.3f s", file, seconds))
+                            // The memory and the windows the process holds after each picture: a leak shows as growth.
+                            print(
+                                String(
+                                    format: "snapshot: %@ %.3f s, %d MB, %d windows", file, seconds,
+                                    SnapshotRenderer.footprint, SnapshotRenderer.liveWindows))
                             // A picture that failed stays in the manifest without results: the page shows it missing.
                             manifest.components[componentIndex].groups[groupIndex].sheets[sheetIndex]
                                 .images[capture.name, default: []].append(image)
@@ -125,8 +135,10 @@ struct SnapshotMatrixRenderTests {
             .map { String(format: "%@ %.2f s", $0.file, $0.seconds) }.joined(separator: ", ")
         print(
             String(
-                format: "snapshot: %d images in %.1f s (%.3f s an image), %.1f MB; slowest: %@", count, total,
-                total / Double(max(count, 1)), Double(bytes) / 1_048_576, slowest))
+                format:
+                    "snapshot: %d images in %.1f s (%.3f s an image), %.1f MB; slowest: %@; memory at the end %d MB",
+                count, total, total / Double(max(count, 1)), Double(bytes) / 1_048_576, slowest,
+                SnapshotRenderer.footprint))
     }
 }
 
@@ -193,8 +205,8 @@ struct SnapshotManifest: Codable {
         /// What part of the sheet it holds; nil for the whole sheet.
         var part: String?
         var cells: Int
-        /// Without a picture (its render failed) these are nil: the cells drawn, whether they all lie inside the
-        /// window, the picture's width and height in points, how many renders it took and how long it took.
+        /// Without a picture (its render failed) these are nil: the cells that drew something, whether they all lie
+        /// inside the window, the picture's width and height in points, how many draws it took and how long.
         var found: Int?
         var fits: Bool?
         var size: [Double]?

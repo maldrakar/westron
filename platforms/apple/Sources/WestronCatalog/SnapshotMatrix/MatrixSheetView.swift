@@ -23,7 +23,7 @@ struct MatrixSheetView: View {
     let sheet: ComponentMatrix.Sheet
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @Environment(\.matrixSheetFrame) private var reportFrame
+    @Environment(\.matrixSheetProbe) private var probe
 
     var body: some View {
         VStack(alignment: .leading, spacing: SampleMetrics.pagePadding) {
@@ -60,14 +60,10 @@ struct MatrixSheetView: View {
         .padding(SampleMetrics.pagePadding)
         // The sheet's content: the snapshot tests cut their picture to it.
         .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier(CatalogAccessibilityID.matrixSheet)
-        // The in-process snapshot tests (platforms/apple/Tests/WestronSnapshotTests) find the frame here; they have no
-        // accessibility query.
         .onGeometryChange(for: CGRect.self) { proxy in
             proxy.frame(in: .global)
         } action: { frame in
-            reportFrame?(frame)
+            probe?.sheet = frame
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(.background.canvas)
@@ -131,7 +127,12 @@ struct MatrixSheetView: View {
             case .drawn(let combination, let fallbacks, let advisedAgainst):
                 VStack(alignment: .leading, spacing: .space25) {
                     matrix.content(combination)
-                        .accessibilityIdentifier(CatalogAccessibilityID.matrixCell)
+                        // A cell that draws nothing has no frame, and the snapshot tests count it as missing.
+                        .onGeometryChange(for: CGRect.self) { proxy in
+                            proxy.frame(in: .global)
+                        } action: { frame in
+                            probe?.cells[combination] = frame
+                        }
                     Group {
                         if let advisedAgainst {
                             TokenDetail("advised against: constraints[\(advisedAgainst)]")
@@ -151,10 +152,18 @@ struct MatrixSheetView: View {
     }
 }
 
+/// What a matrix sheet reports of its own layout, in its window's points, for the in-process snapshot tests
+/// (platforms/apple/Tests/WestronSnapshotTests, `@testable`), which have no accessibility query: the frame of the
+/// sheet's content, which they cut their picture to, and the frame of each cell drawn, which they count against the
+/// matrix and check against the window. Nothing in the catalog sets it.
+@MainActor
+final class MatrixSheetProbe {
+    var sheet = CGRect.zero
+    var cells: [ComponentMatrix.Combination: CGRect] = [:]
+}
+
 extension EnvironmentValues {
-    /// Called with the frame of a matrix sheet's content in its window, in points, whenever it changes: what the
-    /// in-process snapshot tests cut their picture to (`@testable`; nothing in the catalog sets it).
-    @Entry var matrixSheetFrame: (@MainActor (CGRect) -> Void)? = nil
+    @Entry var matrixSheetProbe: MatrixSheetProbe? = nil
 }
 
 /// The mark on a supplement's sheet: what it shows is not a contract option, and the sheet is written by hand.

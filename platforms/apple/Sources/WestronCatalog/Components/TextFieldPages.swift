@@ -139,7 +139,6 @@ struct TextFieldMatrixCell: View {
         // the picture's edge (the contract's platforms.apple).
         .padding(variant.focusRingClearance)
         .forcingTextFieldState(state)
-        .matrixCellContainer()
     }
 }
 
@@ -148,12 +147,6 @@ extension View {
     fileprivate func forcingTextFieldState(_ state: TextFieldCatalogState?) -> some View {
         forcingTextFieldStates(state.map { $0.isForced ? [$0] : [] } ?? [])
             .disabled(state?.isDisabled ?? false)
-    }
-
-    /// Makes a matrix cell that holds several fields one accessibility element that contains them, so the sheet's
-    /// identifier for the cell names the cell, not each field in it.
-    fileprivate func matrixCellContainer() -> some View {
-        accessibilityElement(children: .contain)
     }
 }
 
@@ -244,7 +237,6 @@ private struct TextFieldCardSample: View {
         // its shadow and, in the high-contrast themes, its line.
         .surface(.raised)
         .forcingTextFieldState(stateName.flatMap(TextFieldCatalogState.init(named:)))
-        .matrixCellContainer()
         // On macOS the window the sheet opens in gave the first card's title the keyboard focus for real, its text
         // selected, in the rest row of every theme (the matrix of #85, since the style fixes a field's height). A
         // sheet shows each state as the matrix sets it, so the sample takes that focus away once it appears and once
@@ -277,7 +269,6 @@ private struct TextFieldSecureSample: View {
         .textRole(.body.regular)
         .foregroundStyle(.text.primary)
         .forcingTextFieldState(stateName.flatMap(TextFieldCatalogState.init(named:)))
-        .matrixCellContainer()
     }
 }
 
