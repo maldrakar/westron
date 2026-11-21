@@ -1,5 +1,11 @@
 {
   "platform": "ios",
-  "recorded": false,
-  "note": "No references yet: the workflow snapshot-references.yml records them on CI (platforms/apple/Snapshots/README.md)."
+  "macos": "27.0.1 (26A434)",
+  "machine": "Apple M1 (Virtual)",
+  "xcode": "27.1 (27A9275)",
+  "runtime": "iOS 27.0 (24A434)",
+  "device": "iPhone 17",
+  "image": "macos27 20261104.0337.1",
+  "scale": 3,
+  "images": 388
 }
