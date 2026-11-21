@@ -55,9 +55,6 @@ struct RuleMatrixCell: View {
         // contract has no states, so the state is always rest.
         let (axis, _) = values.fields
         RuleSample(axis: axis)
-            // One element that contains the two groups' texts, so the sheet's cell identifier marks the cell once;
-            // the rule itself is hidden.
-            .accessibilityElement(children: .contain)
     }
 }
 

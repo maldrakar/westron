@@ -1,0 +1,180 @@
+name: Snapshot references
+
+# Records the snapshot matrix's references on the CI runner (#92, decisions/0008, the note of 2026-11-21): renders
+# both platforms, writes platforms/apple/Snapshots/<platform>/ (`tools/apple/snapshot-matrix.sh record`: a reference
+# within one level of its new picture stays as it was) and commits what changed to the branch, through Git LFS. Two ways
+# to ask for it:
+#   - the label `record-snapshots` on a pull request from a branch of this repository (not a fork, whose token cannot
+#     push): it records on the pull request's branch as it is then, and removes the label when done;
+#   - `gh workflow run snapshot-references.yml --ref <branch>` (or "Run workflow" on the Actions tab). On main only on
+#     purpose: `-f allow-main=true`, after the runner image changed (the `snapshots` job warns then); otherwise a run on
+#     main stops before it renders.
+# The order (platforms/apple/Snapshots/README.md): a push to main whose render cannot be compared fails ci.yml's
+# `snapshots`, so record on the pull request that introduces or changes the references (the label), run its checks
+# again (close and reopen, or push), and merge only then. If main is already red for it, run this workflow on main:
+# `gh workflow run snapshot-references.yml --ref main -f allow-main=true`.
+# A commit pushed with the workflow's GITHUB_TOKEN starts no workflow, so the pull request's checks do not run on the
+# recorded commit by themselves. This workflow checks the new references against the render it made, but the pull
+# request's own checks need a new run: close and reopen the pull request (`gh pr close <n> && gh pr reopen <n>`) or
+# push any commit; the comment it leaves on the pull request says so. What the recording changed, against the
+# references before it, is in the artifact `snapshot-references-diff`.
+on:
+  workflow_dispatch:
+    inputs:
+      allow-main:
+        description: Record on main itself (after a runner image update)
+        required: false
+        default: false
+        type: boolean
+  pull_request:
+    types: [labeled]
+
+# One recording per branch at a time: a second request waits for the first rather than racing it to the push. The
+# label is in the group, so that adding another label, which starts a run that does nothing, waits for nothing.
+concurrency:
+  group: snapshot-references-${{ github.head_ref || github.ref }}-${{ github.event.label.name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  record:
+    name: Record the snapshot references
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || (github.event.label.name == 'record-snapshots'
+        && github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: xcode-27
+    # The renders as in ci.yml's `snapshots` (about 22 min), the commit and a second check: 55 min.
+    timeout-minutes: 55
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+      # The branch to record on: the pull request's head branch, not its merge commit; or the branch dispatched on.
+      BRANCH: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+      PR: ${{ github.event.pull_request.number }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Not on main by accident
+        env:
+          ALLOW_MAIN: ${{ inputs.allow-main }}
+        run: |
+          if [ "$BRANCH" = main ] && [ "$ALLOW_MAIN" != true ]; then
+            echo "::error title=Not recorded::Recording on main pushes to main; run it with -f allow-main=true if that is meant."
+            exit 1
+          fi
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.BRANCH }}
+      # The references before this recording: record keeps those within the tolerance, and the report below compares
+      # with them. Through the same cache of .git/lfs as ci.yml's `snapshots`, so that only what it lacks costs LFS
+      # bandwidth; git lfs push then uploads only the new objects.
+      - name: Reference object ids
+        run: |
+          git lfs install --local
+          mkdir -p .build
+          git lfs ls-files --long --include 'platforms/apple/Snapshots/**' --exclude '' | cut -d' ' -f1 | sort \
+            > .build/snapshot-references.lfs-ids
+      - uses: actions/cache@v6
+        with:
+          path: .git/lfs
+          key: snapshot-references-${{ hashFiles('.build/snapshot-references.lfs-ids') }}
+          restore-keys: snapshot-references-
+      - name: References from Git LFS
+        run: git lfs pull --include 'platforms/apple/Snapshots/**' --exclude ''
+      - name: Render (macOS)
+        timeout-minutes: 15
+        run: tools/apple/snapshot-matrix.sh macos
+      - name: Render (iOS)
+        timeout-minutes: 30
+        run: tools/apple/snapshot-matrix.sh ios
+      - name: What the recording changes
+        # Against the references before it; a difference (1), no references (3) or another environment (4) is what a
+        # recording is for, so the step does not fail on them.
+        run: |
+          for platform in macos ios; do
+            status=0
+            tools/apple/snapshot-matrix.sh check "$platform" --from ".build/snapshot-matrix/$platform" || status=$?
+            echo "$platform: check before recording exited $status"
+            [ "$status" -le 4 ] && [ "$status" -ne 2 ] || exit "$status"
+          done
+      - name: Record and commit
+        id: commit
+        run: |
+          for platform in macos ios; do
+            tools/apple/snapshot-matrix.sh record "$platform" --from ".build/snapshot-matrix/$platform"
+          done
+          git add -A platforms/apple/Snapshots
+          if git diff --cached --quiet; then
+            echo "The references already match this render; nothing to commit."
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          environment="$(jq -r '"macOS \(.macos), \(.machine), Xcode \(.xcode), \(.runtime) \(.device)"' \
+            platforms/apple/Snapshots/ios/environment.json)"
+          changes="$(git diff --cached --name-status -- 'platforms/apple/Snapshots/*.png' \
+            | awk '{ n[$1]++ } END { printf "%d added, %d changed, %d removed", n["A"], n["M"], n["D"] }')"
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -F - <<EOF
+          Snapshot references: record on the CI runner${PR:+ (#$PR)}
+
+          tools/apple/snapshot-matrix.sh record, by the workflow Snapshot references
+          (run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID): $changes.
+          Environment: $environment.
+          EOF
+          git push origin "HEAD:refs/heads/$BRANCH"
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Check against the new references
+        run: |
+          for platform in macos ios; do
+            tools/apple/snapshot-matrix.sh check "$platform" --from ".build/snapshot-matrix/$platform" \
+              --out ".build/snapshot-matrix/recorded-$platform"
+          done
+      - name: Why nothing was recorded
+        # A render that failed, or a picture without a result, stops the recording before it writes anything:
+        # `record` refuses an incomplete render, and the steps after a failed one do not run.
+        if: failure()
+        run: |
+          {
+            echo "Nothing was recorded: a step failed before the references were written."
+            grep -h -E '^↳ |^snapshot-matrix: .*(failed|incomplete)' .build/logs/snapshot-matrix-*.log 2> /dev/null \
+              | sed 's/^↳ /  /' | head -20 || true
+          } | tee .build/not-recorded.txt
+          echo "::error title=Snapshot references not recorded::$(head -c 900 .build/not-recorded.txt | tr '\n' ' ')"
+      - name: Keep only this commit's references in the LFS cache
+        # As in ci.yml's `snapshots`: with lfs.fetchexclude emptied, or prune deletes the current objects too.
+        if: ${{ !cancelled() }}
+        run: git -c lfs.fetchexclude= lfs prune || echo "::warning::git lfs prune failed; the LFS cache keeps older references too."
+      - name: Tell the pull request
+        if: ${{ github.event_name == 'pull_request' && !cancelled() }}
+        env:
+          COMMITTED: ${{ steps.commit.outputs.committed }}
+          SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          gh pr edit "$PR" --remove-label record-snapshots || true
+          run="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          if [ "$COMMITTED" = true ]; then
+            body="Snapshot references recorded in $SHA ([run]($run); what changed: the artifact snapshot-references-diff). A commit pushed by a workflow starts no checks: close and reopen this pull request, or push any commit, to run CI on it."
+          elif [ "$COMMITTED" = false ]; then
+            body="The snapshot references already match this branch's render; nothing was committed ([run]($run))."
+          else
+            reasons="$(sed 1d .build/not-recorded.txt 2> /dev/null | head -12)"
+            body="Nothing was recorded: a step failed before the references were written ([run]($run)). ${reasons:+The pictures or steps that failed:
+          \`\`\`
+          $reasons
+          \`\`\`
+          }The label is removed; fix the cause and add it again."
+          fi
+          gh pr comment "$PR" --body "$body"
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: snapshot-references-diff
+          path: |
+            .build/snapshot-matrix/check-ios/
+            .build/snapshot-matrix/check-macos/
+            .build/logs/
+          retention-days: 14
+          if-no-files-found: ignore

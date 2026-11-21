@@ -30,16 +30,23 @@ westron_ui='^platforms/apple/Sources/WestronUI/'
 
 # The Apple package and its catalog (tools/apple/check.sh). The package's unit tests also read the contracts
 # (`contractFile` in platforms/apple/Tests); the catalog app and its UI tests import WestronCatalog alone, and a
-# change of WestronUI that breaks WestronCatalog fails `package` first. The four checks are targets of
+# change of WestronUI that breaks WestronCatalog fails `package` first. The catalog also compiles the snapshot tests
+# (platforms/apple/Tests/WestronSnapshotTests, its hosted bundle CatalogSnapshotTests). The four checks are targets of
 # tools/apple/check.sh, so a change of that script runs all four; simulator.sh serves only its targets the hook does not
 # run (package-ios, a11y). Any other script in tools/apple/ (snapshot-matrix.sh, catalog-screenshot.sh,
 # audit-scope.sh) runs none of them, only the syntax check below.
+#
+# The snapshot matrix itself is not rendered here. It is cheap on macOS (about 15 s) and repeatable, but a local render
+# has nothing to be checked against: the references are the CI runner's (platforms/apple/Snapshots/), and `check`
+# says the environment differs. The CI job `snapshots` checks it; an agent compares renders before and after a change
+# (/visual-check). What the hook checks of it: the page builder compiles, and a reference environment file is JSON.
 apple_script='^tools/apple/check\.sh$'
 swift_sources='^(Package\.swift|platforms/apple/.*\.swift|tools/(Package\.swift|Sources/.*\.swift|Tests/.*\.swift))$'
 format_inputs="$swift_sources|^\.swift-format$|$apple_script|$toolchain"
 package_inputs="$package_manifest|^platforms/apple/(Sources|Tests)/|^spec/components/[^/]+/[^/]+\.spec\.yaml$|$apple_script|$toolchain"
 platforms_inputs="$package_manifest|^platforms/apple/Sources/|$apple_script|$toolchain"
-catalog_inputs="$package_manifest|^platforms/apple/Catalog/|^platforms/apple/Sources/WestronCatalog/|$apple_script|$toolchain"
+snapshot_tests='^platforms/apple/Tests/WestronSnapshotTests/'
+catalog_inputs="$package_manifest|^platforms/apple/Catalog/|^platforms/apple/Sources/WestronCatalog/|$snapshot_tests|$apple_script|$toolchain"
 
 # The steps of tools/check.sh, each with what its command reads by default (tools/Sources). The data: the token
 # files, the resolver and the palette; the contracts, their schema and the icon registry; not the Markdown beside
@@ -66,6 +73,14 @@ checks=()
 while IFS= read -r script; do
   [ -f "$script" ] && checks+=("bash -n $(printf '%q' "$script")")
 done < <(grep -E '^(tools/.*\.sh|tools/westron|\.claude/hooks/.*\.sh)$' <<< "$changed")
+# The snapshot matrix's page builder and comparison, compiled by snapshot-matrix.sh only when it runs: type-checked
+# here. A reference set's environment file, which `check` and `record` read with jq: parsed.
+if has '^tools/apple/snapshot-pages\.swift$|'"$toolchain"; then
+  checks+=("source tools/apple/xcode-env.sh && xcrun --sdk macosx swiftc -typecheck tools/apple/snapshot-pages.swift")
+fi
+while IFS= read -r file; do
+  [ -f "$file" ] && checks+=("jq -e . $(printf '%q' "$file") > /dev/null")
+done < <(grep -E '^platforms/apple/Snapshots/[^/]+/environment\.json$' <<< "$changed")
 has "$format_inputs" && checks+=("tools/apple/check.sh format")
 has "$package_inputs" && checks+=("tools/apple/check.sh package")
 has "$platforms_inputs" && checks+=("tools/apple/check.sh platforms")

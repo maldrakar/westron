@@ -51,6 +51,14 @@ let package = Package(
             dependencies: ["WestronCatalog"],
             path: "platforms/apple/Tests/WestronCatalogTests"
         ),
+        // The snapshot matrix rendered in-process on macOS (#92); skipped unless WESTRON_SNAPSHOTS is set, which
+        // tools/apple/snapshot-matrix.sh does. The catalog's CatalogSnapshotTests compiles the same folder for iOS,
+        // hosted by the catalog app.
+        .testTarget(
+            name: "WestronSnapshotTests",
+            dependencies: ["WestronCatalog", "WestronUI"],
+            path: "platforms/apple/Tests/WestronSnapshotTests"
+        ),
     ],
     swiftLanguageModes: [.v6]
 )

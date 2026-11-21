@@ -59,9 +59,9 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
     ///   44444325775, `testDefaultSettings` 2/3, in the shard's first entry;
     /// - "Failed to launch <XCUIApplicationImpl: 0x… dev.westron.catalog at …> via Xcode: Timed out while launching
     ///   application via Xcode.", a launch that timed out: the CI runner, run 44444325775, in the snapshot matrix's
-    ///   first `app.launch()` (`SnapshotMatrixTests`), the same call as here; between the angle brackets is XCTest's
-    ///   description of the app, its address and path. A launch that fails otherwise, an app that crashes on an entry,
-    ///   stays a finding.
+    ///   first `app.launch()` (`SnapshotMatrixTests`, removed in #92), the same call as here; between the angle
+    ///   brackets is XCTest's description of the app, its address and path. A launch that fails otherwise, an app
+    ///   that crashes on an entry, stays a finding.
     /// Every other failure is a finding. A message joins only with evidence that it is the machinery's.
     static func isInfrastructure(_ description: String) -> Bool {
         description.hasPrefix(infrastructurePrefix) || description.hasPrefix("failed - " + infrastructurePrefix)

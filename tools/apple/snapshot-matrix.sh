@@ -1,37 +1,49 @@
 #!/usr/bin/env bash
-# The snapshot matrix (#24): every combination each component's contract declares, in the four themes and, on iOS,
-# at the smallest and the largest text size, with the catalog's supplementary sheets (#72), for review.
+# The snapshot matrix (#24, #92): every combination each component's contract declares, in the four themes and, on
+# iOS, at the smallest and the largest text size, with the catalog's supplementary sheets (#72), rendered in-process
+# and compared with the references in platforms/apple/Snapshots/.
 #
 #   tools/apple/snapshot-matrix.sh <ios|macos> [--component ID[,ID…]]… [--device "iPhone 17"] [--out DIR]
-#   tools/apple/snapshot-matrix.sh compare DIR_A DIR_B [--out DIR]
-#   tools/apple/snapshot-matrix.sh merge [--expect ID,ID…] OUT DIR...
+#   tools/apple/snapshot-matrix.sh compare DIR_A DIR_B [--out DIR] [--tolerance N]
+#   tools/apple/snapshot-matrix.sh check <ios|macos> [--from DIR] [--device "iPhone 17"] [--out DIR] [--tolerance N]
+#   tools/apple/snapshot-matrix.sh record <ios|macos> [--from DIR] [--device "iPhone 17"]
 #
-# Capture: builds the catalog (incrementally), then runs the SnapshotMatrixTests UI test in one `xcodebuild test`
-# invocation, which walks every sheet of every matrix (generated from the contracts into WestronCatalog/Generated/)
-# and of its supplements in light, dark, light-hc and dark-hc at the default text size, and on iOS in light at xSmall
-# and accessibility5 (macOS has no Dynamic Type); with --component, of the components it names only (repeated or
-# comma-separated, still one run). The PNGs, named <component>.<sheet>.<theme>.png and
-# <component>.<sheet>[_part-<n>-of-<count>].light.<text size>.png, the manifest matrix.json and the review page
-# index.html go to DIR, by default .build/snapshot-matrix/<platform>/; the script prints the path of index.html and
-# fails when an expected image is missing or a sheet failed its checks. Log: .build/logs/. A capture the machinery
-# failed (the app did not launch, the test runner did not start: a stalled simulator) is run once more, within
-# WESTRON_MATRIX_RETRY_BY minutes (default 25) of the start; never one whose test reported a failure of a sheet. An
-# xcodebuild whose log has not grown for WESTRON_MATRIX_STALL_SECONDS (default 600) is stopped, and a capture so
-# stopped counts as the machinery's failure; at WESTRON_MATRIX_DEADLINE minutes from the start (if set) the script
-# stops whatever it still does and exits 1.
+# Render: runs the snapshot tests (platforms/apple/Tests/WestronSnapshotTests), which draw every sheet of every matrix
+# (generated from the contracts into WestronCatalog/Generated/) and of its supplements in light, dark, light-hc and
+# dark-hc at the default text size, and on iOS in light at xSmall and accessibility5 (macOS has no Dynamic Type); with
+# --component, of the components it names only (repeated or comma-separated). On macOS they run under `swift test` in
+# an offscreen window; on iOS in the catalog app on the simulator (--device, default iPhone 17 or $WESTRON_SIM_DEVICE),
+# as the unit-test bundle CatalogSnapshotTests, built incrementally. The PNGs, named <component>.<sheet>.<theme>.png and
+# <component>.<sheet>[_part-<n>-of-<count>].light.<text size>.png, the manifest matrix.json, environment.json (the
+# environment, below) and the review page index.html go to DIR, by default .build/snapshot-matrix/<platform>/; the
+# script prints the images per component, the time, and the path of index.html last, and fails when a picture failed
+# (a blank render drawn again until it gave up, a sheet that does not fit) or an image is missing. Log:
+# .build/logs/snapshot-matrix-<platform>.log, with each picture's time.
 # The sheets are laid out for the default device, iPhone 17 in portrait: at accessibility5 a part of one column and six
 # rows just fits it, so another --device, a shorter one above all, may fail the check that every cell is inside the
-# picture there.
-# Compare: compares two capture directories image by image and writes a report page, by default to
-# .build/snapshot-matrix/compare/; prints its path; exits 0 when every image is the same and 1 when one differs.
-# Between two iOS captures it ignores the home indicator, which the system draws or not from launch to launch, where
-# the differing pixels fit its footprint at the bottom of the screen, and shows those images apart
-# (platforms/apple/README.md, "Snapshot matrix"). Only captures from the same environment compare (decisions/0008).
-# macOS needs Automation Mode (platforms/apple/README.md) and the screen to itself.
-# Merge: puts captures of one platform taken apart (--component, one CI job each) into OUT as one: their PNGs, one
-# manifest and one review page; prints its path. With --expect, the components go in that order and the page names
-# at its top every expected one that no capture holds. Exits 1 when a component or a capture's manifest is missing or
-# the page finds a problem.
+# window there.
+#
+# Compare: compares two renders image by image and writes a report page (before, after and a diff side by side), by
+# default to .build/snapshot-matrix/compare/; prints what changed, by component, and the page's path; exits 0 when
+# every image is the same and 1 when one changed, was added or was removed. A pixel whose every channel differs by at
+# most N levels (--tolerance, default 1) counts as the same: renders in one environment drift by a level in a few
+# pixels from run to run. Only renders from the same environment compare (decisions/0008): two local renders, before
+# and after a change, on one Mac and simulator.
+#
+# Check: compares a render (DIR with --from, else a fresh full render) with the references of the platform and writes
+# the report to .build/snapshot-matrix/check-<platform>/ (--out). The environment is what besides the code changes a
+# picture: the Mac's macOS and processor, Xcode, and on iOS the simulator's runtime and device, and the scale; the
+# references record theirs in platforms/apple/Snapshots/<platform>/environment.json. Exit status:
+#   0  every image is the same as its reference, within the tolerance
+#   1  an image changed, was added or was removed (the report says which), or the render failed
+#   2  wrong arguments
+#   3  no references recorded yet for the platform
+#   4  the environment differs from the references': nothing is compared. Elsewhere than on the CI runner the
+#      references were made on, this is the normal outcome; render before and after a change and `compare` them.
+# Record: writes the render (--from, else a fresh full render) into the references and its environment beside them.
+# A reference within the tolerance of its new picture stays as it was, so a drift does not rewrite it; in another
+# environment only the same pixels keep one. CI records them (.github/workflows/snapshot-references.yml): references
+# recorded elsewhere would not match the runner's renders.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -53,81 +65,287 @@ pages() {
   "$binary" "$@"
 }
 
-if [ "${1:-}" = merge ]; then
-  shift
-  expect=""
-  if [ "${1:-}" = --expect ]; then
-    expect="$2"
-    shift 2
-  fi
-  [ $# -ge 2 ] || usage
-  out="$(absolute "$1")"
-  shift
-  mkdir -p "$out"
-  rm -f -- "$out/matrix.json" "$out/index.html"
-  manifests=() status=0 lost=()
-  for capture in "$@"; do
-    capture="$(absolute "$capture")"
-    if [ ! -f "$capture/matrix.json" ]; then
-      echo "snapshot-matrix: merge: no manifest in $capture; its components are missing from the page" >&2
-      lost+=("$capture")
-      status=1
-      continue
-    fi
-    manifests+=("$capture/matrix.json")
-    find "$capture" -maxdepth 1 -name '*.png' -exec cp -- {} "$out/" \;
-  done
-  [ ${#manifests[@]} -gt 0 ] || { echo "snapshot-matrix: merge: no manifest to merge" >&2; exit 1; }
-  if [ "$(jq -s 'map(.platform) | unique | length' "${manifests[@]}")" != 1 ]; then
-    echo "snapshot-matrix: merge: the captures are of different platforms" >&2
-    exit 2
-  fi
-  # The first manifest's environment, the components of all, and a scale from a capture that took an image (a capture
-  # that failed before its first image says 0). With --expect, the components go in its order, and every expected one
-  # that no manifest holds is named in `missing`, which the page shows at its top; without it, a capture with no
-  # manifest is named by its directory.
-  jq -s --arg expect "$expect" --arg lost "$(printf '%s\n' ${lost[@]+"${lost[@]}"})" '
-    ($expect | split(",") | map(select(. != ""))) as $expected
-    | (map(.components) | add) as $components
-    | ($components | map(.component)) as $present
-    | .[0] + {
-        scale: (map(.scale) | max),
-        components: (if ($expected | length) > 0
-          then $components | sort_by(.component as $id | $expected | index($id) // length)
-          else $components end),
-        missing: (if ($expected | length) > 0
-          then $expected - $present
-          else $lost | split("\n") | map(select(. != "") | "the capture in " + .) end)
-      }' "${manifests[@]}" > "$out/matrix.json"
-  if [ "$(jq '.missing | length' "$out/matrix.json")" != 0 ]; then
-    echo "snapshot-matrix: merge: missing: $(jq -r '.missing | join(", ")' "$out/matrix.json")" >&2
-    status=1
-  fi
-  pages index "$out" || status=1
-  echo "$out/index.html"
-  exit "$status"
-fi
+references_of() { echo "$root/platforms/apple/Snapshots/$1"; }
 
-if [ "${1:-}" = compare ]; then
-  shift
-  [ $# -ge 2 ] || usage
-  before="$(absolute "$1")" after="$(absolute "$2")"
-  shift 2
-  out=".build/snapshot-matrix/compare"
-  while [ $# -gt 0 ]; do
-    case "$1" in
-      --out) out="$2"; shift 2 ;;
-      *) usage ;;
-    esac
+# Prints, as JSON, what besides the code changes a render of <platform> (with the simulator <udid> on iOS): the Mac's
+# macOS and processor (Core Animation draws on its GPU, the simulator's too), Xcode, and on iOS the simulator's runtime
+# and device type. The render adds the scale and the number of images. On a GitHub runner it also names the runner
+# image and its version (`image`), for the reader only: an image's weekly version changes no picture by itself, so it
+# is not compared.
+environment_json() {
+  local platform="$1" udid="${2:-}" xcode runtime="" device="" ids
+  xcode="$(xcodebuild -version | awk 'NR == 1 { v = $2 } NR == 2 { b = $3 } END { print v " (" b ")" }')"
+  if [ "$platform" = ios ]; then
+    ids="$(xcrun simctl list devices -j | jq -r --arg udid "$udid" \
+      '.devices | to_entries[] | .key as $runtime | .value[] | select(.udid == $udid)
+        | "\($runtime) \(.deviceTypeIdentifier)"')"
+    runtime="$(xcrun simctl list runtimes -j | jq -r --arg id "${ids%% *}" \
+      '.runtimes[] | select(.identifier == $id) | "\(.name) (\(.buildversion))"')"
+    device="$(xcrun simctl list devicetypes -j | jq -r --arg id "${ids#* }" \
+      '.devicetypes[] | select(.identifier == $id) | .name')"
+  fi
+  jq -n --arg platform "$platform" --arg macos "$(sw_vers -productVersion) ($(sw_vers -buildVersion))" \
+    --arg machine "$(sysctl -n machdep.cpu.brand_string)" --arg xcode "$xcode" --arg runtime "$runtime" \
+    --arg device "$device" --arg image "${ImageOS:+$ImageOS ${ImageVersion:-}}" '
+    {platform: $platform, macos: $macos, machine: $machine, xcode: $xcode}
+    + (if $runtime != "" then {runtime: $runtime, device: $device} else {} end)
+    + (if $image != "" then {image: $image} else {} end)'
+}
+
+# Prints what makes the render in <dir> unfit to check or record, one line each: a picture of the manifest without a
+# result (its render failed), short of cells or cut off, and a PNG the manifest does not name or a named one that is
+# not there. Nothing when the render is complete.
+incomplete() {
+  local dir="$1"
+  jq -r '.components[].groups[].sheets[].images[][]
+    | if .found == null then "\(.file): no picture (its render failed)"
+      elif .found != .cells then "\(.file): \(.found) of \(.cells) cells drew something"
+      elif .fits == false then "\(.file): cut off"
+      else empty end' "$dir/matrix.json"
+  diff <(jq -r '.. | objects | select(has("file")) | .file' "$dir/matrix.json" | sort) \
+    <(find "$dir" -maxdepth 1 -name '*.png' -exec basename {} \; | sort) \
+    | sed -n 's/^< \(.*\)/\1: named in the manifest, no PNG/p; s/^> \(.*\)/\1: a PNG the manifest does not name/p' \
+    || true
+}
+
+# Prints the keys whose values differ between two environment files, one per line, `key: <a> / <b>`: neither the
+# number of images nor the notes count, nor the scale unless <with> is `scale` (a render knows it, not the script).
+environment_differences() {
+  jq -rn --slurpfile a "$1" --slurpfile b "$2" --arg with "${3:-}" '
+    ["platform", "macos", "machine", "xcode", "runtime", "device"] + (if $with == "scale" then ["scale"] else [] end)
+    | .[] | select($a[0][.] != $b[0][.]) | "  \(.): \($a[0][.] // "none") / \($b[0][.] // "none")"'
+}
+
+# Whether the references of <platform> hold a recorded set.
+recorded() {
+  local file
+  file="$(references_of "$1")/environment.json"
+  [ -f "$file" ] && [ "$(jq -r '.recorded' "$file")" != false ]
+}
+
+# Finds the destination of <platform>: on iOS the simulator <device>, booted if need be (sets udid); on macOS the Mac.
+destination() {
+  udid=""
+  if [ "$1" = ios ]; then
+    # shellcheck source=tools/apple/simulator.sh
+    source tools/apple/simulator.sh
+    udid="$(westron_simulator_udid "$2")" || exit 1
+  fi
+}
+
+# Renders <platform> with the components <list> (empty: all) into <out>; destination must have run. Sets
+# render_status: 0, or 1 when the render failed.
+render() {
+  local platform="$1" component="$2" out="$3" log=".build/logs/snapshot-matrix-$1.log" start built finished
+  local test_status=0 page_status=0 contract file
+  mkdir -p "$out" .build/logs
+  : > "$log"
+  # Only a render's own files are removed, so DIR can hold other files: the images the previous manifest names, any
+  # <component>.*.png of a component in spec/components (a render that failed before its manifest), the manifest, the
+  # environment and the page.
+  if [ -f "$out/matrix.json" ]; then
+    { jq -r '.. | objects | select(has("file")) | .file' "$out/matrix.json" 2> /dev/null || true; } \
+      | while read -r file; do
+        case "$file" in */* | "") ;; *) rm -f -- "$out/$file" ;; esac
+      done
+  fi
+  for contract in spec/components/*/; do
+    rm -f -- "$out/$(basename "$contract")."*.png
   done
-  out="$(absolute "$out")"
-  mkdir -p "$out"
-  status=0
-  pages compare "$before" "$after" "$out" || status=$?
-  [ "$status" -le 1 ] || exit "$status"
-  echo "$out/index.html"
-  exit "$status"
-fi
+  rm -f -- "$out/matrix.json" "$out/environment.json" "$out/index.html"
+
+  start=$SECONDS
+  if [ "$platform" = macos ]; then
+    echo "== snapshot-matrix: macOS, swift test${component:+, $component}" >&2
+    if ! swift build --build-tests >> "$log" 2>&1; then
+      grep -E "error:" "$log" | head -20 >&2 || true
+      echo "snapshot-matrix: build failed, log: $log" >&2
+      render_status=1
+      return 0
+    fi
+    built=$SECONDS
+    WESTRON_SNAPSHOTS="$out" WESTRON_SNAPSHOTS_COMPONENT="$component" \
+      swift test --skip-build --filter WestronSnapshotTests >> "$log" 2>&1 || test_status=$?
+  else
+    echo "== snapshot-matrix: id=$udid, CatalogSnapshotTests${component:+, $component}" >&2
+    local xcodebuild_args=(-project platforms/apple/Catalog/Catalog.xcodeproj -scheme Catalog -destination "id=$udid"
+      -derivedDataPath .build/xcode/catalog)
+    if ! xcodebuild "${xcodebuild_args[@]}" build-for-testing >> "$log" 2>&1; then
+      grep -E "error:|BUILD FAILED" "$log" | grep -v "\[MT\]" | head -20 >&2 || true
+      echo "snapshot-matrix: build failed, log: $log" >&2
+      render_status=1
+      return 0
+    fi
+    built=$SECONDS
+    # The test runner passes TEST_RUNNER_<name> to the test as <name>. Without -collect-test-diagnostics never, a
+    # failed run waits minutes for a sysdiagnose of the simulator.
+    TEST_RUNNER_WESTRON_SNAPSHOTS="$out" TEST_RUNNER_WESTRON_SNAPSHOTS_COMPONENT="$component" \
+      xcodebuild "${xcodebuild_args[@]}" test-without-building -only-testing:CatalogSnapshotTests \
+      -testLanguage en -testRegion en_US -collect-test-diagnostics never >> "$log" 2>&1 || test_status=$?
+  fi
+  finished=$SECONDS
+
+  # The test's failures, each with its message, and its summary line.
+  awk '/\[MT\]/ { next }
+    /✘ .*recorded an issue/ { if ((getline line) > 0 && line ~ /^↳ /) print line; next }
+    / draws: |^snapshot: [0-9]+ images|: error: |\*\* TEST/ { print }' "$log" >&2
+  if [ ! -f "$out/matrix.json" ]; then
+    echo "snapshot-matrix: the test wrote no manifest (status $test_status), log: $log" >&2
+    render_status=1
+    return 0
+  fi
+  jq -r '.components[] | "  \(.component): \([.groups[].sheets[].images[][] | select(.found != null)] | length) images"' \
+    "$out/matrix.json" >&2
+  environment_json "$platform" "$udid" \
+    | jq --slurpfile manifest "$out/matrix.json" --argjson images "$(find "$out" -maxdepth 1 -name '*.png' | wc -l)" \
+      --arg component "$component" '. + {scale: $manifest[0].scale, images: $images}
+        + (if $component != "" then {partial: $component} else {} end)' > "$out/environment.json"
+  echo "snapshot-matrix: build $((built - start)) s, render $((finished - built)) s (log: $log)" >&2
+  pages index "$out" || page_status=$?
+  render_status=0
+  if [ "$test_status" -ne 0 ] || [ "$page_status" -ne 0 ]; then
+    echo "snapshot-matrix: the render failed (test status $test_status), log: $log" >&2
+    render_status=1
+  fi
+}
+
+case "${1:-}" in
+  compare)
+    shift
+    [ $# -ge 2 ] || usage
+    before="$(absolute "$1")" after="$(absolute "$2")"
+    shift 2
+    out=".build/snapshot-matrix/compare" tolerance=1
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --out) out="$2"; shift 2 ;;
+        --tolerance) tolerance="$2"; shift 2 ;;
+        *) usage ;;
+      esac
+    done
+    out="$(absolute "$out")"
+    mkdir -p "$out"
+    status=0
+    pages compare "$before" "$after" "$out" --tolerance "$tolerance" || status=$?
+    [ "$status" -le 1 ] || exit "$status"
+    echo "$out/index.html"
+    exit "$status"
+    ;;
+
+  check | record)
+    command="$1" platform="${2:-}"
+    [ "$platform" = ios ] || [ "$platform" = macos ] || usage
+    shift 2
+    from="" device="${WESTRON_SIM_DEVICE:-iPhone 17}" out=".build/snapshot-matrix/check-$platform" tolerance=1
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --from) from="$2"; shift 2 ;;
+        --device) device="$2"; shift 2 ;;
+        --out) [ "$command" = check ] || usage; out="$2"; shift 2 ;;
+        --tolerance) tolerance="$2"; shift 2 ;;
+        *) usage ;;
+      esac
+    done
+    references="$(references_of "$platform")"
+    out="$(absolute "$out")"
+
+    if [ "$command" = check ] && ! recorded "$platform"; then
+      echo "snapshot-matrix: no references recorded yet for $platform: nothing to compare with." >&2
+      echo "snapshot-matrix: CI records them (.github/workflows/snapshot-references.yml: by hand on a branch, or the" \
+        "label record-snapshots on a pull request); see platforms/apple/Snapshots/README.md." >&2
+      exit 3
+    fi
+    # The render: one given, else a fresh full one, after the environment is known to match (no point otherwise).
+    if [ -n "$from" ]; then
+      render_dir="$(absolute "$from")"
+      [ -f "$render_dir/environment.json" ] && [ -f "$render_dir/matrix.json" ] || {
+        echo "snapshot-matrix: $render_dir is not a render of tools/apple/snapshot-matrix.sh (no environment.json" \
+          "or matrix.json)" >&2
+        exit 2
+      }
+    else
+      destination "$platform" "$device"
+      render_dir="$root/.build/snapshot-matrix/$platform"
+      if [ "$command" = check ]; then
+        current="$(mktemp)"
+        environment_json "$platform" "$udid" > "$current"
+        differences="$(environment_differences "$references/environment.json" "$current")"
+        rm -f "$current"
+        if [ -n "$differences" ]; then
+          echo "snapshot-matrix: this environment differs from the one the $platform references were recorded in" \
+            "(references / here):" >&2
+          echo "$differences" >&2
+          echo "snapshot-matrix: nothing compared; pictures from another environment differ in every image" \
+            "(decisions/0008). Render before and after your change here and compare those two instead:" >&2
+          echo "  tools/apple/snapshot-matrix.sh $platform --out <before>; <change>;" \
+            "tools/apple/snapshot-matrix.sh $platform; tools/apple/snapshot-matrix.sh compare <before>" \
+            ".build/snapshot-matrix/$platform" >&2
+          exit 4
+        fi
+      fi
+      render "$platform" "" "$render_dir"
+      [ "$render_status" -eq 0 ] || exit 1
+    fi
+    if [ "$(jq -r '.partial // ""' "$render_dir/environment.json")" != "" ]; then
+      echo "snapshot-matrix: $render_dir holds some components only ($(jq -r .partial "$render_dir/environment.json"));" \
+        "$command takes a full render" >&2
+      exit 2
+    fi
+    if [ "$(jq -r .platform "$render_dir/environment.json")" != "$platform" ]; then
+      echo "snapshot-matrix: $render_dir is not a render of $platform" >&2
+      exit 2
+    fi
+    # A render with a failed picture is neither checked nor recorded: a missing PNG would read as a removed sheet, and
+    # record would delete its reference.
+    problems="$(incomplete "$render_dir")"
+    if [ -n "$problems" ]; then
+      echo "snapshot-matrix: $command: the render in $render_dir is incomplete, so nothing is" \
+        "$([ "$command" = check ] && echo compared || echo recorded):" >&2
+      while IFS= read -r line; do echo "  $line"; done <<< "$problems" >&2
+      exit 1
+    fi
+
+    if [ "$command" = check ]; then
+      differences="$(environment_differences "$references/environment.json" "$render_dir/environment.json" scale)"
+      if [ -n "$differences" ]; then
+        echo "snapshot-matrix: the render's environment differs from the one the $platform references were" \
+          "recorded in (references / render):" >&2
+        echo "$differences" >&2
+        echo "snapshot-matrix: nothing compared (decisions/0008). On CI: the runner image changed under the" \
+          "references; record them again (.github/workflows/snapshot-references.yml). Elsewhere: render before and" \
+          "after your change and compare those two (tools/apple/snapshot-matrix.sh compare)." >&2
+        exit 4
+      fi
+      status=0
+      mkdir -p "$out"
+      pages compare "$references" "$render_dir" "$out" --tolerance "$tolerance" --labels reference,new \
+        || status=$?
+      [ "$status" -le 1 ] || exit "$status"
+      echo "$out/index.html"
+      if [ "$status" -eq 0 ]; then
+        echo "snapshot-matrix: $platform matches its references" >&2
+      else
+        echo "snapshot-matrix: $platform differs from its references; the report shows each change. If the change" \
+          "is intended, record the references on CI (label record-snapshots on the pull request)." >&2
+      fi
+      exit "$status"
+    fi
+
+    # record: in another environment, or over no references, only the same pixels keep a reference.
+    keep="$tolerance"
+    if ! recorded "$platform" \
+      || [ -n "$(environment_differences "$references/environment.json" "$render_dir/environment.json" scale)" ]; then
+      keep=0
+    fi
+    mkdir -p "$references"
+    pages sync "$render_dir" "$references" --tolerance "$keep"
+    jq --argjson images "$(find "$references" -maxdepth 1 -name '*.png' | wc -l)" '. + {images: $images}' \
+      "$render_dir/environment.json" > "$references/environment.json"
+    echo "snapshot-matrix: recorded the $platform references in ${references#"$root"/}: $(jq -c . \
+      "$references/environment.json")" >&2
+    exit 0
+    ;;
+esac
 
 platform="${1:-}"
 [ "$platform" = ios ] || [ "$platform" = macos ] || usage
@@ -143,346 +361,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 out="$(absolute "${out:-.build/snapshot-matrix/$platform}")"
-# The log and the result bundle name the components, joined with "+": snapshot-matrix-ios-rule+surface.log.
-name="snapshot-matrix-$platform${component:+-${component//,/+}}"
-log=".build/logs/$name.log"
-mkdir -p "$out" .build/logs .build/xcode/results
-# Only a capture's own files are removed, so --out can name a directory that holds other files: the images the previous
-# manifest names (in this format, or the earlier one with a file name per theme), any <component>.*.<capture>.png of a component
-# in spec/components whose name ends in a capture's name (a capture that failed before its manifest), the manifest and
-# the page. The capture names are ComponentMatrix.Capture's: the themes at the default text size, then light at the
-# other text sizes.
-captures=(light dark light-hc dark-hc light.xSmall light.accessibility5)
-if [ -f "$out/matrix.json" ]; then
-  { jq -r '(.. | objects | select(has("file")) | .file), (.components[]?.sheets[]?.images[]? | strings)' \
-    "$out/matrix.json" 2> /dev/null || true; } | while read -r file; do
-    case "$file" in */* | "") ;; *) rm -f -- "$out/$file" ;; esac
-  done
-fi
-for contract in spec/components/*/; do
-  id="$(basename "$contract")"
-  for capture in "${captures[@]}"; do rm -f -- "$out/$id."*".$capture.png"; done
-done
-rm -f -- "$out/matrix.json" "$out/index.html"
-
-# Finds the simulator, boots it if need be, and pins its status bar; on macOS, the Mac. Sets udid, destination and
-# xcodebuild_args.
-prepare_destination() {
-  udid=""
-  if [ "$platform" = ios ]; then
-    # shellcheck source=tools/apple/simulator.sh
-    source tools/apple/simulator.sh
-    udid="$(westron_simulator_udid "$device")" || exit 1
-    # The same status bar on every screenshot.
-    xcrun simctl status_bar "$udid" override --time 9:41 --batteryState charged --batteryLevel 100 \
-      --wifiBars 3 --cellularMode active --cellularBars 4 --dataNetwork wifi
-    destination="id=$udid"
-  else
-    destination="platform=macOS,arch=$(uname -m)"
-  fi
-  xcodebuild_args=(-project platforms/apple/Catalog/Catalog.xcodeproj -scheme Catalog -destination "$destination"
-    -derivedDataPath .build/xcode/catalog)
-}
-
-# CI run 44461921450 printed the capture's header and then nothing for 62 minutes, until the job's timeout killed the
-# leg, and a leg the timeout kills uploads no logs. Two guards keep that from happening again:
-# - The watchdog over every xcodebuild of the script, the build and each capture: a run whose log has not grown for
-#   WESTRON_MATRIX_STALL_SECONDS (default 600, 10 min) has stalled, and is stopped with its children; a line saying so
-#   goes into its log for matrix_plan, which retries a stalled capture. A capture's longest usual silences are the
-#   machinery's: the test runner starting (2.4 min on a stalled CI runner, run 44444325775), a launch timing out
-#   (3 min) or the runner crashing while bootstrapping (3.5 min after "Running tests..."); between the test's own lines
-#   no more than 2.3 s (local captures of every component, 1750 s on iOS and 709 s on macOS).
-# - The deadline, WESTRON_MATRIX_DEADLINE minutes from the script's start (unset: none; CI sets it, .github/workflows/
-#   snapshot-matrix.yml): then whatever the script still does, an xcodebuild, the export of the attachments, the page, is stopped,
-#   and the script says which step it stopped and exits 1, with no retry, so that the logs upload before the timeout.
-stall_after="${WESTRON_MATRIX_STALL_SECONDS:-600}"
-deadline=""
-[ -z "${WESTRON_MATRIX_DEADLINE:-}" ] || deadline=$((WESTRON_MATRIX_DEADLINE * 60))
-
-# Prints the process <pid> and every process under it, parents first.
-process_tree() {
-  local child
-  echo "$1"
-  for child in $(pgrep -P "$1" || true); do process_tree "$child"; done
-}
-
-# Stops the processes <pid>… and their children: TERM, then KILL for what is left after 30 s. The trees are read
-# first: a child of a process that has gone belongs to launchd, and pgrep -P no longer finds it.
-stop_tree() {
-  local tree pid alive waited=0
-  tree="$(for pid in "$@"; do process_tree "$pid"; done)"
-  # shellcheck disable=SC2086 # one pid per word
-  kill -TERM $tree 2> /dev/null || true
-  while [ "$waited" -lt 30 ]; do
-    alive=""
-    for pid in $tree; do kill -0 "$pid" 2> /dev/null && alive="$alive $pid"; done
-    [ -n "$alive" ] || return 0
-    sleep 1
-    waited=$((waited + 1))
-  done
-  # shellcheck disable=SC2086
-  kill -KILL $alive 2> /dev/null || true
-}
-
-# Stops the processes <pid>… of the script (an xcodebuild, the export, the page) and what they started. On macOS the
-# test runner and the catalog it launched belong to launchd, not to xcodebuild: a stopped run's runner exits by
-# itself, its catalog stays (seen locally), so whatever still runs from this checkout's build products is stopped too,
-# a concurrent macOS check in the same checkout included. On iOS they run in the simulator, whose test daemon
-# stop_test_daemon stops.
-stop_run() {
-  [ $# -eq 0 ] || stop_tree "$@"
-  if [ "$platform" = macos ]; then pkill -f "$root/.build/xcode/catalog/Build/Products/" 2> /dev/null || true; fi
-}
-
-# After UI tests the simulator's testmanagerd has been seen to spin for hours (tools/apple/check.sh, a11y): it is
-# stopped once no xcodebuild uses the simulator (nothing on macOS).
-stop_test_daemon() {
-  if [ -n "$udid" ] && ! pgrep -f "xcodebuild.*-destination id=$udid" > /dev/null; then
-    xcrun simctl spawn "$udid" launchctl kill SIGKILL system/com.apple.testmanagerd > /dev/null 2>&1 || true
-  fi
-}
-
-# Watches xcodebuild <pid> through its <log> once a second, in the background, until it ends or is stopped (above).
-# The line goes into the log after a newline: xcodebuild's last output may lack one, and matrix_plan reads the line
-# only at the start of a line.
-watchdog() {
-  local log="$1" pid="$2" size last=-1 quiet_since=$SECONDS quiet why
-  while kill -0 "$pid" 2> /dev/null; do
-    size=$(($(wc -c < "$log")))
-    quiet=$((SECONDS - quiet_since))
-    if [ "$size" -ne "$last" ]; then
-      last="$size" quiet_since=$SECONDS
-    elif [ "$quiet" -ge "$stall_after" ]; then
-      why="stalled: xcodebuild wrote nothing for $((quiet / 60)) min $((quiet % 60)) s"
-      echo "snapshot-matrix: $why (WESTRON_MATRIX_STALL_SECONDS=$stall_after); stopping it, log: $log" >&2
-      printf '\nsnapshot-matrix: %s\n' "$why" >> "$log"
-      stop_run "$pid"
-      return 0
-    fi
-    sleep 1
-  done
-}
-
-# An interrupted run: stops its xcodebuild and the watchdog, then exits with <status> (tools/apple/check.sh,
-# a11y_interrupted). A background job of a script ignores SIGINT, so the interruption does not reach xcodebuild itself.
-interrupted() {
-  stop_run "$watched_pid"
-  kill "$watchdog_pid" 2> /dev/null || true
-  exit "$1"
-}
-
-# Runs xcodebuild <argument>… with its output appended to <log>, under the watchdog, and returns its status. It runs in
-# the background and the script waits for it, so that an interruption reaches the traps at once, as in check.sh's
-# a11y_run; a stopped run returns 143 (TERM) or 137 (KILL).
-watched_xcodebuild() {
-  local log="$1" status=0
-  shift
-  xcodebuild "$@" >> "$log" 2>&1 &
-  watched_pid=$!
-  watchdog "$log" "$watched_pid" &
-  watchdog_pid=$!
-  trap 'interrupted 130' INT
-  trap 'interrupted 143' TERM
-  wait "$watched_pid" || status=$?
-  wait "$watchdog_pid" || true
-  trap - INT TERM
-  return "$status"
-}
-
-# The deadline (above), in the background: at it, the timer signals the script (USR1) and stops the script's other
-# children, the step that runs among them; the script handles the signal once its own command has ended, at once when
-# it waits for an xcodebuild. The timer ends with the script. Its own pid: bash 3.2 has no BASHPID, so a child that
-# execs sh reports its parent.
-deadline_timer() {
-  local self child children=""
-  self="$(exec sh -c 'echo "$PPID"')"
-  while kill -0 $$ 2> /dev/null; do
-    if [ "$SECONDS" -ge "$deadline" ]; then
-      kill -USR1 $$ 2> /dev/null || return 0
-      for child in $(pgrep -P $$ || true); do [ "$child" = "$self" ] || children="$children $child"; done
-      # shellcheck disable=SC2086 # one pid per word
-      stop_run $children
-      return 0
-    fi
-    sleep 1
-  done
-}
-
-# The script's side of the deadline: says which <step> it stopped, writes the same into the current log, stops what
-# is left, and exits 1.
-at_deadline() {
-  local why="stopped at the deadline: $((SECONDS / 60)) min since the start, during $step"
-  echo "snapshot-matrix: $why (WESTRON_MATRIX_DEADLINE=$((deadline / 60))), so that the logs upload before the job's" \
-    "timeout; log: $log" >&2
-  printf '\nsnapshot-matrix: %s\n' "$why" >> "$log"
-  # shellcheck disable=SC2046 # one pid per word
-  stop_run $(pgrep -P $$ | grep -vx "$deadline_timer_pid" || true)
-  stop_test_daemon
-  exit 1
-}
-
-if [ -n "$deadline" ]; then
-  trap at_deadline USR1
-  deadline_timer &
-  deadline_timer_pid=$!
-fi
-
-step="finding the destination"
-prepare_destination
-
-step="the build (xcodebuild build-for-testing)"
-: > "$log"
-if ! watched_xcodebuild "$log" "${xcodebuild_args[@]}" build-for-testing; then
-  grep -E "error:|BUILD FAILED" "$log" | head -20 >&2 || true
-  echo "snapshot-matrix: build failed, log: $log" >&2
-  exit 1
-fi
-
-export TEST_RUNNER_WESTRON_MATRIX=1
-[ -n "$component" ] && export TEST_RUNNER_WESTRON_MATRIX_COMPONENT="$component"
-
-# Runs the test once into <log> (appended) and <results>, and moves what it attached into $out: the PNGs and the
-# manifest. Sets test_status to xcodebuild's status. Without -collect-test-diagnostics never, a failed run waits minutes
-# for a sysdiagnose of the simulator. A failed test still exports what it captured, so the page shows what went wrong.
-capture() {
-  local log="$1" results="$2" attachments="${2%.xcresult}-attachments"
-  rm -rf "$results" "$attachments"
-  echo "== snapshot-matrix: $destination${component:+, $component}" >&2
-  test_status=0
-  step="the test run (xcodebuild test-without-building)"
-  watched_xcodebuild "$log" "${xcodebuild_args[@]}" test-without-building -resultBundlePath "$results" \
-    -collect-test-diagnostics never \
-    -only-testing:CatalogUITests/SnapshotMatrixTests/testMatrix || test_status=$?
-  grep -E "^matrix: |: error: |Failed to install or launch the test runner|Early unexpected exit" "$log" \
-    | grep -v "\[MT\]" >&2 || true
-  stop_test_daemon
-  # A runner that never started leaves no result bundle: no manifest then, and matrix_plan below decides.
-  step="the export of the attachments (xcresulttool)"
-  if ! xcrun xcresulttool export attachments --path "$results" --output-path "$attachments" >> "$log" 2>&1; then
-    echo "snapshot-matrix: no attachments in $results, log: $log" >&2
-    return 0
-  fi
-  # The export names each file by its own id; its manifest.json maps them to the names the test gave the attachments,
-  # which xcresulttool suggests as `<name without .png>_<n>_<UUID>.png`.
-  step="moving the attachments"
-  jq -r '.[].attachments[] | [.exportedFileName, .suggestedHumanReadableName] | @tsv' \
-    "$attachments/manifest.json" | while IFS=$'\t' read -r file label; do
-    case "$label" in
-      westron-matrix-manifest*) target="matrix.json" ;;
-      westron-matrix-*.png)
-        target="$(sed -E 's/^westron-matrix-//; s/(\.png)?(_[0-9]+_[0-9A-Fa-f-]+)?\.png$//' <<< "$label").png" ;;
-      *) continue ;;
-    esac
-    mv "$attachments/$file" "$out/$target"
-  done
-  rm -rf "$attachments"
-}
-
-# What a failed capture that wrote no manifest leaves to do, from its <log>. Prints one line:
-#   retry <reason>  the machinery failed, not the capture: the test runner did not start (xcodebuild's "Failed to
-#                   install or launch the test runner" or "Early unexpected exit, operation never finished
-#                   bootstrapping", with no test case started and no failure), or the test started and every failure
-#                   XCTest reported is one of its messages for a request to the simulator, below, or the watchdog
-#                   stopped a run that had stalled (`retry stalled: …`) and the test reported no failure of its own;
-#   fail <reason>   anything else: a failure of the test's own (a cell count that differs, a cell outside the window,
-#                   a sheet that did not render or showed a problem, an unknown component), such a failure among
-#                   others, stalled or not, a run with no failure that explains it (the runner died mid-run), a test
-#                   that did not start otherwise, a test that passed.
-# A real macOS xcodebuild the watchdog stops mid-test ends its output with "** BUILD INTERRUPTED **" and reports no
-# failure of the test (seen locally), so a stall alone is retried.
-# The machinery's messages, told by how they start, never by text further in: the XCTest messages that
-# CatalogAccessibilityAuditTests.isInfrastructure counts as infrastructure (the same XCUIApplication calls), not that
-# test's own failures:
-#   "Failed to launch <XCUIApplicationImpl: …> via Xcode: Timed out while launching application" (CI run 44444325775,
-#     the leg button+rule, at the first `app.launch()` of SnapshotMatrixTests);
-#   "Failed to get background assertion for target app with pid <pid>: Timed out while acquiring …" (the same run, the
-#     audit's testDefaultSettings 2/3, at its first `app.launch()`);
-#   "Failed to terminate dev.westron.catalog:" and "Application 'dev.westron.catalog' does not have a process ID"
-#     (the audit on CI, #74);
-#   "Failed to <request>: Timed out while …" (a UI query on CI, #74; a drag and a screenshot locally).
-matrix_plan() {
-  awk -v q="'" '
-    BEGIN { c = "-[CatalogUITests.SnapshotMatrixTests testMatrix]"; e = ": error: " c " : " }
-    index($0, "Test Case " q c q " started") { started = 1 }
-    index($0, "Test Case " q c q " passed") { passed = 1 }
-    index($0, "Failed to install or launch the test runner") { runner = 1 }
-    index($0, "Early unexpected exit, operation never finished bootstrapping") { runner = 1 }
-    index($0, "snapshot-matrix: stalled: ") == 1 { stalled = substr($0, length("snapshot-matrix: ") + 1) }
-    index($0, e) {
-      errors++
-      m = substr($0, index($0, e) + length(e))
-      if (m ~ /^Failed to launch <XCUIApplicationImpl: [^>]+> via Xcode: Timed out while launching application/ \
-        || m ~ /^Failed to get background assertion for target app with pid [0-9]+: Timed out while acquiring / \
-        || index(m, "Failed to terminate dev.westron.catalog:") == 1 \
-        || index(m, "Application " q "dev.westron.catalog" q " does not have a process ID") == 1 \
-        || m ~ /^Failed to [a-z ]+: Timed out while /) machinery++
-      else if (other == "") other = m
-    }
-    END {
-      if (passed) { print "fail the test passed, yet wrote no manifest"; exit }
-      if (stalled != "") {
-        if (other != "") print "fail a failure of the capture: " other
-        else print "retry " stalled
-        exit
-      }
-      if (!started) {
-        if (runner && errors == 0) print "retry the test runner did not start"
-        else print "fail the test did not start"
-        exit
-      }
-      if (errors == 0) { print "fail no failure of the test explains it"; exit }
-      if (other != "") { print "fail a failure of the capture: " other; exit }
-      printf "retry the simulator failed the test (%d failure%s of the machinery)\n", errors, (errors == 1 ? "" : "s")
-    }' "$1"
-}
-
-# A retry starts only within this many minutes of the start of the script, its build included: it captures everything
-# again, so it needs a whole capture's time. CI's snapshot legs time out at 30 minutes plus their estimated capture
-# time with a third more (.github/workflows/snapshot-matrix.yml, `snapshot-components`): a retry that starts by 25 minutes, takes
-# about 3 to start the test runner (2.4 on the stalled CI runner, run 44444325775) and captures within the third more,
-# leaves about 2 minutes for the export, the page and the upload. A leg the timeout kills uploads no logs, so CI sets
-# the deadline (above) at those 2 minutes before the timeout: a stall noticed 10 minutes late, in a retry or after a
-# slow first run, or a step that hangs outside xcodebuild, would otherwise run into it.
-retry_by=$((${WESTRON_MATRIX_RETRY_BY:-25} * 60))
-
-# One test invocation for the whole matrix, and one retry when the machinery failed it (above), with a warning on
-# GitHub Actions. The first run's log stays as $log, its build included; the retry's is <name>-retry.log.
-results=".build/xcode/results/$name.xcresult"
-capture "$log" "$results"
-if [ ! -f "$out/matrix.json" ] && [ "$test_status" -ne 0 ]; then
-  plan="$(matrix_plan "$log")"
-  case "$plan" in
-    retry*)
-      if [ "$SECONDS" -gt "$retry_by" ]; then
-        echo "snapshot-matrix: ${plan#retry }, not retried: $((SECONDS / 60)) min have gone, past the" \
-          "$((retry_by / 60)) min a retry must start by (WESTRON_MATRIX_RETRY_BY)" >&2
-      else
-        echo "snapshot-matrix: retrying the capture: ${plan#retry }; its failures are above (log: $log)" >&2
-        if [ -n "${GITHUB_ACTIONS:-}" ]; then
-          echo "::warning title=Snapshot matrix retried::${component:-every component} on $platform:" \
-            "${plan#retry }. The first run's failures are in this step's output; its log is in the leg's artifact."
-        fi
-        # The simulator may have died with the run; it is found, and booted again if need be.
-        step="finding the destination again"
-        prepare_destination
-        log=".build/logs/$name-retry.log" results=".build/xcode/results/$name-retry.xcresult"
-        : > "$log"
-        capture "$log" "$results"
-      fi
-      ;;
-    *) echo "snapshot-matrix: the capture failed, not retried: ${plan#fail }" >&2 ;;
-  esac
-fi
-
-if [ ! -f "$out/matrix.json" ]; then
-  echo "snapshot-matrix: the test wrote no manifest (status $test_status), log: $log" >&2
-  exit 1
-fi
-page_status=0
-step="the review page (snapshot-pages)"
-pages index "$out" || page_status=$?
+destination "$platform" "$device"
+render "$platform" "$component" "$out"
 echo "$out/index.html"
-if [ "$test_status" -ne 0 ] || [ "$page_status" -ne 0 ]; then
-  echo "snapshot-matrix: the capture failed (test status $test_status), log: $log, result: $results" >&2
-  exit 1
-fi
+exit "$render_status"

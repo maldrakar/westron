@@ -169,7 +169,7 @@ jobs:
     #
     # The macOS leg was not run when this job was added (its tests take over the screen, and the Mac was in use), so
     # its first night is its first run on CI: Automation Mode is on for the runner (decisions/0008), as the snapshot
-    # matrix's macOS legs rely on, and a failure uploads the log and the result bundle, with XCTest's screenshots, to
+    # matrix's macOS UI test relied on until #92, and a failure uploads the log and the result bundle, with XCTest's screenshots, to
     # tell a stale test from a broken component or a runner problem. On macOS
     # CheckboxBehaviorTests.testKeyboardFocusAndSpace skips itself when the system's keyboard navigation is off, as it
     # likely is on the runner, so a green macOS leg may not have run it: the step's output shows the skip.

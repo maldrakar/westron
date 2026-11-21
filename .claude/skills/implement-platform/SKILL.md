@@ -39,15 +39,17 @@ tools/check.sh             # tools tests, the raw-values lint, generate --check
 tools/apple/check.sh behavior ios <Component>BehaviorTests   # its behaviour UI tests, if it has a class of them
 ```
 
-Then run `/visual-check <id>` and open every screenshot, and capture the snapshot matrix on both platforms:
+Then run `/visual-check <id>` and open every screenshot, and render the snapshot matrix on both platforms:
 
 ```sh
 tools/apple/snapshot-matrix.sh ios   --component <id>   # prints the path to index.html
 tools/apple/snapshot-matrix.sh macos --component <id>
 ```
 
-For a change to an existing component, capture before and after on the same machine and compare:
-`tools/apple/snapshot-matrix.sh compare <before> <after>`.
+For a change to an existing component, render before and after on the same machine and compare:
+`tools/apple/snapshot-matrix.sh compare <before> <after>`. The references the CI job `snapshots` checks against are
+recorded on CI, never locally: once the human agrees the look is meant, the label `record-snapshots` on the pull
+request records them (`platforms/apple/Snapshots/README.md`).
 
 ## 4. Review
 
@@ -58,4 +60,6 @@ they found, or explain why it is not a bug. Fix contract gaps by changing the co
 
 The snapshot matrix (the paths to both platforms' `index.html`), the output of the checks, the review results and the
 list of deviations recorded in the `platforms` block. The human looks at the matrix and, for a change, the snapshot
-diff (the compare report): this is the second approval gate. Commit and pull request only when the human asks.
+diff (the compare report); on the pull request, the CI job `snapshots` gives the same two: its report of what changed
+against the references and the full page (the artifacts `snapshot-diff` and `snapshot-matrix`). This is the second
+approval gate. Commit and pull request only when the human asks.

@@ -438,7 +438,7 @@ behavior_at_deadline() {
   pkill -P $$ -x xcodebuild 2> /dev/null || true
   echo "check.sh: behavior: $why, so that the logs upload before the job's timeout; log: $behavior_log" >&2
   printf '\ncheck.sh: behavior: %s\n' "$why" >> "$behavior_log"
-  # On macOS the test runner and the catalog belong to launchd, not to xcodebuild (tools/apple/snapshot-matrix.sh).
+  # On macOS the test runner and the catalog belong to launchd, not to xcodebuild: they are stopped by their path.
   if [ "$behavior_platform" = macos ]; then
     pkill -f "$root/.build/xcode/catalog/Build/Products/" 2> /dev/null || true
   fi

@@ -23,8 +23,10 @@ with no prefix: `0.2.0`, not `v0.2.0`.
 
 1. **Preconditions.** If something is wrong, stop and say what exactly.
    - The branch is `main`, the working tree is clean, and `main` matches `origin/main` (`git fetch` and compare).
-   - The last `ci.yml` run on this commit is green. Only that workflow counts here: the nightly checks and the snapshot
-     matrix are workflows of their own (decisions/0008, note of 2026-11-20).
+   - The last `ci.yml` run on this commit is green. Only that workflow counts here, and it holds the snapshot matrix's
+     check against the references (`snapshots`); the nightly checks are a workflow of their own (decisions/0008,
+     notes of 2026-11-20 and 2026-11-21). If `snapshots` passed with a warning (no references, or references from
+     another runner image), it compared nothing: tell the human, who decides whether to record them first.
    - The nightly checks passed on exactly this commit, the full accessibility audit and the behaviour UI tests on iOS
      and macOS: a successful run of `accessibility-audit.yml` (scheduled, or dispatched by hand) whose head commit is
      `git rev-parse HEAD`, and whose Mac jobs ran, the audit's legs and the behaviour tests' alike. A scheduled run
@@ -37,7 +39,7 @@ with no prefix: `0.2.0`, not `v0.2.0`.
      accessibility-audit.yml --commit "$(git rev-parse HEAD)"` lists them all), re-run its failed jobs
      (`gh run rerun <databaseId> --failed`, then check that run again: a re-run keeps its id and commit); otherwise run
      the nightly checks now on `main` (`gh workflow run accessibility-audit.yml --ref main`, an hour or more, then
-     check again), or wait for the nightly run. The snapshot matrix is not a precondition.
+     check again), or wait for the nightly run.
 2. **Version.** If the human passed `major|minor|patch` (`$ARGUMENTS`), use that. Otherwise propose one yourself from
    the "Unreleased" section in `CHANGELOG.md` and the commits: before 1.0, a breaking change is a minor bump.
    With no tags, the first version is `0.1.0`. Show the resulting version and wait for confirmation.

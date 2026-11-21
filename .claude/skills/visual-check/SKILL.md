@@ -29,16 +29,20 @@ tools/apple/catalog-screenshot.sh macos --entry <id> --appearance dark
 
 The script prints the path to the PNG. The captures are independent: run them one at a time and do not stop at the first error.
 
-For a component, also capture its snapshot matrix, every combination of its contract in the four themes at `large` (on
-iOS also light at `xSmall` and `accessibility5`), with supplementary sheets marked "not a contract option":
+For a component, also render its snapshot matrix, every combination of its contract in the four themes at `large` (on
+iOS also light at `xSmall` and `accessibility5`), with supplementary sheets marked "not a contract option". Unit tests
+render it in-process, in seconds, without taking over the screen:
 
 ```sh
 tools/apple/snapshot-matrix.sh ios   --component <id>   # prints the path to index.html
 tools/apple/snapshot-matrix.sh macos --component <id>
 ```
 
-To see what an edit changed, capture the matrix before and after it on the same machine (`--out <dir>`) and run
-`tools/apple/snapshot-matrix.sh compare <before> <after>`: its report lists the changed images side by side.
+To see what an edit changed, render the matrix before and after it on the same machine (`--out <dir>` for the first)
+and run `tools/apple/snapshot-matrix.sh compare <before> <after>`: its report lists the changed images side by side,
+with a diff; a drift of one level a channel counts as unchanged. `tools/apple/snapshot-matrix.sh check` compares with
+the references in `platforms/apple/Snapshots/`, but those are the CI runner's: locally it says the environment differs
+(exit 4) and compares nothing, which is expected. The CI job `snapshots` runs the real check on the pull request.
 
 If macOS fails with `Timed out while enabling automation mode`, Automation Mode is not enabled on the machine.
 Only the human can enable it, once:

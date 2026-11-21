@@ -7,10 +7,6 @@ public enum CatalogAccessibilityID {
     public static let entry = "westron.catalog.entry"
     /// The problem message; its `label` is the reason.
     public static let problem = "westron.catalog.problem"
-    /// Each drawn cell of a snapshot matrix sheet: the capture counts them and checks that none is cut off.
-    public static let matrixCell = "westron.matrix.cell"
-    /// The content of a snapshot matrix sheet: the macOS capture cuts its picture around it, without the title bar.
-    public static let matrixSheet = "westron.matrix.sheet"
 }
 
 /// The root view of the catalog.

@@ -300,7 +300,5 @@ private struct CheckboxSupplementCell<Content: View>: View {
             .forcingCheckboxStates(state.map { $0.isForced ? [$0] : [] } ?? [])
             .disabled(state?.isDisabled ?? false)
             .dynamicTypeSize(...DynamicTypeSize.accessibility1)
-            // One cell for the sheet's test, which counts the cells by their identifier.
-            .accessibilityElement(children: .contain)
     }
 }

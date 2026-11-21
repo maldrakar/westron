@@ -1,0 +1,6 @@
+# What Git LFS fetches by default (#92). The snapshot references are made on and for the CI runner, which pulls them
+# itself (git lfs pull --include "platforms/apple/Snapshots/**" --exclude ""); a clone, and a SwiftPM checkout of
+# westron in a product, keep them as pointers. Without this, a SwiftPM checkout (a clone of its local mirror) fails on
+# a machine with Git LFS: the objects are nowhere to smudge from (decisions/0008, the note of 2026-11-21).
+[lfs]
+	fetchexclude = platforms/apple/Snapshots/**
