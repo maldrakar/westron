@@ -12,6 +12,11 @@
 // cell or the sheet runs past the window ("cut off"), or when four draws give no complete picture (SnapshotRenderer).
 // Each picture's line in the log has its time, the process's memory and its windows, so that a leak shows as growth;
 // a picture that took more than one draw, or a check draw, has a line with each draw's outcome.
+//
+// On macOS the run is held to its own reproducibility (#98): the process's languages and locale are pinned, as
+// xcodebuild pins them on iOS; a picture fails when AppKit measures text otherwise than at the start of the run
+// (`SnapshotRenderer.textMetrics`); and each component's first picture in each capture is drawn again at the end and
+// must give the same pixels (`checkReproducible`).
 
 import Foundation
 import SwiftUI
@@ -74,20 +79,31 @@ struct SnapshotMatrixRenderTests {
                     })
             })
 
+        SnapshotRenderer.pinLanguage()
+        let metrics = SnapshotRenderer.textMetrics
+        if let metrics { print("snapshot: text metrics at the start: \(metrics)") }
         let start = Date()
         var count = 0
         var bytes = 0
         var times: [(file: String, seconds: TimeInterval)] = []
+        // The pictures drawn again at the end (`checksReproducible`): each component's first picture in each capture.
+        var again: [(file: String, key: String, capture: ComponentMatrix.Capture)] = []
         for capture in captures {
             for (componentIndex, groups) in components.enumerated() {
                 for (groupIndex, matrix) in groups.enumerated() {
                     for (sheetIndex, sheet) in matrix.sheets.enumerated() {
-                        for picture in matrix.pictures(of: sheet, at: capture.textSize) {
+                        for (pictureIndex, picture) in matrix.pictures(of: sheet, at: capture.textSize).enumerated() {
                             let file = matrix.fileName(of: picture, capture: capture)
                             let cells = matrix.drawnCount(in: picture)
                             var image = SnapshotManifest.Image(
                                 file: file, part: matrix.partTitle(of: picture), cells: cells)
                             let began = Date()
+                            if let metrics, let now = SnapshotRenderer.textMetrics, now != metrics {
+                                let why =
+                                    "drawn while the process measured text otherwise than at the start of the run, "
+                                    + "so it is not comparable: \(now), at the start \(metrics)"
+                                Issue.record("\(file): \(why)")
+                            }
                             do {
                                 let rendered = try await SnapshotRenderer.render(
                                     key: matrix.key(of: picture), capture: capture)
@@ -108,6 +124,9 @@ struct SnapshotMatrixRenderTests {
                                     print("snapshot: \(file) draws: " + rendered.log.joined(separator: "; "))
                                 }
                                 count += 1
+                                if groupIndex == 0, sheetIndex == 0, pictureIndex == 0 {
+                                    again.append((file, matrix.key(of: picture), capture))
+                                }
                             } catch {
                                 Issue.record("\(file): \(error)")
                             }
@@ -128,6 +147,12 @@ struct SnapshotMatrixRenderTests {
             }
         }
         let total = Date().timeIntervalSince(start)
+        if SnapshotRenderer.checksReproducible {
+            await checkReproducible(again, in: output)
+        }
+        if let metrics, let now = SnapshotRenderer.textMetrics {
+            print("snapshot: text metrics at the end: \(now == metrics ? "the same" : now)")
+        }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         try encoder.encode(manifest).write(to: output.appendingPathComponent("matrix.json"))
@@ -140,6 +165,43 @@ struct SnapshotMatrixRenderTests {
                 count, total, total / Double(max(count, 1)), Double(bytes) / 1_048_576, slowest,
                 SnapshotRenderer.footprint))
     }
+
+    /// Reproducible within the run: draws the pictures again, after every other, and fails by name each one that
+    /// differs from what it drew the first time by more than a level in a channel (the tolerance of
+    /// `tools/apple/snapshot-matrix.sh compare`). A check against the references holds only if the same code draws
+    /// the same pictures; in run 44885247356 (#98) seven pictures of one run differed from every other run's with no
+    /// change in the code, so a picture of a process in that state fails here, named as such, rather than reading as
+    /// a change to the pull request.
+    func checkReproducible(
+        _ pictures: [(file: String, key: String, capture: ComponentMatrix.Capture)], in output: URL
+    ) async {
+        let began = Date()
+        var differing: [String] = []
+        for picture in pictures {
+            guard let first = SnapshotRenderer.read(output.appendingPathComponent(picture.file)) else { continue }
+            do {
+                let again = try await SnapshotRenderer.render(key: picture.key, capture: picture.capture)
+                let why: String
+                if let pixels = SnapshotRenderer.differingPixels(first, again.image) {
+                    guard pixels > 0 else { continue }
+                    why = "drawn again, \(pixels) pixels differ by more than a level from the first draw"
+                } else {
+                    why =
+                        "drawn again \(again.image.width) × \(again.image.height) px, the first draw "
+                        + "\(first.width) × \(first.height) px"
+                }
+                differing.append(picture.file)
+                Issue.record("\(picture.file): not reproducible within the run: \(why)")
+            } catch {
+                Issue.record("\(picture.file): drawn again: \(error)")
+            }
+        }
+        print(
+            String(
+                format: "snapshot: drawn again at the end: %d pictures in %.1f s, %@", pictures.count,
+                Date().timeIntervalSince(began),
+                differing.isEmpty ? "each the same" : "differing: " + differing.joined(separator: ", ")))
+    }
 }
 
 /// The manifest the review page reads (tools/apple/snapshot-pages.swift, `Manifest`).
@@ -149,9 +211,14 @@ struct SnapshotManifest: Codable {
     #else
         static let platform = "macos"
     #endif
-    /// What every picture pins besides its theme and text size: the locale in SwiftUI's environment, and on iOS the
-    /// language and region xcodebuild runs the catalog in (`-testLanguage`, `-testRegion`).
-    static let pinned = ["locale en_US"] + (platform == "ios" ? ["-testLanguage en", "-testRegion en_US"] : [])
+    /// What every picture pins besides its theme and text size: the locale in SwiftUI's environment, and the process's
+    /// language and region, on iOS those xcodebuild runs the catalog in (`-testLanguage`, `-testRegion`), on macOS
+    /// those the test sets itself (`SnapshotRenderer.pinLanguage`).
+    static let pinned =
+        ["locale en_US"]
+        + (platform == "ios"
+            ? ["-testLanguage en", "-testRegion en_US"]
+            : ["AppleLanguages (en)", "AppleLocale en_US"])
 
     var platform: String
     var os: String

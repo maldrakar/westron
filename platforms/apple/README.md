@@ -223,7 +223,12 @@ than 1.5 s, is taken twice and must agree pixel for pixel (on macOS `CARenderer`
 server to cut a draw short, so a slow draw there is only slow). Between draws, and while a sheet settles, the test gives the
 main thread back to its run loop, so that UIKit and SwiftUI release each picture's window and controller; without
 that, every window stayed alive and the CI runner drew the last pictures of the run blank (decisions/0008, the note
-of 2026-11-21). The tests run only when `WESTRON_SNAPSHOTS` names the output directory (on the simulator through
+of 2026-11-21). On macOS the run is held to its own reproducibility (#98): the test pins the process's language and
+locale (`AppleLanguages` `en`, `AppleLocale` `en_US`, in its argument domain, as `-testLanguage en -testRegion en_US`
+does on iOS), since AppKit measures a line of text by the languages; a picture fails, named, when a field's line of
+body text measures otherwise than at the start of the run (`snapshot: text metrics` in the log); and each component's
+first picture in each capture is drawn again at the end and must give the same pixels, within a level (`snapshot:
+drawn again at the end`). The tests run only when `WESTRON_SNAPSHOTS` names the output directory (on the simulator through
 `TEST_RUNNER_WESTRON_SNAPSHOTS`), so `swift test` and `tools/apple/check.sh package` skip them;
 `WESTRON_SNAPSHOTS_COMPONENT` takes some components.
 

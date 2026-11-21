@@ -438,6 +438,44 @@ enum SnapshotRenderer {
 
         /// The windows the process holds.
         static var liveWindows: Int { NSApplication.shared.windows.count }
+
+        /// The language and the region the render pins (`pinLanguage`), as on iOS, where xcodebuild's `-testLanguage
+        /// en -testRegion en_US` puts the same two values in the catalog's argument domain.
+        static let pinnedLanguages = ["en"]
+        static let pinnedLocale = "en_US"
+
+        /// Pins the process's preferred languages and locale for the run, in its argument domain, which outranks the
+        /// app's and the machine's preferences. Under `swift test` the process otherwise takes the Mac's, and AppKit
+        /// and Core Text read them when they make a font: the line height of a text style follows them (the system
+        /// field's line of body text is 16 pt with English, 17.3 with Vietnamese or Arabic among the languages, 18.3
+        /// with Thai, 21 with Burmese; measured with Xcode 27.1 on macOS 26.7), and a fresh font after a change of the
+        /// machine's preferences takes the new ones. The posted notification makes Core Text read them now.
+        static func pinLanguage() {
+            var arguments = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
+            arguments["AppleLanguages"] = pinnedLanguages
+            arguments["AppleLocale"] = pinnedLocale
+            UserDefaults.standard.setVolatileDomain(arguments, forName: UserDefaults.argumentDomain)
+            NotificationCenter.default.post(name: NSLocale.currentLocaleDidChangeNotification, object: nil)
+        }
+
+        /// What AppKit's text field, the system field under SwiftUI's TextField, measures one line of body text and an
+        /// empty field with a prompt at now, with the process's languages: a picture is comparable only with the
+        /// metrics the run began with (#98: in run 44885247356 every system field of seven pictures in a row was 1 pt
+        /// taller than in every other run, and nothing else in them changed).
+        static var textMetrics: String? {
+            let font = NSFont.preferredFont(forTextStyle: .body)
+            let line = NSTextFieldCell(textCell: "Groceries")
+            line.font = font
+            let empty = NSTextFieldCell(textCell: "")
+            empty.font = font
+            empty.placeholderString = "Untitled"
+            return "a field's line of \(font.fontName) \(font.pointSize) pt is \(line.cellSize.height) pt high, an "
+                + "empty one \(empty.cellSize.height) pt; languages \(Locale.preferredLanguages.joined(separator: ", "))"
+        }
+
+        /// Whether the run draws a few pictures a second time at its end and requires the same pixels
+        /// (SnapshotMatrixRenderTests, "Reproducible within the run").
+        static let checksReproducible = true
     #else
         static func show(_ view: some View, dark: Bool) throws -> Never { throw SnapshotRenderError.noHost }
         static func hide(_ window: Never) {}
@@ -445,6 +483,15 @@ enum SnapshotRenderer {
 
         static var environment: (os: String, device: String, scale: Double) { ("", "", 0) }
         static var liveWindows: Int { 0 }
+    #endif
+
+    #if !os(macOS)
+        /// On iOS xcodebuild pins the language and the region (`-testLanguage en -testRegion en_US`), and no render
+        /// has been seen to differ within a run (388 of 388 the same in every CI run), so neither the text metrics
+        /// nor a second draw are checked.
+        static func pinLanguage() {}
+        static var textMetrics: String? { nil }
+        static let checksReproducible = false
     #endif
 
     /// The process's physical memory footprint in megabytes, as the system counts it against its limit.
@@ -477,6 +524,38 @@ enum SnapshotRenderer {
 
     /// An image's pixels, for comparing two draws.
     static func pixels(of image: CGImage) -> Data? { image.dataProvider?.data as Data? }
+
+    /// Reads a PNG.
+    static func read(_ url: URL) -> CGImage? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+        return CGImageSourceCreateImageAtIndex(source, 0, nil)
+    }
+
+    /// How many pixels of two images differ by more than `tolerance` levels in a channel, the tolerance of
+    /// `tools/apple/snapshot-matrix.sh compare`; nil when their sizes differ.
+    static func differingPixels(_ a: CGImage, _ b: CGImage, tolerance: Int = 1) -> Int? {
+        guard a.width == b.width, a.height == b.height,
+            let first = context(width: a.width, height: a.height, alpha: true),
+            let second = context(width: b.width, height: b.height, alpha: true)
+        else { return nil }
+        let rect = CGRect(x: 0, y: 0, width: a.width, height: a.height)
+        first.draw(a, in: rect)
+        second.draw(b, in: rect)
+        guard let one = first.data?.assumingMemoryBound(to: UInt8.self),
+            let other = second.data?.assumingMemoryBound(to: UInt8.self)
+        else { return nil }
+        // The same bytes, the usual outcome, without a pass over every pixel.
+        if memcmp(one, other, a.width * a.height * 4) == 0 { return 0 }
+        var count = 0
+        for pixel in 0..<(a.width * a.height) {
+            let offset = pixel * 4
+            for channel in 0..<3 where abs(Int(one[offset + channel]) - Int(other[offset + channel])) > tolerance {
+                count += 1
+                break
+            }
+        }
+        return count
+    }
 
     /// How many colors a sample of an image's pixels holds, counted up to `limit`. A sheet always has text on its
     /// canvas; a blank render is one color, black or transparent.

@@ -185,10 +185,12 @@ render() {
   fi
   finished=$SECONDS
 
-  # The test's failures, each with its message, and its summary line.
+  # The test's failures, each with its message, its summary line, and on macOS the text metrics at the start and the
+  # end and the pictures drawn again at the end.
   awk '/\[MT\]/ { next }
     /✘ .*recorded an issue/ { if ((getline line) > 0 && line ~ /^↳ /) print line; next }
-    / draws: |^snapshot: [0-9]+ images|: error: |\*\* TEST/ { print }' "$log" >&2
+    / draws: |^snapshot: [0-9]+ images|^snapshot: (text metrics|drawn again)|: error: |\*\* TEST/ { print }' \
+    "$log" >&2
   if [ ! -f "$out/matrix.json" ]; then
     echo "snapshot-matrix: the test wrote no manifest (status $test_status), log: $log" >&2
     render_status=1
