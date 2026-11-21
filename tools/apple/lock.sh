@@ -54,20 +54,22 @@ westron_lock_time() {
   date -r "$1" +%H:%M:%S 2> /dev/null || date -d "@$1" +%H:%M:%S 2> /dev/null || echo "$1"
 }
 
-# Removes the lock <path> left by the dead holder <target>, unless another process has already done so and taken it
-# (the lock names someone else by then). The takeover is itself guarded, by a directory, so that of two waiters that
-# both found the holder dead the second does not remove the lock the first has just taken; a guard older than a minute
-# was left by a process that died between its two steps.
+# Removes the lock <path> left by the dead holder <target>, unless it is gone already: the holder released it after
+# all, or another process has removed it and taken it (the lock names someone else by then). Succeeds only when it
+# removed the lock. The takeover is itself guarded, by a directory, so that of two waiters that both found the holder
+# dead the second does not remove the lock the first has just taken; a guard older than a minute was left by a process
+# that died between its two steps.
 westron_lock_take_over() {
-  local lock="$1" target="$2" guard="$1.takeover"
+  local lock="$1" target="$2" guard="$1.takeover" removed=1
   if mkdir "$guard" 2> /dev/null; then
-    [ "$(readlink "$lock" 2> /dev/null)" != "$target" ] || rm -f "$lock"
+    if [ "$(readlink "$lock" 2> /dev/null)" = "$target" ] && rm -f "$lock"; then removed=0; fi
     rmdir "$guard"
   elif [ -n "$(find "$guard" -maxdepth 0 -mmin +1 2> /dev/null)" ]; then
     rmdir "$guard" 2> /dev/null || true
   else
     sleep 1
   fi
+  return "$removed"
 }
 
 # Releases the lock <key> before the script exits, when it holds it itself (not when a script that ran it does): for a
@@ -138,9 +140,12 @@ westron_lock_release' EXIT
     fi
     vanished=0
     pid="${target%% *}"
+    # Not running: it died and left the lock, or it released the lock and exited after the readlink, and then there is
+    # nothing to take over and nothing to say.
     if ! westron_lock_alive "$target"; then
-      echo "$name: the lock on $what was left by pid $pid, which no longer runs; taking it over" >&2
-      westron_lock_take_over "$lock" "$target"
+      if westron_lock_take_over "$lock" "$target"; then
+        echo "$name: the lock on $what was left by pid $pid, which no longer runs; taking it over" >&2
+      fi
       continue
     fi
     # This script holds it already, or the script that ran this one does.
