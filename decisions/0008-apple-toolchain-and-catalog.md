@@ -272,9 +272,11 @@ Date: 2026-11-14. Status: accepted.
     five that had failed among them, in 147 s, 0.38 s an image against 1.2 s in the failing run, and the process ended
     at 63 MB; drawn the old way in the same job, the matrix had not finished after 15 minutes. A draw that gives no
     complete picture (no frame reported, `drawHierarchy` returning false, fewer than three colors) is taken again, four
-    draws in all with a longer pause each, and then the picture fails by name with every draw's outcome; a draw slower
-    than 1.5 s, and any retry, is taken a second time and must agree pixel for pixel, against a draw that the system cut
-    short.
+    draws in all with a longer pause each, and then the picture fails by name with every draw's outcome; any retry,
+    and on iOS a draw slower than 1.5 s, is taken a second time and must agree pixel for pixel, against a draw that the
+    render server cut short. macOS draws with `CARenderer` in the process, with no server to fall behind and no
+    incomplete draw ever seen, and its ordinary draws take up to 5.4 s on the runner, where a 1.5 s check doubled 35 of
+    196 draws for nothing (run 44846443416), so a slow macOS draw is not checked.
   - **Fidelity.** In the same environment the in-process pictures match the UI test's: on iOS, of Checkbox's and Rule's
     26 images, 21 are pixel for pixel the same and 5 the same except where the UI test's status bar covered the top of a
     sheet that overflows the safe area (Checkbox's twelve list colors); on macOS, Text field's 40 images show the same

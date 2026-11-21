@@ -9,6 +9,10 @@ name: Snapshot references
 #   - `gh workflow run snapshot-references.yml --ref <branch>` (or "Run workflow" on the Actions tab). On main only on
 #     purpose: `-f allow-main=true`, after the runner image changed (the `snapshots` job warns then); otherwise a run on
 #     main stops before it renders.
+# The order (platforms/apple/Snapshots/README.md): a push to main whose render cannot be compared fails ci.yml's
+# `snapshots`, so record on the pull request that introduces or changes the references (the label), run its checks
+# again (close and reopen, or push), and merge only then. If main is already red for it, run this workflow on main:
+# `gh workflow run snapshot-references.yml --ref main -f allow-main=true`.
 # A commit pushed with the workflow's GITHUB_TOKEN starts no workflow, so the pull request's checks do not run on the
 # recorded commit by themselves. This workflow checks the new references against the render it made, but the pull
 # request's own checks need a new run: close and reopen the pull request (`gh pr close <n> && gh pr reopen <n>`) or

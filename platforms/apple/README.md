@@ -218,8 +218,9 @@ iOS; no status bar or home indicator is drawn) down to its bottom and the reach 
 (`shadow.dragged`, 56 pt), as far as the window goes; it is opaque RGB. A picture fails by name when a cell lies
 outside the window on either axis ("cut off" on the page), when a cell draws nothing (the drawn cells are counted
 against the matrix), or when four draws give no complete picture: a draw with no frame reported, `drawHierarchy`
-returning false, or fewer than three colors is taken again with a longer pause, and a draw slower than 1.5 s, or a
-retry, is taken twice and must agree pixel for pixel. Between draws, and while a sheet settles, the test gives the
+returning false, or fewer than three colors is taken again with a longer pause, and a retry, or on iOS a draw slower
+than 1.5 s, is taken twice and must agree pixel for pixel (on macOS `CARenderer` draws in the process, with no render
+server to cut a draw short, so a slow draw there is only slow). Between draws, and while a sheet settles, the test gives the
 main thread back to its run loop, so that UIKit and SwiftUI release each picture's window and controller; without
 that, every window stayed alive and the CI runner drew the last pictures of the run blank (decisions/0008, the note
 of 2026-11-21). The tests run only when `WESTRON_SNAPSHOTS` names the output directory (on the simulator through

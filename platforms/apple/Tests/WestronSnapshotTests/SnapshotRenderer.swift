@@ -132,10 +132,21 @@ enum SnapshotRenderer {
     /// (its asynchronous updates, the representables) on the next turn of the run loop.
     static func settle(attempt: Int) -> TimeInterval { [0.01, 0.1, 0.5, 2][min(attempt, 3)] }
 
-    /// A draw slower than this is taken a second time and must agree pixel for pixel: a render that comes back slow
-    /// on a loaded machine is the one that may be incomplete. Locally a draw takes about 0.1 s; on the CI runner up
-    /// to about 1 s for an ordinary sheet and several seconds for text fields at accessibility5.
+    /// On iOS, a draw slower than this is taken a second time and must agree pixel for pixel: `drawHierarchy` goes
+    /// through the simulator's render server, and a draw that comes back slow from it on a loaded machine is the one
+    /// that may be incomplete. Locally a draw takes about 0.1 s; on the CI runner up to about 1.2 s once the main
+    /// thread is freed between draws (run 44846443416). On macOS a slow draw is not checked (`checksSlowDraws`):
+    /// `CARenderer` draws into the test's own texture, in the process and in the call, with no server to fall behind,
+    /// no incomplete draw has been seen there, and the runner's ordinary macOS draws take up to 5.4 s, so a threshold
+    /// would only double them (35 of 196 there, 176 s of render became 269 s). A retry after a failed draw is checked
+    /// on both.
     static let verifyAfter: TimeInterval = 1.5
+
+    #if os(iOS)
+        static let checksSlowDraws = true
+    #else
+        static let checksSlowDraws = false
+    #endif
 
     /// How far below a view the deepest shadow token reaches, in points: the most of its layers' offset, blur and
     /// spread in any theme (`shadow.dragged`, 16 + 40 pt, in the tokens' CSS sense). The picture keeps that much below
@@ -155,7 +166,7 @@ enum SnapshotRenderer {
     }
 
     /// Draws a picture until a draw gives a complete one: a frame, a successful draw, more than the canvas, and, for a
-    /// slow draw or a retry, a second draw that agrees. Each draw's outcome and time go into the picture's log, or the
+    /// slow draw on iOS or a retry, a second draw that agrees. Each draw's outcome and time go into the picture's log, or the
     /// error's.
     static func render(key: String, capture: ComponentMatrix.Capture) async throws -> SnapshotPicture {
         var log: [String] = []
@@ -167,7 +178,7 @@ enum SnapshotRenderer {
             case .failure(let miss):
                 log.append(String(format: "#%d %@ after %.2f s", attempt + 1, miss.description, seconds))
             case .success(let first):
-                guard seconds > verifyAfter || attempt > 0 else {
+                guard (checksSlowDraws && seconds > verifyAfter) || attempt > 0 else {
                     log.append(String(format: "#%d drawn in %.2f s", attempt + 1, seconds))
                     return picture(first, attempts: attempt + 1, log: log)
                 }

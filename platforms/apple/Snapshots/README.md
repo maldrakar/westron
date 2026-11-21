@@ -22,5 +22,18 @@ check on the runner.
 Until the first recording, each `environment.json` says `"recorded": false` and the check reports that there is
 nothing to compare with.
 
+**The order, for the first recording and every change of look.** A push to `main` whose render cannot be compared
+(no references, or references from another runner) fails the `snapshots` job; a pull request only warns. So:
+
+1. Record on the pull request that introduces or changes the references: add the label `record-snapshots`. The
+   workflow commits the references to the pull request's branch and comments when it is done.
+2. Run the pull request's checks again on that commit, which a workflow's own push does not start: close and reopen
+   the pull request (`gh pr close <n> && gh pr reopen <n>`), or push any commit. `snapshots` must pass, comparing.
+3. Merge only then.
+
+If `main` is already red for it (merged without references, or the runner image changed under them), record on
+`main` itself: `gh workflow run snapshot-references.yml --ref main -f allow-main=true` (if branch protection refuses
+the workflow's push, record on a branch with the label and merge that instead).
+
 Locally, the check says the environment differs and compares nothing (exit 4). Render before and after a change and
 compare the two instead: `tools/apple/snapshot-matrix.sh compare` (`.claude/skills/visual-check`).
