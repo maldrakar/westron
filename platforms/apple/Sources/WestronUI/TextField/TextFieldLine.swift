@@ -20,18 +20,22 @@
 // - when SwiftUI has laid the system field out at a height that is not its lines' (one line on a single-line field, a
 //   whole number of lines on a multi-line one), the style gives the field its font with `leading(.standard)` added once
 //   more, the leading the font has anyway, so that it draws the same pixels: a font SwiftUI resolves anew, makes a new
-//   object for and measures, often at another address. With it, the field is offered a width less by 1/2048 of a point
-//   more, up to 31/2048 and then from none again, under a pixel at any scale: a width SwiftUI has not sized the field
-//   for, so that it sizes it anew. A new font alone has not been enough where the field's text and width stay the
-//   same: SwiftUI then kept the field at the other font's height whatever font it was given, until the text or the
-//   width changed (`TextFieldLineTests`, a field being edited);
+//   object for and measures, often at another address. With it, the field is offered a width more by 1/2048 of a point
+//   more, up to 31/2048 and then from none again, at its right edge: a width SwiftUI has not sized the field for, so
+//   that it sizes it anew. A new font alone has not been enough where the field's text and width stay the same: SwiftUI
+//   then kept the field at the other font's height whatever font it was given, until the text or the width changed
+//   (`TextFieldLineTests`, a field being edited). The field keeps that width once it is back at its lines: given its
+//   own width back, it has been laid out at the other font's height again. Wider at the right edge, the field's frame
+//   rounds to the same pixels at 1x and 2x, left to right and right to left (`TextFieldLineTests`, the review's probe):
+//   a right edge at a half point rounds up either way, where a narrower field lost a pixel at 1x, and a field wider at
+//   its left edge gained one;
 // - it does so up to eight times in a row, and the count starts again once the field is laid out at its own lines, so
 //   a field on screen for long is held each time the state comes back. In the forced states of the tests no field has
 //   needed more than three;
 // - a single-line field takes exactly its line's height, the system field at the top of it, so the layout around the
 //   field and the place of its text are its own while SwiftUI holds the system field taller than its line.
 // None of it changes a field laid out at its own height: the same layout and the same pixels (`TextFieldLineTests`, the
-// snapshot matrix). A field being edited keeps its field editor, its text, its selection and an input method's marked
+// snapshot matrix); and a field it held keeps the frame it had before, at 1x and 2x (`TextFieldLineTests`). A field being edited keeps its field editor, its text, its selection and an input method's marked
 // text while its font is made anew, with no runtime warning from SwiftUI (`TextFieldLineTests`).
 //
 // Not covered:
@@ -61,6 +65,8 @@ package enum TextFieldLineWorkaround {
     /// How many times a field's font has been made anew because SwiftUI laid it out at another font's line, in this
     /// process: a test reads it to see that the defect was forced.
     @MainActor package internal(set) static var remade = 0
+    /// The same, by the field's axis: a test reads it to see which of its fields were held.
+    @MainActor package internal(set) static var remadeOnAxis: [Axis: Int] = [:]
 }
 
 /// On macOS 26 and later, the field held to the height of its own lines (#113); elsewhere the field as it is.
@@ -88,6 +94,7 @@ struct TextFieldLine: ViewModifier {
         let axis: Axis
         @Environment(\.font) private var font
         @Environment(\.fontResolutionContext) private var context
+        @Environment(\.layoutDirection) private var layoutDirection
         /// How many times this field's font has been made anew, in all: each time a font SwiftUI has not resolved before.
         @State private var remade = 0
         /// How many times it has been made anew since the field was last laid out at its own lines.
@@ -96,10 +103,10 @@ struct TextFieldLine: ViewModifier {
         /// The most times a field's font is made anew in a row: the budget starts again once the field is laid out at
         /// its own lines, so that a field on screen for long is held each time the state comes back.
         private static let mostInARow = 8
-        /// How many of a point less width the field is offered at each font made anew, and after how many it starts
-        /// again: under a pixel in all, 31/2048 of a point at most.
-        private static let narrower: CGFloat = 1 / 2048  // westron-lint: allow a part of a pixel, no token's
-        private static let narrowerSteps = 32
+        /// The width the field is offered more, one step more at each font made anew, from none to `widerSteps` - 1 of
+        /// them and from none again: 31/2048 of a point at most.
+        private static let wider: CGFloat = 1 / 2048  // westron-lint: allow a part of a pixel, no token's
+        private static let widerSteps = 32
 
         func body(content: Content) -> some View {
             if let font {
@@ -119,9 +126,15 @@ struct TextFieldLine: ViewModifier {
                         inARow += 1
                         self.remade = laidOut.remade + 1
                         TextFieldLineWorkaround.remade += 1
+                        TextFieldLineWorkaround.remadeOnAxis[axis, default: .zero] += 1
                     }
-                    // A width SwiftUI has not sized the field for, so that it measures the field anew.
-                    .padding(.trailing, CGFloat(remade % Self.narrowerSteps) * Self.narrower)
+                    // A width SwiftUI has not sized the field for, so that it measures it anew: wider by a part of a
+                    // pixel at its right edge, which rounds to the pixel it rounds to anyway, as a half point rounds
+                    // up; narrower, or wider at the left edge, would move an edge at a half point by a pixel at 1x.
+                    .padding(
+                        layoutDirection == .rightToLeft ? .leading : .trailing,
+                        -CGFloat(remade % Self.widerSteps) * Self.wider
+                    )
                     .frame(height: axis == .horizontal ? line : nil, alignment: .top)
             } else {
                 content

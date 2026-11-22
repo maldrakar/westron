@@ -12,11 +12,12 @@
 //   inline ones in the text role of their context, body.regular, heading.small (Onest) and footnote.regular;
 // - `aLongLivedFieldKeepsItsLines`: a framed field of one line and one of several stay on screen, as a product's do,
 //   their text and width changing at each attempt, and the product's own fields come and go in another window: the
-//   state comes back to the same fields again and again;
+//   state comes back to the same fields again and again; at 2x, and at 1x left to right and right to left
+//   (`…At1x`, `…At1xRightToLeft`), where the frames of fields the style held must keep every pixel too;
 // - `anEditedFieldKeepsItsEditing`: the same fields, each in turn being edited in a key window, with text selected and
 //   then in the middle of an input method's composition, only the width changing: the field editor, its text, its
-//   selection and its marked text must stay, and SwiftUI must print no runtime warning (a canary shows that its
-//   warnings reach the child's standard error);
+//   selection and its marked text must stay, each field's own font must have been made anew while it was edited, and
+//   SwiftUI must log no runtime warning (the child reads its own log, where a canary shows the warnings are seen);
 // - `unchangedAtItsOwnLines`: every text role's and every size's field, laid out with the fix and without it, in a
 //   process that keeps every measured font, where the state cannot arise: the same size and frames.
 // Every field must come out at its own lines, the height AppKit gives for its cell at its width, and at the size it has
@@ -35,6 +36,7 @@
 
 #if os(macOS)
     import AppKit
+    import OSLog
     import SwiftUI
     import Testing
     @testable import WestronUI
@@ -59,7 +61,27 @@
         func aLongLivedFieldKeepsItsLines() async throws {
             guard #available(macOS 26, *) else { return }
             let result = try await #require(processExitsWith: .success, observing: [\.standardOutputContent]) {
-                let report = await MainActor.run { LineChurn.runLongLived() }
+                let report = await MainActor.run { LineChurn.runLongLived(scale: 2) }
+                print(LineChurn.marker + report.joined(separator: "\n" + LineChurn.marker))
+            }
+            LineChurn.expectPassed(result)
+        }
+
+        @Test("on a display of 1x, a field that stays on screen keeps its lines and, once held, its width")
+        func aLongLivedFieldKeepsItsLinesAt1x() async throws {
+            guard #available(macOS 26, *) else { return }
+            let result = try await #require(processExitsWith: .success, observing: [\.standardOutputContent]) {
+                let report = await MainActor.run { LineChurn.runLongLived(scale: 1) }
+                print(LineChurn.marker + report.joined(separator: "\n" + LineChurn.marker))
+            }
+            LineChurn.expectPassed(result)
+        }
+
+        @Test("on a display of 1x, right to left, a field that stays on screen keeps its lines and its width")
+        func aLongLivedFieldKeepsItsLinesAt1xRightToLeft() async throws {
+            guard #available(macOS 26, *) else { return }
+            let result = try await #require(processExitsWith: .success, observing: [\.standardOutputContent]) {
+                let report = await MainActor.run { LineChurn.runLongLived(scale: 1, direction: .rightToLeft) }
                 print(LineChurn.marker + report.joined(separator: "\n" + LineChurn.marker))
             }
             LineChurn.expectPassed(result)
@@ -68,21 +90,18 @@
         @Test("a field being edited keeps its text, its selection and its marked text while it is held to its lines")
         func anEditedFieldKeepsItsEditing() async throws {
             guard #available(macOS 26, *) else { return }
-            // SwiftUI's runtime warnings go to standard error only in this mode, which the child takes from this process.
-            setenv("OS_ACTIVITY_DT_MODE", "YES", 1)
-            let result = try await #require(
-                processExitsWith: .success, observing: [\.standardOutputContent, \.standardErrorContent]
-            ) {
-                let report = await MainActor.run { LineEditing.run() }
+            let result = try await #require(processExitsWith: .success, observing: [\.standardOutputContent]) {
+                let (report, warnings) = await MainActor.run { LineEditing.run() }
                 print(LineChurn.marker + report.joined(separator: "\n" + LineChurn.marker))
+                for warning in warnings { print(LineEditing.warningMarker + warning) }
             }
             LineChurn.expectPassed(result)
-            // SwiftUI's runtime warnings, which the child's canary shows reach its standard error.
-            let warnings = String(decoding: result.standardErrorContent, as: UTF8.self).split(separator: "\n")
-                .filter { line in LineEditing.warnings.contains { line.contains($0) } }
+            // SwiftUI's runtime warnings in the child's own log, where the child's canary shows they are seen.
+            let warnings = String(decoding: result.standardOutputContent, as: UTF8.self).split(separator: "\n")
+                .filter { $0.hasPrefix(LineEditing.warningMarker) }
             let canary = warnings.filter { $0.contains(LineEditing.canaryWarning) }
             print("runtime warnings in the child: \(warnings.count), of them the canary's \(canary.count)")
-            #expect(!canary.isEmpty, "the canary's warning did not reach standard error: warnings would not be seen")
+            #expect(!canary.isEmpty, "the canary's warning was not in the child's log: warnings would not be seen")
             #expect(
                 warnings.count == canary.count,
                 "\(warnings.filter { !$0.contains(LineEditing.canaryWarning) }.prefix(5).joined(separator: " | "))")
@@ -248,14 +267,15 @@
         /// each attempt, and between attempts the product lays out fields of its own, not westron's, in Onest, in
         /// footnote.regular and in body.regular in another window, whose fonts SwiftUI's cache then lets go. Every
         /// attempt must find the field at its own line and its westron field at its size in a fresh process.
-        static func runLongLived() -> [String] {
+        static func runLongLived(scale: CGFloat, direction: LayoutDirection = .leftToRight) -> [String] {
+            ScaledWindow.scale = scale
             let unfixed = ProcessInfo.processInfo.environment["WESTRON_FIELD_LINE_UNFIXED"] == "1"
             TextFieldLineWorkaround.isEnabled = !unfixed
             let churn = FontChurn()
             let model = LongLivedModel()
             let size = LaidOutSize()
             func window(_ view: some View) -> (NSWindow, NSHostingView<AnyView>) {
-                let window = SnapshotRenderer.FixedScaleWindow(
+                let window = ScaledWindow(
                     contentRect: CGRect(x: -20000, y: -20000, width: 400, height: 200), styleMask: [.borderless],
                     backing: .buffered, defer: false)
                 window.isReleasedWhenClosed = false
@@ -265,7 +285,8 @@
                 window.contentView = hosting
                 return (window, hosting)
             }
-            let (fieldWindow, field) = window(LongLivedField(model: model, size: size))
+            let (fieldWindow, field) = window(
+                LongLivedField(model: model, size: size).environment(\.layoutDirection, direction))
             let (otherWindow, other) = window(ProductField(font: nil))
             defer {
                 for window in [fieldWindow, otherWindow] {
@@ -328,7 +349,8 @@
                 }
             }
             return report(
-                "a long-lived text field's line", attempts: attempts, since: began, freed: freed, wrong: wrong,
+                "a long-lived text field's line at \(Int(scale))x, \(direction == .rightToLeft ? "right to left" : "left to right")",
+                attempts: attempts, since: began, freed: freed, wrong: wrong,
                 unfixed: unfixed)
         }
 
@@ -473,6 +495,8 @@
             "Modifying state during view update", "AttributeGraph: cycle", "tried to update multiple times per frame",
             "Bound preference", "layout loop",
         ]
+        /// What starts each runtime warning in the exit test's output.
+        nonisolated static let warningMarker = "text-field-warning: "
         /// The warning the canary causes on purpose.
         nonisolated static let canaryWarning = "Modifying state during view update"
 
@@ -490,9 +514,13 @@
             }
         }
 
-        static func run() -> [String] {
+        /// The report, and every runtime warning of SwiftUI's this process logged meanwhile.
+        static func run() -> (report: [String], warnings: [String]) {
             let unfixed = ProcessInfo.processInfo.environment["WESTRON_FIELD_LINE_UNFIXED"] == "1"
             TextFieldLineWorkaround.isEnabled = !unfixed
+            // SwiftUI logs its runtime warnings; this process reads its own log at the end.
+            let log = try? OSLogStore(scope: .currentProcessIdentifier)
+            let logged = log?.position(date: Date())
             _ = NSApplication.shared
             let churn = FontChurn()
             let model = LongLivedModel()
@@ -547,6 +575,8 @@
             let perPhase = max(LineChurn.attempts / 4, 1)
             var freed = 0
             var remadeEditing = 0
+            // How many times each field's own font was made anew while it was the one edited.
+            var remadeEdited = Array(repeating: 0, count: fields.count)
             var attempt = 0
             let began = Date()
             for (index, system) in fields.enumerated() {
@@ -577,6 +607,8 @@
                     }
                     let expected = editing()
                     let remadeBefore = TextFieldLineWorkaround.remade
+                    let axis: Axis = index == 0 ? .horizontal : .vertical
+                    let remadeOwnBefore = TextFieldLineWorkaround.remadeOnAxis[axis, default: 0]
                     for _ in 0..<perPhase {
                         attempt += 1
                         var font = WeakFont(nil)
@@ -613,6 +645,7 @@
                         }
                     }
                     remadeEditing += TextFieldLineWorkaround.remade - remadeBefore
+                    remadeEdited[index] += TextFieldLineWorkaround.remadeOnAxis[axis, default: 0] - remadeOwnBefore
                     if marked { editor.unmarkText() }
                     window.makeFirstResponder(nil)
                 }
@@ -621,13 +654,24 @@
                 "text fields being edited", attempts: attempt, since: began, freed: freed, wrong: wrong,
                 unfixed: unfixed)
             report.insert(
-                "the window key: \(key); fonts made anew while a field was edited: \(remadeEditing); off its lines, "
+                "the window key: \(key); fonts made anew while a field was edited: \(remadeEditing), of the field edited "
+                    + "\(remadeEdited.map(String.init).joined(separator: " and ")); off its lines, "
                     + "the field being edited \(offEdited) times, the other field \(offOther)", at: 2)
-            if !unfixed, remadeEditing == 0 {
+            if !unfixed, remadeEdited.contains(0) {
                 report[0] = "failed"
-                report.append("no font was made anew while a field was edited: the forcing did not force")
+                report.append("a field's own font was never made anew while it was edited: the forcing did not force")
             }
-            return report
+            var warnings: [String] = []
+            if let log, let logged, let entries = try? log.getEntries(at: logged) {
+                for case let entry as OSLogEntryLog in entries
+                where Self.warnings.contains(where: { entry.composedMessage.contains($0) }) {
+                    warnings.append("\(entry.subsystem) \(entry.category): \(entry.composedMessage)")
+                }
+            } else {
+                report[0] = "failed"
+                report.append("the process's log could not be read")
+            }
+            return (report, warnings)
         }
 
         /// A window that becomes key, borderless and off screen, at the render's scale.
@@ -647,6 +691,12 @@
                 Color.clear
             }
         }
+    }
+
+    /// A borderless window off screen at a scale the test sets, for every window of its process.
+    final class ScaledWindow: NSWindow {
+        nonisolated(unsafe) static var scale: CGFloat = 2
+        override var backingScaleFactor: CGFloat { Self.scale }
     }
 
     /// A `LineField`, or a view, reporting its size; or nothing.
