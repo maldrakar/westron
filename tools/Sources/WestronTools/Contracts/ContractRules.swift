@@ -149,6 +149,9 @@ struct ContractRules {
     /// The key of a case's `when` that names states; no option may take it.
     static let stateKey = "state"
 
+    /// The key of a constraint's `when` that names slots an instance fills; no option may take it.
+    static let slotsKey = "slots"
+
     /// The contract of `button` is `button/button.spec.yaml`.
     mutating func checkFileName() {
         guard let id = document["id"]?.string else { return }
@@ -201,12 +204,18 @@ struct ContractRules {
         }
     }
 
-    /// An enum option's default is one of its values; no option takes the name a case gives to states.
+    /// An enum option's default is one of its values; no option takes the name a case gives to states or the name a
+    /// constraint gives to slots.
     mutating func checkOptions() {
         for member in document["options"]?.members ?? [] where member.key == Self.stateKey {
             report(
                 .root.key("options").key(member.key),
                 "\"\(Self.stateKey)\" names the states in a case of a token binding; give the option another name")
+        }
+        for member in document["options"]?.members ?? [] where member.key == Self.slotsKey {
+            report(
+                .root.key("options").key(member.key),
+                "\"\(Self.slotsKey)\" names the slots in a constraint's when; give the option another name")
         }
         for member in document["options"]?.members ?? [] where member.value["type"] == .string("enum") {
             guard let values = member.value["values"]?.elements?.compactMap(\.string),
@@ -287,14 +296,66 @@ struct ContractRules {
         }
     }
 
-    /// Constraints name options that exist, with values those options have.
+    /// Constraints name options that exist, with values those options have. A constraint's `when` may instead name
+    /// slots under `slots`, the slots an instance fills: then, as narrow as what the conventions derive from it
+    /// (spec/conventions.md, "Own components"), it names slots the contract declares and no option, forbids (severity
+    /// `error`), and its `require` gives enum options one value each, which an instance that fills the slots takes.
     mutating func checkConstraints() {
+        let enums = enumOptions
+        let declaredSlots = document["slots"]?.elements?.compactMap(\.string) ?? []
         for (index, constraint) in (document["constraints"]?.elements ?? []).enumerated() {
-            for side in ["when", "require"] {
-                checkConditions(
-                    constraint[side]?.members ?? [], at: .root.key("constraints").index(index).key(side),
-                    states: false)
+            let path = DocumentPath.root.key("constraints").index(index)
+            var when = constraint["when"]?.members ?? []
+            if let slots = when.first(where: { $0.key == Self.slotsKey }) {
+                when.removeAll { $0.key == Self.slotsKey }
+                let place = path.key("when").key(Self.slotsKey)
+                let named: [(DocumentPath, JSON)] =
+                    if case .array(let elements) = slots.value {
+                        elements.enumerated().map { (place.index($0.offset), $0.element) }
+                    } else {
+                        [(place, slots.value)]
+                    }
+                for (at, value) in named {
+                    guard let name = value.string else {
+                        report(at, "name a slot, not true or false")
+                        continue
+                    }
+                    if !declaredSlots.contains(name) {
+                        report(
+                            at,
+                            declaredSlots.isEmpty
+                                ? "\"\(name)\": the contract declares no slots"
+                                : "\"\(name)\" is not one of the slots: \(declaredSlots.joined(separator: ", "))")
+                    }
+                }
+                if !when.isEmpty {
+                    report(
+                        path.key("when"),
+                        "a constraint on slots names no option in its when: the conventions derive no API from both")
+                }
+                if constraint["severity"]?.string != "error" {
+                    report(
+                        path.key("severity"),
+                        "a constraint on slots forbids (error): the conventions derive no API from advice")
+                }
+                for member in constraint["require"]?.members ?? [] {
+                    let one: Bool =
+                        if case .array(let elements) = member.value { elements.count == 1 } else { true }
+                    if enums[member.key] != nil, !one {
+                        report(
+                            path.key("require").key(member.key),
+                            "a constraint on slots gives \(member.key) one value, which an instance that fills them "
+                                + "takes")
+                    } else if enums[member.key] == nil, boolOptions.contains(member.key) {
+                        report(
+                            path.key("require").key(member.key),
+                            "a constraint on slots requires enum options only: the conventions derive no API for a "
+                                + "bool option yet")
+                    }
+                }
             }
+            checkConditions(when, at: path.key("when"), states: false)
+            checkConditions(constraint["require"]?.members ?? [], at: path.key("require"), states: false)
         }
     }
 

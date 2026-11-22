@@ -45,7 +45,7 @@
       "items": { "$ref": "#/$defs/name" }
     },
     "constraints": {
-      "description": "Rules between options: when the options have the values in `when`, they must have the values in `require`.",
+      "description": "Rules between options: when the options have the values in `when`, they must have the values in `require`. A rule on a slot names it in `when` under the key `slots` instead of options: when an instance fills that slot, the options must have the values in `require`, one value each, with severity error (Rule: a labelled rule is a horizontal separator).",
       "type": "array",
       "items": { "$ref": "#/$defs/constraint" }
     },
@@ -189,7 +189,10 @@
       "required": ["when", "require", "severity"],
       "additionalProperties": false,
       "properties": {
-        "when": { "$ref": "#/$defs/optionValues" },
+        "when": {
+          "description": "Values by option name; or, under the key `slots`, the slots an instance fills, from `slots`, and no option.",
+          "$ref": "#/$defs/optionValues"
+        },
         "require": { "$ref": "#/$defs/optionValues" },
         "severity": {
           "description": "error: the combination is not allowed; warning: allowed, but advised against.",

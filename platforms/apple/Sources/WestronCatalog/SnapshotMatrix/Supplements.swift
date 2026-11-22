@@ -6,5 +6,6 @@ extension ComponentMatrix.Supplement {
     static let all: [Self] = [
         .buttonLabelWithoutIcon, .iconBesideText, .iconColorRoles, .surfaceNesting, .checkboxListColors,
         .checkboxTextRoles, .textFieldCardNotes, .textFieldSecure, .textFieldOnSurface, .textFieldOnSunken,
+        .ruleLabelled,
     ]
 }
