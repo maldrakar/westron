@@ -17,10 +17,10 @@
 #   tools/apple/check.sh behavior [ios|macos] [class …]
 #                                    the catalog's behaviour UI tests (default: the iOS simulator), the classes named
 #                                    (ButtonBehaviorTests CheckboxBehaviorTests TextFieldBehaviorTests
-#                                    IconAccessibilityTests; default: all); a run that stops making progress
-#                                    (WESTRON_BEHAVIOR_STALL_LIMIT=<seconds>, default 300) or fails for
-#                                    infrastructure runs once more what has not passed, never a test XCTest reported
-#                                    a failure of its own for (#97); WESTRON_BEHAVIOR_DEADLINE=<minutes> stops it all
+#                                    IconAccessibilityTests IconTileAccessibilityTests; default: all); a run that
+#                                    stops making progress (WESTRON_BEHAVIOR_STALL_LIMIT=<seconds>, default 300) or
+#                                    fails for infrastructure runs once more what has not passed, never a test XCTest
+#                                    reported a failure of its own for (#97); WESTRON_BEHAVIOR_DEADLINE=<minutes> stops it all
 #                                    at that time
 #   tools/apple/check.sh format      swift format lint without changes, tools/ included
 #   tools/apple/check.sh fix-format  swift format that rewrites the files, tools/ included
@@ -437,7 +437,8 @@ a11y() {
 # second xcodebuild run, what has not passed (#97): a test that never finished runs again, but a test with a failure
 # of its own (behavior_plan) is never retried, and the nightly CI run reports it
 # (.github/workflows/accessibility-audit.yml).
-behavior_tests=(ButtonBehaviorTests CheckboxBehaviorTests TextFieldBehaviorTests IconAccessibilityTests)
+behavior_tests=(ButtonBehaviorTests CheckboxBehaviorTests TextFieldBehaviorTests IconAccessibilityTests
+  IconTileAccessibilityTests)
 
 # WESTRON_BEHAVIOR_DEADLINE=<minutes> from the script's start (unset: none; CI sets it a few minutes before the job's
 # timeout, since a job the timeout kills uploads no logs, and a macOS UI test run has gone silent on CI for an hour,
