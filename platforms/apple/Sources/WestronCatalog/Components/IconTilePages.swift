@@ -138,7 +138,9 @@ struct IconTileBesideTitle: View {
     }
 }
 
-/// An empty screen as the pilot draws it: the system's `ContentUnavailableView`, its icon a list's tile.
+/// An empty screen as the pilot draws it: the system's `ContentUnavailableView`, its icon a list's tile and its words
+/// in westron's text roles and colors (decisions/0014: westron styles what is inside a system view). The system's own
+/// gray for the description does not meet the text contrast on westron's canvas.
 struct IconTileEmptyScreen: View {
     let icon: Westron.Icon
 
@@ -146,11 +148,15 @@ struct IconTileEmptyScreen: View {
         ContentUnavailableView {
             Label {
                 Text("No tasks")
+                    .textRole(.heading.medium)
+                    .foregroundStyle(.text.primary)
             } icon: {
                 IconTile(icon)
             }
         } description: {
             Text("Add a task.")
+                .textRole(.body.regular)
+                .foregroundStyle(.text.secondary)
         }
     }
 }
@@ -244,8 +250,9 @@ private struct IconTilePage: View {
         ) {
             VStack(alignment: .leading, spacing: .space.betweenGroups) {
                 section("scale: small, medium, large, in body.regular") {
+                    // Wrapped, so that at the largest text sizes the tiles stay within the screen's width.
                     ForEach(ComponentMatrix.iconTile.options[1].values, id: \.self) { scale in
-                        HStack(spacing: .space75) {
+                        IconTileWrap(perLine: Self.glyphs.count) {
                             ForEach(Self.glyphs.indices, id: \.self) { index in
                                 IconTile(Self.glyphs[index])
                                     .category(index == 0 ? nil : Westron.Category.allCases[index * 2])
@@ -256,11 +263,11 @@ private struct IconTilePage: View {
                     }
                 }
                 section("beside a title: size from the role") {
+                    // The role's name over its sample, so that a large title keeps the screen's width.
                     ForEach(IconTileSampleColors.roles, id: \.name) { item in
-                        HStack(spacing: .space150) {
-                            IconTileBesideTitle(icon: .folder, role: item.role, title: "Garden")
-                                .fixedSize(horizontal: true, vertical: false)
+                        VStack(alignment: .leading, spacing: .space25) {
                             TokenDetail(item.name.replacingOccurrences(of: ".", with: " "))
+                            IconTileBesideTitle(icon: .folder, role: item.role, title: "Garden")
                         }
                     }
                     .category(.green)
