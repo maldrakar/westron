@@ -8,6 +8,7 @@ extension ComponentMatrix {
     public static let all: [ComponentMatrix] = [
         .button,
         .checkbox,
+        .chip,
         .icon,
         .iconTile,
         .rule,

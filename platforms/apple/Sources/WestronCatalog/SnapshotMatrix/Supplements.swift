@@ -3,9 +3,11 @@ extension ComponentMatrix.Supplement {
     /// with the matrix. Each is defined with its component's catalog code; `ComponentMatrix.supplements` derives its
     /// sheets from the generated matrix, and `tools/apple/snapshot-matrix.sh` captures them in the same run and the same
     /// captures as the generated sheets. They are not catalog entries, so the accessibility audit does not walk them.
-    static let all: [Self] = [
-        .buttonLabelWithoutIcon, .iconBesideText, .iconColorRoles, .surfaceNesting, .checkboxListColors,
-        .checkboxTextRoles, .textFieldCardNotes, .textFieldSecure, .textFieldOnSurface, .textFieldOnSunken,
-        .ruleLabelled, .iconTileListColors, .iconTileBesideTitle, .iconTileEmptyScreen,
-    ]
+    static let all: [Self] =
+        [
+            .buttonLabelWithoutIcon, .iconBesideText, .iconColorRoles, .surfaceNesting, .checkboxListColors,
+            .checkboxTextRoles, .textFieldCardNotes, .textFieldSecure, .textFieldOnSurface, .textFieldOnSunken,
+            .ruleLabelled, .iconTileListColors, .iconTileBesideTitle, .iconTileEmptyScreen, .chipLitAccent,
+            .chipLongLabel,
+        ] + chipListColors + chipTextOnly
 }

@@ -276,8 +276,9 @@ extension AppleComponents {
         var owners: [String: (source: String, what: String)] = [:]
         for api in apis {
             for item in api.enums { owners[item.type] = (api.source, "\(api.component)'s option \(item.option.name)") }
-            owners[api.style] = (api.source, "\(api.component)'s hand-written style")
+            for target in api.targets { owners[target.style] = (api.source, "\(api.component)'s hand-written style") }
             if !api.contract.states.isEmpty { owners[api.stateType] = (api.source, "\(api.component)'s states") }
+            if !api.contract.forms.isEmpty { owners[api.formType] = (api.source, "\(api.component)'s forms") }
         }
         var problems: [ContractProblem] = []
         for (own, source) in owns {
