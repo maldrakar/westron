@@ -151,6 +151,14 @@ struct IconTileTests {
         #expect(IconTile(Westron.Icon(rawValue: "no-such-icon") ?? .fallback).icon == .bullets)
     }
 
+    @Test("an empty name is no label: a list with no title yet has a decorative tile, not an image without a name")
+    func emptyLabel() {
+        let untitled = IconTile(.folder, label: String())
+        #expect(untitled.icon == .folder && untitled.label == nil)
+        let substring = IconTile(.folder, label: "Garden".prefix(0))
+        #expect(substring.label == nil)
+    }
+
     private func fittingSize(_ view: some View) -> CGSize {
         #if os(macOS)
             // The controller's measure, not the view's fittingSize, which rounds up to whole points: a tile of 1.5

@@ -72,7 +72,8 @@ platforms:
     description: >-
       IconTile(.tray) draws a decorative tile, hidden from assistive technology; IconTile(.folder, label: list.title)
       is one element announced as an image labeled with the list's name, with a localized twin, IconTile(.sun, label:
-      "Today"), as Icon takes its label. The list's color reaches it through the environment, from the shared
+      "Today"), as Icon takes its label. An empty label that is not localized, a list's title not given yet, is no
+      label: the tile is decorative and hidden. The list's color reaches it through the environment, from the shared
       .category(_:) modifier Checkbox reads (spec/conventions.md, "Context a style reads"): set once around a list's
       rows or a screen, .category(Westron.Category(rawValue: list.color)), the closest one winning; nil, the default,
       is the neutral tile, IconTile's own default under the conventions' "nil being the contract's default", where a

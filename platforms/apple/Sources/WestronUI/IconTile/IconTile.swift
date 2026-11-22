@@ -45,11 +45,12 @@ public struct IconTile: View {
     }
 
     /// A tile with a label that is not localized, such as the name the person gave the list:
-    /// `IconTile(.folder, label: list.title)`.
+    /// `IconTile(.folder, label: list.title)`. An empty name is no label: the tile is decorative and hidden, so that a
+    /// list with no title yet exposes no image without a name.
     @_disfavoredOverload
     public init<S: StringProtocol>(_ icon: Westron.Icon, label: S) {
         self.icon = icon
-        self.label = Text(label)
+        self.label = label.isEmpty ? nil : Text(label)
     }
 
     public var body: some View {
@@ -94,11 +95,12 @@ struct IconTileShape: Shape {
     }
 }
 
-/// Lays out a tile from five subviews: a hidden line of the context's text, the glyph hidden at the context's scale and
-/// at medium, the shape and the glyph. The side is `IconTileMetrics.side` of the line's height and the scale's step; the
-/// shape fills it, and the glyph is fitted into a square of `IconTileMetrics.glyph` of it, both centered. The line is
-/// centered too, and the tile's text baselines are the line's, so a row aligned on its first text baseline puts the
-/// tile's center on the middle of its title's first line.
+/// Lays out a tile from five subviews: a hidden line of the context's text, the reference symbol
+/// `IconTileMetrics.scaleReference` hidden at the context's scale and at medium, the shape and the tile's glyph. The
+/// side is `IconTileMetrics.side` of the line's height and the scale's step; the shape fills it, and the glyph is
+/// fitted into a square of `IconTileMetrics.glyph` of it, both centered. The line is centered too, and the tile's text
+/// baselines are the line's, so a row aligned on its first text baseline puts the tile's center on the middle of its
+/// title's first line.
 struct IconTileLayout: Layout {
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let side = side(subviews)
@@ -129,7 +131,7 @@ struct IconTileLayout: Layout {
         return bounds.midY - dimensions.height / 2 + dimensions[guide]
     }
 
-    /// The tile's side: from the height of the hidden line and the ratio of the hidden glyphs' heights.
+    /// The tile's side: from the height of the hidden line and the ratio of the hidden reference symbols' heights.
     private func side(_ subviews: Subviews) -> CGFloat {
         guard subviews.count > 2 else { return 0 }
         let line = subviews[0].sizeThatFits(.unspecified).height

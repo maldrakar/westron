@@ -20,8 +20,9 @@ final class IconTileAccessibilityTests: XCTestCase {
         XCTAssertTrue(entry.waitForExistence(timeout: 30), "the entry did not render")
 
         // The page draws some fifty tiles, every one decorative but one, the empty screen's among them: only that one
-        // is an element, and none of a tile's parts is (on iOS the labeled tile's symbol was an image of its own,
-        // named after the symbol, until the glyph was hidden in IconTile.swift).
+        // is an element, and none of a tile's parts is (on iOS the labeled tile's symbol stays an image of its own,
+        // named after the symbol, even hidden; IconTile.swift replaces the tile's parts with
+        // `.accessibilityRepresentation`).
         let images = entry.descendants(matching: .image)
         XCTAssertEqual(
             images.count, 1,

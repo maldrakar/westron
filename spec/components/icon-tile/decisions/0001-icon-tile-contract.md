@@ -113,7 +113,9 @@ corner is 0.27 to 0.29 of its side; sides of 30 and 26 in a phone row, 22 and 18
 - Role `image`, label `optional`, as Icon (its decisions/0001, "Screen readers"). Without a label the tile is hidden:
   beside its list's title it would only repeat it, and the glyph's system name ("tray") and the color name say nothing
   of the list. With a label, the list's name, it is one element announced as an image (approved, question 4: kept for
-  parity with Icon and a tile without its title, though every pilot tile today stands beside its title).
+  parity with Icon and a tile without its title, though every pilot tile today stands beside its title). An empty
+  label that is not localized, the title of a list not named yet, is no label: the tile is decorative and hidden,
+  since an image without a name tells a screen reader user nothing.
 - Not interactive: no intents, no hit area. A product that makes a tile act puts it in a Button, which carries the
   target.
 
