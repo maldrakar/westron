@@ -331,8 +331,9 @@ With Xcode 27.1, on macOS 26.7.1 and the iPhone 17 simulator of iOS 26.3, on 202
   cannot arise, were laid out the same. Without the hold (`WESTRON_FIELD_LINE_UNFIXED=1`) the same tests fail: fields
   163 to 347 times off their lines, and the glyph row moving with them, a point up beside a field laid out 17 pt high.
 - **A tap or a click on a glyph** focuses the field, through the style's hit area (the catalog's
-  `TextFieldBehaviorTests`, `testATouchOrClickOnAGlyphFocusesTheField`, 6 pt into each glyph; passed on iOS; on macOS
-  the run could not activate the catalog app on 2026-11-22, the Mac's screen being unavailable, and is still to run).
+  `TextFieldBehaviorTests`, `testATouchOrClickOnAGlyphFocusesTheField`, 6 pt into each glyph; passed on iOS and on
+  macOS). On macOS the class's `testMultilineAndSecureFieldsEdit` fails on this Mac, the text typed into the inline
+  notes never arriving, and fails the same on `main`'s code, with no glyph anywhere: it is not this revision's.
 - **Assistive technology.** The glyphs are hidden: the catalog's live page, with a search field, exposes no image,
   and the search field is a search field, named "Search", by the product's trait and label (`TextFieldBehaviorTests`;
   a package test's window exposes no accessibility elements, so this is checked in the app).
