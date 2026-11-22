@@ -285,6 +285,53 @@ struct ChipStyleTests {
         #expect(abs(pressable.width - textUnlit.width) < 0.5)
     }
 
+    @Test("for every registry icon and text size, a lit chip keeps its width, and the check never reaches the label")
+    func markInEveryIconsPlace() {
+        let name = "Work"
+        // The check is centred over the icon at its own size (`ChipContent`): over a narrower icon it reaches past the
+        // icon's frame by half the difference on each side, toward the padding and toward the label.
+        var widest: (spill: CGFloat, gap: CGFloat, icon: Westron.Icon, size: DynamicTypeSize)?
+        for size in [DynamicTypeSize.large, .accessibility5] {
+            let glyph = { (icon: Westron.Icon) in
+                fittingSize(
+                    Image(icon).textRole(ChipMetrics.iconFont).imageScale(ChipMetrics.iconScale).dynamicTypeSize(size)
+                ).width
+            }
+            let check = glyph(.check)
+            let textOnly = fittingSize(Button(name) {}.buttonStyle(.chip).dynamicTypeSize(size)).width
+            for icon in Westron.Icon.allCases {
+                let chip = { (on: Bool) in
+                    fittingSize(
+                        Toggle(isOn: .constant(on)) { Label(name, icon: icon) }.toggleStyle(.chip).dynamicTypeSize(size)
+                    )
+                }
+                let unlit = chip(false)
+                let lit = chip(true)
+                #expect(abs(lit.width - unlit.width) < 0.5, "\(icon) at \(size): lit \(lit), unlit \(unlit)")
+                #expect(abs(lit.height - unlit.height) < 0.5, "\(icon) at \(size): lit \(lit), unlit \(unlit)")
+                // The gap as laid out at this size: the chip with the icon less the chip whose label is only text,
+                // less the icon. Both are wider than the hit area's minimum, so both are their capsule's width.
+                let width = glyph(icon)
+                let withIcon = fittingSize(
+                    Button {
+                    } label: {
+                        Label(name, icon: icon)
+                    }.buttonStyle(.chip).dynamicTypeSize(size)
+                ).width
+                let gap = withIcon - textOnly - width
+                #expect(gap >= CGFloat(ChipMetrics.gap) - 0.5, "\(icon) at \(size): gap \(gap)")
+                let spill = max(0, (check - width) / 2)
+                #expect(spill < gap, "\(icon) at \(size): the check spills \(spill) pt toward the label, gap \(gap)")
+                if spill > widest?.spill ?? -1 { widest = (spill, gap, icon, size) }
+            }
+        }
+        if let widest {
+            print(
+                "chip: the check spills at most \(widest.spill) pt past the icon on each side, over \(widest.icon) at "
+                    + "\(widest.size), of a gap of \(widest.gap) pt")
+        }
+    }
+
     @Test("a long label stays one line, truncated, in the width it is given")
     func truncation() {
         let width: CGFloat = 120

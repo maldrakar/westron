@@ -334,7 +334,9 @@ announced states: the selectable chip's is the toggle's on or off, as a checkbox
   laid out, so chips side by side move apart instead of overlapping: where a short chip's frame is wider than its
   capsule, the gap between two capsules grows by the difference.
 - **Hover on macOS** starts and ends at the drawn capsule, as Button's does (`contentShape(.interaction, …)` on the
-  capsule), not at the corners of the hit area beyond it; the click is still taken in the whole hit area.
+  capsule), not at the corners of the hit area beyond it; the click is still taken in the whole hit area. Measured on
+  macOS afterwards, that content shape did not hold the hover to the capsule, and the location of the pointer is now
+  tested against it (below, "Measured on macOS").
 - **The accessibility shape** is the drawn capsule, `contentShape(.accessibility, …)`, on every OS, and the focus
   effect's shape the capsule on macOS and watchOS, as Button's are.
 - **A truncated label** is whole only to a screen reader, so the contract says that a product gives a chip the width
@@ -366,11 +368,47 @@ itself; `type` is XCUIElement's element type:
 - **The accessibility frame (C).** With `contentShape(.accessibility, …)` on the drawn capsule, as Button sets it, the
   element's frame is still the 44 pt hit area on iOS.
 - **The hit area.** `ChipBehaviorTests.testHitAreaAroundTheChip` presses 1 pt inside the element's top edge, 7 pt
-  above the drawn capsule on iOS and 1 pt above it on macOS, and toggles on iOS; a one-letter chip, `Toggle("I", …)`,
+  above the drawn capsule on iOS and 1 pt above it on macOS, and toggles on both; a one-letter chip, `Toggle("I", …)`,
   lays out 44 pt across on iOS and 28 on macOS (`ChipStyleTests`).
-- **macOS** was not measured after the revision: the Mac's screen was locked, and every UI test there failed to
-  activate the catalog app. The behaviour tests, the hover at the capsule and the macOS screenshot wait for a run on
-  an unlocked Mac.
+- **The check in a narrower icon's place.** The check is drawn centred over the hidden icon at its own size, so over
+  an icon narrower than it, it reaches past the icon's frame by half the difference on each side, into the padding
+  and into the gap before the label. `ChipStyleTests.markInEveryIconsPlace` measures every registry icon at the
+  default text size and at accessibility5: a lit chip keeps the unlit one's width and height, and the check spills
+  less than the gap as laid out at that size. The most it spills is 1.5 pt of the 4 pt gap on macOS, over
+  `chevronLeft`, 6 pt wide against the check's 9 (macOS has no Dynamic Type, so both sizes measure the same); on iOS
+  26.3, 6.5 pt of the 11.3 pt gap at accessibility5, over `chevronLeft` too. It never reaches the label, so nothing
+  changed.
+
+### Measured on macOS, 2026-11-22
+
+On macOS 26.7.1, as XCUITest reads the hierarchy (`ChipBehaviorTests`), not with VoiceOver itself, after the Mac's
+screen, locked when the revision was made, could run the catalog again:
+
+| Element | What the hierarchy holds |
+|---|---|
+| Selectable, Work (off), Home (on), Errands (green, off) | A checkbox (type 12), label "Work", value 0 (Home 1), not selected, enabled, frame 28 pt high: the hit area; no button, no image under it, the name once |
+| Selectable, text only, Reading (on) | A checkbox, label "Reading", value 1, not selected |
+| Selectable, disabled and "disabled, on" | Checkboxes with value 0 and 1, not enabled |
+| Pressable, Tue | A button (type 9), label "Tue", value empty, not selected, 28 pt high, with no element under it |
+| Pressable, disabled | A button, not enabled |
+| Static, Garden and Groceries | Texts (type 48) with an empty label and their words as the value, 24 pt high: the capsule |
+| The long label, truncated | A checkbox, a button and a text each named with the whole label |
+
+- **The hit area.** A click 1 pt inside the element's top edge, 1 pt above the drawn capsule, toggles the chip
+  (`testHitAreaAroundTheChip`).
+- **Hover did not end at the capsule.** `testHoverAtTheCapsule` moves the pointer and reads the hover the style draws
+  from a readout on the catalog page (`onChipHover`, catalog only). With `.contentShape(.interaction, capsule)` before
+  `.onHover`, as the revision had it (C), the pointer 1 pt above the capsule, outside the capsule's frame, left the
+  chip at rest, but the pointer 2 pt in from the frame's left edge and 1 pt below its top, outside the capsule's round
+  end, hovered it: `onHover` follows the whole frame, and a rectangular interaction shape measured the same. So the
+  style now tests the pointer's place in the frame against the capsule (`onContinuousHover`, `ChipHover`): the
+  pointer in the margin and in the corner leaves the chip at rest, inside the capsule it is hovered, and leaving for
+  the margin or the corner ends the hover. Button's style, whose comment says that its interaction shape holds hover
+  to its drawn edge, uses the same `onHover`; it is outside this change.
+- **Keyboard focus** is not measured: `testKeyboardFocusAndSpace` is skipped on a Mac with keyboard navigation off,
+  as this one has it, as it was before.
+- **The screenshot** of the `chip` entry (`tools/apple/catalog-screenshot.sh macos --entry chip`, dark) draws each
+  form in its states, the live tag bar and both readouts, as on iOS.
 - The accessibility audit of the `chip` entry passes on iOS in its five configurations with the three suppressions
   above. An unlit sample at rest first in its own row moved the page so that the audit's second screenful reported
   "potentially inaccessible text" with no element; the sample stands beside the lit one in the row of `checked`

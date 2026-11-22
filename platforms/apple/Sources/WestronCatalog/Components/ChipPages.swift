@@ -23,6 +23,8 @@ enum ChipCatalogID {
     /// The text that says which selectable chips are on and how often the pressable one was pressed: "on: home;
     /// pressed: 0".
     static let summary = "chip.live.summary"
+    /// The text that says whether the style draws Work under the pointer: "hover: work" or "hover: none".
+    static let hover = "chip.live.hover"
 }
 
 /// The sample words of the chips, a tag's name and a day's, as the pilot's tag bar and card pills show them.
@@ -41,6 +43,7 @@ private struct ChipPage: View {
     @State private var home = true
     @State private var errands = false
     @State private var presses = 0
+    @State private var workHovered = false
 
     var body: some View {
         TokenPage(
@@ -88,6 +91,7 @@ private struct ChipPage: View {
                 ChipSamples {
                     Toggle(isOn: $work) { Label(ChipSample.tag, icon: ChipSample.tagIcon) }
                         .toggleStyle(.chip)
+                        .onChipHover { workHovered = $0 }
                         .accessibilityIdentifier(ChipCatalogID.work)
                     Toggle(isOn: $home) { Label("Home", icon: .hash) }
                         .toggleStyle(.chip)
@@ -108,6 +112,10 @@ private struct ChipPage: View {
                     .textRole(.footnote.regular)
                     .foregroundStyle(.text.secondary)
                     .accessibilityIdentifier(ChipCatalogID.summary)
+                Text(verbatim: "hover: " + (workHovered ? "work" : "none"))
+                    .textRole(.footnote.regular)
+                    .foregroundStyle(.text.secondary)
+                    .accessibilityIdentifier(ChipCatalogID.hover)
             }
             section("List colors, lit") {
                 ChipColors()

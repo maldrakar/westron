@@ -174,12 +174,17 @@ platforms:
     macos:
       description: >-
         The hit area is at least 28 pt high and 28 pt across around the 24 pt chip. Hover starts and ends at the drawn
-        capsule (contentShape(.interaction, …) on it), as Button's does, not at the hit area's corners; the click is
-        taken in the whole hit area. The system's focus ring follows the drawn capsule (contentShape(.focusEffect,
-        …)), as Button's does. The selectable chip's representation is the system Toggle, a checkbox on macOS, as
-        Checkbox's is; the hierarchy, the hit area and hover on macOS were not measured after the revision (the Mac's
-        screen was locked; CatalogUITests/ChipBehaviorTests holds the checks). Keyboard focus follows the system's
-        controls, as Checkbox's does.
+        capsule, not in the hit area's margin nor in the corners of the capsule's frame beyond its round ends: the
+        pointer's place in the chip's frame is tested against the capsule (onContinuousHover), since onHover reports
+        the whole frame whatever its content shape (decisions/0001, "Measured on macOS"). The click is taken in the
+        whole hit area. The system's focus ring follows the drawn capsule (contentShape(.focusEffect, …)), as Button's
+        does. The selectable chip's representation is the system Toggle, a checkbox on macOS, as Checkbox's is.
+        Measured on macOS 26.7 as XCUITest reads the hierarchy (CatalogUITests/ChipBehaviorTests), not with VoiceOver
+        itself: the selectable chip is a checkbox with its label and its value 0 or 1, never selected, and no button;
+        the pressable chip a button with its label and nothing under it; the static chip a text whose words are its
+        value; the disabled samples not enabled; a truncated label the whole name. The element's frame is the 28 pt hit
+        area, and a click 1 pt above the drawn capsule toggles. Keyboard focus follows the system's controls, as
+        Checkbox's does; it is not measured, since keyboard navigation was off on the Mac that ran the tests.
     watchos:
       states: [checked, pressed, disabled]
       description: >-

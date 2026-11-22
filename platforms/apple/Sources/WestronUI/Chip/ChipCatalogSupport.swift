@@ -1,13 +1,15 @@
 // Hand-written. CATALOG ONLY: what the westron catalog (WestronCatalog, in this package) needs to show Chip's states
-// that a screenshot cannot produce: hover, focus and pressed, also held with checked. Everything here is `package`,
-// visible to the targets of this Swift package and never to a product that imports WestronUI: it is not public API,
-// and the parity lint (#21) does not see it.
+// that a screenshot cannot produce: hover, focus and pressed, also held with checked; and a readout of the hover the
+// style draws, which its UI tests read. Everything here is `package`, visible to the targets of this Swift package and
+// never to a product that imports WestronUI: it is not public API, and the parity lint (#21) does not see it.
 
 import SwiftUI
 
 extension EnvironmentValues {
     /// States the westron Chip styles draw in addition to the real ones. Catalog only: a product never sets it.
     @Entry var forcedChipStates: Set<ChipState> = []
+    /// Called when a westron chip's hover state changes, with the new state. Catalog only: a product never sets it.
+    @Entry var chipHoverObserver: (@MainActor @Sendable (Bool) -> Void)? = nil
 }
 
 /// One of Chip's states from its contract, as the catalog names it. Catalog only.
@@ -70,5 +72,12 @@ extension View {
     /// for a screenshot, and changes nothing a chip does.
     package func forcingChipStates(_ states: Set<ChipCatalogState>) -> some View {
         environment(\.forcedChipStates, Set(states.map(\.state)))
+    }
+
+    /// Calls `action` when a westron chip in this view enters or leaves hover, the state the style draws from the
+    /// pointer over its capsule, so that the catalog can show it and its UI tests read it (ChipBehaviorTests). Catalog
+    /// only: it changes nothing a chip does.
+    package func onChipHover(_ action: @escaping @MainActor @Sendable (Bool) -> Void) -> some View {
+        environment(\.chipHoverObserver, action)
     }
 }

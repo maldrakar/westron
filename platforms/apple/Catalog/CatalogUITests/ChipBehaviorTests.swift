@@ -3,11 +3,12 @@ import XCTest
 /// Chip's behavior that a unit test cannot reach, on the catalog's `chip` entry: what assistive technology meets for
 /// each form (the selectable chip the system's own toggle, the style's accessibility representation: a switch on iOS, a
 /// checkbox on macOS, with its value on or off; the pressable chip a button; the static chip its text), a press that
-/// toggles or activates, the hit area laid out around the drawn chip, keyboard focus and Space on macOS, and a label
-/// that is only text.
+/// toggles or activates, the hit area laid out around the drawn chip, hover at the drawn capsule on macOS, keyboard
+/// focus and Space on macOS, and a label that is only text.
 ///
 /// The entry says which live chips are on, and how often the pressable one was pressed, in a text,
-/// `ChipCatalogID.summary` in WestronCatalog.
+/// `ChipCatalogID.summary` in WestronCatalog, and whether the style draws Work under the pointer in another,
+/// `ChipCatalogID.hover`.
 final class ChipBehaviorTests: XCTestCase {
     /// Must match `ChipCatalogID` in WestronCatalog.
     private enum ID {
@@ -16,6 +17,7 @@ final class ChipBehaviorTests: XCTestCase {
         static let errands = "chip.live.errands"
         static let day = "chip.live.day"
         static let summary = "chip.live.summary"
+        static let hover = "chip.live.hover"
     }
 
     /// Must match `ChipSample.long` in WestronCatalog.
@@ -93,10 +95,10 @@ final class ChipBehaviorTests: XCTestCase {
         }
     }
 
-    /// The elements whose label is `label`, of any type.
+    /// The elements named `label`, of any type: a text's string is its label on iOS and its value on macOS.
     @MainActor
     private func named(_ label: String) -> XCUIElementQuery {
-        app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label))
+        app.descendants(matching: .any).matching(NSPredicate(format: "label == %@ OR value == %@", label, label))
     }
 
     /// One line of what the hierarchy holds for an element, printed and attached for the report.
@@ -242,6 +244,64 @@ final class ChipBehaviorTests: XCTestCase {
         }
         press(work.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0)).withOffset(CGVector(dx: 0, dy: -above)))
         XCTAssertEqual(summary, "on: work, home; pressed: 0", "a press in the hit area above the chip did not toggle")
+    }
+
+    /// Whether the catalog's readout says the style draws Work under the pointer, within `timeout`; with `expected`
+    /// false, that it does not for the whole `timeout`.
+    @MainActor
+    private func hoverReads(_ expected: Bool, within timeout: TimeInterval) -> Bool {
+        let text = app.staticTexts[ID.hover]
+        let hovered = NSPredicate(format: "label == %@ OR value == %@", "hover: work", "hover: work")
+        let expectation = XCTNSPredicateExpectation(predicate: hovered, object: text)
+        expectation.isInverted = !expected
+        let waited = XCTWaiter().wait(for: [expectation], timeout: timeout) == .completed
+        // Read again after the wait: the readout as the app shows it now.
+        let now = text.label.isEmpty ? (text.value as? String ?? "") : text.label
+        print("chip: hover readout \(now)")
+        return waited && (now == "hover: work") == expected
+    }
+
+    /// macOS: hover starts and ends at the drawn capsule, not at the hit area laid out around it. The pointer in the
+    /// hit area's margin 1 pt above the capsule, or in its corner beyond the capsule's round end, leaves the chip at
+    /// rest; inside the capsule it is hovered; back in the margin, at rest again. The click is still taken in the whole
+    /// hit area (`testHitAreaAroundTheChip`). The element's frame is measured and printed.
+    @MainActor
+    func testHoverAtTheCapsule() throws {
+        #if os(macOS)
+            launch()
+            let work = toggle(ID.work)
+            print(line(ID.work, work))
+            let frame = work.frame
+            // The element's frame is the hit area, 28 pt high around the 24 pt capsule (testHitAreaAroundTheChip): the
+            // capsule's top is (28 - 24) / 2 below the frame's.
+            let target: CGFloat = 28
+            let drawn: CGFloat = 24
+            XCTAssertEqual(frame.height, target, accuracy: 0.5, "the element is not the hit area")
+            XCTAssertGreaterThan(
+                frame.width, target, "Work must be wider than the target, its capsule the frame across")
+            let inset = (target - drawn) / 2
+            let origin = work.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+            func point(_ x: CGFloat, _ y: CGFloat) -> XCUICoordinate { origin.withOffset(CGVector(dx: x, dy: y)) }
+            // Inside the capsule: its middle. In the margin: 1 pt above the capsule's top, in the middle across. In the
+            // corner: 2 pt in from the capsule's left edge and 1 pt below its top, outside its round end of radius 12.
+            let inside = point(frame.width / 2, target / 2)
+            let margin = point(frame.width / 2, inset - 1)
+            let corner = point(2, inset + 1)
+            app.staticTexts[ID.summary].hover()
+            XCTAssertTrue(hoverReads(false, within: 1), "Work is hovered with the pointer away from it")
+            margin.hover()
+            XCTAssertTrue(hoverReads(false, within: 1), "the pointer in the hit area above the capsule hovers the chip")
+            corner.hover()
+            XCTAssertTrue(hoverReads(false, within: 1), "the pointer in the hit area's corner hovers the chip")
+            inside.hover()
+            XCTAssertTrue(hoverReads(true, within: 5), "the pointer inside the capsule does not hover the chip")
+            margin.hover()
+            XCTAssertTrue(hoverReads(false, within: 1), "hover did not end as the pointer left the capsule")
+            corner.hover()
+            XCTAssertTrue(hoverReads(false, within: 1), "hover did not end as the pointer left for the corner")
+        #else
+            throw XCTSkip("a pointer's hover is measured on macOS")
+        #endif
     }
 
     /// Whether the element with the identifier has the keyboard focus.

@@ -82,6 +82,7 @@ private struct ChipControl<Label: View>: View {
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.isFocused) private var isFocused
     @Environment(\.forcedChipStates) private var forcedStates
+    @Environment(\.chipHoverObserver) private var hoverObserver
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovered = false
     @ScaledMetric(relativeTo: Font.TextStyle(ChipMetrics.labelFont.textStyle)) private var gap = CGFloat(
@@ -140,6 +141,10 @@ private struct ChipControl<Label: View>: View {
         // it hovered, and the tint would come back when it is enabled again with the pointer away.
         .onChange(of: isEnabled) { _, enabled in
             if !enabled { isHovered = false }
+        }
+        // The catalog's readout of hover (`onChipHover`); nil in a product.
+        .onChange(of: isHovered) { _, hovered in
+            hoverObserver?(hovered)
         }
     }
 }
@@ -373,11 +378,16 @@ private struct ChipSurface<Content: View>: View {
     }
 }
 
-/// Tracks the pointer over the drawn capsule, not over the hit area around it, as Button does: on macOS the capsule is
-/// the interaction shape the hover is tracked on. The click is still taken in the whole hit area (`ChipHitArea`).
+/// Tracks the pointer over the drawn capsule, not over the hit area around it nor the corners of the capsule's frame
+/// beyond its round ends: the pointer's location in the drawn chip's frame is tested against the capsule. `onHover`
+/// reports the whole frame whatever the content shape: with `.contentShape(.interaction, capsule)` before it, the
+/// pointer 1 pt inside the frame's corner, outside the capsule, still hovered the chip (macOS 26, ChipBehaviorTests).
+/// The click is still taken in the whole hit area (`ChipHitArea`).
 private struct ChipHover<S: Shape>: ViewModifier {
     let shape: S
     let onHover: ((Bool) -> Void)?
+
+    @State private var size = CGSize.zero
 
     func body(content: Content) -> some View {
         #if os(watchOS)
@@ -385,10 +395,19 @@ private struct ChipHover<S: Shape>: ViewModifier {
         #else
             if let onHover {
                 content
-                    #if os(macOS)
-                        .contentShape(.interaction, shape)
-                    #endif
-                    .onHover(perform: onHover)
+                    .onGeometryChange(for: CGSize.self) { proxy in
+                        proxy.size
+                    } action: { newSize in
+                        size = newSize
+                    }
+                    .onContinuousHover(coordinateSpace: .local) { phase in
+                        switch phase {
+                        case .active(let location):
+                            onHover(shape.path(in: CGRect(origin: .zero, size: size)).contains(location))
+                        case .ended:
+                            onHover(false)
+                        }
+                    }
             } else {
                 content
             }

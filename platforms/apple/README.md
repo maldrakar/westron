@@ -169,8 +169,9 @@ The hand-written `<Component>MatrixCell` (Button's is in `Components/ButtonPages
 as on the `button-states` pages, disabled and loading with the real modifiers; Text's with `.textRole(_:)`; Surface's
 (`Components/SurfacePages.swift`) with `.surface(_:outlined:)` around sample content, a plain surface on the canvas
 and an outlined one on a fill (a raised or dragged one in a sunken well, a sunken one in a raised card); Rule's
-(`Components/RulePages.swift`) between two lines or two words; Icon's, Checkbox's and Text field's in
-`Components/IconPages.swift`, `CheckboxPages.swift` and `TextFieldPages.swift`. The rows of a state the OS never
+(`Components/RulePages.swift`) between two lines or two words; Icon's, Checkbox's, Chip's and Text field's in
+`Components/IconPages.swift`, `CheckboxPages.swift`, `ChipPages.swift` and `TextFieldPages.swift`; Chip's draws each
+of its forms on sheets of its own, in the states the form enters. The rows of a state the OS never
 enters are left out, as on those pages; a value the OS does not offer is drawn with its fallback and marked, and a
 combination a `warning` constraint advises against is drawn with a caption. A state no token binding names in a case looks as rest,
 and the sheet and the review page say so: Button's focus, whose ring the system draws. The sheets are not catalog
@@ -212,7 +213,7 @@ still drives every generated sheet and combination:
   listed again by hand. Each sheet and its section of the review page are marked "Not a contract option". Over a
   matrix whose rows are icons, a supplement keeps a few of them (`rows`), on one sheet. Where its cell is taller than
   a generated one, `rowsPerPicture` caps the rows of one picture at a text size that splits sheets
-  (`accessibility5`). There are ten (`SnapshotMatrix/Supplements.swift`, `Supplement.all`):
+  (`accessibility5`). There are nineteen (`SnapshotMatrix/Supplements.swift`, `Supplement.all`):
   - Button, `label-without-icon`: its generated cells have an icon and a label or are icon-only, so a label without an
     icon, which while loading has the indicator before the label and widens the button (P13), is shown on the sheets
     with iconOnly false: every variant, size and role, at rest and in each state, 108 combinations on 6 sheets.
@@ -225,6 +226,11 @@ still drives every generated sheet and combination:
   - Text field, at size m: `card-notes`, a card's title and multiline notes (two rows to a picture at
     `accessibility5`); `secure-field`, the style on `SecureField`; `on-surface` and `on-sunken`, a field on those
     grounds.
+  - Rule, `labelled`: the separator with a label.
+  - Chip, on the selectable form: `lit`, a chip lit in the accent in each state, which under the pointer and pressed
+    holds two states at once; `list-colors-1` to `list-colors-4`, the twelve list colors lit, three to a sheet; on
+    each control, `text-only-selectable` and `text-only-pressable`, a label that is only text, short and truncated; and
+    in every form, `long-label`, a long label in a narrow place.
 
   Like the matrix, supplements are not catalog entries, so the accessibility audit does not walk them.
 
@@ -360,11 +366,11 @@ checks again (a commit pushed by a workflow starts none).
 
 ### Behaviour UI tests
 
-`ButtonBehaviorTests`, `CheckboxBehaviorTests`, `ChipBehaviorTests`, `TextFieldBehaviorTests` and `IconAccessibilityTests`, in
-`Catalog/CatalogUITests`, check on the catalog's entries what a unit test cannot reach: presses and hit areas, the
-accessibility hierarchy, the keyboard. Each class has branches of its own for iOS and macOS. `tools/apple/check.sh
-behavior` runs them, like the audit: the build first, a step of its own, then one `xcodebuild test-without-building`
-for the classes named (all four by default); it prints each failure with its message, each skip with its reason, the
+`ButtonBehaviorTests`, `CheckboxBehaviorTests`, `ChipBehaviorTests`, `TextFieldBehaviorTests` and
+`IconAccessibilityTests`, in `Catalog/CatalogUITests`, check on the catalog's entries what a unit test cannot reach:
+presses, hit areas and hover, the accessibility hierarchy, the keyboard. Each class has branches of its own for iOS
+and macOS. `tools/apple/check.sh behavior` runs them, like the audit: the build first, a step of its own, then one
+`xcodebuild test-without-building` for the classes named (all five by default); it prints each failure with its message, each skip with its reason, the
 test cases and the totals, and stops the simulator's test daemon afterwards. The log goes to
 `.build/logs/behavior-<platform>[-<classes>].log`, the result bundle to `.build/xcode/results/`.
 

@@ -437,7 +437,9 @@ a11y() {
 # second xcodebuild run, what has not passed (#97): a test that never finished runs again, but a test with a failure
 # of its own (behavior_plan) is never retried, and the nightly CI run reports it
 # (.github/workflows/accessibility-audit.yml).
-behavior_tests=(ButtonBehaviorTests CheckboxBehaviorTests ChipBehaviorTests TextFieldBehaviorTests IconAccessibilityTests)
+behavior_tests=(
+  ButtonBehaviorTests CheckboxBehaviorTests ChipBehaviorTests TextFieldBehaviorTests IconAccessibilityTests
+)
 
 # WESTRON_BEHAVIOR_DEADLINE=<minutes> from the script's start (unset: none; CI sets it a few minutes before the job's
 # timeout, since a job the timeout kills uploads no logs, and a macOS UI test run has gone silent on CI for an hour,
