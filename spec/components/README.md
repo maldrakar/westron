@@ -54,6 +54,7 @@ tokens:                         # by <part>.<property>, in one of three forms
       - { when: { variant: primary, state: [hover, pressed] }, token: color.background.accent-hover }
       - { when: { variant: primary }, token: color.background.accent }
       - { when: { variant: secondary, state: disabled }, token: null }    # null: no value in this case
+      # - { when: { state: { all: [checked, pressed] } }, token: … }   # in every one of the states at once
 accessibility:
   role: button
   intents: [activate]
@@ -95,6 +96,23 @@ no option is `inout`, `var` or `let` (an option becomes an argument label). Othe
   component can be in several states at once, or in none; `state` matches when it is in any of the named ones, and a
   case without `state` matches every set of states. So a state that excludes others goes first, and the narrower case
   before the wider one.
+- **Cases over several states at once.** `state: { all: [checked, pressed] }` matches only when the component is in
+  every one of the named states, two or more: a tint that depends on two states, such as a lit chip that darkens when
+  pressed (Chip). It goes before the cases over one of its states, which would otherwise cover it. The check of such
+  a binding enumerates every set of the states its cases name, 2ⁿ for n states, times the combinations of the
+  options they name, and reports a binding past 20 000 of them instead of checking it: with 15 states named, it is
+  past the limit with no option. A binding without such a case is checked as before, without enumerating states.
+- **Forms.** A component whose one look a product reaches through several system controls, picked by the control it
+  writes, names them in `forms`: each form with the states it enters, a subset of `states`, and, where it announces
+  something else, an `accessibility` whose fields replace the contract's for that form (Chip: `selectable` on a
+  toggle, `pressable` on a button, `static` on a label, which adds no role). Every declared state is entered by some
+  form, and the rules of `accessibility` hold for each form's (a form with role `none` takes no intents, announced
+  states or required label; it announces only states it enters). Each platform with a strategy names a base per form
+  in `bases`, `{ selectable: SwiftUI.Toggle, pressable: SwiftUI.Button, static: SwiftUI.Label }`, in place of
+  `base`, and `bases` belongs only to a contract with forms. On Apple each base is checked as `base` is
+  (`SystemStyles`, its strategy, no value a system style of it), and the conventions derive forms only for
+  `style-on-system-control`: one overload per base, each applying its own style (`spec/conventions.md`, "Forms").
+  The snapshot matrix draws each form on a sheet of its own, in the states it enters.
 - **Restrictions.** A platform, or an Apple OS (`ios`, `macos`, `watchos`), restricts the contract with `options` (the
   values of an enum option it offers) and `states` (the states it enters); what it does not name, it keeps whole. An
   Apple OS restricts what Apple keeps.

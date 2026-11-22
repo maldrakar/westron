@@ -1,9 +1,12 @@
 # 0001. The Chip contract: a tag, a filter, a value
 
-Date: 2026-11-22. Status: draft for the first gate (decisions/0005), whose approval the owner delegated to the
-coordinating agent for phase 4 (decisions/0014, "Process"). There was no interview: the agent that wrote the draft
+Date: 2026-11-22. Status: approved on 2026-11-22 by the coordinating agent under the owner's delegation for phase 4
+(decisions/0005, the first gate; decisions/0014, "Process"). There was no interview: the agent that wrote the draft
 answered the questions of `/new-component` from the sources, and each answer below names its source. Where the
-sources are silent, the answer is the agent's guess and is listed under "Open questions", each with a recommendation.
+sources were silent, the answer was the agent's guess, listed under "Open questions" with a recommendation; the
+approver's answers are under "Approval", and what the implementation on Apple measured and decided under the same
+delegation, pending the owner's review at the second gate, under "Implementation on Apple". The proposals below are
+the draft's; where an answer changed one, "Approval" says so.
 
 ## Context
 
@@ -154,3 +157,110 @@ Each is a guess the sources do not settle; the recommendation comes first.
 - **Q11. A laid-out hit area on iOS.** (P10.) Recommended: laid out, as Checkbox's is and as the pilot's tag bar
   needs it (44 pt). The alternative is Button's iOS rule, the system's touch tolerance, which the 6 pt gap between
   chips would share.
+
+## Approval
+
+The coordinating agent approved the contract on 2026-11-22 under the owner's delegation (decisions/0014), with these
+answers.
+
+| Question | Answer |
+|---|---|
+| Q1 | A: one contract in several forms on several system bases. decisions/0003 will produce this shape again, so the tools learn it now: `forms` and per-platform `bases`, as small as Chip needs, every new rule tested, and a contract without `forms` behaving exactly as before (the other contracts' generated files did not change by a byte) |
+| Q2 | Yes: the static form, `.labelStyle(.chip)` |
+| Q3 | Keep the pressable form: decisions/0014, the list the owner confirmed, names Chip "selectable (a filter) or pressable (a value)". Its pilot consumer arrives with the Task screen's pickers; until then the pilot draws its inert pills as static chips |
+| Q4 | (a): a chip lit in a list's color keeps its fill under the pointer and pressed; no new tokens |
+| Q5 | `color.category.<name>.fill` and `on-fill`, as design-language/02 gives a lit tag; the contrast of a lit chip's fill is measured below, and no token changes for it |
+| Q6 | As recommended, measured in the accessibility hierarchy, with the fallback as described: see "Implementation on Apple" |
+| Q7 | Accept `size.control.s` for the static form |
+| Q8 | Out of this contract |
+| Q9 | No check mark |
+| Q10 | `space.125` on both sides |
+| Q11 | A laid-out frame at least `size.target.minimum` high |
+| Tools, item 7 | Yes, here, since ListRow (#119) needs it too: a case that matches only when all the states it names hold, `state: { all: [checked, pressed] }`. The hover and pressed tints moved from the description into the bindings (P8, P11) |
+| Tokens | Add the two missing contrast declarations, `color.text.secondary` on `muted-hover` and `muted-pressed`, unless a pair fails; then report instead of changing a value. Both pairs fail: below |
+
+What changed from the draft: P1's bases and P13's accessibility are now `forms` and `bases` (the schema carries
+them); P11 is answered by cases over several states, so the tints are bindings; P16's web and GTK bases are per form.
+
+### The contrast of a lit chip's fill (Q5)
+
+With no check mark (Q9), the fill is the only visible sign that a chip is on (the label's color changes with it).
+WCAG 2 contrast of the lit fill against the unlit fill, `color.background.muted`, and against the grounds a chip
+stands on, the canvas and a raised surface (`color.background.surface`), in the four themes, from the resolved token
+values (sRGB hex of `tokens/primitive/color.<theme>.tokens.json`, the semantic aliases of
+`tokens/semantic/color.tokens.json`). Below 3:1 in bold.
+
+| Fill | light: muted / canvas / surface | dark | light-hc | dark-hc |
+|---|---|---|---|---|
+| accent | 4.69 / 5.21 / 5.45 | **2.76** / 3.42 / 3.14 | 6.02 / 6.69 / 7.00 | 5.69 / 7.04 / 6.48 |
+| blue | 4.69 / 5.21 / 5.45 | **2.76** / 3.42 / 3.14 | 6.02 / 6.69 / 7.00 | 5.69 / 7.04 / 6.48 |
+| sky | 3.90 / 4.33 / 4.53 | 3.32 / 4.10 / 3.77 | 6.03 / 6.70 / 7.01 | 5.67 / 7.02 / 6.45 |
+| teal | 3.89 / 4.33 / 4.53 | 3.32 / 4.11 / 3.78 | 6.09 / 6.76 / 7.07 | 5.67 / 7.02 / 6.45 |
+| emerald | 3.88 / 4.31 / 4.51 | 3.34 / 4.13 / 3.80 | 6.09 / 6.77 / 7.08 | 5.68 / 7.03 / 6.47 |
+| green | 3.88 / 4.31 / 4.50 | 3.34 / 4.13 / 3.80 | 6.03 / 6.69 / 7.00 | 5.68 / 7.03 / 6.46 |
+| olive | **1.59 / 1.76 / 1.84** | 8.16 / 10.10 / 9.29 | **1.59 / 1.76 / 1.84** | 8.16 / 10.10 / 9.29 |
+| amber | **1.64 / 1.82 / 1.90** | 7.91 / 9.78 / 9.00 | **1.64 / 1.82 / 1.90** | 7.91 / 9.78 / 9.00 |
+| orange | 3.89 / 4.32 / 4.52 | 3.33 / 4.12 / 3.79 | 6.06 / 6.73 / 7.04 | 5.66 / 7.01 / 6.44 |
+| red | 6.27 / 6.97 / 7.29 | **2.06 / 2.55 / 2.35** | 6.27 / 6.97 / 7.29 | 5.67 / 7.02 / 6.45 |
+| pink | 4.40 / 4.89 / 5.11 | **2.94** / 3.64 / 3.35 | 6.04 / 6.71 / 7.02 | 5.68 / 7.02 / 6.46 |
+| violet | 4.69 / 5.21 / 5.46 | **2.76** / 3.41 / 3.14 | 6.03 / 6.70 / 7.00 | 5.66 / 7.01 / 6.44 |
+| indigo | 5.01 / 5.56 / 5.82 | **2.59** / 3.20 / **2.94** | 6.04 / 6.71 / 7.02 | 5.68 / 7.03 / 6.46 |
+
+Plainly: 21 pairs fall under 3:1. In light and light-hc, a lit olive or amber chip stands about 1.6:1 off an unlit
+one and under 2:1 off the canvas and a surface, in every case (their fills are light, under dark words). In dark, a
+lit red chip is under 3:1 against all three grounds (2.06 off an unlit chip), and the accent, blue, pink, violet and
+indigo fall under 3:1 against an unlit chip (2.59 to 2.94), indigo also against a surface. In the high-contrast
+themes every chip also draws `color.border.strong` (P9), which gives its edge but not its state. The label's color
+changes with the fill and the state is announced, so "on" is not color alone for assistive technology; on screen the
+fill is the signal. No token changed (the approver's instruction); the owner decides at the second gate whether to
+accept it, as for the text field's edge, or to answer it, with a check mark (Q9's alternative) or other fills.
+
+### Two contrast declarations that fail
+
+`color.text.secondary`, the unlit chip's icon, on `color.background.muted-hover` and `muted-pressed`, as text
+(4.5:1; 7:1 in high contrast), measured by `tools/westron tokens contrast` with the two declarations added:
+
+| Pair | light | dark | light-hc | dark-hc |
+|---|---|---|---|---|
+| text.secondary on muted-hover | 4.20 | 4.42 | 6.59 | 6.85 |
+| text.secondary on muted-pressed | 3.71 | 3.77 | 5.81 | 5.84 |
+
+All eight fail the text target; all pass 3:1 as a non-text glyph in the standard themes, and 4.5:1 in high contrast.
+As instructed, the declarations were not kept and no value changed: `tokens contrast` passes without them, and the
+contract still binds the icon to `color.text.secondary` under the pointer and pressed. Open for the owner: accept the
+icon as a non-text glyph (declare the pairs as `non-text`), draw it in `color.text.primary` in those states (a case
+over hover and pressed), or darken `color.text.secondary`.
+
+## Implementation on Apple
+
+Decided and measured by the implementing agent on 2026-11-22 under the same delegation, pending the owner's review
+of the snapshot matrix (the second gate).
+
+- **Three styles, one look.** `ChipToggleStyle`, `ChipButtonStyle` and `ChipLabelStyle` (WestronUI/Chip/) draw one
+  view from one table of tokens (`ChipTokens`), which the unit tests compare with the contract's bindings for every
+  combination of the five states, cases over two states included (ChipStyleTests).
+- **Q6, measured.** In the accessibility hierarchy as XCUITest reads it (iOS 26.3, the catalog's `chip` entry), the
+  recommended representation, the system's own Toggle in its `.button` style, is a switch with the value 0 or 1,
+  never selected; so is the style's body with no representation. So the fallback: the representation is a system
+  Button with the toggle trait removed and `.isSelected` while on. Measured on iOS 26.3 and macOS 26: a button,
+  labelled with the chip's words, selected while on, not while off; the pressable chip a button never selected; the
+  static chip's words a text. The surrounding Toggle still gives the element the value 0 or 1, which a style cannot
+  clear (`.accessibilityValue` inside it changed nothing); what VoiceOver itself speaks for it is not measured.
+  iOS 17, macOS 14 and watchOS run the same code, not measured (ChipBehaviorTests).
+- **Q11.** The selectable and pressable forms lay out a frame at least `size.target.minimum` high around the drawn
+  capsule, every point of it taking the press; across, the chip's width (ChipStyleTests; ChipBehaviorTests presses
+  2 pt inside the frame's top edge, above the capsule). On macOS the system's focus ring follows the drawn capsule
+  (`contentShape(.focusEffect, …)`); keyboard focus is not measured.
+- **Truncation.** The label is one line, truncated at its end, in the width the container gives; the icon keeps its
+  size.
+- **The snapshot matrix** draws each form in the states it enters, and supplementary sheets: a chip lit in the accent
+  in each state (accent-hover and accent-pressed, which the generated sheets, each state alone, do not draw), the
+  twelve list colors lit in each state, three to a sheet, and a long label in a narrow place in each form and state.
+  The list-color sheets stop growing at the default text size, so a cell is one line on an iPhone; the text sizes
+  are the generated sheets'.
+- **The accessibility audit** of the `chip` entry passes on iOS 26.3 in its five configurations, with three
+  suppressions, each in `CatalogAccessibilityAuditTests` with its reason: contrast on the disabled samples, which
+  the system disables (WCAG exempts an inactive control); "text clipped" on the long label, truncated by the
+  contract while the element's label is the whole name; and "text clipped" at accessibility5 on the pressable chip
+  the catalog holds pressed, drawn at 0.98 of its size and whole in the screenshot. No lit chip and no list color
+  was reported at the default size or in the other themes.

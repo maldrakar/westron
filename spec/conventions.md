@@ -46,6 +46,7 @@ decisions/0003 rejected.
 | Contract concept | SwiftUI (authoritative) | Web (provisional) | GTK: Rust + GTK4/libadwaita (provisional) | Compose (provisional) |
 |---|---|---|---|---|
 | **Component id and naming** | System control: no westron type. The contract binds to the system control (`Button`), and westron adds an overload of its style modifier. Own component: the shape its `platforms.apple.form` names, no prefix: a modifier on `View` named after the id in lowerCamelCase (`surface` → `.surface(.raised)`), or a `View` named after the id in UpperCamelCase (`rule` → `Rule()`, `empty-state` → `EmptyState`) (below, "Own components"). Generated types are `<Component><Option>`: `ButtonVariant`, `ButtonSize`. A name that would collide with a SwiftUI type is recorded in the `platforms` block (decisions/0003, point 3) | System control: the native element (`<button>`) with westron's CSS. Own component: a custom element, whose name must contain a hyphen, so it differs from the contract's and the `platforms` block records it; the namespace is decided in #40 | System control: the stock widget (`gtk::Button`) with westron's style classes and an extension trait. Own component: a GObject subclass, `Badge` in westron's crate; its GType name carries the library's namespace, as every GTK library's does, and the `platforms` block records it | System control: the Material3 composable inside `WestronTheme`. Own component: a `@Composable` function named after the id in UpperCamelCase. Where Material3 has a composable of the same name (`Badge`), the strategy differs from Apple's and the `platforms` block records it |
+| **Forms** (`forms`, `bases`) | One overload per form, of its base's style modifier, each applying its own hand-written `<Component><Control>Style`: `.toggleStyle(.chip)`, `.buttonStyle(.chip)`, `.labelStyle(.chip)`; the product picks the form by the control it writes (below, "Forms") | One native element per form with westron's CSS (`<button aria-pressed>`, `<button>`, `<span>`), provisional (#40) | One stock widget per form with westron's style class, provisional (phase 7) | Decided in phase 8 |
 | **Enum option: the variant** | A generated `public enum ButtonVariant: String, CaseIterable, Sendable`; cases are the contract's values in lowerCamelCase. It is the first, unlabeled argument of the style overload and has no default, so it is always written: `.buttonStyle(.primary, size: .m)`, `.buttonStyle(.secondary)`; the contract gives the variant no default. A value must not match a system style's static name (`plain`, `bordered`, …); the validator checks it (#18). Another enum option is a labeled argument named after it. Own component: the same generated enum; the first, unlabeled argument of its modifier (`.surface(.raised)`); a view with a variant is not derived yet (Q2) | A `variant` attribute and property on a custom element; on a native element a class or data attribute (#40) | A Rust `enum ButtonVariant { Primary, … }` that adds a CSS class: the stock class where one exists (`.suggested-action`, `.destructive-action`), westron's own otherwise. The value-to-class map is in the `platforms` block | A generated `enum class ButtonVariant { Primary, … }` passed as a parameter; the variant picks westron's colors and shape for the Material3 composable, through `ButtonDefaults`-style factories or the Compose Style API, decided in phase 8 |
 | **Option whose values are tokens** (`type: tokens`, `group: typography`) | The accessor of the token group, which the token generator already writes (decisions/0010): `Westron.TextRole` for `typography`, its values the group's tokens, `.heading.large`. No `<Component><Option>` enum is generated, since the values are the tokens', and its names follow them. The parity lint expects the accessor as the argument's type, and the snapshot matrix enumerates the group's tokens in token order (below, "Extensions of a system view") | A class per value on the element, named from the token path; the prefix is decided in #40 | A style class per value, named from the token path | The theme's value for the token, through `WestronTheme` |
 | **Option whose values are icons** (`type: icons`) | `Westron.Icon`, the enum the icon generator already writes from `spec/icons/icons.yaml` (decisions/0011), whose cases are the registry's names (`AppleIcons.iconType`). No `<Component><Option>` enum is generated. On an own view it is the glyph the view draws, its first, unlabeled argument: `Icon(.tray)` (below, "Own components"). The snapshot matrix runs the registry's names down the rows of a contract without states. A style, an extension or an own modifier with such an option is not derived yet: generation and the parity lint report it as not supported | westron's glyph by name, an inline SVG (#40) | The symbolic icon's name, mapped from the registry in phase 7 | A drawable by name, mapped in phase 8 |
@@ -170,6 +171,37 @@ enum ButtonState: String, CaseIterable, Sendable {
   the system style: the system's `.plain` would be reachable only as `PlainButtonStyle()`, and existing product code
   would change meaning without a diagnostic (decisions/0003, note of 2026-11-18). The validator rejects such a value
   (#18).
+
+### Forms: one look on several system controls
+
+A contract with `forms` (spec/components/README.md, "Forms") is one look that a product reaches through several
+system controls, each a form, picked by the control the product writes, not by an argument: Chip (#117) is
+`Toggle(isOn: $on) { … }.toggleStyle(.chip)` when it is on or off, `Button { … } label: { … }.buttonStyle(.chip)`
+when it opens something, and `Label("Work", icon: .hash).labelStyle(.chip)` when it is only shown. decisions/0003
+gives each control its own style, so the look is recorded once and styled on each base, and nothing makes a product
+choose a form by a parameter the system control already says.
+
+- **One overload per base.** The generator writes, for each form, the overload of its base's style modifier, with the
+  contract's options as `base` would have them (`toggleStyle(_ variant: ChipVariant)`, `buttonStyle(_:)`,
+  `labelStyle(_:)`), each applying a hand-written style named `<Component><Control>Style`: `ChipToggleStyle`,
+  `ChipButtonStyle`, `ChipLabelStyle`, in place of the one `<Component>VariantStyle`. Two forms on bases of one
+  modifier would give two overloads of one signature, so generation fails for them. Beside other components the
+  overloads follow "One base control, several components", modifier by modifier: Chip's `chip` shares no value with
+  Button's or Checkbox's variant.
+- **The states.** `<Component>State` holds every declared state, and a `package` enum `<Component>Form` lists the
+  forms with the states each enters (`ChipForm.pressable.states`), for the styles and the catalog; it is not public
+  API. A state a form's base does not carry gets the shared modifier, as for one base; a state every base that enters
+  it carries gets none (Chip's states are all its bases' own, so it has no modifier).
+- **The look is shared code.** The three styles draw one view from one table of tokens; a form that enters no state,
+  such as Chip's static form, draws the look at rest. A label style reaches every `Label` below its modifier, as the
+  system's label styles do.
+- **The parity lint** expects each form's overload at its base's modifier, and reports one missing as "the style
+  overload for its form".
+- **The snapshot matrix** puts the form first among its axes, each form on a sheet of its own (`form-selectable`), its
+  rows rest and the states that form enters; the generated `<Component>MatrixValues` gives the cell the form as
+  `<Component>Form`. No option may be named `form`.
+- **Other platforms.** The web and GTK name their bases per form too (`<button>`, `<span>`; `GtkToggleButton`,
+  `GtkButton`, `GtkLabel`), provisional until their phases.
 
 ### Sizes and `controlSize`
 
