@@ -81,6 +81,110 @@ struct ContractRules {
         checkAppleFallbacks()
         checkSystemOptions()
         checkAccessibility()
+        checkForms()
+    }
+
+    /// A contract with forms (`forms`): each form enters states the contract declares, and every declared state is
+    /// entered by some form, or nothing would draw it; each form's accessibility, the contract's with the fields the
+    /// form names in their place, follows the rules of `accessibility`, its announced states among the form's states;
+    /// each platform that implements it names a base for every form in `bases` and none other, and no `base`; on Apple
+    /// the conventions derive forms only for a style on system controls (spec/conventions.md, "Forms"). A contract
+    /// without forms names no `bases`.
+    mutating func checkForms() {
+        let root = DocumentPath.root
+        let platforms = ["apple", "web", "linux", "android"]
+        guard let forms = document["forms"]?.members else {
+            for platform in platforms where value(at: root.key("platforms").key(platform).key("bases")) != nil {
+                report(
+                    root.key("platforms").key(platform).key("bases"),
+                    "bases names a base per form, and the contract has no forms: name one base in base")
+            }
+            return
+        }
+        let declared = states ?? []
+        var entered: Set<String> = []
+        for form in forms {
+            let path = root.key("forms").key(form.key)
+            let formStates = form.value["states"]?.elements?.compactMap(\.string) ?? []
+            for (index, state) in formStates.enumerated() {
+                if declared.contains(state) {
+                    entered.insert(state)
+                } else {
+                    report(
+                        path.key("states").index(index),
+                        declared.isEmpty
+                            ? "\"\(state)\": the contract declares no states"
+                            : "\"\(state)\" is not one of the states: \(declared.joined(separator: ", "))")
+                }
+            }
+            checkFormAccessibility(form.value, states: formStates, at: path.key("accessibility"))
+        }
+        for (index, state) in declared.enumerated() where !entered.contains(state) {
+            report(root.key("states").index(index), "no form enters \(state): add it to a form's states, or remove it")
+        }
+        let names = forms.map(\.key)
+        for platform in platforms {
+            let path = root.key("platforms").key(platform)
+            guard let entry = value(at: path), entry["strategy"] != nil else { continue }
+            if entry["base"] != nil {
+                report(
+                    path.key("base"),
+                    "the contract has forms, so each has its base in bases (\(names.joined(separator: ", "))), "
+                        + "not one base")
+            }
+            guard let bases = entry["bases"]?.members else { continue }
+            let missing = names.filter { name in !bases.contains { $0.key == name } }
+            if !missing.isEmpty {
+                report(path.key("bases"), "no base for the form \(missing.joined(separator: ", "))")
+            }
+            for member in bases where !names.contains(member.key) {
+                report(
+                    path.key("bases").key(member.key),
+                    "\"\(member.key)\" is not one of the forms: \(names.joined(separator: ", "))")
+            }
+            if platform == "apple", let strategy = entry["strategy"]?.string, strategy != AppleComponents.strategy {
+                report(
+                    path.key("strategy"),
+                    "the conventions derive forms on Apple only for a \(AppleComponents.strategy), each form a style "
+                        + "on its base (spec/conventions.md, \"Forms\"), not for an \(strategy)")
+            }
+        }
+    }
+
+    /// One form's accessibility, the contract's with the fields the form names in their place, as `checkAccessibility`
+    /// checks the contract's: a role of none has nothing to act on, announce or require; announced states are the
+    /// form's.
+    private mutating func checkFormAccessibility(_ form: JSON, states: [String], at path: DocumentPath) {
+        let own = form["accessibility"]
+        let shared = document["accessibility"]
+        func field(_ key: String) -> (JSON?, DocumentPath) {
+            if let value = own?[key] { return (value, path.key(key)) }
+            return (shared?[key], DocumentPath.root.key("accessibility").key(key))
+        }
+        let why = "in this form the role is \(Self.noRole): it adds no role of its own, so assistive technology"
+        if field("role").0?.string == Self.noRole {
+            for key in ["intents", "keyboardIntents"] {
+                let (value, place) = field(key)
+                if !(value?.elements ?? []).isEmpty {
+                    report(place, "\(why) has nothing to do with it; give the form \(key): [], or its role")
+                }
+            }
+            let (announced, place) = field("states")
+            if !(announced?.members ?? []).isEmpty {
+                report(place, "\(why) announces no state of it; give the form states: {}, or its role")
+            }
+            let (label, labelPlace) = field("label")
+            if label?.string == "required" {
+                report(labelPlace, "\(why) reads no label of it: give the form label: optional, or its role")
+            }
+        }
+        let (announced, place) = field("states")
+        for member in announced?.members ?? [] where !states.contains(member.key) {
+            report(
+                place.key(member.key),
+                "\"\(member.key)\" is announced, and this form does not enter it"
+                    + (states.isEmpty ? "" : ": \(states.joined(separator: ", "))"))
+        }
     }
 
     /// An unquoted word that YAML 1.1 reads as a boolean, other than `true` and `false`, is a mistake wherever it
@@ -122,8 +226,8 @@ struct ContractRules {
     /// compile there, and `var` and `let` compile only with a warning.
     static let unusableLabels: Set<String> = ["inout", "var", "let"]
 
-    /// Option values, states and option names become Swift names on Apple, the pilot platform: none may be a word
-    /// Swift cannot use there.
+    /// Option values, states, forms and option names become Swift names on Apple, the pilot platform: none may be a
+    /// word Swift cannot use there.
     mutating func checkSwiftNames() {
         for member in document["options"]?.members ?? [] {
             let path = DocumentPath.root.key("options").key(member.key)
@@ -144,6 +248,11 @@ struct ContractRules {
             guard let state = element.string, let reason = Self.unusableCases[state] else { continue }
             report(.root.key("states").index(index), "\"\(state)\" cannot be a state: \(reason); choose another name")
         }
+        // A form is a case of the generated `<Component>Form` too.
+        for form in document["forms"]?.members ?? [] {
+            guard let reason = Self.unusableCases[form.key] else { continue }
+            report(.root.key("forms").key(form.key), "\"\(form.key)\" cannot be a form: \(reason); choose another name")
+        }
     }
 
     /// The key of a case's `when` that names states; no option may take it.
@@ -151,6 +260,10 @@ struct ContractRules {
 
     /// The key of a constraint's `when` that names slots an instance fills; no option may take it.
     static let slotsKey = "slots"
+
+    /// The key under a case's `state` that names states which must all hold at once: `state: {all: [checked,
+    /// pressed]}`.
+    static let allStatesKey = "all"
 
     /// The contract of `button` is `button/button.spec.yaml`.
     mutating func checkFileName() {
@@ -189,10 +302,18 @@ struct ContractRules {
         for member in document["tokens"]?.members ?? [] {
             for (index, item) in (member.value["cases"]?.elements ?? []).enumerated() {
                 for condition in item["when"]?.members ?? [] {
-                    lists.append(
-                        root.key("tokens").key(member.key).key("cases").index(index).key("when").key(condition.key))
+                    let path = root.key("tokens").key(member.key).key("cases").index(index).key("when")
+                    lists.append(path.key(condition.key))
+                    if condition.key == Self.stateKey { lists.append(path.key(condition.key).key(Self.allStatesKey)) }
                 }
             }
+        }
+        for member in document["forms"]?.members ?? [] {
+            let path = root.key("forms").key(member.key)
+            lists += [
+                path.key("states"), path.key("accessibility").key("intents"),
+                path.key("accessibility").key("keyboardIntents"),
+            ]
         }
         for path in lists {
             guard let elements = value(at: path)?.elements else { continue }
@@ -250,8 +371,19 @@ struct ContractRules {
     /// Apple base control, which westron's overload would shadow (decisions/0003).
     mutating func checkSystemStyles() {
         let apple = DocumentPath.root.key("platforms").key("apple")
-        guard let strategy = value(at: apple.key("strategy"))?.string, let base = value(at: apple.key("base"))?.string
-        else { return }
+        guard let strategy = value(at: apple.key("strategy"))?.string else { return }
+        if let base = value(at: apple.key("base"))?.string {
+            checkSystemStyles(of: base, at: apple.key("base"), strategy: strategy)
+        }
+        // A contract with forms: each form's base, as `base` is checked.
+        for member in value(at: apple.key("bases"))?.members ?? [] {
+            guard let base = member.value.string else { continue }
+            checkSystemStyles(of: base, at: apple.key("bases").key(member.key), strategy: strategy)
+        }
+    }
+
+    private mutating func checkSystemStyles(of base: String, at basePath: DocumentPath, strategy: String) {
+        let apple = DocumentPath.root.key("platforms").key("apple")
         if strategy == SystemStyles.extensionStrategy {
             if let styled = SystemStyles.byBase[base] {
                 report(
@@ -260,7 +392,7 @@ struct ContractRules {
                         + "style-on-system-control (decisions/0003)")
             } else if !SystemStyles.withoutStyle.contains(base) {
                 report(
-                    apple.key("base"),
+                    basePath,
                     "the validator does not know \(base): add it to SystemStyles.withoutStyle "
                         + "(tools/Sources/WestronTools/Contracts/SystemStyles.swift) once it is checked that SwiftUI "
                         + "gives it no style modifier, or, if it has one, to SystemStyles.byBase and make the component "
@@ -278,7 +410,7 @@ struct ContractRules {
         }
         guard let styles = SystemStyles.byBase[base]?.styles else {
             report(
-                apple.key("base"),
+                basePath,
                 "the validator does not know the system styles of \(base): add its style modifier and their names "
                     + "to SystemStyles.byBase (tools/Sources/WestronTools/Contracts/SystemStyles.swift, "
                     + "decisions/0003); a control with no style modifier, such as SwiftUI.Slider, takes no style, so "
@@ -383,12 +515,17 @@ struct ContractRules {
         for member in conditions {
             let option = member.key
             let place = path.key(option)
-            let named: [(DocumentPath, JSON)] =
+            var named: [(DocumentPath, JSON)] =
                 if case .array(let elements) = member.value {
                     elements.enumerated().map { (place.index($0.offset), $0.element) }
                 } else {
                     [(place, member.value)]
                 }
+            // `state: {all: [checked, pressed]}`: every one of the states at once; the schema checks its shape.
+            if states, option == Self.stateKey, case .object = member.value {
+                guard let all = member.value[Self.allStatesKey]?.elements else { continue }
+                named = all.enumerated().map { (place.key(Self.allStatesKey).index($0.offset), $0.element) }
+            }
             if states && option == Self.stateKey {
                 let declared = self.states ?? []
                 for (at, value) in named {
@@ -531,9 +668,10 @@ struct ContractRules {
         let reachability = CaseReachability(cases: cases.map(\.when), domains: domains)
         guard let result = reachability.check() else {
             let count = reachability.combinations == .max ? "more than \(Int.max)" : "\(reachability.combinations)"
+            let what = reachability.countsStates ? "option values and sets of states" : "option values"
             report(
                 path.key("cases"),
-                "the cases name too many combinations of option values to check that each is used (\(count), at "
+                "the cases name too many combinations of \(what) to check that each is used (\(count), at "
                     + "most \(CaseReachability.limit))")
             return
         }
@@ -573,7 +711,12 @@ struct ContractRules {
     {
         var options: [String: Set<String>] = [:]
         var states: Set<String>?
-        for (key, values) in conditionSets(conditions) {
+        var allStates: Set<String>?
+        if let state = conditions.first(where: { $0.key == stateKey })?.value, case .object = state {
+            guard let all = state[allStatesKey]?.elements?.compactMap(\.string), all.count >= 2 else { return nil }
+            allStates = Set(all)
+        }
+        for (key, values) in conditionSets(conditions.filter { !($0.key == stateKey && allStates != nil) }) {
             guard let values, !values.isEmpty else { return nil }
             if key == stateKey {
                 states = values
@@ -582,7 +725,7 @@ struct ContractRules {
                 options[key] = values
             }
         }
-        return CaseReachability.Case(options: options, states: states)
+        return CaseReachability.Case(options: options, states: states, allStates: allStates)
     }
 
     /// Conditions as sets of the values each key accepts, `true` and `false` as text; nil for a key with a value
