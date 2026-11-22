@@ -1,6 +1,7 @@
 # 0006. Pilot product: todo-app
 
-Date: 2026-11-14. Status: accepted. Revised 2026-11-15: westron's look is its own, and the pilot adopts it.
+Date: 2026-11-14. Status: accepted. Revised 2026-11-15: westron's look is its own, and the pilot adopts it. Revised
+2026-11-22: the pilot keeps its compositions, built from westron's core (decisions/0014).
 
 ## Context
 
@@ -59,9 +60,10 @@ What it draws:
 
 The pilot keeps its own look in two modules: `DesignSystem` holds its palette, fonts, icons and animations, and
 `DesignSystemComponents` holds the models and styles of the components on these screens. As westron gets tokens,
-styles and components, the pilot moves to them and deletes both modules. The move happens in parts, as westron
-covers what these modules contain: phase 1 tokens replace `DesignSystem`, and components from phases 2–4 replace
-`DesignSystemComponents`. With each part, the pilot's screens take westron's look.
+styles and components, the pilot moves to them. The move happens in parts, as westron covers what these modules
+contain: phase 1 tokens replace `DesignSystem`, which the pilot deletes, and components from phases 2–4 replace the
+values and styles of `DesignSystemComponents`, while the pilot's compositions stay, built from westron's components
+(revision of 2026-11-22). With each part, the pilot's screens take westron's look.
 
 ## Revision of 2026-11-15
 
@@ -71,13 +73,26 @@ decided that westron's look is designed for many products, everyday and technica
 the pilot's look. The owner chose it on direction specimens: direction B, the cobalt palette, Onest for headings.
 The pilot adopts this look as westron's first consumer.
 
+## Revision of 2026-11-22
+
+The first version had components from phases 2–4 replace `DesignSystemComponents` whole, and drew the phase 4 list
+from the inventory above. On 2026-11-22 the owner rejected porting the pilot's components one to one: westron holds a
+small core, and the pilot builds its more custom parts from it by composition (decisions/0014, which gives the phase 4
+list and maps every family of the module).
+
+- The pilot deletes the values and styles of `DesignSystemComponents`, its numbers, colors, fonts and motions, as
+  westron's tokens and components cover them.
+- It keeps its compositions, the task row, the card, the headers, the bars and the rest that decisions/0014 lists,
+  built from westron's components.
+
 ## Consequences
 
 - westron's minimum OS versions equal the pilot's (decisions/0008).
 - westron's toolchain equals the pilot's: Xcode 27.1, Swift 6.4.
 - The `consumers` field in a component contract refers to a pilot screen: `todo-app/lists-screen` or
   `todo-app/list-screen`.
-- The phase 4 component list (issue #32) is drawn up from the inventory above.
+- The phase 4 component list (issue #32) is drawn up from the inventory above: decisions/0014 (revision of
+  2026-11-22).
 - westron tokens and components must cover every role the pilot takes from its own modules, such as a list color, a
   text role or an icon; otherwise the pilot cannot delete them. They cover the roles, not the pilot's values. The
   inventory of these modules, `research_notes/pilot-inventory.md`, is a checklist of roles for phase 1 and for #32.
