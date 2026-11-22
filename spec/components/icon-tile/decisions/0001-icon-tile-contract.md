@@ -137,8 +137,9 @@ view existed, `tools/westron lint api-parity` reported exactly the missing `publ
 
 - `IconTile` lays out five subviews: a hidden line of the context's text, which gives the side and, centered in the
   tile, its text baseline (so a row aligned on the first baseline centers the tile on its title's line); one reference
-  symbol, the registry's default, hidden at the context's image scale and at medium, whose ratio is the scale's step
-  (the tile's own glyph gave sides that differed from glyph to glyph at large, caught by a unit test); the shape; and
+  symbol, `folder`, hidden at the context's image scale and at medium, whose ratio is the scale's step (the tile's own
+  glyph gave sides that differed from glyph to glyph at large, caught by a unit test; the reference is a tall symbol,
+  since a short one's height rounded to the screen's pixels moves the step by a few percent on iOS); the shape; and
   the resizable glyph, which keeps the weight of the font in the environment, seen in the renders beside body and the
   Onest headings.
 - The tile is one accessibility element through `.accessibilityRepresentation`: on iOS the symbol inside stayed an

@@ -109,7 +109,9 @@ struct IconTileTests {
         #expect(side(.small) < side(.medium) && side(.medium) < side(.large))
         for scale in [Image.Scale.small, .large] {
             let step = symbol(scale) / symbol(.medium)
-            #expect(abs(side(scale) - IconTileMetrics.side(lineHeight: line, scaleStep: step)) < 0.5, "\(scale)")
+            #expect(
+                abs(side(scale) - IconTileMetrics.side(lineHeight: line, scaleStep: step)) < 0.5,
+                "\(scale): side \(side(scale)), line \(line), symbol \(symbol(scale)) against \(symbol(.medium))")
         }
     }
 
