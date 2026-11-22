@@ -130,11 +130,15 @@ struct ComponentMatrixTests {
         #expect(Catalog.entry(id: "icon-tile")?.section == .components)
     }
 
-    @Test("IconTile's supplements: the list colors, beside a title and an empty screen, one sheet of one glyph each")
+    @Test("IconTile's supplements: list colors, beside a title, an empty screen on iOS only; one sheet of one glyph")
     func iconTileSupplements() throws {
         let matrix = try #require(ComponentMatrix.all.first { $0.component == "icon-tile" })
         let supplements = matrix.supplements
-        #expect(supplements.map { $0.supplement?.id } == ["list-colors", "beside-title", "empty-screen"])
+        #if os(iOS)
+            #expect(supplements.map { $0.supplement?.id } == ["list-colors", "beside-title", "empty-screen"])
+        #else
+            #expect(supplements.map { $0.supplement?.id } == ["list-colors", "beside-title"])
+        #endif
         for supplement in supplements {
             #expect(supplement.sheets.count == 1)
             let sheet = try #require(supplement.sheets.first)

@@ -196,10 +196,11 @@ extension ComponentMatrix.Supplement {
     static let iconTileEmptyScreen = ComponentMatrix.Supplement(
         component: "icon-tile", id: "empty-screen", title: "an empty screen",
         note: "Alone, as the empty screen draws it: the system's ContentUnavailableView, whose label's icon is the "
-            + "tile, in the font the system gives that icon, in violet (decisions/0014). The in-process render on "
-            + "macOS draws no icon of ContentUnavailableView, not even a plain Icon, so this sheet is read on iOS; the "
-            + "catalog entry shows it on the Mac.",
-        keeps: [:], rows: ["tray"], rowsPerPicture: 1
+            + "tile, in the font the system gives that icon, in violet (decisions/0014). iOS only: the in-process "
+            + "render on macOS draws no icon of ContentUnavailableView, not even a plain Icon, and draws its scroll "
+            + "indicator, beside which the words sit in one place or another from one render to the next, so macOS "
+            + "has no such sheet; the catalog entry shows it on the Mac.",
+        keeps: [:], rows: ["tray"], rowsPerPicture: 1, onlyOn: ["ios"]
     ) {
         let (glyph, scale, _) = IconTileMatrixValues($0).fields
         IconTileEmptyScreen(icon: glyph)

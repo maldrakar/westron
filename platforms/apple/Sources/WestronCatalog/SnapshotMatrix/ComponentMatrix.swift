@@ -115,14 +115,18 @@ public struct ComponentMatrix: Sendable {
         /// The most rows of one picture at a text size that splits sheets (`TextSize.limit`), where its cells are
         /// taller than a generated cell; nil takes the text size's own limit.
         let rowsPerPicture: Int?
+        /// The OSes it is drawn on, as `currentOS` names them, where a render on another is not worth reading or not
+        /// the same twice (its note says why); nil draws it on every OS.
+        let onlyOn: [String]?
         let cell: @MainActor @Sendable (Combination) -> AnyView
 
         init<Content: View>(
             component: String, id: String, title: String, note: String, keeps: [String: String],
-            rows: [String]? = nil, rowsPerPicture: Int? = nil,
+            rows: [String]? = nil, rowsPerPicture: Int? = nil, onlyOn: [String]? = nil,
             @ViewBuilder cell: @escaping @MainActor @Sendable (Combination) -> Content
         ) {
             self.rowsPerPicture = rowsPerPicture
+            self.onlyOn = onlyOn
             self.component = component
             self.id = id
             self.title = title
@@ -276,12 +280,13 @@ public struct ComponentMatrix: Sendable {
         self.supplement = nil
     }
 
-    /// The component's supplementary sheets (`Supplement.all`), each group as a matrix of its own: the combinations and
-    /// the sheets of this matrix that keep the supplement's values, the sheets' ids starting with the supplement's id,
-    /// and the supplement's cell. Empty for a supplement itself.
+    /// The component's supplementary sheets (`Supplement.all`) on the current OS, each group as a matrix of its own:
+    /// the combinations and the sheets of this matrix that keep the supplement's values, the sheets' ids starting with
+    /// the supplement's id, and the supplement's cell. Empty for a supplement itself.
     public var supplements: [ComponentMatrix] {
         guard supplement == nil else { return [] }
-        return Supplement.all.filter { $0.component == component }.map(supplemented(by:))
+        return Supplement.all.filter { $0.component == component && ($0.onlyOn?.contains(Self.currentOS) ?? true) }
+            .map(supplemented(by:))
     }
 
     private func supplemented(by supplement: Supplement) -> ComponentMatrix {

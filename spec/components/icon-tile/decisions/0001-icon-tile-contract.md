@@ -149,8 +149,10 @@ view existed, `tools/westron lint api-parity` reported exactly the missing `publ
 - The snapshot matrix's own cells stop growing at accessibility2: six rows of tiles at accessibility5 run past an
   iPhone's height, and the generated sheets take six rows to a picture for every component. The supplement "beside a
   title" grows to accessibility5.
-- The in-process render on macOS (`CARenderer`) draws no icon of `ContentUnavailableView`, not even a plain `Icon`, so
-  the supplement "an empty screen" is read on iOS; the catalog entry's screenshot shows it on the Mac.
+- The in-process render on macOS (`CARenderer`) draws no icon of `ContentUnavailableView`, not even a plain `Icon`, and
+  draws its scroll indicator, beside which the words were centered in one render and not in the next on the CI runner
+  (2026-11-22). So the supplement "an empty screen" is drawn on iOS only (`onlyOn` of a supplement); the catalog
+  entry's screenshot shows it on the Mac.
 
 ## The owner's answer
 

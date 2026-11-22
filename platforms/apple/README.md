@@ -212,7 +212,9 @@ still drives every generated sheet and combination:
   listed again by hand. Each sheet and its section of the review page are marked "Not a contract option". Over a
   matrix whose rows are icons, a supplement keeps a few of them (`rows`), on one sheet. Where its cell is taller than
   a generated one, `rowsPerPicture` caps the rows of one picture at a text size that splits sheets
-  (`accessibility5`). There are ten (`SnapshotMatrix/Supplements.swift`, `Supplement.all`):
+  (`accessibility5`). A supplement whose render on one OS is not worth reading, or not the same twice, names the
+  OSes it is drawn on (`onlyOn`), and its note says why. There are fourteen (`SnapshotMatrix/Supplements.swift`,
+  `Supplement.all`):
   - Button, `label-without-icon`: its generated cells have an icon and a label or are icon-only, so a label without an
     icon, which while loading has the indicator before the label and widens the button (P13), is shown on the sheets
     with iconOnly false: every variant, size and role, at rest and in each state, 108 combinations on 6 sheets.
@@ -225,6 +227,12 @@ still drives every generated sheet and combination:
   - Text field, at size m: `card-notes`, a card's title and multiline notes (two rows to a picture at
     `accessibility5`); `secure-field`, the style on `SecureField`; `on-surface` and `on-sunken`, a field on those
     grounds.
+  - Rule, `labelled`, on the sheet with purpose separator: a short label, a long one truncated and a rule with none,
+    each above a row; a vertical rule takes no label.
+  - IconTile, over the glyph folder or tray: `list-colors`, neutral and the twelve list colors; `beside-title`, a tile
+    beside titles in four roles, growing to `accessibility5`; and `empty-screen`, on iOS only, the tile in the
+    system's `ContentUnavailableView` (macOS draws no icon there and places its words differently from one render to
+    the next).
 
   Like the matrix, supplements are not catalog entries, so the accessibility audit does not walk them.
 
