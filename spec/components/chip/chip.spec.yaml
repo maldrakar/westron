@@ -163,17 +163,23 @@ platforms:
     ios:
       description: >-
         Hover only with a pointer, on iPad; an iPhone never enters it. The hit area is at least 44 pt high and 44 pt
-        across around the 28 pt chip. The accessibility hierarchy holds, for the selectable chip, a switch with its
-        label and its value 0 or 1 and no button; for the pressable chip, a button; for the static chip, its text
-        (CatalogUITests/ChipBehaviorTests, as XCUITest reads the hierarchy, not with VoiceOver itself).
+        across around the 28 pt chip. Measured on iOS 26.3 as XCUITest reads the hierarchy
+        (CatalogUITests/ChipBehaviorTests), not with VoiceOver itself: the selectable chip is a switch with its label
+        and its value 0 or 1, never selected, and no button, the text-only chip too; the pressable chip a button with
+        its label, never selected; the static chip its text; the disabled samples not enabled; a truncated label the
+        whole name. Under the pressable chip XCUITest also lists the button's words as a text, as under a westron
+        Button with a Label, and each hidden glyph, the icon and the check, as an element of type other with no
+        label, value or trait (under a westron Button the icon is an image named after its symbol). The element's
+        frame is the 44 pt hit area, not the drawn capsule, with contentShape(.accessibility, …) set as Button's is.
     macos:
       description: >-
         The hit area is at least 28 pt high and 28 pt across around the 24 pt chip. Hover starts and ends at the drawn
         capsule (contentShape(.interaction, …) on it), as Button's does, not at the hit area's corners; the click is
         taken in the whole hit area. The system's focus ring follows the drawn capsule (contentShape(.focusEffect,
-        …)), as Button's does. The accessibility hierarchy holds, for the selectable chip, a checkbox with its label
-        and its value 0 or 1 and no button; for the pressable chip, a button; for the static chip, its text
-        (CatalogUITests/ChipBehaviorTests). Keyboard focus follows the system's controls, as Checkbox's does.
+        …)), as Button's does. The selectable chip's representation is the system Toggle, a checkbox on macOS, as
+        Checkbox's is; the hierarchy, the hit area and hover on macOS were not measured after the revision (the Mac's
+        screen was locked; CatalogUITests/ChipBehaviorTests holds the checks). Keyboard focus follows the system's
+        controls, as Checkbox's does.
     watchos:
       states: [checked, pressed, disabled]
       description: >-

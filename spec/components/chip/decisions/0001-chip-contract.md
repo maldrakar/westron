@@ -342,3 +342,36 @@ announced states: the selectable chip's is the toggle's on or off, as a checkbox
 - **The static form under `.disabled(true)`** is drawn as it is, undimmed: the form enters no state, disabled
   included. Nothing else is decided for it.
 - **watchOS** gives its hit-area numbers, 44 pt high and across around the 32 pt chip, as iOS and macOS do.
+
+### Measured after the revision
+
+On iOS 26.3 (the iPhone 17 simulator), as XCUITest reads the hierarchy (`ChipBehaviorTests`), not with VoiceOver
+itself; `type` is XCUIElement's element type:
+
+| Element | What the hierarchy holds |
+|---|---|
+| Selectable, Work (off), Home (on), Errands (green, off) | A switch (type 40), label "Work", value 0 (Home 1), not selected, enabled, frame 44 pt high; no button, no image under it, the name once |
+| Selectable, text only, Reading (on) | A switch, label "Reading", value 1, not selected |
+| Selectable, disabled and "disabled, on" | Switches with value 0 and 1, not enabled |
+| Pressable, Tue | A button (type 9), label "Tue", not selected, 44 pt high; under it its words as a text, and the icon and the check, each an element of type other with no label, value or trait |
+| Pressable, disabled | A button, not enabled |
+| Static, Garden and Groceries | Texts, 28 pt high: the capsule |
+| The long label, truncated | A switch, a button and a text each labelled with the whole label |
+
+- **The icon under a button (C).** A westron Button with a Label in the same hierarchy shows its icon as an image named
+  after its symbol, the check with the trait selected (`Button` entry, iOS 26.3), from `.accessibilityHidden(true)`
+  as Chip had it. Chip's glyphs now also give an empty representation, as IconTile's symbol does (#118): XCUITest
+  then lists each as an element of type other with nothing in it. `.accessibilityElement(children: .combine)` around
+  the label did not remove them. Button's own icon is outside this change.
+- **The accessibility frame (C).** With `contentShape(.accessibility, …)` on the drawn capsule, as Button sets it, the
+  element's frame is still the 44 pt hit area on iOS.
+- **The hit area.** `ChipBehaviorTests.testHitAreaAroundTheChip` presses 1 pt inside the element's top edge, 7 pt
+  above the drawn capsule on iOS and 1 pt above it on macOS, and toggles on iOS; a one-letter chip, `Toggle("I", …)`,
+  lays out 44 pt across on iOS and 28 on macOS (`ChipStyleTests`).
+- **macOS** was not measured after the revision: the Mac's screen was locked, and every UI test there failed to
+  activate the catalog app. The behaviour tests, the hover at the capsule and the macOS screenshot wait for a run on
+  an unlocked Mac.
+- The accessibility audit of the `chip` entry passes on iOS in its five configurations with the three suppressions
+  above. An unlit sample at rest first in its own row moved the page so that the audit's second screenful reported
+  "potentially inaccessible text" with no element; the sample stands beside the lit one in the row of `checked`
+  instead, and the audit passes.
