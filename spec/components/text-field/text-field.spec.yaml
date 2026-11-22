@@ -55,13 +55,15 @@ description: >-
   still grows with the text). There, where a glyph is smaller than its text, it is centred on the first line
   instead of standing on its baseline, which would set it low like a subscript; at the other sizes it stands on the
   baseline; an empty field of several lines, showing its placeholder, has its first line at its top, and its glyphs
-  stand on that line's baseline. A glyph never draws past its room, and the field never grows for one: on framed the
-  room is the field's fill, on inline, which has no fill, the field's first line. A glyph is about as tall as a line
-  of its text, but standing on the baseline some symbols reach a little above or below the line and a few are
-  taller than it (the wrench), and at s on one line, at the larger text sizes, a field is no taller than its line.
-  A glyph that would draw past its room is fitted to it: scaled down, its proportions kept, to the room's height if
-  it is taller, centred where it would have stood, and moved inside the room; it keeps its own width, so the text
-  keeps its place. A glyph within its room, to half a pixel, stands where it would and at its own size. It draws in
+  stand on that line's baseline. A glyph never draws past its room by more than a pixel, and the field never grows
+  for one: on framed the room is the field's fill, on inline, which has no fill, the field's first line. A glyph is
+  about as tall as a line of its text, but standing on the baseline some symbols reach a little above or below the
+  line and a few are taller than it (the wrench), and at s on one line, at the larger text sizes, a field is no
+  taller than its line. A glyph that would draw past its room by more than a pixel is fitted to it: scaled down, its
+  proportions kept, to the room's height if it is taller by more than a pixel, centred where it would have stood, and
+  moved inside the room; it keeps its own width, so the text keeps its place. A glyph within a pixel of its room
+  stands where it would and at its own size: scaled down by one pixel it would only blur, and a symbol's ink stops
+  short of its frame. It draws in
   color.text.secondary in every state, with the placeholder shown or text entered, focused or not; disabled dims it
   with the rest of the field. A search field is no component of its own (decisions/0014): it is a framed field with
   the magnifier at its start. There is no error state, hint or message in

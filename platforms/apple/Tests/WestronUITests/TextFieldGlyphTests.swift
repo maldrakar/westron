@@ -281,8 +281,9 @@ struct TextFieldGlyphTests {
                             x: .zero, y: max(field.baseline, line.baseline) - line.baseline, width: fill.width,
                             height: line.size.height)
                         let room = variant == .framed ? fill : firstLine.intersection(fill)
-                        // Within a pixel's rounding, the pixel of the window the field is laid out in.
-                        let pixel = 1 / field.displayScale
+                        // A pixel of the window the field is laid out in, and the margin no comparison sits on: what
+                        // the row allows a glyph past its room (`TextFieldGlyphFitting`).
+                        let slack = TextFieldGlyphFitting.slack(displayScale: field.displayScale)
                         let name =
                             "\(icon) on \(variant) \(fieldSize) \(axis) \(text.isEmpty ? "empty" : "filled") at \(size): "
                             + "the fill \(fill), the room \(room), a line \(line.size.height) pt, the glyph's own size "
@@ -295,23 +296,49 @@ struct TextFieldGlyphTests {
                             "\(name): \(field.size), the system field \(system)")
                         for part in [TextFieldGlyphAnchors.Part.leading, .trailing] {
                             let frame = try #require(field.parts[part], "\(name): no \(part) glyph")
-                            // Never past its room: a framed field's fill, an inline field's first line, on several
-                            // lines too.
+                            // Never past its room by more than a pixel: a framed field's fill, an inline field's
+                            // first line, on several lines too.
                             #expect(
-                                frame.minY >= room.minY - pixel && frame.maxY <= room.maxY + pixel,
+                                frame.minY >= room.minY - slack && frame.maxY <= room.maxY + slack,
                                 "\(name): the \(part) glyph at \(frame)")
                             // Its width is its own, so the field's text keeps its place; it is drawn at its own height
-                            // unless that is more than the room, and then at the room's.
-                            #expect(abs(frame.width - glyph.width) <= pixel, "\(name): the \(part) glyph at \(frame)")
-                            let fitted = glyph.height > room.height + pixel
+                            // unless that is more than the room's by more than a pixel, and then at the room's. The
+                            // row decides that with the same gate.
+                            #expect(abs(frame.width - glyph.width) <= slack, "\(name): the \(part) glyph at \(frame)")
+                            let fitted = TextFieldGlyphFitting.isFitted(
+                                height: glyph.height, room: room.height, displayScale: field.displayScale)
                             #expect(
-                                abs(frame.height - (fitted ? room.height : glyph.height)) <= pixel,
+                                abs(frame.height - (fitted ? room.height : glyph.height)) <= slack,
                                 "\(name): the \(part) glyph at \(frame), fitted: \(fitted)")
                         }
                     }
                 }
             }
         }
+    }
+
+    @Test("the gate of fitting: a glyph a pixel taller than its room is left alone, one taller by more is fitted")
+    func fittingGate() {
+        // iOS 27 at large: a line of body.regular is 61 pixels, 20.333333333333332 pt, at three pixels a point, and some
+        // glyphs are 62, 20.666666666666664 pt, a pixel taller, which floating point puts a hair past room + 1/3.
+        let room: CGFloat = 20.333333333333332
+        #expect(!TextFieldGlyphFitting.isFitted(height: 20.666666666666664, room: room, displayScale: 3))
+        #expect(TextFieldGlyphFitting.height(20.666666666666664, room: room, displayScale: 3) == 20.666666666666664)
+        #expect(TextFieldGlyphFitting.isFitted(height: 22, room: room, displayScale: 3))
+        #expect(TextFieldGlyphFitting.height(22, room: room, displayScale: 3) == room)
+        // Two pixels taller is fitted; as tall as the room is not.
+        #expect(TextFieldGlyphFitting.isFitted(height: room + 2.0 / 3, room: room, displayScale: 3))
+        #expect(!TextFieldGlyphFitting.isFitted(height: room, room: room, displayScale: 3))
+        // macOS at two pixels a point: the wrench, 18 pt, in a 16 pt field is fitted; the trash, 16.5, is left alone.
+        #expect(TextFieldGlyphFitting.isFitted(height: 18, room: 16, displayScale: 2))
+        #expect(!TextFieldGlyphFitting.isFitted(height: 16.5, room: 16, displayScale: 2))
+        // Placed from the room's top, the glyph a pixel taller is a pixel past its bottom, and stands within it.
+        let line = CGRect(x: 0, y: 1, width: 300, height: room)
+        #expect(
+            TextFieldGlyphFitting.standsWithin(top: 1, height: 20.666666666666664, room: line, displayScale: 3))
+        #expect(!TextFieldGlyphFitting.standsWithin(top: 1, height: 22, room: line, displayScale: 3))
+        #expect(
+            !TextFieldGlyphFitting.standsWithin(top: 1 - 2.0 / 3, height: room, room: line, displayScale: 3))
     }
 
     @Test("a fitted glyph is drawn within the field, as its own drawing scaled into its frame")
@@ -328,6 +355,8 @@ struct TextFieldGlyphTests {
             let size = DynamicTypeSize.xxxLarge
         #endif
         let pixel = 1 / Drawn.scale
+        // What the row, laid out at the renderer's scale, allows a glyph past its room.
+        let slack = TextFieldGlyphFitting.slack(displayScale: Drawn.scale)
         var fitted: [Westron.Icon] = []
         for icon in Westron.Icon.allCases {
             // The glyph on its own, as the field draws it: its size and the rows its ink spans, from its top.
@@ -337,7 +366,11 @@ struct TextFieldGlyphTests {
             let drawn = try Self.draw(Self.field(.inline, text: "", leading: icon).dynamicTypeSize(size))
             let frame = try #require(drawn.laidOut.parts[.leading], "\(icon): no glyph")
             let field = try #require(drawn.laidOut.parts[.field], "\(icon): no field")
-            if ownSize.height > drawn.laidOut.size.height + pixel { fitted.append(icon) }
+            if TextFieldGlyphFitting.isFitted(
+                height: ownSize.height, room: drawn.laidOut.size.height, displayScale: Drawn.scale)
+            {
+                fitted.append(icon)
+            }
             // The glyph's columns, from the image's edge to the middle of the gap before the field's text, so that
             // whatever the renderer draws for the system field is not read.
             let name =
@@ -349,7 +382,7 @@ struct TextFieldGlyphTests {
             let bottom = ink.upperBound - Drawn.margin
             // Within the field, to a pixel.
             #expect(
-                top >= -pixel && bottom <= drawn.laidOut.size.height + pixel,
+                top >= -slack && bottom <= drawn.laidOut.size.height + slack,
                 "\(name): drawn from \(top) to \(bottom)")
             // Its own ink, scaled about its centre into its frame, to a pixel and a half: an edge of either ink may round
             // to the next pixel. (Drawn unscaled, the wrench on macOS is 0.85 pt, more than three pixels, off at each

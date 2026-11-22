@@ -522,10 +522,10 @@ a tolerance measured on one OS was no rule. The contract changed first:
   on `inline`, which has no fill, the field's first line. A glyph that would draw past it is fitted to it: scaled down,
   its proportions kept, to the room's height if it is taller, centred where it would have stood, and moved inside the
   room. It keeps its own width, so the text keeps its place. A glyph within its room, to half a pixel, stands where it
-  would and at its own size. The coordinator's decision named scaling a glyph taller than its room; a glyph no taller
-  than its room that would still reach past it, standing on the baseline with its own descent (the new window on
-  inline on macOS, 1.5 pt below the line; the week at `s` on iOS 27), is moved inside it, the least that keeps the
-  rule.
+  would and at its own size (within a pixel since the revision below). The coordinator's decision named scaling a
+  glyph taller than its room; a glyph no taller than its room that would still reach past it, standing on the
+  baseline with its own descent (the new window on inline on macOS, 1.5 pt below the line; the week at `s` on iOS
+  27), is moved inside it, the least that keeps the rule.
 - **On Apple.** `TextFieldGlyphRow` works out the room in the same layout pass that places the glyph: the fill reaches
   past the row, the system field, by the field's vertical padding and, where the minimum height is more than the row
   and its padding, half the rest, since the row is centred in that height; an inline field's first line is the box of
@@ -566,3 +566,34 @@ a tolerance measured on one OS was no rule. The contract changed first:
   that would scale a fitted glyph draws it at its own size on another pixel where it stands between pixels (a render
   without the effect left those 4 sheets the same). No sheet draws a glyph that needs fitting: the magnifier and the
   number sign fit at every size the sheets draw.
+
+### Revision: within a pixel, one gate
+
+Decided on 2026-11-23 (#115) by the coordinating agent, after the pull request's CI on the runner's iOS 27: at
+`large` on `inline`, a line of body.regular is 61 pixels, 20.333333333333332 pt, at three pixels a point, and some
+glyphs (the sun, the week, the logbook, the microphone and others) are 62, 20.666666666666664 pt. The row fitted
+them, a pixel over half a pixel; the test, deciding "fitted" with its own threshold of a whole pixel, expected their
+own height, and the two heights differed by 0.333333333333334 against a pixel of 0.3333333333333333: 120 failures,
+on the last bit of a comparison. Two defects: the row and the test decided with different thresholds, and the
+comparison sat on a boundary.
+
+- **Within a pixel of its room, a glyph is left alone.** Scaled down by one pixel a glyph only blurs, and a symbol's
+  ink stops short of its frame (the wrench's frame is 18 pt on macOS, its ink 15.25). So a glyph is fitted only when
+  it is taller than its room by more than a pixel, and stands where it would while each edge is within a pixel of the
+  room. One that is past it otherwise is moved inside it at its own height, from the room's top where it is still up
+  to a pixel taller: then it is up to a pixel past the room's bottom, which the rule allows.
+- **One gate.** `TextFieldGlyphFitting` decides whether a glyph is fitted, at what height and whether it stands
+  within its room, and the row and the tests call it; the tests still check the outcome on their own: no glyph past
+  its room by more than a pixel, its own width, the field not grown, a fitted glyph at the room's height.
+- **No comparison on a boundary.** Laid out on a screen, lengths stand on its pixels, so two that differ, differ by a
+  pixel; what is less is floating point. The gate allows a pixel and an eighth of one, a margin well clear of both
+  the rounding and the next pixel, and the tests compare with the same slack.
+- **The iOS 27 case.** The sun on `inline` `s` at `large`: room 20.333333333333332 pt from y = 1.0, the glyph
+  20.666666666666664. The slack at three pixels a point is 1/3 + 1/24 = 0.375; 20.666666666666664 is not more than
+  20.708333333333332, so it is not fitted and keeps its height. Wherever the baseline puts it, its frame is then
+  within the room to the slack (left where it stood) or moved to y = max(min(y, 21.333333333333332 - 20.666666666666664
+  = 0.666666666666668), 1.0) = 1.0, its bottom at 21.666666666666664, 0.333333333333332 past the room's: a pixel,
+  within 0.375. The test's assertions: top 1.0 ≥ 1.0 - 0.375; bottom 21.666666666666664 ≤ 21.708333333333332; the
+  test's gate says not fitted, so it expects 20.666666666666664 and the frame's height differs by 0, within 0.375;
+  its width is its own. `fittingGate` pins these numbers on every OS: 20.666666666666664 in 20.333333333333332 at
+  scale 3 is not fitted, 22 is, and the glyph a pixel taller placed from the room's top stands within it.
