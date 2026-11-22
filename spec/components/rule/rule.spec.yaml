@@ -1,6 +1,10 @@
 # westron's Rule contract (#29, which calls it a divider), approved on 2026-11-18 under the owner's delegation of that
 # day: decisions/0001-rule-contract.md records the owner's answers, what the documents already decide, and the
 # proposals approved on top of them; P2 still waits for the owner's confirmation.
+# A revision is proposed and waits for approval (#116): a label, and the purpose `insertion`, in full in
+# decisions/0002-a-label-and-the-insertion-point.md. Until it is approved this file stays the approved contract the
+# implementation follows, since the generator does not derive the revised API yet (that decision, "What the tools
+# need").
 id: rule
 status: approved
 description: >-
