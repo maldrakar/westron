@@ -19,7 +19,12 @@ extension AppleComponents {
     ///   its spoken label: then it has three initializers, `init(_ icon: Westron.Icon)` (decorative; left out when
     ///   `accessibility.label` is `required`), `init(_ icon: Westron.Icon, label: LocalizedStringKey)`, and, for a label
     ///   that is not localized, `@_disfavoredOverload init<S: StringProtocol>(_ icon: Westron.Icon, label: S)`, as
-    ///   `Label(_:icon:)` takes its title (`labelInitializers`). Other slots and a variant are not derived yet.
+    ///   `Label(_:icon:)` takes its title (`labelInitializers`). A view without such an option may have the one slot
+    ///   `label` as drawn text: then it has `init(<options>)` (left out when the label is `required`),
+    ///   `init(_ label: LocalizedStringKey, <options>)` and `@_disfavoredOverload init<S: StringProtocol>(_ label: S,
+    ///   <options>)`, as `Text` and `Label` take their titles; the label's initializers leave out the options a
+    ///   constraint on the slot fixes (`when: { slots: [label] }`, `ContractRules.slotsKey`), so Rule's take no axis
+    ///   and no purpose (`textLabelInitializers`). Other slots and a variant are not derived yet.
     ///
     /// The generator writes the enums of the enum options, `<Component><Option>`, into
     /// `WestronUI/Generated/<Component>+Contract.swift`, by the naming rules of a style. The modifier or the view is
@@ -170,11 +175,11 @@ extension AppleComponents {
                 }
                 name = component.prefix(1).lowercased() + component.dropFirst()
             case .view:
-                if !contract.slots.isEmpty, !(glyph != nil && contract.slots == ["label"]) {
+                if !contract.slots.isEmpty, contract.slots != ["label"] {
                     throw problem(
                         .root.key("slots"),
-                        "a view with slots other than an icon's spoken label (an option whose values are icons and "
-                            + "the one slot label): \(notYet)")
+                        "a view with slots other than the one slot label, an icon's spoken label or a drawn text "
+                            + "label: \(notYet)")
                 }
                 if SwiftUITypes.names.contains(component) {
                     throw problem(
@@ -191,6 +196,14 @@ extension AppleComponents {
             if form == .view, glyph != nil, contract.slots == ["label"] {
                 initializers = Self.labelInitializers(
                     first + rest, decorative: contract.accessibilityLabel != "required")
+            } else if form == .view, contract.slots == ["label"] {
+                // The options a constraint on the label fixes to one value are what a labelled instance takes, so
+                // the label's initializers leave them out (Rule: a labelled rule is a horizontal separator).
+                let fixed = Set(
+                    contract.constraints.filter { $0.forbids && $0.slots == ["label"] }.flatMap(\.require.keys))
+                initializers = Self.textLabelInitializers(
+                    options: first + rest, labelled: (first + rest).filter { !fixed.contains($0.label) },
+                    unlabelled: contract.accessibilityLabel != "required")
             } else {
                 initializers = form == .view ? [Initializer(parameters: first + rest)] : []
             }
@@ -205,6 +218,22 @@ extension AppleComponents {
             result.append(
                 Initializer(
                     parameters: parameters + [.init(label: "label", type: verbatimLabel.type)],
+                    extras: verbatimLabel.extras))
+            return result
+        }
+
+        /// The initializers of a view whose slot `label` is drawn text, as `Text` and `Label` take their titles: without
+        /// a label, with every option, unless the label is required; with a localized label, first and unlabeled,
+        /// then the options a labelled instance still chooses; and the same with a label that is not localized.
+        static func textLabelInitializers(
+            options: [SwiftDeclarations.Parameter], labelled: [SwiftDeclarations.Parameter], unlabelled: Bool
+        ) -> [Initializer] {
+            var result: [Initializer] = []
+            if unlabelled { result.append(Initializer(parameters: options)) }
+            result.append(Initializer(parameters: [.init(label: "_", type: labelType)] + labelled))
+            result.append(
+                Initializer(
+                    parameters: [.init(label: "_", type: verbatimLabel.type)] + labelled,
                     extras: verbatimLabel.extras))
             return result
         }

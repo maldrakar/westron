@@ -239,8 +239,11 @@ struct OwnComponentTests {
                         """)) == nil)
         let viewWithVariant = viewYAML(options: "  variant: { type: enum, values: [quiet, loud] }")
         #expect(failure(viewWithVariant, id: "rule")?.contains("options.variant: a view with a variant") == true)
-        let viewWithSlots = viewYAML().replacingOccurrences(of: "slots: []", with: "slots: [label]")
+        // The one slot label is derived (LabelledViewTests); any other slot is not.
+        let viewWithSlots = viewYAML().replacingOccurrences(of: "slots: []", with: "slots: [label, detail]")
         #expect(failure(viewWithSlots, id: "rule")?.contains("slots: a view with slots") == true)
+        let viewWithContent = viewYAML().replacingOccurrences(of: "slots: []", with: "slots: [content]")
+        #expect(failure(viewWithContent, id: "rule")?.contains("slots: a view with slots") == true)
     }
 
     @Test("a name that would shadow SwiftUI's fails: the view's type or an option's enum")

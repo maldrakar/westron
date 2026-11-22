@@ -29,7 +29,9 @@ values, the ramps and the rules that solve them are in decisions/0012; the token
   draws the quiet ring of an unchecked check. `border.strong` draws the outline of something a person must find, and
   it meets 3:1. A secondary button and a framed text field are found by their muted fill, and draw the outline only in
   high contrast, where the check's ring is `border.strong` too (chapter 04). In the standard themes their edges stay
-  below 3:1, a deviation the owner accepted on 2026-11-20 (chapter 08).
+  below 3:1, a deviation the owner accepted on 2026-11-20 (chapter 08). Two lines must be found at once and meet the
+  non-text target on every ground a list stands on: `border.focus`, the focus ring, and `border.insertion`, the line
+  that marks where a dragged item will land, in the same blue.
 
 ## One accent: cobalt
 
