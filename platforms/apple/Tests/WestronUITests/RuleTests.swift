@@ -48,6 +48,46 @@ struct RuleTests {
         laidOut(probed, in: Self.offered)
         #expect(placed.size == CGSize(width: .stroke.thin, height: alone.height))
     }
+
+    @Test("the default purpose is the contract's, separator")
+    func defaultPurpose() {
+        #expect(Rule().purpose == .separator)
+        #expect(Rule(axis: .vertical).purpose == .separator)
+    }
+
+    @Test("an insertion rule is stroke.thick across its axis and spans the length it is offered")
+    func insertion() {
+        #expect(
+            fittingSize(Rule(axis: .horizontal, purpose: .insertion), in: Self.offered)
+                == CGSize(width: 240, height: .stroke.thick))
+        #expect(
+            fittingSize(Rule(axis: .vertical, purpose: .insertion), in: Self.offered)
+                == CGSize(width: .stroke.thick, height: 120))
+    }
+
+    @Test("a labelled rule is a horizontal separator, by either initializer")
+    func labelledShape() {
+        let localized = Rule("WORK")
+        let verbatim = Rule(String("Garden"))
+        for rule in [localized, verbatim] {
+            #expect(rule.axis == .horizontal && rule.purpose == .separator && rule.label != nil)
+        }
+        #expect(Rule().label == nil)
+    }
+
+    @Test("a labelled rule spans the width it is offered and is as tall as its label's line")
+    func labelledSize() {
+        let label = Text("WORK").textRole(.heading.overline)
+        let height = fittingSize(label, in: Self.offered).height
+        #expect(fittingSize(Rule("WORK"), in: Self.offered) == CGSize(width: 240, height: height))
+    }
+
+    @Test("a label longer than the rule truncates on one line rather than widen or wrap it")
+    func longLabel() {
+        let long = "HOUSEHOLD ERRANDS, REPAIRS AND EVERYTHING FOR THE GARDEN"
+        let oneLine = fittingSize(Text("WORK").textRole(.heading.overline), in: Self.offered).height
+        #expect(fittingSize(Rule(long), in: Self.offered) == CGSize(width: 240, height: oneLine))
+    }
 }
 
 /// The size a `SizeProbe` was placed at.

@@ -78,25 +78,32 @@ public struct ComponentContract: Equatable, Sendable {
     }
 
     /// A rule between options: when the options have the values in `when`, they must have the values in `require`.
+    /// A rule on a slot names it under the key `slots` of `when` (`ContractRules.slotsKey`): when an instance fills
+    /// that slot, the options must have the values in `require` (Rule: a labelled rule is a horizontal separator).
     public struct Constraint: Equatable, Sendable {
         /// By option name, the values that match: an enum option's values, or `true` or `false` for a bool option.
         public let when: [String: [String]]
         public let require: [String: [String]]
         /// `error`: the combination is not allowed; `warning`: allowed, but advised against.
         public let severity: String
+        /// The slots `when` names, which an instance fills for the rule to apply; empty for a rule between options.
+        public let slots: [String]
 
-        public init(when: [String: [String]], require: [String: [String]], severity: String) {
+        public init(when: [String: [String]], require: [String: [String]], severity: String, slots: [String] = []) {
             self.when = when
             self.require = require
             self.severity = severity
+            self.slots = slots
         }
 
         /// Whether the constraint forbids what breaks it, rather than advising against it.
         public var forbids: Bool { severity == "error" }
 
         /// Whether a combination, by option name its value (`true` or `false` for a bool option), breaks the rule: it
-        /// matches every condition of `when` and misses one of `require`.
+        /// matches every condition of `when` and misses one of `require`. A combination of options fills no slot, so
+        /// it never breaks a rule on a slot.
         public func isBroken(by values: [String: String]) -> Bool {
+            guard slots.isEmpty else { return false }
             func matches(_ conditions: [String: [String]]) -> Bool {
                 conditions.allSatisfy { option, allowed in values[option].map(allowed.contains) ?? false }
             }
@@ -219,11 +226,13 @@ public struct ComponentContract: Equatable, Sendable {
         for (index, entry) in (document["constraints"]?.elements ?? []).enumerated() {
             let path = root.key("constraints").index(index)
             guard let severity = entry["severity"]?.string else { throw problem(path.key("severity"), "missing") }
+            var when = try Self.conditions(entry["when"], at: path.key("when"), source: source)
+            let slots = when.removeValue(forKey: ContractRules.slotsKey) ?? []
             constraints.append(
                 Constraint(
-                    when: try Self.conditions(entry["when"], at: path.key("when"), source: source),
+                    when: when,
                     require: try Self.conditions(entry["require"], at: path.key("require"), source: source),
-                    severity: severity))
+                    severity: severity, slots: slots))
         }
         var named: Set<String> = []
         for binding in document["tokens"]?.members ?? [] {
