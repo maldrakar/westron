@@ -240,7 +240,9 @@
                 "color.background.surface",
                 "color.background.sunken",
                 "color.background.hover",
-                "color.background.selected"
+                "color.background.pressed",
+                "color.background.selected",
+                "color.background.accent-subtle"
               ]
             }
           ]
@@ -260,6 +262,26 @@
           ]
         }
       },
+      "guide": {
+        "$value": "{color.neutral.7}",
+        "$description": "The guides down the levels of a tree, one under each ancestor level of a nested row: decorative in the standard themes, where the indent also shows the nesting, and 3:1 in high contrast on every ground a row stands on, its highlights included, which border.default does not reach there. The palette's guides step (decisions/0012).",
+        "$extensions": {
+          "dev.westron.contrast": [
+            {
+              "kind": "separator",
+              "on": [
+                "color.background.canvas",
+                "color.background.surface",
+                "color.background.sunken",
+                "color.background.hover",
+                "color.background.pressed",
+                "color.background.selected",
+                "color.background.accent-subtle"
+              ]
+            }
+          ]
+        }
+      },
       "strong": {
         "$value": "{color.neutral.8}",
         "$description": "The border of a control that must be seen: a radio ring; and in the high-contrast themes a framed text field and a secondary button, where their muted fill alone does not mark their edge against the ground, and an unchecked check's ring, which is border.default in the standard themes. The ground is what that border is measured on, not the fill inside it.",
@@ -271,7 +293,10 @@
                 "color.background.canvas",
                 "color.background.surface",
                 "color.background.sunken",
-                "color.background.muted"
+                "color.background.muted",
+                "color.background.hover",
+                "color.background.pressed",
+                "color.background.selected"
               ]
             }
           ]
@@ -289,7 +314,9 @@
                 "color.background.surface",
                 "color.background.sunken",
                 "color.background.hover",
-                "color.background.selected"
+                "color.background.pressed",
+                "color.background.selected",
+                "color.background.accent-subtle"
               ]
             }
           ]
