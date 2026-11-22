@@ -76,4 +76,25 @@ extension View {
     package func listRowDisclosureCell<Cell: View>(@ViewBuilder _ cell: () -> Cell) -> some View {
         environment(\.listRowDisclosureCell, AnyView(cell()))
     }
+
+    /// Tells `observer` when a westron row in this view begins (true) and ends (false) a press of its system Button:
+    /// the catalog counts them, so that a UI test sees whether a press on a slot's control also presses the row.
+    /// Catalog only.
+    package func listRowPressObserver(_ observer: @escaping @MainActor @Sendable (Bool) -> Void) -> some View {
+        environment(\.listRowPressObserver, observer)
+    }
+}
+
+/// A leaf's empty chevron cell, a stand-in until Disclosure (#120) decides how a product asks for it: at the end of a
+/// leaf's trailing slot, as wide as the chevron's cell, `size.target.minimum`, and the trailing gap the row puts before
+/// the cell, scaled as the row scales it, so that the leaf's trailing slot stands in its branches' column. Catalog
+/// only.
+package struct ListRowEmptyCell: View {
+    package init() {}
+
+    package var body: some View {
+        ListRowSpacingReader { spacing in
+            Color.clear.frame(width: spacing.trailingGap + .size.target.minimum, height: 0)
+        }
+    }
 }

@@ -539,7 +539,8 @@ public struct Rule: View {
   `activate` takes `action: @escaping () -> Void` after the options and before the slots; a form without one takes
   none. An own component's form names no `bases`: no system control stands under it. The generator writes the
   package-internal `<Component>Form`, its cases, `takesAction` and the states each enters, for the catalog and the
-  tests; a modifier with forms is not derived.
+  tests. A modifier with forms is not derived, and `spec check` rejects an own component with forms whose Apple form is
+  not `view`.
 
   ```swift
   public struct ListRow: View {
@@ -620,8 +621,8 @@ left open, and the last one what the size question left open.
    and Rule (#29, "Own components"): the options are the modifier's arguments or the initializer's parameters. Settled
    under the owner's delegation of 2026-11-18, and waiting for the owner's confirmation. Settled for a view with the
    one slot `label`, an icon's spoken label (Icon, #28) or drawn text (Rule, #116), and for a view with several
-   slots (ListRow, #119), as (a) below. Still open for a view with a variant: (a) initializer parameters, `Badge("3", variant: .info)`: the report's
-   parity-first shape; (b) a style modifier on the component, `Badge("3").badgeStyle(.info)`, cascading through the
+   slots (ListRow, #119), as (a) below. Still open for a view with a variant: (a) initializer parameters,
+   `Badge("3", variant: .info)`: the report's parity-first shape; (b) a style modifier on the component, `Badge("3").badgeStyle(.info)`, cascading through the
    environment: the same call shape as a system control, and a later system control could replace the own component
    without changing call sites.
 3. **A forbidden combination in code.** (a) Nothing beyond the validator, the catalog and the snapshot matrix.

@@ -188,6 +188,15 @@ struct ContractRules {
                         path.key("bases"),
                         "an \(AppleComponents.ownStrategy) has no base control: its forms are its own initializers")
                 }
+                // An own view's forms are its initializers, with an action or without (AppleComponents.Own); a
+                // modifier has no initializer to carry a form.
+                if platform == "apple", entry["form"]?.string != AppleComponents.Own.Form.view.rawValue {
+                    report(
+                        path.key("form"),
+                        "the conventions derive forms on an \(AppleComponents.ownStrategy) only of form view, each "
+                            + "form an initializer (spec/conventions.md, \"Forms of an own view\"), not of form "
+                            + "\(entry["form"]?.string ?? "none")")
+                }
                 continue
             }
             if entry["base"] != nil {
@@ -207,17 +216,12 @@ struct ContractRules {
                     "\"\(member.key)\" is not one of the forms: \(names.joined(separator: ", "))")
             }
             if platform == "apple", let strategy = entry["strategy"]?.string, strategy != AppleComponents.strategy {
-                // An own view's forms are its initializers, with an action or without (AppleComponents.Own).
-                let ownView =
-                    strategy == AppleComponents.ownStrategy
-                    && entry["form"]?.string == AppleComponents.Own.Form.view.rawValue
-                if !ownView {
-                    report(
-                        path.key("strategy"),
-                        "the conventions derive forms on Apple only for a \(AppleComponents.strategy), each form a "
-                            + "style on its base, or for an \(AppleComponents.ownStrategy) of form view, each form an "
-                            + "initializer (spec/conventions.md, \"Forms\"), not for an \(strategy)")
-                }
+                // An own component returned above, so any strategy here has no form to derive.
+                report(
+                    path.key("strategy"),
+                    "the conventions derive forms on Apple only for a \(AppleComponents.strategy), each form a "
+                        + "style on its base, or for an \(AppleComponents.ownStrategy) of form view, each form an "
+                        + "initializer (spec/conventions.md, \"Forms\"), not for an \(strategy)")
             }
         }
     }

@@ -228,13 +228,13 @@ still drives every generated sheet and combination:
   - Text field, at size m: `card-notes`, a card's title and multiline notes (two rows to a picture at
     `accessibility5`); `secure-field`, the style on `SecureField`; `on-surface` and `on-sunken`, a field on those
     grounds.
-  - ListRow, eight: `selected`, the selected row in its themes, the high-contrast ring included; `tree`, rows at
-    levels 0 to 3 with their guides; `slots`, a row with a second line, a leading icon and a trailing count; `task`,
-    a static row with a check in its leading slot; `long-title`, a title on one line truncated at level 4; `drag`, the
-    insertion mark at a level and a drop target; `right-to-left`, the slots, indent and guides mirrored; and
-    `accessibility5`, the trailing slot under the text at level 0. All but `selected` and `accessibility5` are drawn at
-    `accessibility2` at most, and their header says why: at accessibility5 the scaled indent leaves a row at level 2 or
-    deeper no room for its words on a phone (spec/components/list-row, decisions/0001, "Measured").
+  - ListRow, eight: `selected`, the selected row's bar in every state and theme, also beside a title whose role the
+    product set; `tree`, rows at levels 0 to 3 with their guides; `slots`, a row with a second line, a leading icon
+    and a trailing count; `task`, a static row with a check in its leading slot; `long-title`, a title on one line
+    truncated at level 4; `drag`, the insertion mark at a level, drawn above the next row's highlight, and a drop
+    target; `right-to-left`, the slots, indent, guides and bar mirrored; and `accessibility5`, the trailing slot under
+    the text at level 0. Every one is drawn at every text size of the sheet, accessibility5 included, where the row's
+    horizontal spacing stops at its xxxLarge width (spec/components/list-row, decisions/0001, D2).
 
   Like the matrix, supplements are not catalog entries, so the accessibility audit does not walk them.
 

@@ -163,11 +163,17 @@ struct OwnViewSlotsTests {
         #expect(specProblems(markBelow).contains { $0.contains("marks.insertion") }, "\(specProblems(markBelow))")
     }
 
-    @Test("an own component's forms name no bases")
+    @Test("an own component's forms name no bases, and only an own view has forms")
     func formsWithoutBases() {
         #expect(specProblems(rowYAML) == [])
-        let based = replacing("  pressable:\n", with: "  pressable:\n    bases: { apple: SwiftUI.Button }\n")
-        #expect(!specProblems(based).isEmpty)
+        let based = replacing(
+            "    form: view\n",
+            with: "    form: view\n    bases: { pressable: SwiftUI.Button, static: SwiftUI.Button }\n")
+        #expect(
+            specProblems(based).contains { $0.contains("has no base control") }, "\(specProblems(based))")
+        let modifier = replacing("    form: view\n", with: "    form: modifier\n")
+        #expect(
+            specProblems(modifier).contains { $0.contains("only of form view") }, "\(specProblems(modifier))")
     }
 
     // MARK: - The API

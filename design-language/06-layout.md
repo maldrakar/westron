@@ -101,6 +101,10 @@ B spends space generously, on the 8 px base. Each place has a role, and the role
 - **Text scales, and containers make room.** Every role follows the person's text size (chapter 03), and so does the
   spacing that belongs to text: on Apple through `@ScaledMetric`, with a token as its base value. A row, a bar or a
   header grows with its text.
+- **Structure stops growing at xxxLarge; text grows on.** At the accessibility text sizes the room is the words'. A
+  component's horizontal structure, such as a row's indent per level, its side padding and the gaps beside its title,
+  scales up to xxxLarge and keeps that width above it, while the text, its line spacing and the vertical padding keep
+  scaling (spec/components/list-row, decisions/0001, D2; the same rule as a text field's glyphs in this phase).
 - **A minimum height, never a fixed one, wherever text sits.** A fixed height clips text at large sizes. SwiftUI's
   lists work the same way: `defaultMinListRowHeight` is a minimum. Some of the pilot's bars and headers have fixed
   heights today; the westron components that replace them have minimum heights.

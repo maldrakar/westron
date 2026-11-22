@@ -4,11 +4,12 @@
 // (Generated/ListRow+Contract.swift).
 //
 // The pressable row is a system Button whose label is the whole drawn row, so the pointer, the keyboard, the press and
-// .disabled(_:) are the system's, and a press anywhere on the row's frame is the row's action. A control at the start,
-// a Checkbox, is nested in that label and takes its own press: the inner control's gesture wins. To assistive
-// technology the Button would merge that control into its own element, so the row is given there by
-// `accessibilityRepresentation`: the same layout, with the control at the start as its own element, a Button of the
-// row's words, and the Disclosure chevron's cell as its own element (decisions/0001, "Measured").
+// .disabled(_:) are the system's, and a press anywhere on the row's frame is the row's action. The controls of its
+// slots, a Checkbox at the start, are nested in that label and take their own press: the inner control's gesture wins
+// (decisions/0001, "Revision of Q1 at implementation"). To assistive technology the Button would merge those controls
+// into its own element, so the row is given there by `accessibilityRepresentation`: the same layout, the leading slot's
+// elements as they are, the words, the title, the second line and the trailing slot, combined into one element with the
+// button trait, and the Disclosure chevron's cell as its own element (decisions/0001, "Measured").
 
 import SwiftUI
 
@@ -33,11 +34,14 @@ import SwiftUI
 ///         Toggle(isOn: $subtask.isDone, accessibilityLabel: subtask.title).toggleStyle(.check)
 ///     }
 ///
-/// The title is the content every row has; every other slot is optional. A control belongs at the start; the trailing
-/// slot holds words and glyphs, which join the row's spoken name. `.selected(_:)` and `.dropTarget(_:)` set the states
-/// the system lacks, `.insertionMark(_:level:)` marks where a dragged row would land, and `.disabled(_:)` dims the
-/// row. In a `List`, give the row `.listRowInsets(EdgeInsets())`, `.listRowBackground(Color.clear)` and
-/// `.listRowSeparator(.hidden)`, and bind no `List` selection: the row draws its own.
+/// The title is the content every row has; every other slot is optional. The title and the second line hold text and
+/// decorative content, never a control: a row being renamed is replaced by the product's field for that time. A control
+/// belongs at the start; the trailing slot holds words and glyphs, which join the row's spoken name. `.selected(_:)` and
+/// `.dropTarget(_:)` set the states the system lacks, `.insertionMark(_:level:)` marks where a dragged row would land,
+/// and `.disabled(_:)` dims the row. A title on one line (`lineLimit(1)`) belongs below the accessibility text sizes
+/// only, so that at those sizes it wraps. In a `List`, give the row `.listRowInsets(EdgeInsets())`,
+/// `.listRowBackground(Color.clear)` and `.listRowSeparator(.hidden)`, and bind no `List` selection: the row draws its
+/// own.
 public struct ListRow: View {
     let level: Int
     let guides: Bool
@@ -50,10 +54,13 @@ public struct ListRow: View {
     ///   - level: The nesting level, 0 at the top of a tree; the row is indented by `container.indent` per level.
     ///   - guides: Whether a row at level 1 or deeper draws one guide per level above it; by default `true`.
     ///   - action: What a press on the row does: anywhere on its frame but on the control at its start.
-    ///   - title: The row's first line, in `body.regular`, `body.strong` while selected, unless it sets its own role.
-    ///   - subtitle: The second line, in `footnote.regular` and `text.secondary`.
-    ///   - leading: An IconTile, an Icon or a Checkbox at the start, on the title's first line.
-    ///   - trailing: Words and glyphs at the end, such as a count; under the text at the accessibility sizes.
+    ///   - title: The row's first line, in `body.regular`, `body.strong` while selected, unless it sets its own role;
+    ///     text and decorative content, no control.
+    ///   - subtitle: The second line, in `footnote.regular` and `text.secondary`; text and decorative content, no
+    ///     control.
+    ///   - leading: An IconTile, an Icon or a Checkbox at the start, on the title's first line, in `body.regular`.
+    ///   - trailing: Words and glyphs at the end, such as a count, in `body.regular` unless they set their own role;
+    ///     under the text at the accessibility sizes.
     public init<Title: View, Subtitle: View, Leading: View, Trailing: View>(
         level: Int = 0, guides: Bool = true, action: @escaping () -> Void, @ViewBuilder title: () -> Title,
         @ViewBuilder subtitle: () -> Subtitle = { EmptyView() }, @ViewBuilder leading: () -> Leading = { EmptyView() },
@@ -111,6 +118,10 @@ extension EnvironmentValues {
     /// so that a row inside a slot draws none. Package-internal: no product sets it (decisions/0001, "The Disclosure
     /// chevron's place").
     @Entry var listRowDisclosureCell: AnyView? = nil
+
+    /// Told when the pressable row's system Button begins and ends a press: the catalog counts the presses, so that a
+    /// UI test can see whether a press on a control in a slot also presses the row. Package-internal.
+    @Entry var listRowPressObserver: (@MainActor @Sendable (Bool) -> Void)? = nil
 }
 
 // MARK: - The row
@@ -125,11 +136,14 @@ private struct ListRowBody: View {
 
     @Environment(\.listRowDisclosureCell) private var cell
     @Environment(\.isSelected) private var isSelected
-    @Environment(\.isDropTarget) private var isDropTarget
     @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
         let content = ListRowContent(level: level, guides: guides, parts: parts, cell: cell)
+        // The representation lays the title out in the role the drawn row draws it in, strong while selected, so
+        // that each element's frame is where its words are drawn.
+        let titleFont = ListRowTokens(form: action == nil ? .static : .pressable, states: isSelected ? [.selected] : [])
+            .titleFont
         Group {
             if let action {
                 Button(action: action) {
@@ -139,14 +153,18 @@ private struct ListRowBody: View {
                 .accessibilityRepresentation {
                     ListRowContent(
                         level: level, guides: false, parts: parts, cell: cell,
-                        words: .button(action: action, selected: isSelected))
+                        words: .button(action: isEnabled ? action : nil, selected: isSelected)
+                    )
+                    .environment(\.listRowTitleFont, titleFont)
                 }
             } else {
                 content
                     .modifier(ListRowHighlight(form: .static, isPressed: false, isHovered: false, isFocused: false))
                     .accessibilityRepresentation {
                         ListRowContent(
-                            level: level, guides: false, parts: parts, cell: cell, words: .text(selected: isSelected))
+                            level: level, guides: false, parts: parts, cell: cell, words: .text(selected: isSelected)
+                        )
+                        .environment(\.listRowTitleFont, titleFont)
                     }
             }
         }
@@ -171,6 +189,7 @@ private struct ListRowPressBody: View {
     @State private var isHovered = false
     @Environment(\.isFocused) private var isFocused
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.listRowPressObserver) private var pressObserver
 
     var body: some View {
         configuration.label
@@ -188,11 +207,14 @@ private struct ListRowPressBody: View {
             .onChange(of: isEnabled) { _, enabled in
                 if !enabled { isHovered = false }
             }
+            .onChange(of: configuration.isPressed) { _, pressed in
+                pressObserver?(pressed)
+            }
     }
 }
 
-/// The highlight under the row, its ring, its opacity, and the shapes the system's pointer, focus ring and assistive
-/// technology take: the highlight's rounded rectangle at `container.radius`, filling the row's frame.
+/// The highlight under the row, its bar, its ring, its opacity, and the shapes the system's pointer, focus ring and
+/// assistive technology take: the highlight's rounded rectangle at `container.radius`, filling the row's frame.
 private struct ListRowHighlight: ViewModifier {
     let form: ListRowForm
     let isPressed: Bool
@@ -202,8 +224,6 @@ private struct ListRowHighlight: ViewModifier {
     @Environment(\.isSelected) private var isSelected
     @Environment(\.isDropTarget) private var isDropTarget
     @Environment(\.isEnabled) private var isEnabled
-    @Environment(\.colorSchemeContrast) private var contrast
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.forcedListRowStates) private var forcedStates
 
     func body(content: Content) -> some View {
@@ -213,27 +233,46 @@ private struct ListRowHighlight: ViewModifier {
             dropTarget: isDropTarget, enabled: isEnabled
         ).union(forcedStates)
         let effective = ListRowTokens.effective(states, form: form)
-        let tokens = ListRowTokens(form: form, states: states, highContrast: contrast == .increased)
-        let motion = ListRowMotion(reduceMotion: reduceMotion)
-        let shape = RoundedRectangle(cornerRadius: CGFloat(ListRowMetrics.radius), style: .continuous)
+        let tokens = ListRowTokens(form: form, states: states)
+        let radius = CGFloat(ListRowMetrics.radius)
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
 
         return
             content
             .environment(\.listRowTitleFont, tokens.titleFont)
             .background {
-                ZStack {
+                ZStack(alignment: .leading) {
                     if let background = tokens.background {
                         shape.fill(background)
+                            .listRowProbed("highlight")
                     }
-                    if let ringColor = tokens.ringColor, let ringWidth = tokens.ringWidth {
-                        shape.strokeBorder(ringColor, lineWidth: CGFloat(ringWidth))
+                    // A selected row's bar, at the highlight's leading edge and inside it, as long as the highlight's
+                    // straight side: a cue of selection that is neither the tint nor the title's weight.
+                    if let barColor = tokens.barColor, let barWidth = tokens.barWidth {
+                        Capsule(style: .continuous)
+                            .fill(barColor)
+                            .frame(width: CGFloat(barWidth))
+                            .listRowProbed("bar")
+                            .padding(.vertical, radius)
                     }
                 }
                 // The tint of a press in `motion.press`; of the pointer, the selection and a drop in `motion.fade`.
-                .animation(motion.highlight, value: effective.contains(.hover))
-                .animation(motion.highlight, value: effective.contains(.selected))
-                .animation(motion.highlight, value: effective.contains(.dropTarget))
-                .animation(motion.press, value: effective.contains(.pressed))
+                .animation(ListRowMotion.highlight, value: effective.contains(.hover))
+                .animation(ListRowMotion.highlight, value: effective.contains(.selected))
+                .animation(ListRowMotion.highlight, value: effective.contains(.dropTarget))
+                .animation(ListRowMotion.press, value: effective.contains(.pressed))
+            }
+            // The drop target's ring, above the row's content, so that the guides do not cross it.
+            .overlay {
+                ZStack {
+                    if let ringColor = tokens.ringColor, let ringWidth = tokens.ringWidth {
+                        shape.strokeBorder(ringColor, lineWidth: CGFloat(ringWidth))
+                            .listRowProbed("ring")
+                    }
+                }
+                .animation(ListRowMotion.highlight, value: effective.contains(.dropTarget))
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
             }
             .contentShape(Rectangle())
             #if os(macOS)
@@ -270,17 +309,18 @@ extension EnvironmentValues {
 // MARK: - The layout
 
 /// What the row's words are to assistive technology: nothing, in the drawn row, which the representation replaces; a
-/// button, in the pressable row's representation; text in one element, in the static row's.
+/// button, in the pressable row's representation, whose activation is the row's action while it is enabled (nil while
+/// disabled); text in one element, in the static row's.
 enum ListRowWords {
     case drawn
-    case button(action: () -> Void, selected: Bool)
+    case button(action: (() -> Void)?, selected: Bool)
     case text(selected: Bool)
 }
 
 /// The drawn row: the indent, the leading slot, the title and the second line, the trailing slot, and the chevron's
-/// cell, padded, at least `container.minHeight` high, over the guides. The metrics scale with Dynamic Type from their
-/// tokens, relative to the title's text style. The representation uses the same layout, so that each element's frame
-/// is where its part is drawn.
+/// cell, padded, at least `container.minHeight` high, over the guides. The horizontal spacing scales with Dynamic Type
+/// from its tokens, relative to the title's text style, up to `ListRowMetrics.structureLimit`; the vertical spacing at
+/// every size. The representation uses the same layout, so that each element's frame is where its part is drawn.
 struct ListRowContent: View {
     let level: Int
     let guides: Bool
@@ -288,18 +328,28 @@ struct ListRowContent: View {
     let cell: AnyView?
     var words: ListRowWords = .drawn
 
+    var body: some View {
+        ListRowSpacingReader { spacing in
+            ListRowLayout(level: level, guides: guides, parts: parts, cell: cell, words: words, spacing: spacing)
+        }
+    }
+}
+
+private struct ListRowLayout: View {
+    let level: Int
+    let guides: Bool
+    let parts: ListRowParts
+    let cell: AnyView?
+    let words: ListRowWords
+    let spacing: ListRowSpacing
+
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.listRowTitleFont) private var titleFont
     #if os(iOS)
         @Environment(\.horizontalSizeClass) private var sizeClass
     #endif
-    @ScaledMetric(relativeTo: ListRowMetrics.textStyle) private var indent = CGFloat(ListRowMetrics.indent)
-    @ScaledMetric(relativeTo: ListRowMetrics.textStyle) private var padding = CGFloat(
-        ListRowMetrics.paddingHorizontal)
     @ScaledMetric(relativeTo: ListRowMetrics.textStyle) private var paddingVertical = CGFloat(
         ListRowMetrics.paddingVertical)
-    @ScaledMetric(relativeTo: ListRowMetrics.textStyle) private var gap = CGFloat(ListRowMetrics.gap)
-    @ScaledMetric(relativeTo: ListRowMetrics.textStyle) private var trailingGap = CGFloat(ListRowMetrics.trailingGap)
     @ScaledMetric(relativeTo: ListRowMetrics.textStyle) private var subtitleGap = CGFloat(ListRowMetrics.subtitleGap)
 
     private var compact: Bool {
@@ -317,23 +367,25 @@ struct ListRowContent: View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
             if let leading = parts.leading {
                 leading
+                    .textRole(ListRowMetrics.slotRole)
                     .anchorPreference(key: ListRowLeadingBounds.self, value: .bounds) { $0 }
-                    .padding(.trailing, gap)
+                    .listRowProbed("leading")
+                    .padding(.trailing, spacing.gap)
             }
             wordsElement(stacks: stacks)
             if let cell {
-                cell.padding(.leading, trailingGap)
+                cell.padding(.leading, spacing.trailingGap)
             }
         }
-        .padding(.leading, ListRowMetrics.slotStart(level: level, indent: indent, padding: padding))
-        .padding(.trailing, padding)
+        .padding(.leading, ListRowMetrics.slotStart(level: level, indent: spacing.indent, padding: spacing.padding))
+        .padding(.trailing, spacing.padding)
         .frame(maxWidth: .infinity, minHeight: ListRowMetrics.minHeight, alignment: .leading)
         .backgroundPreferenceValue(ListRowLeadingBounds.self) { leading in
             if guides && level > 0 {
                 GeometryReader { proxy in
                     ListRowGuides(
                         centres: ListRowMetrics.guides(
-                            level: level, enabled: guides, indent: indent, padding: padding,
+                            level: level, enabled: guides, spacing: spacing,
                             slotWidth: leading.map { proxy[$0].width } ?? 0),
                         width: ListRowMetrics.guideWidth(compact: compact))
                 }
@@ -349,38 +401,44 @@ struct ListRowContent: View {
             VStack(alignment: .leading, spacing: subtitleGap) {
                 parts.title
                     .textRole(titleFont)
-                    .foregroundStyle(.text.primary)
+                    .foregroundStyle(ListRowMetrics.titleColor)
                 if let subtitle = parts.subtitle {
                     subtitle
                         .textRole(ListRowMetrics.subtitleFont)
-                        .foregroundStyle(.text.secondary)
+                        .foregroundStyle(ListRowMetrics.subtitleColor)
                 }
                 if stacks, let trailing = parts.trailing {
-                    trailing
+                    trailing.textRole(ListRowMetrics.slotRole)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             if !stacks, let trailing = parts.trailing {
                 trailing
-                    .padding(.leading, trailingGap)
+                    .textRole(ListRowMetrics.slotRole)
+                    .padding(.leading, spacing.trailingGap)
             }
         }
         .padding(.vertical, paddingVertical)
+        .listRowProbed("words")
         switch words {
         case .drawn:
             column
         case .button(let action, let selected):
-            // One element of the words, a button: activating it is the row's action. A system Button here would drop
-            // the selected trait (measured on iOS 26, decisions/0001, "Measured"); its frame is the row's height.
+            // One element of the words, a button: activating it is the row's action while the row is enabled. A
+            // system Button here would drop the selected trait (measured on iOS 26, decisions/0001, "Measured"); its
+            // frame is the row's height.
             column
                 .frame(minHeight: ListRowMetrics.minHeight)
                 .contentShape(.accessibility, Rectangle())
                 .accessibilityElement(children: .combine)
                 .accessibilityAddTraits(selected ? [.isButton, .isSelected] : [.isButton])
-                .accessibilityAction { action() }
+                .modifier(ListRowActivation(action: action))
                 .modifier(ListRowLevelContent(level: level))
         case .text(let selected):
+            // One element of the words, as text, its frame the row's height as the button's is.
             column
+                .frame(minHeight: ListRowMetrics.minHeight)
+                .contentShape(.accessibility, Rectangle())
                 .accessibilityElement(children: .combine)
                 .accessibilityAddTraits(selected ? .isSelected : [])
                 .modifier(ListRowLevelContent(level: level))
@@ -388,12 +446,28 @@ struct ListRowContent: View {
     }
 }
 
-/// The level as more content, from level 1 on, counted from 1, not spoken unless asked (decisions/0001, Q8).
-private struct ListRowLevelContent: ViewModifier {
+/// The words' activation, the row's action, only while the row is enabled.
+private struct ListRowActivation: ViewModifier {
+    let action: (() -> Void)?
+
+    func body(content: Content) -> some View {
+        if let action {
+            content.accessibilityAction { action() }
+        } else {
+            content
+        }
+    }
+}
+
+/// The level as more content, from level 1 on, counted from 1, not spoken unless asked (decisions/0001, Q8): a row at
+/// level 1 carries "Level" "2".
+struct ListRowLevelContent: ViewModifier {
     let level: Int
+    @Environment(\.listRowProbe) private var probe
 
     func body(content: Content) -> some View {
         if let spoken = ListRowMetrics.spokenLevel(level) {
+            let _ = probe?.note("level \(spoken)")
             content.accessibilityCustomContent(
                 Text("Level", bundle: .module, comment: "The nesting level of a row in a tree, as more content."),
                 Text(spoken, format: .number))
@@ -420,8 +494,9 @@ private struct ListRowGuides: View {
         ZStack(alignment: .leading) {
             ForEach(centres.indices, id: \.self) { index in
                 Rectangle()
-                    .fill(.border.guide)
+                    .fill(ListRowMetrics.guideColor)
                     .frame(width: width)
+                    .listRowProbed("guide \(index)")
                     .padding(.leading, centres[index] - width / 2)
             }
         }

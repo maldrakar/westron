@@ -2,7 +2,8 @@
 
 Date: 2026-11-22. Status: approved on 2026-11-22 by the coordinating agent under the owner's delegation for phase 4
 (decisions/0014, "Process"), with the answers and changes below ("Approval"); implemented on Apple, measured below
-("Measured"). It was a draft for the first gate (decisions/0005). There was no interview: the agent that wrote the draft
+("Measured"), and revised after the review ("Revision of Q1 at implementation", "Revision after the review"). It was
+a draft for the first gate (decisions/0005). There was no interview: the agent that wrote the draft
 answered the eight questions of `/new-component` from the sources, and each answer names its source. Where the sources
 are silent the answer is the agent's proposal; where a proposal changes the contract's shape it is an open question
 below, with the recommendation first, and the draft is written to the recommendation.
@@ -84,17 +85,17 @@ below, not taken. No pilot row stands in a SwiftUI `List`.
 | # | Proposal | Reason |
 |---|---|---|
 | P1 | **An own view, `ListRow`**, with the slots as `@ViewBuilder` closures, `level: Int = 0`, `guides: Bool = true`, an optional `action` | Q1 |
-| P2 | **The row's action is a system Button inside the row, beside the slots' controls, not around them.** A press anywhere on the row that is not on a control in a slot is the action; the whole frame is the hit area | The pilot keeps the check a sibling of the row's Button (`TaskRowView.swift`); a control inside a Button's label is merged into the button's element and loses its own role |
+| P2 | **The row's action is a system Button whose label is the whole row; the slots' controls are nested in it and take their own press**, and to assistive technology the row is an accessibility representation in which each control keeps its own element (revised at implementation: "Revision of Q1 at implementation"; the draft said "beside the slots' controls, not around them"). A press anywhere on the row that is not on a control in a slot is the action; the whole frame is the hit area | The pilot keeps the check a sibling of the row's Button (`TaskRowView.swift`), since a control inside a Button's label is merged into the button's element and loses its own role; the representation gives the control its element back, measured |
 | P3 | **Only a row with an action enters hover, focus and pressed**; `selected`, `disabled`, `dropTarget` on any row | A highlight that answers the pointer promises an action; the subtask row has none |
 | P4 | **`.selected(_:)` and `.dropTarget(_:)`**, shared state modifiers through the environment, Bools, named as the states | spec/conventions.md, "States the system control lacks"; the selection and the drag are the product's knowledge (the pilot's module holds both) |
-| P5 | **At rest no background**; hover `background.hover`, pressed `background.pressed`, selected `background.selected`, dropTarget `background.accent-subtle` with a `border.focus` ring at `stroke.thick`; pressed wins over selected, selected over hover; a disabled row never tints and is drawn whole at `opacity.disabled` | The documents' tints; the order of the bindings' cases |
-| P6 | **Selected sets the title in `body.strong`** where the product set no other role, and **in high contrast draws a `border.focus` ring at `stroke.thick`** | The usage note of `background.selected`; `body.strong`'s description. The pilot's sidebar emphasizes the highlighted title too. The tint is the palette's step 5, solved to stand 1.16:1 off the canvas in light and 1.36:1 in dark (decisions/0012), so weight is the second signal in the standard themes, the ring in high contrast |
-| P7 | **Sizes**: at least `size.target.minimum`; text padded `space.75` vertically and `space.150` horizontally; `space.150` from the leading slot to the title, `space.100` from the title to the trailing slot, `space.25` from the title to the second line; corners `radius.row` | Below, "Sizes"; every value an existing token |
+| P5 | **At rest no background**; hover `background.hover`, pressed `background.pressed`, selected `background.selected`, dropTarget `background.accent-subtle` with a `border.insertion` ring at `stroke.thick`, drawn over the content (revised: Q4, D4); pressed wins over selected, selected over hover; a disabled row never tints and is drawn whole at `opacity.disabled` | The documents' tints; the order of the bindings' cases |
+| P6 | **Selected draws a `border.focus` bar at `stroke.thick` at the highlight's leading edge, in every theme, and sets the title in `body.strong`** where the product set no other role (revised after the review, D3; the draft drew a ring in high contrast instead of the bar) | The usage note of `background.selected`; `body.strong`'s description. The pilot's sidebar emphasizes the highlighted title too. The tint is the palette's step 5, solved to stand 1.16:1 off the canvas in light and 1.36:1 in dark (decisions/0012), so a mark that is not a color carries the selection, and the weight is lost where a product sets the title's role |
+| P7 | **Sizes**: at least `size.target.minimum`; text padded `space.75` vertically and `space.150` horizontally; `space.150` from the leading slot to the title, `space.100` from the title to the trailing slot, `space.25` from the title to the second line; corners `radius.row`; the horizontal ones scaled up to xxxLarge, the vertical ones at every size (D2) | Below, "Sizes"; every value an existing token |
 | P8 | **The slots stand on the title's first line**, centred on it, by the first text baseline that IconTile and the check give at their centre | IconTile's contract (a row aligned on the first text baseline); the pilot aligns its check with the title's top |
 | P9 | **No line limit of the row's own**; a product sets one line where it wants it, the title truncated at its end and whole to assistive technology | The pilot's list rows are one line, its task rows wrap on the phone; one rule serves both |
 | P10 | **At accessibility sizes the trailing slot moves under the text**, from the title's leading edge | design-language/08:67 |
-| P11 | **The indent is `container.indent` per level, scaled with the text** (Q5) | design-language/06:23–25, 08:67 |
-| P12 | **Guides**: one per ancestor level, centred under where that level's leading slot is centred (as wide as the row's own), the row's full height, `color.border.guide` (new, below) at `stroke.thin`, `stroke.regular` in the compact size class; hidden from assistive technology | The pilot draws them so (`childGuides`); design-language/04 gives the widths; Q7 the color |
+| P11 | **The indent is `container.indent` per level, scaled with the text up to xxxLarge** (Q5, D2) | design-language/06:23–25, 08:67 |
+| P12 | **Guides**: one per ancestor level, centred under where that level's leading slot is centred (as wide as the row's own) but never closer than half `container.gap` to the next level's slot (D2), the row's full height, `color.border.guide` (new, below) at `stroke.thin`, `stroke.regular` in the compact size class; hidden from assistive technology | The pilot draws them so (`childGuides`); design-language/04 gives the widths; Q7 the color |
 | P13 | **No separator of the row's own**: a product adds a Rule | Rule is the separator; the pilot's rows have none between them |
 | P14 | **The tree wider than its container truncates** (Q3) | 0014's open point 2 |
 | P15 | **Drag and drop** (Q4): the insertion mark is Rule's, drawn by the row over its edge at a level; dropTarget for a drop onto the row; no dashed slot; the carried copy a ListRow on `.surface(.dragged)`; nothing announced | 0014's open point 1 |
@@ -109,7 +110,8 @@ below, not taken. No pilot row stands in a SwiftUI `List`.
 
 Computed from the tokens at the default text size (iOS body 17 pt on a 22 pt line, footnote on 18; macOS body 13 on
 16, footnote on 13; IconTile 1.5 lines; the check's hit area the larger of `size.target.minimum` and `size.control.m`),
-against the pilot's:
+against the pilot's. The IconTile rows are computed for a component that is not on this branch (#118) and are not
+verified; the check's rows are measured by the unit tests (44 on iOS, 32 on macOS):
 
 | Row | iOS | pilot phone | macOS | pilot Mac |
 |---|---|---|---|---|
@@ -131,12 +133,8 @@ Sketches, not compiled; the API is the draft's (P1, P4, Q4). `Disclosure` is #12
 ListRow(level: row.depth, action: { send(row.tap) }) {
     IconTile(list.icon)
 } title: {
-    if let draft = row.draft {
-        TextField("Title", text: draftBinding).textFieldStyle(.framed)   // the rename field in the title's place
-    } else {
-        Text(list.title).lineLimit(1)
-            .textRole(row.hasChildren ? .body.strong : .body.regular)   // the pilot's emphasis, the product's
-    }
+    Text(list.title).lineLimit(isAccessibilitySize ? nil : 1)         // one line below the accessibility sizes
+        .textRole(row.hasChildren ? .body.strong : .body.regular)     // the pilot's emphasis, the product's
 } trailing: {
     if !isEditing, let count { Text(count).textRole(.subheadline.regular).foregroundStyle(.text.secondary) }
     if list.hasChildren { Disclosure(isExpanded: expandedBinding) }        // #120, its own button
@@ -149,7 +147,9 @@ ListRow(level: row.depth, action: { send(row.tap) }) {
 .contextMenu { MenuItems(menu, send: send) }                               // the system's
 ```
 
-The pilot's sideways scroll and the fade under the accessories go (Q3). The count and chevron columns hold by the
+While a row is renamed, the product draws its own field in the row's place, not a ListRow with a field in its title:
+the title holds no control (D1; a text field there was measured as part of the row's button, below). The pilot's
+sideways scroll and the fade under the accessories go (Q3). The count and chevron columns hold by the
 trailing slot's content: the pilot's empty `space` cells become a fixed-width frame the product gives the count.
 
 **A task's row** (`TaskRowModel`, `TaskRowView`):
@@ -215,16 +215,18 @@ for it would be a second implementation of the system's swipe.
   4.41, 4.14, 4.15, 4.40 and 4.40, 3.82, 3.81, 4.40. In the standard themes the guide stands 1.32–1.90:1 off the
   grounds, a little firmer than a separator's 1.07–1.53. Q7.
 - **New contrast declarations**: `color.icon.tertiary` (a chevron or a grip in the trailing slot) and
-  `color.border.focus` (the drop and the high-contrast selection ring) on `pressed` and `accent-subtle`;
+  `color.border.focus` (the selected row's bar, D3) on `pressed` and `accent-subtle`;
   `color.border.strong` (a Checkbox's and a Chip's high-contrast edge in a slot) on `hover`, `pressed` and `selected`.
   `text.primary` and `text.secondary` were declared on every row ground already.
 - `tools/westron tokens contrast`: 333 pairs in each of the four themes, none failed.
 - `tools/westron generate` writes the token into `WestronTokens/Generated/Tokens.swift` and
   `WestronUI/Tokens.xcassets/color.border.guide.colorset`, and the new declarations into `Tokens.swift`'s background
   lists; nothing else, since the draft contract generates nothing.
-- The drop ring binds `color.border.focus` because `color.border.insertion`, Rule's insertion color, is on #116's
-  branch and not on `main`; when #116 merges, the drop ring takes `color.border.insertion`, so the line and the ring
-  between and onto rows are one color that can change apart from focus.
+- The drop ring binds `color.border.insertion`, Rule's insertion color (Q4), so the line and the ring between and onto
+  rows are one color that can change apart from focus; its declarations gained `pressed` and `accent-subtle`.
+- After the review (D3) `color.border.focus` draws the selected row's bar, 3.02–3.03:1 on `selected` and `pressed` in
+  the standard themes and 4.56–4.57:1 in high contrast (`tools/westron tokens contrast --all`);
+  `color.background.selected`'s usage note and `color.border.focus`'s description name the bar. 342 pairs in each theme, none failed.
 
 ## The snapshot matrix
 
@@ -240,7 +242,8 @@ Hand-written supplements, marked "not a contract option":
 4. A long title on one line, truncated at level 4 in a narrow width.
 5. Accessibility5: the trailing slot under the text.
 6. The insertion mark at the top and the bottom edge at levels 0 and 2; dropTarget.
-7. selected with pressed, selected with disabled, in the high-contrast themes (the ring).
+7. selected with pressed, with disabled and with a drop onto it, the bar in every theme, also beside a title whose
+   role the product set (D3).
 8. Right to left.
 
 ## What the tools cannot express yet
@@ -261,7 +264,7 @@ Written for the draft, before any tool changed. The approval asked the tools to 
 5. **A binding by size class or platform.** The guide is `stroke.thin` in a sidebar and `stroke.regular` on a phone;
    a binding takes one token or one per enum value. A platform token would carry it per platform, not per size class.
 6. **A case by contrast.** The high-contrast selection ring, as Button's high-contrast outline, is in the
-   description.
+   description. (After the review the ring went: the selected row's bar is drawn in every theme, D3.)
 7. **Cases over several states.** "A disabled row never tints" and "pressed over selected" are by order and prose;
    Chip's branch adds `state: { all: [...] }`, which would let a case say `disabled` with `hover`.
 8. **A scaled metric.** That the indent scales with the text is in the description.
@@ -272,7 +275,8 @@ Each changes the contract; the recommendation is first, and the draft follows it
 
 - **Q1. What ListRow is on Apple.**
   (a) **Westron's own view**: the row's slots, level and guides, its action a system Button inside it beside the
-  slots' controls, `selected` and `dropTarget` as shared state modifiers. Outside a `List` there is no system row
+  slots' controls (built nested, the controls inside the Button's label: "Revision of Q1 at implementation"),
+  `selected` and `dropTarget` as shared state modifiers. Outside a `List` there is no system row
   (decisions/0003, point 2), and a control in a slot keeps its own press and element. Recommended.
   (b) A style on `SwiftUI.Button`, `.buttonStyle(.row)`, the row's content its label: closest to "a style on a
   system control", but a Checkbox or a Disclosure in the label is merged into the button's element and loses its role,
@@ -347,9 +351,12 @@ Each changes the contract; the recommendation is first, and the draft follows it
 
 Approved on 2026-11-22 by the coordinating agent under the owner's delegation (decisions/0014, "Process"):
 
-- **Q1 (a).** Westron's own view; the row's action a system Button beside the slots' controls.
+- **Q1 (a).** Westron's own view; the row's action a system Button beside the slots' controls. Revised at
+  implementation and accepted by the coordinating agent after the review: the Button's label is the whole row and the
+  slots' controls are nested in it ("Revision of Q1 at implementation").
 - **Q2 (a), on condition of a measurement.** A behaviour UI test measures a ListRow inside a `List` on iOS and macOS:
-  the row's action runs, a Checkbox in the leading slot keeps its own press, and `.swipeActions` works. Were any to
+  the row's action runs, a Checkbox in the leading slot keeps its own press, and `.swipeActions` works (on iOS; on
+  macOS not measured, "Measured"). Were any to
   fail, the answer would fall back to (c), "not promised inside a List", saying what was measured. It held ("Measured"),
   so (a) stands, and design-language/06 records the exception to "the system's List keeps its own insets".
 - **Q3 (a).** The title truncates. If the pilot keeps its sideways scroll, that is the pilot's composition: a scroll
@@ -357,8 +364,8 @@ Approved on 2026-11-22 by the coordinating agent under the owner's delegation (d
 - **Q4 (a).** `.insertionMark(_:level:)` draws `Rule(purpose: .insertion)`; the drop ring binds `color.border.insertion`
   (merged from #116), not `color.border.focus`, so the line between rows and the ring onto a row are one color.
 - **Q5 (a).** `space.300`, scaled. Flagged for the second gate: 24 pt per level on the Mac against the pilot's 16; and,
-  measured, at accessibility5 on an iPhone the scaled indent leaves a row at level 2 or deeper little or no room for its
-  words ("Measured").
+  measured, at accessibility5 on an iPhone the scaled indent left a row at level 2 or deeper little or no room for its
+  words, which the review settled by stopping the horizontal metrics at xxxLarge (D2, "Revision after the review").
 - **Q6 (a).** A press tints and does not scale; design-language/05 points here.
 - **Q7 (a).** `color.border.guide`.
 - **Q8 (a).** The level as accessibility custom content.
@@ -379,9 +386,13 @@ only), sets the same value with a chevron in a frame `size.target.minimum` wide;
 with a stand-in. Disclosure itself is #120's.
 
 **How a leaf lines up with a branch.** The row reserves nothing: a leaf among branches that wants its trailing slot in
-the branches' column ends that slot with an empty frame of the chevron cell's width plus the trailing gap, as the
-pilot's leaf rows keep the cell empty. A row in a list of leaves alone, the common case, keeps the room. The catalog's
-`ListRowCellColumn` shows a branch with the stand-in and a leaf beside it, their counts in one column.
+the branches' column ends that slot with an empty frame as wide as the chevron's cell, `size.target.minimum`, and the
+`container.trailingGap` the row puts before the cell, scaled as the row scales it (up to xxxLarge, D2), as the pilot's
+leaf rows keep the cell empty. A row in a list of leaves alone, the common case, keeps the room. The catalog's
+`ListRowCellColumn` shows a branch with the stand-in and a leaf beside it, their counts in one column; its empty cell is
+`ListRowEmptyCell`, package-internal, which reads the row's own scaled gap, and a unit test holds the two counts in one
+column. How a product asks for that frame, a public empty cell or a Disclosure option, is decided with Disclosure
+(#120).
 
 ## What the tools now express
 
@@ -400,55 +411,182 @@ Closed, with tests in `tools/Tests/WestronToolsTests/OwnViewSlotsTests.swift` an
 4. **Marks**: the contract's top-level `marks`, `.insertionMark(_ edge: ListRowInsertionEdge?, level: Int = 0)`, its enum
    generated and its signature held by the lint.
 
-Still open, carried by the contract's description: a binding by size class (5, the guides' width), a case by contrast
-(6, the high-contrast ring), cases over several states (7, from Chip's branch, not used here) and a scaled metric (8,
-the indent's scaling).
+Still open, carried by the contract's description: a binding by size class (5, the guides' width), cases over several
+states (7, from Chip's branch, not used here) and a scaled metric (8, the indent's scaling and where it stops, D2).
+A case by contrast (6) is no longer needed: the bar that replaced the high-contrast ring binds in every theme.
+
+## Revision of Q1 at implementation
+
+Q1 (a) asked for the row's action as a system Button **beside** the slots' controls. What was built nests them: the
+Button's label is the whole row, the leading and trailing slots included, and a control in a slot takes its own press
+because the inner gesture wins over the Button's. To assistive technology the row is an `accessibilityRepresentation`:
+the same layout, with each control in a slot as its own element and the words as one element with the button trait.
+
+Why not beside. The row must be pressable on its whole frame: the padding, the leading slot's surroundings, the room
+past the words (P2). Beside means the Button covers the words only, so a press on the rest of the frame needs a second
+mechanism, a tap gesture on an ancestor; that gesture is not a Button, so it has no pressed state for the press tint,
+no keyboard focus or Space on the Mac, and on iOS it fires together with the control's own tap unless each control is
+excluded by hand. That shape ("approach N" in the working notes) was planned as the fallback and never built: the
+nested shape passed every measurement first. What was tried and broke, inside the nested shape: a system Button inside
+the representation (the representation's words a `Button`) lost `.isSelected` and its frame was the union of its texts,
+20 pt high on iOS, under the target; the combined element replaced it, its frame the words' column at the row's height.
+
+What the code is, and what the contract and P2 now say:
+
+- The drawn row: `Button(action:) { the whole row }` with a package `ButtonStyle` that draws the highlight; hover from
+  `onHover`; disabled from `.disabled(_:)`. A control in a slot is nested in the label and keeps its press.
+- To assistive technology, in order: the leading slot's control, if any, as its own element; then the words (title,
+  second line, the trailing slot's text) as one element, `children: .combine`, with the button trait, `.isSelected`
+  while selected, the level as custom content, and an activate action that runs the row's action, added only while the
+  row is enabled; then the Disclosure chevron's cell. The element's frame is the words' column at the row's height, at
+  least `size.target.minimum` (44 on iOS, 28 on macOS, measured).
+- The shapes: the hit shape and the focus ring's are the whole highlight; the drawn row's accessibility shape is the
+  highlight's too, but the drawn row is not what assistive technology meets: the representation's words' element has
+  its own rectangle, the words' column at the row's height, beside the leading control's element (the first text said
+  "the accessibility shape is the highlight's", which held for the drawn row alone).
+- The static form: the words as one element of text, `.isSelected` while selected, unavailable while disabled, its
+  frame the row's height; no button trait.
+
+Measured for the review (iOS and macOS, "Measured"): (a) the chevron's stand-in takes its own press without running the
+row's action, and is its own element after the row's; (b) a control in the trailing slot, a Button and a check side by
+side (iOS, removed after the measurement): each was listed as its own element, but the trailing slot is combined into the
+words' element, and the row's own element became Switch "PinRow" with the check's value 0, the check's role and value
+taken over; so the trailing slot holds text and decorative content, and a control stands in the leading slot or in the
+chevron's cell (below, "Revision after the review", D1); (c) a press
+held on the leading check, or on the chevron's cell, begins no press of the row's Button, so the row never tints as
+pressed under it, and a press held on the row does; (d) Tab on the Mac reaching the nested check is written as a test,
+`testKeyboardFocusAndSpace`, which skips itself with the Mac's keyboard navigation off, as on this Mac: unmeasured.
+
+## Revision after the review
+
+The coordinating agent's review of the implementation (2026-11-22) decided the following; the contract, its
+description and accessibility text, this decision and the code follow it.
+
+**D1. No control among the words.** The title and the second line are text and decorative content; a control goes to
+the leading slot or, for Disclosure, the chevron's cell. Measured: a `TextField` in the title became part of the row's
+button, read as Button "4" with value "Groceries", and a Toggle in the trailing slot became the row's role. A row being
+renamed is replaced by the product's field, not given a field in its title (the rename sketch above). The trailing slot
+holds text and decorative content too: this keeps the review's "controls go to the side slots" for the leading slot
+only, since the trailing slot is combined into the words' element (measured, b). The contract's accessibility text says
+so. A labelled Icon in the leading slot (`Icon(_:label:)`) is its own element, before the words (G9).
+
+**D2. Large text.** Every horizontal metric stops growing at its xxxLarge value: the indent, `paddingHorizontal`,
+`gap`, `trailingGap`, and the insertion mark's start and end, which read them. `paddingVertical` and `subtitleGap` keep
+scaling, and so does the text. On Apple the four are `@ScaledMetric`s read inside an environment whose
+`dynamicTypeSize` is `min(size, .xxxLarge)`, and the content is given the real size back. This settles G1 and the old
+"Sizes at accessibility5" note; design-language/06 says it in one sentence. The guide's centre is
+`min(slotWidth / 2, indent − container.gap / 2)` past its level's slot start: centred under the slot while the indent
+allows, and never closer than half the gap to the next level's slot (chosen: half `container.gap`, so a guide always
+stands in the middle of the space between its level's slot start and the child's, with a wide slot or a narrow one).
+The supplements lost their accessibility2 cap: every sheet is drawn at accessibility5 too (the tree's without counts,
+so that its five rows fit one iPhone screen there). Measured, iOS, iPhone 17
+width (402 pt), accessibility5, `Icon(.folder)` in the leading slot (72.3 pt wide at that size), no chevron's cell
+(`ListRowTests.wordsColumnAtDepth`):
+
+| Level | The words' column |
+|---|---|
+| 1 | 251 pt |
+| 2 | 219 pt |
+| 3 | 188 pt |
+| 4 | 156 pt |
+
+Each level costs 31.7 pt, the capped indent (24 pt scaled to xxxLarge). The numbers do not call for stacking the
+leading slot above the words: at level 4 the column still holds a short word per line at accessibility5, and a row at
+levels 1 to 3 keeps half the width or more. Not built. The contract's guidance: a product sets the title on one line
+(`lineLimit(1)`) only below the accessibility sizes.
+
+**D3. A bar on a selected row, in every theme.** At the highlight's leading edge, inside it, `stroke.thick` wide, in
+`color.border.focus`, inset vertically by `radius.row`, rounded ends, mirrored right to left. The high-contrast ring on
+selected is gone: a ring means a drop target only. The bold title stays as a second cue, and the bar carries the
+selection where a product sets the title's role. The tint is not the signal: `background.selected` and
+`background.pressed` stand at equal luminance in some themes, which is acceptable with the bar, since a pressed row has
+no bar. Contrast of the bar, 3.02–3.03:1 on `selected` and `pressed` in the standard themes, 4.56–4.57:1 in high
+contrast. Collisions checked: the guides start at least 12 pt in, past the bar; the insertion mark lies over the row's
+edges, which the bar's inset by the radius keeps clear; on a selected row that is also a drop target the bar lies along
+the ring's leading side, `border.focus` beside `border.insertion`, and the two read as one thicker leading edge of the
+ring (the matrix's `selected` supplement, row dropTarget). For the owner at the second gate: this is a visible design change.
+
+**D4. Smaller decisions.**
+
+- The static form announces selected and disabled; its role is `text` in the contract (the tools reject announced
+  states on role `none`), one element, no button trait. A behaviour test measures the live static row.
+- The accessibility representation lays the title out in the drawn font, `body.strong` while selected. With the
+  regular role there, the text clipped audit reported the selected sample's title, which the drawn row shows whole;
+  with the drawn font it reports neither selected sample ("Measured"). The pilot meets the same in its sidebar, whose
+  selected and branch titles are strong: a product that sets the title's role sets it on the title it passes, which the
+  representation lays out as drawn.
+- The insertion mark fades, never travels: two fixed overlays, top and bottom, each fading in and out by its edge and
+  level; it is drawn above the next row (`zIndex`), so a bottom mark is whole over a highlighted neighbour; it is drawn
+  whole beside a disabled row (G7); watchOS draws nothing.
+- The drop ring is drawn above the content.
+- The activate action is added only while the row is enabled; the live Archived row has a counting action, and a press
+  on it counts nothing.
+- "Level" is in `Localizable.xcstrings`; the contract gives the spoken example, a row at level 1 gives "Level, 2".
+- Q2 on macOS: the swipe is a trackpad's gesture that XCUITest cannot make; the claim is narrowed to iOS, and on the Mac
+  a product offers the swipe's actions as context menu items or accessibility actions.
+- The leaf's alignment: the contract's text was off by the trailing gap; the empty frame is the cell's width plus the
+  scaled (capped) trailing gap. The product-facing API is decided with #120.
+- Guides with no leading slot (G5): the slot's width is 0, so `min(0, indent − gap / 2)` puts each guide at its
+  level's slot start.
+- The side slots' text role (G8): both slots are laid out in `body.regular`, so an Icon there sizes from the body's
+  role, not from a title the product set in another role.
+- The IconTile rows of "Sizes" are not verified (IconTile is #118).
+- design-language/02 and 04 list `color.border.guide` and the bar.
+- The catalog shows `guides: false`, as a picker's.
+- The Mac keyboard in a tree (arrows to move, Left and Right to collapse and expand) is an open point for the pilot's
+  tree and Disclosure (#120): ListRow gives Tab and Space through its system Button only.
 
 ## Measured
 
 On 2026-11-22, iOS 26 on the iPhone 17 simulator and macOS 26, in the catalog's `list-row` and `list-row-in-list`
-entries (`ListRowBehaviorTests`, `tools/apple/check.sh behavior ios|macos ListRowBehaviorTests`).
+entries (`ListRowBehaviorTests`, `tools/apple/check.sh behavior ios|macos ListRowBehaviorTests`); remeasured after the
+review.
 
-**The accessibility shape.** The drawn row is a system Button whose label is the whole row, drawn by the row's
-ButtonStyle, so a control in the leading slot is nested in it and takes its own press, the inner gesture winning. What
-assistive technology meets is the row's `accessibilityRepresentation`: the same layout, with the control at the start
-as its own element, the words as one element with the button trait, `.isSelected` while selected, the level as more
-content, and an activate action that is the row's action, then the chevron's cell. A system Button inside the
-representation was tried first and measured wrong: it lost the selected trait, and its frame was the union of its
-texts, 20 pt high on iOS. The combined element replaced it; its frame is the words' column at the row's height, at
-least `size.target.minimum`. XCUITest's hierarchy:
+**The accessibility shape** ("Revision of Q1 at implementation"). XCUITest's hierarchy of the live rows:
 
 | Element | iOS | macOS |
 |---|---|---|
-| Pressable row "Inbox", count 12, selected | Button "Inbox, 12", Selected, 344 × 44 | Button "Inbox, 12", Selected, 670 × 28 |
-| Nested row "Today", level 1 | Button "Today", 321 × 44 | Button "Today", 647 × 28 |
+| Pressable row "Inbox", count 12, selected | Button "Inbox, 12", Selected, 344 × 44 | Button "Inbox, 12", Selected, 670.5 × 28 |
+| Nested row "Today", level 1 | Button "Today", 320.7 × 44 | Button "Today", 647 × 28 |
 | The task's check | Switch "Call the plumber", value 0, 44 × 44 | CheckBox "Call the plumber", value 0, 32 × 32 |
-| The task's row, with a second line | Button "Call the plumber, Tomorrow", 290 × 50, after the check | Button "Call the plumber, Tomorrow", 628 × 43 |
+| The task's row, with a second line | Button "Call the plumber, Tomorrow", 290 × 50, after the check | Button "Call the plumber, Tomorrow", 628 × 43, after the check |
+| A branch "Projects" | Button "Projects", 259 × 44 | Button "Projects", 606.5 × 28 |
+| Its chevron's cell, a stand-in | Button "Collapse", 44 × 44, after the row's | Button "Collapse", 28 × 28, after the row's |
+| A static row "Buy washers", level 1, selected | StaticText "Buy washers", Selected, 320 × 44 | StaticText, value "Buy washers", Selected, 646.5 × 28 |
 | A disabled row | Button "Archived", Disabled | Button "Archived", Disabled |
 | The leading icon | no element | no element |
 
-The words are listed under each button as texts too, as XCUITest lists them under a westron Button; nothing outside
-the button repeats them. The level as more content is not visible to XCUITest; it is read by VoiceOver's "More content"
-rotor, which no test here drives.
+Against the first measurement: the branch and its cell and the static row are new on the page; the static row is one
+element of text at the row's height (first measured at its words' height, 20 pt, and given the row's); the
+rest is as before. The
+words are listed under each button as texts too, as XCUITest lists them under a westron Button; nothing outside the
+button repeats them. The level as more content is not visible to XCUITest; a unit test (`spokenLevel`) holds that it is
+attached, "Level, 2" at level 1 and nothing at level 0, for both forms, and VoiceOver's "More content" rotor reads it.
 
 **Presses.** A press on a row runs its action and chooses it; a press at the row's far end, past its words, and one in
-its bottom padding, run it too: the whole frame is the hit area. A press on the check toggles it and never runs the
-row's action. A disabled row takes no press. iOS and macOS alike.
+its bottom padding, run it too: the whole frame is the hit area. A press on the check toggles it, and one on the
+chevron's cell counts the cell's press; neither runs the row's action. Held for 0.6 s, a press on the check or on the
+cell begins no press of the row's Button (0 presses counted by `listRowPressObserver`, a package hook), so the row
+never tints as pressed under them; held on the row, it begins one. A disabled row takes no press, and its counting
+action stays at 0. iOS and macOS alike.
 
 **In a List** (Q2): the row's action runs, the check in the first row's leading slot keeps its own press, and on iOS the
-List's `.swipeActions` (a destructive Delete) appears on a swipe and runs. Q2 (a) holds. The keyboard: with the Mac's
-keyboard navigation off, as on this Mac, `testKeyboardFocusAndSpace` skips itself, as Chip's and Checkbox's do; it is
-not measured.
+List's `.swipeActions` (a destructive Delete) appears on a swipe and runs. On macOS the swipe is a trackpad's gesture
+XCUITest cannot make: not measured, and the contract promises the List's swipe on iOS only. The keyboard: with the
+Mac's keyboard navigation off, as on this Mac, `testKeyboardFocusAndSpace`, which now also asks Tab to reach the check
+nested in a row, skips itself, as Chip's and Checkbox's do; it is not measured.
 
-**Sizes at accessibility5.** The indent, the padding and the gaps scale with the title's style, about threefold at
-accessibility5 (75 pt a level). On an iPhone, 402 pt wide, a row at level 1 with a leading icon and the chevron's cell
-leaves its words about 25 pt; at level 2 or deeper, none. The generated sheets (level 1, no cell) are drawn at
-accessibility5 with the words wrapped over several lines; the supplements of deeper rows are drawn at accessibility2 at
-most and say so. For the second gate: whether the indent's scaling should stop at an accessibility size, or the indent
-be capped at the leading slot's half width plus a gap (Q5 (c)), is a contract change, not made here.
+**Sizes at accessibility5** (D2): above, "Revision after the review". The words' column of a row at level 4 on an
+iPhone is 156 pt.
 
-**The audit** (`WESTRON_ENTRY=list-row,list-row-in-list tools/apple/check.sh a11y`, iOS): clean but for suppressions
-recorded in `CatalogAccessibilityAuditTests`: contrast on the disabled samples (an inactive row, at `opacity.disabled`
-by the contract), "Text clipped" on the long title the page sets on one line (truncated by the contract, Q3), and
-"Text clipped" on the pressable sample held selected, whose title is whole in the screenshots and the matrix at the
-default size and accessibility5.
+**The audit** (`WESTRON_ENTRY=list-row,list-row-in-list tools/apple/check.sh a11y`, iOS, all five configurations):
+clean but for suppressions recorded in `CatalogAccessibilityAuditTests`, each matched by its label: contrast on the
+disabled samples and the live Archived row (an inactive row, at `opacity.disabled` by the contract), contrast on an
+element under the status bar (the harness's own, for every entry), and "Text clipped" on the long title the page sets
+on one line (truncated by the contract, Q3). The selected samples are no longer reported: with the representation's
+title in the drawn font (D4) neither the pressable nor the static one is, so the earlier suppression of "pressable,
+selected" was removed. With every sheet at accessibility5, the page at that size is 17 screenfuls; the contrast audit
+gave up ("Audit failed to complete in time") on every try at the 14th, over the drag samples, and completed in a third
+of a second with the page 30 pt before or 60 pt past that position. The harness now tries such a screenful a third time
+with the page moved on by a tenth of the screen, which the overlap of the screenfuls covers; it did, and the audit
+passed.

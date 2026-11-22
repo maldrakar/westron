@@ -91,7 +91,7 @@
         "$extensions": {
           "dev.westron.usage": {
             "use": ["selected row", "selected item"],
-            "avoid": "Color alone: in high contrast a selected row also shows a check or a border.focus outline."
+            "avoid": "Color alone: a selected row also shows a mark that is not a color, in every theme, such as a check or ListRow's border.focus bar at its leading edge."
           }
         }
       },
@@ -308,7 +308,7 @@
       },
       "focus": {
         "$value": "{color.blue.8}",
-        "$description": "The focus ring, and the outline of a selected item in high contrast.",
+        "$description": "The focus ring, and the bar or outline that marks a selected item, such as a selected ListRow's bar.",
         "$extensions": {
           "dev.westron.contrast": [
             {

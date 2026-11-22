@@ -32,9 +32,12 @@ extension CatalogEntry {
 enum ListRowCatalogID {
     /// The check at the start of the live task's row.
     static let check = "list-row.live.check"
-    /// The text that says which live row is selected, how often a row's action ran and whether the task is done:
-    /// "selected: inbox; actions: 0; done: no".
+    /// The text that says which live row is selected, how often a row's action ran, whether the task is done, how often
+    /// the branch's chevron cell was pressed and how many presses a row's system Button began:
+    /// "selected: inbox; actions: 0; done: no; cell: 0; presses: 0".
     static let summary = "list-row.live.summary"
+    /// The live branch's chevron cell, a stand-in.
+    static let cell = "list-row.live.cell"
     /// The check at the start of the first row in the List.
     static let listCheck = "list-row.list.check"
     /// The List page's summary: "actions: 0; done: no; deleted: none".
@@ -93,9 +96,10 @@ struct ListRowSampleRow: View {
     }
 }
 
-/// A tree of levels 0 to 3, with guides, the second row selected.
+/// A tree of levels 0 to 3, with guides, the second row selected; with or without a count in each trailing slot.
 struct ListRowTree: View {
     var guides = true
+    var counts = true
 
     var body: some View {
         VStack(spacing: 0) {
@@ -106,9 +110,11 @@ struct ListRowTree: View {
                 } leading: {
                     Icon(level == 0 ? .briefcase : .folder)
                 } trailing: {
-                    Text(verbatim: "\(index + 2)")
-                        .textRole(.subheadline.regular)
-                        .foregroundStyle(.text.secondary)
+                    if counts {
+                        Text(verbatim: "\(index + 2)")
+                            .textRole(.subheadline.regular)
+                            .foregroundStyle(.text.secondary)
+                    }
                 }
                 .selected(index == 1)
             }
@@ -119,8 +125,11 @@ struct ListRowTree: View {
 /// The Disclosure chevron's cell, a stand-in until Disclosure exists (#120): a chevron in a frame
 /// size.target.minimum across, its own button.
 struct ListRowCellStandIn: View {
+    var action: () -> Void = {}
+
     var body: some View {
         Button {
+            action()
         } label: {
             Icon(.chevron)
                 .frame(minWidth: .size.target.minimum, minHeight: .size.target.minimum)
@@ -152,14 +161,15 @@ struct ListRowCellColumn: View {
                 HStack(spacing: 0) {
                     Text(verbatim: "7").textRole(.subheadline.regular).foregroundStyle(.text.secondary)
                     // The leaf's empty cell: the chevron cell's width, after the trailing gap the row puts before it.
-                    Color.clear.frame(width: .space100 + .size.target.minimum, height: 0)
+                    ListRowEmptyCell()
                 }
             }
         }
     }
 }
 
-/// Rows with the insertion mark over the top edge at level 0 and over the bottom edge at level 2, and a drop target.
+/// Rows with the insertion mark over the top edge at level 0 and over the bottom edge at level 2, the row under that
+/// mark selected and not a drop target, so that its highlight shows the mark drawn above it, and a drop target.
 struct ListRowDragSamples: View {
     var guides = true
 
@@ -169,6 +179,8 @@ struct ListRowDragSamples: View {
                 .insertionMark(.top, level: 0)
             ListRowSampleRow(level: 1, guides: guides, title: "Garden", subtitle: nil)
                 .insertionMark(.bottom, level: 2)
+            ListRowSampleRow(level: 1, guides: guides, title: "Seeds", subtitle: nil)
+                .selected(true)
             ListRowSampleRow(level: 1, guides: guides, title: "Errands", subtitle: nil)
                 .dropTarget(true)
         }
@@ -179,15 +191,17 @@ private struct ListRowPage: View {
     @State private var chosen = "inbox"
     @State private var actions = 0
     @State private var done = false
+    @State private var cellPresses = 0
+    @State private var presses = 0
 
     var body: some View {
         TokenPage(
             title: "ListRow",
             summary: "ListRow(level:guides:action:) { title } subtitle: leading: trailing:, an own view: a title, a "
                 + "second line, a leading and a trailing slot, indented by space.300 per level with guides in "
-                + "border.guide; a highlight at radius.row, hover, pressed, selected (body.strong, a ring in high "
-                + "contrast) and a drop target (accent-subtle, an insertion ring). .selected(_:), .dropTarget(_:), "
-                + ".insertionMark(_:level:)."
+                + "border.guide; a highlight at radius.row, hover, pressed, selected (a border.focus bar at its "
+                + "leading edge, body.strong) and a drop target (accent-subtle, an insertion ring). .selected(_:), "
+                + ".dropTarget(_:), .insertionMark(_:level:)."
         ) {
             section("Pressable, in each state") {
                 states(.pressable)
@@ -197,6 +211,9 @@ private struct ListRowPage: View {
             }
             section("Levels and guides") {
                 ListRowTree()
+            }
+            section("Levels without guides (guides: false), as a picker's") {
+                ListRowTree(guides: false)
             }
             section("Drag and drop: the insertion mark and a drop target") {
                 ListRowDragSamples()
@@ -240,17 +257,39 @@ private struct ListRowPage: View {
                             .accessibilityIdentifier(ListRowCatalogID.check)
                     }
                     .selected(chosen == "task")
-                    ListRow(action: {}) {
+                    ListRow(action: { choose("projects") }) {
+                        Text(verbatim: "Projects")
+                    } leading: {
+                        Icon(.folder)
+                    }
+                    .selected(chosen == "projects")
+                    .listRowDisclosureCell {
+                        ListRowCellStandIn { cellPresses += 1 }
+                            .accessibilityIdentifier(ListRowCatalogID.cell)
+                    }
+                    ListRow(level: 1) {
+                        Text(verbatim: "Buy washers")
+                    } leading: {
+                        Icon(.note)
+                    }
+                    .selected(true)
+                    ListRow(action: { choose("archived") }) {
                         Text(verbatim: "Archived")
                     } leading: {
                         Icon(.logbook)
                     }
                     .disabled(true)
                 }
-                Text(verbatim: "selected: \(chosen); actions: \(actions); done: \(done ? "yes" : "no")")
-                    .textRole(.footnote.regular)
-                    .foregroundStyle(.text.secondary)
-                    .accessibilityIdentifier(ListRowCatalogID.summary)
+                .listRowPressObserver { pressed in
+                    if pressed { presses += 1 }
+                }
+                Text(
+                    verbatim: "selected: \(chosen); actions: \(actions); done: \(done ? "yes" : "no"); "
+                        + "cell: \(cellPresses); presses: \(presses)"
+                )
+                .textRole(.footnote.regular)
+                .foregroundStyle(.text.secondary)
+                .accessibilityIdentifier(ListRowCatalogID.summary)
             }
         }
     }
@@ -347,17 +386,6 @@ struct ListRowMatrixCell: View {
     }
 }
 
-/// The largest text size the supplements of rows at level 2 and deeper are drawn at. At accessibility5 an iPhone's
-/// width leaves such a row no room for its words: the indent, the padding and the gaps scale with the text, about
-/// threefold, 75 pt a level (decisions/0001, "Measured", open for the second gate). The generated sheets and the
-/// accessibility5 supplement draw accessibility5 itself.
-private let listRowDeepestTextSize = DynamicTypeSize.accessibility2
-
-/// The note a capped supplement adds.
-private let listRowCappedNote =
-    " At the accessibility sizes drawn at accessibility2 at most: at accessibility5 an iPhone leaves a row at level 2 "
-    + "or deeper no room for its words (decisions/0001, \"Measured\")."
-
 extension ComponentMatrix.Supplement {
     /// The state of a supplement's cell.
     fileprivate static func state(_ combination: ComponentMatrix.Combination) -> ListRowCatalogState? {
@@ -369,32 +397,39 @@ extension ComponentMatrix.Supplement {
         ListRowMatrixValues(combination).fields.guides
     }
 
-    /// A selected row in each state of the pressable form: selected with pressed, with disabled, and in the
-    /// high-contrast themes its ring, which the generated sheets, each state alone, do not draw.
+    /// A selected row in each state of the pressable form: selected with pressed, with disabled and with a drop onto
+    /// it, which the generated sheets, each state alone, do not draw; and a title whose role the product set.
     static let listRowSelected = ComponentMatrix.Supplement(
         component: "list-row", id: "selected", title: "selected, in each state",
         note: "The row is selected, and in the row's state too: pressed draws pressed over selected, disabled dims "
-            + "the selected highlight, and in the high-contrast themes a selected row draws border.focus at "
-            + "stroke.thick inside its highlight.",
-        keeps: ["form": "pressable"]
+            + "the selected highlight, a drop target draws its ring. In every theme a selected row draws a "
+            + "border.focus bar at stroke.thick at its highlight's leading edge; the second row's title sets its own "
+            + "role, callout.regular, so only the bar and the tint show the selection.",
+        keeps: ["form": "pressable"], rowsPerPicture: 3, splitsAtEverySize: true
     ) { combination in
-        ListRowSampleRow(level: 1, guides: guides(combination))
-            .listRowCatalogState(state(combination))
-            .selected(true)
-            .matrixCellTakesOfferedWidth()
+        VStack(spacing: 0) {
+            ListRowSampleRow(level: 1, guides: guides(combination))
+            ListRow(level: 1, guides: guides(combination), action: {}) {
+                Text(verbatim: "Own role").textRole(.callout.regular)
+            } leading: {
+                Icon(.folder)
+            }
+        }
+        .listRowCatalogState(state(combination))
+        .selected(true)
+        .matrixCellTakesOfferedWidth()
     }
 
     /// A tree of levels 0 to 3 with its guides, one row selected (the level is a quantity, not an axis).
     static let listRowTree = ComponentMatrix.Supplement(
         component: "list-row", id: "tree", title: "a tree of levels 0 to 3",
         note: "Five rows at levels 0, 1, 2, 3 and 0, the second selected: each indented by container.indent per "
-            + "level, one guide per ancestor level under that level's leading slot, joining into lines."
-            + listRowCappedNote,
+            + "level, one guide per ancestor level under that level's leading slot, joining into lines. No counts, so "
+            + "that the tree is one screen high at accessibility5, where a count stands under the title.",
         keeps: ["form": "pressable"], rowsPerPicture: 2, splitsAtEverySize: true
     ) { combination in
-        ListRowTree(guides: guides(combination))
+        ListRowTree(guides: guides(combination), counts: false)
             .listRowCatalogState(state(combination))
-            .dynamicTypeSize(...listRowDeepestTextSize)
             .matrixCellTakesOfferedWidth()
     }
 
@@ -402,8 +437,7 @@ extension ComponentMatrix.Supplement {
     static let listRowSlots = ComponentMatrix.Supplement(
         component: "list-row", id: "slots", title: "the slots",
         note: "Title alone; leading and title; title and second line; all four, and the Disclosure chevron's cell "
-            + "(a stand-in until #120) after the trailing slot."
-            + listRowCappedNote,
+            + "(a stand-in until #120) after the trailing slot.",
         keeps: ["form": "pressable"], rowsPerPicture: 2, splitsAtEverySize: true, columnsPerPicture: 1
     ) { combination in
         VStack(spacing: 0) {
@@ -422,7 +456,6 @@ extension ComponentMatrix.Supplement {
                 .listRowDisclosureCell { ListRowCellStandIn() }
         }
         .listRowCatalogState(state(combination))
-        .dynamicTypeSize(...listRowDeepestTextSize)
         .matrixCellTakesOfferedWidth()
     }
 
@@ -430,8 +463,7 @@ extension ComponentMatrix.Supplement {
     static let listRowTask = ComponentMatrix.Supplement(
         component: "list-row", id: "task", title: "a task's row",
         note: "Static: a Checkbox with no drawn label at the start, its hit area standing in the row's padding, a "
-            + "title that wraps, and the meta line under it."
-            + listRowCappedNote,
+            + "title that wraps, and the meta line under it.",
         keeps: ["form": "static"], rowsPerPicture: 2, splitsAtEverySize: true
     ) { combination in
         ListRow(level: 1, guides: guides(combination)) {
@@ -442,7 +474,6 @@ extension ComponentMatrix.Supplement {
             Toggle(isOn: .constant(false), accessibilityLabel: "Call the plumber").toggleStyle(.check)
         }
         .listRowCatalogState(state(combination))
-        .dynamicTypeSize(...listRowDeepestTextSize)
         .matrixCellTakesOfferedWidth()
     }
 
@@ -450,8 +481,7 @@ extension ComponentMatrix.Supplement {
     static let listRowLongTitle = ComponentMatrix.Supplement(
         component: "list-row", id: "long-title", title: "a long title at level 4",
         note: "The product sets one line; the row is given less width than the title needs at level 4: the indent and "
-            + "the slots keep their size, the title truncates at its end with an ellipsis."
-            + listRowCappedNote,
+            + "the slots keep their size, the title truncates at its end with an ellipsis.",
         keeps: ["form": "pressable"]
     ) { combination in
         ListRow(level: 4, guides: guides(combination), action: {}) {
@@ -462,7 +492,6 @@ extension ComponentMatrix.Supplement {
             Text(verbatim: ListRowSample.count).textRole(.subheadline.regular).foregroundStyle(.text.secondary)
         }
         .listRowCatalogState(state(combination))
-        .dynamicTypeSize(...listRowDeepestTextSize)
         .matrixCellTakesOfferedWidth()
     }
 
@@ -485,15 +514,14 @@ extension ComponentMatrix.Supplement {
     /// The insertion mark and a drop target.
     static let listRowDrag = ComponentMatrix.Supplement(
         component: "list-row", id: "drag", title: "the insertion mark and a drop target",
-        note: "Three rows: Rule(purpose: .insertion) over the first row's top edge at level 0, over the second's "
-            + "bottom edge at level 2, and the third a drop target. The mark is no state: .insertionMark(_:level:)."
-            + listRowCappedNote,
+        note: "Four rows: Rule(purpose: .insertion) over the first row's top edge at level 0, over the second's "
+            + "bottom edge at level 2, drawn above the third row's selected highlight, and the fourth a drop target. "
+            + "The mark is no state: .insertionMark(_:level:).",
         keeps: ["form": "pressable"], rowsPerPicture: 2, splitsAtEverySize: true
     ) { combination in
         ListRowDragSamples(guides: guides(combination))
             .listRowCatalogState(state(combination))
             .padding(.vertical, .space50)
-            .dynamicTypeSize(...listRowDeepestTextSize)
             .matrixCellTakesOfferedWidth()
     }
 
@@ -501,8 +529,7 @@ extension ComponentMatrix.Supplement {
     static let listRowRightToLeft = ComponentMatrix.Supplement(
         component: "list-row", id: "right-to-left", title: "right to left",
         note: "The row mirrors: the leading slot and the indent from the right, the guides under it, the trailing slot "
-            + "and the chevron's cell (a stand-in) at the left."
-            + listRowCappedNote,
+            + "and the chevron's cell (a stand-in) at the left.",
         keeps: ["form": "pressable"], rowsPerPicture: 2, splitsAtEverySize: true, columnsPerPicture: 1
     ) { combination in
         VStack(spacing: 0) {
@@ -512,7 +539,6 @@ extension ComponentMatrix.Supplement {
         }
         .listRowCatalogState(state(combination))
         .environment(\.layoutDirection, .rightToLeft)
-        .dynamicTypeSize(...listRowDeepestTextSize)
         .matrixCellTakesOfferedWidth()
     }
 

@@ -2,9 +2,10 @@ import XCTest
 
 /// ListRow's behaviour that a unit test cannot reach, on the catalog's `list-row` and `list-row-in-list` entries: what
 /// assistive technology meets (the pressable row a button named by its words, selected or not, unavailable when
-/// disabled; the check at the start its own element), a press anywhere on the row that runs its action, a press on the
-/// check that toggles it and not the row, a row inside a system `List` with its swipe actions, and keyboard focus and
-/// Space on macOS (decisions/0001, Q2 and "Measured").
+/// disabled; the static row one text element, selected; the check at the start and the chevron's cell their own
+/// elements), a press anywhere on the row that runs its action, a press on the check or on the chevron's cell that
+/// neither runs nor presses the row, a row inside a system `List` with its swipe actions, and keyboard focus and Space
+/// on macOS (decisions/0001, Q2, "Revision of Q1 at implementation" and "Measured").
 ///
 /// Each entry says what its rows did in a text, `ListRowCatalogID.summary` and `ListRowCatalogID.listSummary` in
 /// WestronCatalog.
@@ -12,6 +13,7 @@ final class ListRowBehaviorTests: XCTestCase {
     /// Must match `ListRowCatalogID` in WestronCatalog.
     private enum ID {
         static let check = "list-row.live.check"
+        static let cell = "list-row.live.cell"
         static let summary = "list-row.live.summary"
         static let listCheck = "list-row.list.check"
         static let listSummary = "list-row.list.summary"
@@ -42,6 +44,20 @@ final class ListRowBehaviorTests: XCTestCase {
     private func text(_ id: String) -> String {
         let text = app.staticTexts[id]
         return text.label.isEmpty ? (text.value as? String ?? "") : text.label
+    }
+
+    /// The live summary without its count of presses: "selected: inbox; actions: 0; done: no; cell: 0".
+    @MainActor
+    private func state() -> String {
+        let summary = text(ID.summary)
+        return summary.range(of: "; presses: ").map { String(summary[..<$0.lowerBound]) } ?? summary
+    }
+
+    /// How many presses the live rows' system Buttons began.
+    @MainActor
+    private func presses() -> Int {
+        let summary = text(ID.summary)
+        return summary.range(of: "; presses: ").flatMap { Int(summary[$0.upperBound...]) } ?? -1
     }
 
     /// The check of a task's row: a switch on iOS, a checkbox on macOS (`CheckboxBehaviorTests`).
@@ -88,6 +104,12 @@ final class ListRowBehaviorTests: XCTestCase {
         #endif
     }
 
+    /// Holds a press on the element long enough for a system Button under it to report its press.
+    @MainActor
+    private func hold(_ element: XCUIElement) {
+        element.press(forDuration: 0.6)
+    }
+
     @MainActor
     private func press(_ coordinate: XCUICoordinate) {
         #if os(macOS)
@@ -121,8 +143,9 @@ final class ListRowBehaviorTests: XCTestCase {
 
     /// The pressable row is a button named by its title, its second line and the words of its trailing slot, in that
     /// order; the chosen row is announced as selected; a disabled row as unavailable. The check at the start is its own
-    /// element before the row's, keeping its role, value and name, and the row's leading icon is no element. The
-    /// hierarchy measured is printed and attached.
+    /// element before the row's, keeping its role, value and name, the chevron's cell its own element after it, and
+    /// the row's leading icon is no element. The static row is one element of text, no button, announced as selected.
+    /// The hierarchy measured is printed and attached.
     @MainActor
     func testAssistiveTechnologyMeetsTheRow() {
         launch()
@@ -130,7 +153,9 @@ final class ListRowBehaviorTests: XCTestCase {
         hierarchy.name = "list-row-hierarchy"
         // The live rows' part of the hierarchy, in the log for the report.
         for text in app.debugDescription.split(separator: "\n")
-        where ["Inbox", "Today", "plumber", "Archived", "Tomorrow"].contains(where: text.contains) {
+        where ["Inbox", "Today", "plumber", "Archived", "Tomorrow", "Projects", "Collapse", "washers"].contains(
+            where: text.contains)
+        {
             print("list-row: hierarchy: \(text.trimmingCharacters(in: .whitespaces))")
         }
         hierarchy.lifetime = .keepAlways
@@ -170,6 +195,25 @@ final class ListRowBehaviorTests: XCTestCase {
         // Of the live rows, the chosen one alone is announced as selected; the check is not.
         XCTAssertFalse(task.isSelected)
         XCTAssertFalse(archived.isSelected)
+        // The branch's chevron cell, a stand-in, is its own button after the row's.
+        let projects = row("Projects")
+        let cell = app.buttons[ID.cell]
+        print(line("projects", projects))
+        print(line("cell", cell))
+        XCTAssertEqual(projects.label, "Projects")
+        XCTAssertEqual(cell.label, "Collapse")
+        XCTAssertGreaterThanOrEqual(cell.frame.minX, projects.frame.maxX - 0.5, "the cell is not after the row's words")
+        // The static row: one element of its words, no button, announced as selected.
+        // A text's string is its label on iOS and its value on macOS.
+        let washers = app.staticTexts.matching(
+            NSPredicate(format: "label == %@ OR value == %@", "Buy washers", "Buy washers"))
+        XCTAssertEqual(washers.count, 1, "the static row's words are not one element")
+        XCTAssertEqual(
+            app.buttons.matching(NSPredicate(format: "label == %@", "Buy washers")).count, 0,
+            "the static row is announced as a button")
+        let still = washers.firstMatch
+        print(line("static", still))
+        XCTAssertTrue(still.isSelected, "the selected static row is not announced as selected")
     }
 
     /// A press on a row runs its action and chooses it; a press on the check at its start toggles the check and leaves
@@ -177,11 +221,11 @@ final class ListRowBehaviorTests: XCTestCase {
     @MainActor
     func testRowActionAndTheCheckKeepsItsPress() {
         launch()
-        XCTAssertEqual(text(ID.summary), "selected: inbox; actions: 0; done: no")
+        XCTAssertEqual(state(), "selected: inbox; actions: 0; done: no; cell: 0")
         let today = row("Today")
         reveal(today)
         press(today)
-        XCTAssertEqual(text(ID.summary), "selected: today; actions: 1; done: no")
+        XCTAssertEqual(state(), "selected: today; actions: 1; done: no; cell: 0")
         XCTAssertTrue(row("Today").isSelected, "the chosen row is not announced as selected")
         let done = check(ID.check)
         reveal(done)
@@ -189,12 +233,50 @@ final class ListRowBehaviorTests: XCTestCase {
             Thread.sleep(forTimeInterval: NSEvent.doubleClickInterval)
         #endif
         press(done)
-        XCTAssertEqual(text(ID.summary), "selected: today; actions: 1; done: yes", "the check's press ran the row")
-        // The disabled row takes no press.
+        XCTAssertEqual(state(), "selected: today; actions: 1; done: yes; cell: 0", "the check's press ran the row")
+        // The disabled row takes no press, though its action counts.
         let archived = row("Archived")
         reveal(archived)
         press(archived.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)))
-        XCTAssertEqual(text(ID.summary), "selected: today; actions: 1; done: yes", "the disabled row ran its action")
+        XCTAssertEqual(state(), "selected: today; actions: 1; done: yes; cell: 0", "the disabled row ran its action")
+    }
+
+    /// The chevron's cell, a stand-in, takes its own press: it never runs the row's action.
+    @MainActor
+    func testChevronCellKeepsItsPress() {
+        launch()
+        let cell = app.buttons[ID.cell]
+        XCTAssertTrue(cell.waitForExistence(timeout: 5))
+        reveal(cell)
+        press(cell)
+        XCTAssertEqual(state(), "selected: inbox; actions: 0; done: no; cell: 1", "the cell's press ran the row")
+        // The row beside it still runs its action.
+        press(row("Projects"))
+        XCTAssertEqual(state(), "selected: projects; actions: 1; done: no; cell: 1")
+    }
+
+    /// A press held on the check at the start never presses the row: the row's system Button begins no press, so the
+    /// row does not tint as pressed; a press held on the row does. The counts of begun presses are printed.
+    @MainActor
+    func testPressOnTheCheckDoesNotPressTheRow() {
+        launch()
+        let done = check(ID.check)
+        reveal(done)
+        let before = presses()
+        hold(done)
+        print("list-row: presses after holding the check: \(presses() - before)")
+        XCTAssertEqual(presses(), before, "a press on the check pressed the row")
+        XCTAssertEqual(state(), "selected: inbox; actions: 0; done: yes; cell: 0")
+        let cell = app.buttons[ID.cell]
+        reveal(cell)
+        hold(cell)
+        print("list-row: presses after holding the cell: \(presses() - before)")
+        XCTAssertEqual(presses(), before, "a press on the chevron's cell pressed the row")
+        let today = row("Today")
+        reveal(today)
+        hold(today)
+        print("list-row: presses after holding the row: \(presses() - before)")
+        XCTAssertGreaterThan(presses(), before, "a press held on the row began no press: the measure is blind")
     }
 
     /// The row's whole frame is its hit area: a press at the row's far end, past its words and its trailing slot, where
@@ -212,7 +294,7 @@ final class ListRowBehaviorTests: XCTestCase {
         let end = app.windows.firstMatch.coordinate(withNormalizedOffset: .zero).withOffset(
             CGVector(dx: today.frame.maxX - 4 - window.minX, dy: today.frame.midY - window.minY))
         press(end)
-        XCTAssertEqual(text(ID.summary), "selected: today; actions: 1; done: no", "a press at the row's end missed it")
+        XCTAssertEqual(state(), "selected: today; actions: 1; done: no; cell: 0", "a press at the row's end missed it")
         // Below the words, inside the row's padding: the row's frame is at least the platform's target high.
         #if os(macOS)
             let target: CGFloat = 28
@@ -226,11 +308,12 @@ final class ListRowBehaviorTests: XCTestCase {
         let low = app.windows.firstMatch.coordinate(withNormalizedOffset: .zero).withOffset(
             CGVector(dx: today.frame.maxX - 4 - window.minX, dy: today.frame.minY - 3 - window.minY))
         press(low)
-        XCTAssertEqual(text(ID.summary), "selected: inbox; actions: 2; done: no", "a press low in the row missed it")
+        XCTAssertEqual(state(), "selected: inbox; actions: 2; done: no; cell: 0", "a press low in the row missed it")
     }
 
-    /// Rows in a system List: a row's action runs, the check at the start of the first keeps its own press, and the
-    /// List's swipe action deletes a row (decisions/0001, Q2: promised inside a List on this measurement).
+    /// Rows in a system List: a row's action runs, the check at the start of the first keeps its own press, and on iOS
+    /// the List's swipe action deletes a row (decisions/0001, Q2: promised inside a List on this measurement). On macOS
+    /// the swipe is a trackpad's gesture, which XCUITest cannot make; it is not measured there.
     @MainActor
     func testRowsInAList() {
         launch("list-row-in-list", summary: ID.listSummary)
@@ -264,8 +347,9 @@ final class ListRowBehaviorTests: XCTestCase {
         element.value(forKey: "hasKeyboardFocus") as? Bool ?? false
     }
 
-    /// macOS, with the system's keyboard navigation on: Tab reaches a row's action and Space runs it, as the system's
-    /// buttons are; skipped with the setting off, as `ChipBehaviorTests.testKeyboardFocusAndSpace` is.
+    /// macOS, with the system's keyboard navigation on: Tab reaches a row's action and the check nested in a row, and
+    /// Space runs the row, as the system's buttons are; skipped with the setting off, as
+    /// `ChipBehaviorTests.testKeyboardFocusAndSpace` is.
     @MainActor
     func testKeyboardFocusAndSpace() throws {
         #if os(macOS)
@@ -274,6 +358,17 @@ final class ListRowBehaviorTests: XCTestCase {
             }
             launch()
             app.windows.firstMatch.click()
+            // The check nested in the task's row is reached as its own control.
+            let done = check(ID.check)
+            var reachedCheck = false
+            for _ in 0..<80 {
+                app.typeKey(.tab, modifierFlags: [])
+                if hasFocus(done) {
+                    reachedCheck = true
+                    break
+                }
+            }
+            XCTAssertTrue(reachedCheck, "Tab never moved the keyboard focus to the check nested in the row")
             let today = row("Today")
             var reached = false
             for _ in 0..<80 {
@@ -289,7 +384,7 @@ final class ListRowBehaviorTests: XCTestCase {
             ring.lifetime = .keepAlways
             add(ring)
             app.typeKey(" ", modifierFlags: [])
-            XCTAssertEqual(text(ID.summary), "selected: today; actions: 1; done: no", "Space did not run the row")
+            XCTAssertEqual(state(), "selected: today; actions: 1; done: no; cell: 0", "Space did not run the row")
         #else
             throw XCTSkip("keyboard focus is measured on macOS")
         #endif

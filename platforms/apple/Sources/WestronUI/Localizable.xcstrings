@@ -1,6 +1,18 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Level" : {
+      "comment" : "The nesting level of a row in a tree, as more content.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Level"
+          }
+        }
+      }
+    },
     "Loading" : {
       "comment" : "A button's state while its action runs: its accessibility value, read after its label.",
       "extractionState" : "manual",

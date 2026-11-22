@@ -123,8 +123,8 @@ extension Westron.Color {
 
         /// A selected row or item, tinted with the accent.
         ///
-        /// Use for: selected row, selected item. Avoid: Color alone: in high contrast a selected row also shows a check
-        /// or a border.focus outline.
+        /// Use for: selected row, selected item. Avoid: Color alone: a selected row also shows a mark that is not a
+        /// color, in every theme, such as a check or ListRow's border.focus bar at its leading edge.
         public static let selected = Westron.Color(
             name: "color.background.selected",
             light: Westron.RGB(hex: 0xDDEAFF),
@@ -340,7 +340,7 @@ extension Westron.Color {
                 ["color.background.selected"],
             ])
 
-        /// The focus ring, and the outline of a selected item in high contrast.
+        /// The focus ring, and the bar or outline that marks a selected item, such as a selected ListRow's bar.
         public static let focus = Westron.Color(
             name: "color.border.focus",
             light: Westron.RGB(hex: 0x5283E1),
