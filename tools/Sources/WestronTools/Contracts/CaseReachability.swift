@@ -15,11 +15,28 @@
 /// value counts of the named options times the number of cases, whatever the number of states: Button's
 /// `container.background` names variant (3 values) and role (2), 6 combinations. Past `limit` combinations the check
 /// reports the binding instead of checking it.
+///
+/// A case may instead require several states at once (`state: {all: [checked, pressed]}`): it matches only when the
+/// component is in every one of them. The shortcut above does not hold for such a case, so a binding with one is
+/// checked by enumeration: every combination of option values with every set of the states its cases name, 2ⁿ sets
+/// for n states (Chip's `container.background` names four states and no option: 16 sets). The count it enumerates is
+/// the option combinations times 2ⁿ, held to the same `limit`, past which the binding is reported instead; with 20
+/// states named it is past the limit even with no option.
 struct CaseReachability {
-    /// One case's `when`: by option, the values it accepts; the states it names, or nil when it names none.
+    /// One case's `when`: by option, the values it accepts; the states it names, any of which matches, or nil when it
+    /// names none; the states it requires all at once, or nil.
     struct Case: Equatable {
         let options: [String: Set<String>]
         let states: Set<String>?
+        var allStates: Set<String>? = nil
+    }
+
+    /// Whether some case requires several states at once, so that sets of states are enumerated.
+    private var enumeratesStates: Bool { cases.contains { $0.allStates != nil } }
+
+    /// Every state the cases name, sorted.
+    private var namedStates: [String] {
+        Array(Set(cases.flatMap { ($0.states ?? []).union($0.allStates ?? []) })).sorted()
     }
 
     /// The cases, in order. Each names options of `domains` with values from them, and none with an empty list.
@@ -37,7 +54,7 @@ struct CaseReachability {
     }
 
     /// How many combinations of option values the check enumerates; `Int.max` past the range of `Int`.
-    var combinations: Int {
+    var optionCombinations: Int {
         var count = 1
         for option in options {
             let (product, overflow) = count.multipliedReportingOverflow(by: domains[option]?.count ?? 0)
@@ -46,6 +63,20 @@ struct CaseReachability {
         }
         return count
     }
+
+    /// How many combinations the check enumerates: of option values, and with a case that requires several states at
+    /// once, times every set of the named states; `Int.max` past the range of `Int`.
+    var combinations: Int {
+        let count = optionCombinations
+        guard enumeratesStates else { return count }
+        let states = namedStates.count
+        guard states < Int.bitWidth - 1 else { return .max }
+        let (product, overflow) = count.multipliedReportingOverflow(by: 1 << states)
+        return overflow ? .max : product
+    }
+
+    /// Whether the check counts sets of states among its combinations, for a message.
+    var countsStates: Bool { enumeratesStates }
 
     /// A set of states as bits, one per state the cases name.
     private struct States: Equatable {
@@ -77,7 +108,7 @@ struct CaseReachability {
         let options = self.options
         let named = Array(Set(all.compactMap(\.states).flatMap { $0 })).sorted()
         let stateIndex = Dictionary(uniqueKeysWithValues: named.enumerated().map { ($0.element, $0.offset) })
-        let total = combinations
+        let total = optionCombinations
         let sizes = options.map { domains[$0]!.count }
         // By case and option, which value indices it accepts; nil: every value.
         let accepts: [[[Bool]?]] = all.map { item in
@@ -153,6 +184,7 @@ struct CaseReachability {
     func check() -> (unreachable: [(position: Int, coveredBy: [Int])], coverAll: [Int]?)? {
         guard combinations <= Self.limit else { return nil }
         guard combinations > 0 else { return ([], nil) }
+        if enumeratesStates { return checkByEnumeration() }
         // One more case at the end that matches everything: the binding's `token`.
         let compiled = compile([Case(options: [:], states: nil)])
         // Which cases are reached, in one pass per combination: the earlier matches either take every set of states
@@ -175,6 +207,59 @@ struct CaseReachability {
             (position, Self.cover(position, reachable: reachable.filter { $0 < position }, in: compiled))
         }
         let coverAll = reached[cases.count] ? nil : Self.cover(cases.count, reachable: reachable, in: compiled)
+        return (unreachable, coverAll)
+    }
+
+    /// The check of a binding with a case that requires several states at once: every combination of option values
+    /// with every set of the named states, each a point that a case matches or not, the first match taking it.
+    private func checkByEnumeration() -> (unreachable: [(position: Int, coveredBy: [Int])], coverAll: [Int]?) {
+        let all = cases + [Case(options: [:], states: nil)]
+        let compiled = compile([Case(options: [:], states: nil)])
+        let named = namedStates
+        let sets = 1 << named.count
+        // By case, the sets of states it matches, as bit masks over `named`.
+        func mask(_ states: Set<String>) -> Int {
+            named.enumerated().reduce(0) { $0 | (states.contains($1.element) ? 1 << $1.offset : 0) }
+        }
+        let anyMasks = all.map { $0.states.map(mask) }
+        let allMasks = all.map { $0.allStates.map(mask) }
+        func matches(_ index: Int, _ combination: Int, _ set: Int) -> Bool {
+            guard compiled.matches[index][combination] else { return false }
+            if let any = anyMasks[index], set & any == 0 { return false }
+            if let every = allMasks[index], set & every != every { return false }
+            return true
+        }
+        // The points each case matches.
+        let points: [[(Int, Int)]] = all.indices.map { index in
+            (0..<compiled.combinations).flatMap { combination in
+                (0..<sets).filter { matches(index, combination, $0) }.map { (combination, $0) }
+            }
+        }
+        var reached = [Bool](repeating: false, count: all.count)
+        for combination in 0..<compiled.combinations {
+            for set in 0..<sets {
+                if let first = all.indices.first(where: { matches($0, combination, set) }) { reached[first] = true }
+            }
+        }
+        func isCovered(_ target: Int, by earlier: [Int]) -> Bool {
+            points[target].allSatisfy { point in earlier.contains { matches($0, point.0, point.1) } }
+        }
+        // As `cover`: the first reachable earlier case that covers it alone, or else those that share a point with it,
+        // less each one the others cover without, tried from the last.
+        func cover(_ target: Int, reachable: [Int]) -> [Int] {
+            if let alone = reachable.first(where: { isCovered(target, by: [$0]) }) { return [alone] }
+            var chosen = reachable.filter { index in points[target].contains { matches(index, $0.0, $0.1) } }
+            for candidate in chosen.reversed() {
+                let without = chosen.filter { $0 != candidate }
+                if isCovered(target, by: without) { chosen = without }
+            }
+            return chosen
+        }
+        let reachable = cases.indices.filter { reached[$0] }
+        let unreachable = cases.indices.filter { !reached[$0] }.map { position in
+            (position, cover(position, reachable: reachable.filter { $0 < position }))
+        }
+        let coverAll = reached[cases.count] ? nil : cover(cases.count, reachable: reachable)
         return (unreachable, coverAll)
     }
 }

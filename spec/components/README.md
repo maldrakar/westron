@@ -20,7 +20,8 @@ with an option whose values are the icon registry's names, an own view on Apple.
 first style on the system's text field and the first that draws its own focus ring, on iOS and macOS, by the owner's
 decision. Checkbox ([`checkbox/`](checkbox/checkbox.spec.yaml), #31), approved on 2026-11-18 under the owner's
 delegation, is the first whose control has a value that is on or off and the first that takes a value from its
-context (the list's color).
+context (the list's color). Rule's revision of 2026-11-22 (#116, approved by the coordinating agent under the owner's
+delegation) is the first with a drawn text label on a view, a constraint on a slot and the role `heading`.
 
 ## Format
 
@@ -40,6 +41,8 @@ slots: [label, icon]
 states: [hover, focus, pressed, disabled, loading]
 constraints:
   - { when: { iconOnly: true }, require: { size: [m, l] }, severity: warning }
+  # A rule on a slot (Rule): when an instance fills it, the options take one value each.
+  # - { when: { slots: [label] }, require: { axis: horizontal, purpose: separator }, severity: error }
 tokens:                         # by <part>.<property>, in one of three forms
   container.radius: radius.control                 # 1. one token
   label.font: { s: typography.footnote.strong, m: typography.body.strong, l: typography.body.strong }
@@ -51,6 +54,7 @@ tokens:                         # by <part>.<property>, in one of three forms
       - { when: { variant: primary, state: [hover, pressed] }, token: color.background.accent-hover }
       - { when: { variant: primary }, token: color.background.accent }
       - { when: { variant: secondary, state: disabled }, token: null }    # null: no value in this case
+      # - { when: { state: { all: [checked, pressed] } }, token: … }   # in every one of the states at once
 accessibility:
   role: button
   intents: [activate]
@@ -75,9 +79,10 @@ platforms:                      # all four; each is `status: planned` or a strat
 ```
 
 An enum option without a `default` must be named in every use; a variant has none (`spec/conventions.md`).
-Names of options, values, slots, states and intents are lowerCamelCase: they become identifiers on every platform.
-Swift, the pilot platform's language, cannot use a few words there: no value or state is `init`, `self` or `none`, and
-no option is `inout`, `var` or `let` (an option becomes an argument label). Other Swift keywords are fine.
+Names of options, values, slots, states, forms and intents are lowerCamelCase: they become identifiers on every
+platform. Swift, the pilot platform's language, cannot use a few words there: no value, state or form is `init`,
+`self` or `none`, and no option is `inout`, `var` or `let` (an option becomes an argument label). Other Swift keywords
+are fine.
 `description` is allowed on the contract, an option, a constraint, `accessibility`, a platform and an Apple OS.
 
 - **YAML words.** A boolean is `true` or `false`. YAML 1.1 also reads an unquoted `yes`, `no`, `on` and `off`
@@ -92,6 +97,23 @@ no option is `inout`, `var` or `let` (an option becomes an argument label). Othe
   component can be in several states at once, or in none; `state` matches when it is in any of the named ones, and a
   case without `state` matches every set of states. So a state that excludes others goes first, and the narrower case
   before the wider one.
+- **Cases over several states at once.** `state: { all: [checked, pressed] }` matches only when the component is in
+  every one of the named states, two or more: a tint that depends on two states, such as a lit chip that darkens when
+  pressed (Chip). It goes before the cases over one of its states, which would otherwise cover it. The check of such
+  a binding enumerates every set of the states its cases name, 2ⁿ for n states, times the combinations of the
+  options they name, and reports a binding past 20 000 of them instead of checking it: with 15 states named, it is
+  past the limit with no option. A binding without such a case is checked as before, without enumerating states.
+- **Forms.** A component whose one look a product reaches through several system controls, picked by the control it
+  writes, names them in `forms`: each form with the states it enters, a subset of `states`, and, where it announces
+  something else, an `accessibility` whose fields replace the contract's for that form (Chip: `selectable` on a
+  toggle, `pressable` on a button, `static` on a label, which adds no role). Every declared state is entered by some
+  form, and the rules of `accessibility` hold for each form's (a form with role `none` takes no intents, announced
+  states or required label; it announces only states it enters). Each platform with a strategy names a base per form
+  in `bases`, `{ selectable: SwiftUI.Toggle, pressable: SwiftUI.Button, static: SwiftUI.Label }`, in place of
+  `base`, and `bases` belongs only to a contract with forms. On Apple each base is checked as `base` is
+  (`SystemStyles`, its strategy, no value a system style of it), and the conventions derive forms only for
+  `style-on-system-control`: one overload per base, each applying its own style (`spec/conventions.md`, "Forms").
+  The snapshot matrix draws each form on a sheet of its own, in the states it enters.
 - **Restrictions.** A platform, or an Apple OS (`ios`, `macos`, `watchos`), restricts the contract with `options` (the
   values of an enum option it offers) and `states` (the states it enters); what it does not name, it keeps whole. An
   Apple OS restricts what Apple keeps.
@@ -115,10 +137,22 @@ no option is `inout`, `var` or `let` (an option becomes an argument label). Othe
   use names its glyph (the registry's own `default` is what draws for a name a version does not know). As with tokens,
   constraints, cases, bindings by value and platform restrictions do not name such an option yet, and it is never a
   system option. Icon, the first such contract, needs none of them.
+- **Constraints on a slot.** A constraint's `when` may name, under the key `slots`, the slots an instance fills
+  instead of options: `{ when: { slots: [label] }, require: { axis: horizontal, purpose: separator }, severity:
+  error }` says that a labelled rule is a horizontal separator. It is as narrow as what the conventions derive from
+  it: it names slots the contract declares and no option in its `when`, its severity is `error`, and it gives each
+  enum option it requires one value, which an instance that fills the slots takes; on Apple the initializers that
+  take the slot leave those options out (`spec/conventions.md`, "Own components"). The conventions derive that only
+  for an Apple `own-component` of form `view` whose one slot is `label`, drawn text, with no option whose values are
+  icons (Rule), so on any other contract, such as a style, a modifier or an icon's view, it is an error: nothing would
+  enforce it. No option is named `slots`. The snapshot matrix draws no slot, so it leaves out nothing for such a
+  constraint.
 - **No role of its own.** `accessibility.role: none` is a component that adds no role for assistive technology, as
   ARIA's `none`: its content, if it has any, is read as if the component were not there (Surface), and a component
-  with no content is hidden (Rule). Such a component has nothing to act on or announce, so it takes no `intents`,
-  `keyboardIntents` (its own or a platform's), `states` under `accessibility` and no `label: required`.
+  with no content is hidden. No contract has that shape yet: an unlabelled Rule is hidden too, but its role is
+  `heading`, and it is hidden because it has no label to announce. Such a component has nothing to act on or
+  announce, so it takes no `intents`, `keyboardIntents` (its own or a platform's), `states` under `accessibility`
+  and no `label: required`.
 - **A value that is on or off.** A control whose value is on or off, the system `Toggle` that Checkbox styles, is in
   the state `checked` when it is on and in none of it when it is off; `accessibility.states` announces it
   (`checked: checked`). The control carries it itself, as it carries `pressed` (`SystemStyles`), so no westron
@@ -142,18 +176,20 @@ style reads (the `controlSize` mapping, each OS's fallbacks, the states). Its ex
 [`spec/conventions.md`](../conventions.md). A draft contract generates nothing.
 
 An approved `own-component` names the shape of its API in `platforms.apple.form`, which the schema requires of it and
-forbids on a style or an extension: `modifier`, a modifier on `View` named after the component
-(`.surface(.raised)`), or `view`, a `View` named after it (`Rule(axis: .vertical)`). The generator writes the enums of
-its enum options alone into `WestronUI/Generated/<Component>+Contract.swift` (`SurfaceVariant`, `RuleAxis`); the
-modifier or the view is hand-written, and the API parity lint expects its signature from the contract: the variant
-unlabeled first and every other option labeled with its default for a modifier, every option labeled with its default
-for a view's `init`, which conforms to `View` alone and has `public var body: some View`. States, a `size` option, an
-option whose values are tokens, icons on a modifier, a restriction of Apple or an Apple OS, more than one slot for a
-modifier, and a variant or slots for a view fail generation and the lint as not derived yet
+forbids on a style or an extension: `modifier`, a modifier on `View` named after the component (`.surface(.raised)`), or
+`view`, a `View` named after it (`Rule(axis: .vertical)`). The generator writes the enums of its enum options alone into
+`WestronUI/Generated/<Component>+Contract.swift` (`SurfaceVariant`, `RuleAxis`); the modifier or the view is
+hand-written, and the API parity lint expects its signature from the contract: the variant unlabeled first and every
+other option labeled with its default for a modifier, every option labeled with its default for a view's `init`, which
+conforms to `View` alone and has `public var body: some View`. States, a `size` option, an option whose values are
+tokens, icons on a modifier, a restriction of Apple or an Apple OS, more than one slot for a modifier, and a variant or
+slots other than the one slot `label` for a view fail generation and the lint as not derived yet
 ([`spec/conventions.md`](../conventions.md), "Own components"). A view takes an option whose values are icons as its
-first, unlabeled argument, `Westron.Icon`, and the slot `label` as a spoken label (Icon: `Icon(.tray)`,
-`Icon(.sun, label: "Today")`); `systemOptions` are the system's environment modifiers, no parameter and no enum
-(Icon's `scale`, `.imageScale(_:)`).
+first, unlabeled argument, `Westron.Icon`, and the slot `label` as a spoken label (Icon: `Icon(.tray)`, `Icon(.sun,
+label: "Today")`); a view without such an option takes the slot `label` as drawn text, first and unlabeled, localized or
+not, without the options a constraint on the slot fixes (Rule: `Rule()`, `Rule(axis: .vertical, purpose: .insertion)`,
+`Rule("WORK")`); `systemOptions` are the system's environment modifiers, no parameter and no enum (Icon's `scale`,
+`.imageScale(_:)`).
 
 An approved `extension-on-system-control` gets no file in `WestronUI/Generated/`: its modifier is hand-written, its
 argument is the token accessor the token generator already writes, and the API parity lint expects its signature from
@@ -189,8 +225,8 @@ Besides the schema, the check enforces what a schema cannot:
 - no unquoted YAML 1.1 boolean word other than `true` and `false`; where a name is meant, YAML's `true`, `false` or a
   number is reported as such, with the advice to quote it;
 - no list repeats a name; an enum option's default, when it has one, is one of its values; no option is named `state`;
-- no value or state is `init`, `self` or `none`, and no option `inout`, `var` or `let`: Swift cannot use them in the
-  generated API (above);
+- no value, state or form is `init`, `self` or `none`, and no option `inout`, `var` or `let`: Swift cannot use them in
+  the generated API (above);
 - no option value is the name of a system style of the Apple base control, such as `plain` for `SwiftUI.Button`
   (decisions/0003); a base the check has no style modifier and style names for is an error until they are added to
   `tools/Sources/WestronTools/Contracts/SystemStyles.swift`, which knows `SwiftUI.Button`, `SwiftUI.TextField` and
@@ -204,7 +240,10 @@ Besides the schema, the check enforces what a schema cannot:
   group's tokens are semantic, exist in every mode and are of one type; its default is one of them, by its path after
   the group; no constraint, case, binding by value, platform restriction or `systemOptions` names it;
 - no constraint, case, platform restriction or `systemOptions` names an option whose values are icons;
-- constraints and cases name options, values and states that exist, a bool option with `true` or `false`;
+- constraints and cases name options, values and states that exist, a bool option with `true` or `false`; a
+  constraint on slots (`when: { slots: [...] }`) names declared slots and no option in its `when`, has severity
+  `error`, gives each option it requires one value, and is only on an Apple `own-component` of form `view` whose one
+  slot is `label`, with no option whose values are icons; no option is named `slots`;
 - a binding by value uses the values of one enum option, every one of them; every case is reachable, and so is a
   binding's `token`, which the cases leave no room for when they match every combination. The check enumerates the
   values of the options the cases name, not the states (Button's widest binding has 6 combinations); past 20 000 it

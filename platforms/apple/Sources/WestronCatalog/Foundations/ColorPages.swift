@@ -175,7 +175,7 @@ private struct ForegroundSample: View {
     /// The stroke the border is drawn with where it is used (decisions/0013).
     private var lineWidth: CGFloat {
         switch color.name {
-        case Westron.Color.border.focus.name: .stroke.thick
+        case Westron.Color.border.focus.name, Westron.Color.border.insertion.name: .stroke.thick
         default: .stroke.thin
         }
     }

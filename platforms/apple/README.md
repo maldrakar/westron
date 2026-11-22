@@ -360,7 +360,7 @@ checks again (a commit pushed by a workflow starts none).
 
 ### Behaviour UI tests
 
-`ButtonBehaviorTests`, `CheckboxBehaviorTests`, `TextFieldBehaviorTests` and `IconAccessibilityTests`, in
+`ButtonBehaviorTests`, `CheckboxBehaviorTests`, `ChipBehaviorTests`, `TextFieldBehaviorTests` and `IconAccessibilityTests`, in
 `Catalog/CatalogUITests`, check on the catalog's entries what a unit test cannot reach: presses and hit areas, the
 accessibility hierarchy, the keyboard. Each class has branches of its own for iOS and macOS. `tools/apple/check.sh
 behavior` runs them, like the audit: the build first, a step of its own, then one `xcodebuild test-without-building`

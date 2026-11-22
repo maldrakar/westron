@@ -77,5 +77,11 @@ public enum SystemStyles {
             states: ["checked", "mixed", "pressed", "hover", "focus", "disabled"],
             // Toggle(isOn:label:), the label left to westron's initializer (Checkbox, #86).
             hiddenLabelParameters: [.init(label: "isOn", type: "Binding<Bool>")]),
+        // A view with a style and no states of its own: Chip's static form (#117). Its style cascades to every Label
+        // below the modifier, as the system's label styles do.
+        "SwiftUI.Label": Base(
+            modifier: "labelStyle", protocols: ["LabelStyle"],
+            styles: ["automatic", "iconOnly", "titleAndIcon", "titleOnly"],
+            states: []),
     ]
 }

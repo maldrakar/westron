@@ -51,8 +51,12 @@ public struct ComponentContract: Equatable, Sendable {
     public struct Apple: Equatable, Sendable {
         /// `style-on-system-control`, `extension-on-system-control` or `own-component`.
         public let strategy: String
-        /// The system control or view, such as `SwiftUI.Button`; nil for an own component.
+        /// The system control or view, such as `SwiftUI.Button`; nil for an own component and for a contract with forms,
+        /// which names a base per form in `bases`.
         public let base: String?
+        /// In a contract with forms, the base of each form, in the order of `bases`: `(selectable, SwiftUI.Toggle)`.
+        /// Empty for a contract without forms.
+        public let bases: [FormBase]
         /// The shape of an own component's API, `modifier` or `view` (spec/conventions.md, "Own components"); nil for
         /// a style or an extension.
         public let form: String?
@@ -66,37 +70,75 @@ public struct ComponentContract: Equatable, Sendable {
 
         public init(
             strategy: String, base: String?, form: String? = nil, systemOptions: [String: String] = [:],
-            restriction: Restriction = Restriction(), targets: [String: Restriction] = [:]
+            restriction: Restriction = Restriction(), targets: [String: Restriction] = [:], bases: [FormBase] = []
         ) {
             self.strategy = strategy
             self.base = base
+            self.bases = bases
             self.form = form
             self.systemOptions = systemOptions
             self.restriction = restriction
             self.targets = targets
         }
+
+        /// The bases its styles go on, each with its form: the one `base`, with no form, or each form's base.
+        public var styledBases: [FormBase] {
+            if let base { return [FormBase(form: nil, base: base)] }
+            return bases
+        }
+    }
+
+    /// A base control on a platform, and the form it is the base of; nil in a contract without forms.
+    public struct FormBase: Equatable, Sendable {
+        public let form: String?
+        public let base: String
+
+        public init(form: String?, base: String) {
+            self.form = form
+            self.base = base
+        }
+    }
+
+    /// One form of a contract with forms (`forms`): the same look on its own base control, which the product picks by
+    /// the control it writes (Chip: selectable, pressable, static).
+    public struct Form: Equatable, Sendable {
+        public let name: String
+        /// The states it enters, in the contract's order of `states`.
+        public let states: [String]
+
+        public init(name: String, states: [String]) {
+            self.name = name
+            self.states = states
+        }
     }
 
     /// A rule between options: when the options have the values in `when`, they must have the values in `require`.
+    /// A rule on a slot names it under the key `slots` of `when` (`ContractRules.slotsKey`): when an instance fills
+    /// that slot, the options must have the values in `require` (Rule: a labelled rule is a horizontal separator).
     public struct Constraint: Equatable, Sendable {
         /// By option name, the values that match: an enum option's values, or `true` or `false` for a bool option.
         public let when: [String: [String]]
         public let require: [String: [String]]
         /// `error`: the combination is not allowed; `warning`: allowed, but advised against.
         public let severity: String
+        /// The slots `when` names, which an instance fills for the rule to apply; empty for a rule between options.
+        public let slots: [String]
 
-        public init(when: [String: [String]], require: [String: [String]], severity: String) {
+        public init(when: [String: [String]], require: [String: [String]], severity: String, slots: [String] = []) {
             self.when = when
             self.require = require
             self.severity = severity
+            self.slots = slots
         }
 
         /// Whether the constraint forbids what breaks it, rather than advising against it.
         public var forbids: Bool { severity == "error" }
 
         /// Whether a combination, by option name its value (`true` or `false` for a bool option), breaks the rule: it
-        /// matches every condition of `when` and misses one of `require`.
+        /// matches every condition of `when` and misses one of `require`. A combination of options fills no slot, so
+        /// it never breaks a rule on a slot.
         public func isBroken(by values: [String: String]) -> Bool {
+            guard slots.isEmpty else { return false }
             func matches(_ conditions: [String: [String]]) -> Bool {
                 conditions.allSatisfy { option, allowed in values[option].map(allowed.contains) ?? false }
             }
@@ -116,6 +158,8 @@ public struct ComponentContract: Equatable, Sendable {
     public let slots: [String]
     /// nil when Apple is planned.
     public let apple: Apple?
+    /// In the contract's order; empty for a contract without forms.
+    public let forms: [Form]
     /// In the contract's order.
     public let constraints: [Constraint]
     /// The states some case of a token binding names in its `when` (`state: pressed`), in the contract's order of
@@ -131,8 +175,9 @@ public struct ComponentContract: Equatable, Sendable {
     public init(
         id: String, status: String, options: [Option], states: [String], apple: Apple?,
         constraints: [Constraint] = [], boundStates: [String]? = nil, slots: [String] = [],
-        accessibilityLabel: String? = nil, hiddenLabel: Bool = false
+        accessibilityLabel: String? = nil, hiddenLabel: Bool = false, forms: [Form] = []
     ) {
+        self.forms = forms
         self.accessibilityLabel = accessibilityLabel
         self.hiddenLabel = hiddenLabel
         self.id = id
@@ -208,10 +253,17 @@ public struct ComponentContract: Equatable, Sendable {
                     targets[os] = try Self.restriction(target, at: applePath.key(os), source: source)
                 }
             }
+            var bases: [FormBase] = []
+            for member in entry["bases"]?.members ?? [] {
+                guard let base = member.value.string else {
+                    throw problem(applePath.key("bases").key(member.key), "name the base control")
+                }
+                bases.append(FormBase(form: member.key, base: base))
+            }
             apple = Apple(
                 strategy: strategy, base: entry["base"]?.string, form: entry["form"]?.string,
                 systemOptions: systemOptions,
-                restriction: try Self.restriction(entry, at: applePath, source: source), targets: targets)
+                restriction: try Self.restriction(entry, at: applePath, source: source), targets: targets, bases: bases)
         } else {
             apple = nil
         }
@@ -219,11 +271,13 @@ public struct ComponentContract: Equatable, Sendable {
         for (index, entry) in (document["constraints"]?.elements ?? []).enumerated() {
             let path = root.key("constraints").index(index)
             guard let severity = entry["severity"]?.string else { throw problem(path.key("severity"), "missing") }
+            var when = try Self.conditions(entry["when"], at: path.key("when"), source: source)
+            let slots = when.removeValue(forKey: ContractRules.slotsKey) ?? []
             constraints.append(
                 Constraint(
-                    when: try Self.conditions(entry["when"], at: path.key("when"), source: source),
+                    when: when,
                     require: try Self.conditions(entry["require"], at: path.key("require"), source: source),
-                    severity: severity))
+                    severity: severity, slots: slots))
         }
         var named: Set<String> = []
         for binding in document["tokens"]?.members ?? [] {
@@ -231,16 +285,22 @@ public struct ComponentContract: Equatable, Sendable {
                 switch entry["when"]?["state"] {
                 case .string(let state)?: named.insert(state)
                 case .array(let list)?: named.formUnion(list.compactMap(\.string))
+                case .object?: named.formUnion(entry["when"]?["state"]?["all"]?.elements?.compactMap(\.string) ?? [])
                 default: break
                 }
             }
+        }
+        var forms: [Form] = []
+        for member in document["forms"]?.members ?? [] {
+            let entered = Set(member.value["states"]?.elements?.compactMap(\.string) ?? [])
+            forms.append(Form(name: member.key, states: states.filter(entered.contains)))
         }
         self.init(
             id: id, status: status, options: options, states: states, apple: apple, constraints: constraints,
             boundStates: states.filter(named.contains),
             slots: document["slots"]?.elements?.compactMap(\.string) ?? [],
             accessibilityLabel: document["accessibility"]?["label"]?.string,
-            hiddenLabel: document["accessibility"]?["hiddenLabel"] == .bool(true))
+            hiddenLabel: document["accessibility"]?["hiddenLabel"] == .bool(true), forms: forms)
     }
 
     /// A constraint's `when` or `require`: by option name, a value, a list of values, or `true` or `false`.

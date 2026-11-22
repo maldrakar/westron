@@ -125,9 +125,9 @@ public struct AppleComponents: Generator {
                 }
                 continue
             }
-            guard generates(contract), let apple = contract.apple, let base = apple.base else { continue }
+            guard generates(contract), let apple = contract.apple else { continue }
             do {
-                let api = try API(contract, apple: apple, base: base, source: source)
+                let api = try API(contract, apple: apple, source: source)
                 apis.append(api)
                 files.append(
                     GeneratedFile(path: "\(outputDirectory)/\(api.component)+Contract.swift", contents: api.swift()))
@@ -145,9 +145,11 @@ public struct AppleComponents: Generator {
         id.split(separator: "-").map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined()
     }
 
-    /// Whether the generator writes an API for a contract: approved or later, styled on an Apple system control.
+    /// Whether the generator writes an API for a contract: approved or later, styled on an Apple system control, or, in
+    /// a contract with forms, on one per form.
     public static func generates(_ contract: ComponentContract) -> Bool {
-        contract.status != "draft" && contract.apple?.strategy == strategy && contract.apple?.base != nil
+        contract.status != "draft" && contract.apple?.strategy == strategy
+            && !(contract.apple?.styledBases.isEmpty ?? true)
     }
 
     /// Whether a contract gives API on Apple: approved or later, styled on a system control or extending a system
@@ -156,7 +158,7 @@ public struct AppleComponents: Generator {
     public static func givesAPI(_ contract: ComponentContract) -> Bool {
         guard contract.status != "draft", let apple = contract.apple else { return false }
         if apple.strategy == ownStrategy { return apple.form.flatMap(Own.Form.init(rawValue:)) != nil }
-        guard apple.base != nil else { return false }
+        guard !apple.styledBases.isEmpty else { return false }
         return apple.strategy == strategy || apple.strategy == SystemStyles.extensionStrategy
     }
 
@@ -251,8 +253,8 @@ public struct AppleComponents: Generator {
         if givesAPI(contract), contract.apple?.strategy == ownStrategy {
             return try Own(contract, source: source).file(source: source)
         }
-        guard generates(contract), let apple = contract.apple, let base = apple.base else { return nil }
-        let api = try API(contract, apple: apple, base: base, source: source)
+        guard generates(contract), let apple = contract.apple else { return nil }
+        let api = try API(contract, apple: apple, source: source)
         return GeneratedFile(path: "\(outputDirectory)/\(api.component)+Contract.swift", contents: api.swift())
     }
 
@@ -269,9 +271,14 @@ public struct AppleComponents: Generator {
                     "\(api.component)'s option \($0.option.name)"
                 )
             }
-            names.append((api.style, .root.key("id"), "\(api.component)'s hand-written style"))
+            for target in api.targets {
+                names.append((target.style, .root.key("id"), "\(api.component)'s hand-written style"))
+            }
             if !api.contract.states.isEmpty {
                 names.append((api.stateType, .root.key("states"), "\(api.component)'s states"))
+            }
+            if !api.contract.forms.isEmpty {
+                names.append((api.formType, .root.key("forms"), "\(api.component)'s forms"))
             }
             for entry in names {
                 if let owner = owners[entry.name] {
@@ -304,15 +311,25 @@ public struct AppleComponents: Generator {
         var problems: [ContractProblem] = []
         func variant(_ api: API) -> API.Enum? { api.enums.first { $0.option.name == "variant" } }
         func withoutVariant(_ api: API) -> Bool { variant(api).map { $0.defaultValue != nil } ?? true }
-        for (index, api) in apis.enumerated() {
-            for earlier in apis[..<index] where earlier.modifier == api.modifier {
+        // Each overload a contract adds, one per base: a contract with forms adds one on each form's base.
+        let overloads = apis.flatMap { api in api.targets.map { (api: api, modifier: $0.modifier) } }
+        for (index, (api, modifier)) in overloads.enumerated() {
+            for (earlier, _) in overloads[..<index].filter({ $0.modifier == modifier }) {
+                guard earlier.source != api.source || earlier.component != api.component else {
+                    problems.append(
+                        ContractProblem(
+                            source: api.source, path: .root.key("platforms").key("apple").key("bases"),
+                            "two forms of \(api.component) are on bases styled by .\(modifier), so its two overloads "
+                                + "would have one signature, which does not compile: give each form its own control"))
+                    continue
+                }
                 let both =
-                    "\(api.component) and \(earlier.component) (\(earlier.source)) both add a .\(api.modifier) overload"
+                    "\(api.component) and \(earlier.component) (\(earlier.source)) both add a .\(modifier) overload"
                 if withoutVariant(api), withoutVariant(earlier) {
                     problems.append(
                         ContractProblem(
                             source: api.source, path: .root.key("options"),
-                            both + " that a call without a variant fits, so .\(api.modifier)() would be ambiguous "
+                            both + " that a call without a variant fits, so .\(modifier)() would be ambiguous "
                                 + "or silently take one of them: give one of them a variant without a default"))
                 }
                 guard let ours = variant(api), let theirs = variant(earlier) else { continue }
@@ -322,7 +339,7 @@ public struct AppleComponents: Generator {
                         ContractProblem(
                             source: api.source, path: .root.key("options").key("variant"),
                             both + " and share the variant \(shared.joined(separator: ", ")), so "
-                                + ".\(api.modifier)(.\(shared[0])) would be ambiguous; rename it in one of them"))
+                                + ".\(modifier)(.\(shared[0])) would be ambiguous; rename it in one of them"))
                 }
             }
         }
@@ -349,41 +366,58 @@ public struct AppleComponents: Generator {
             let offered: [(os: String, map: [(value: String, drawn: String)])]
         }
 
+        /// One overload of a style modifier: on the contract's one base, or, in a contract with forms, on one form's.
+        struct Target {
+            /// The form it styles; nil in a contract without forms.
+            let form: String?
+            /// `Button` for `SwiftUI.Button`.
+            let control: String
+            /// `buttonStyle` for `SwiftUI.Button`.
+            let modifier: String
+            /// The hand-written style it applies: `ButtonVariantStyle`, or for a form `<Component><Control>Style`,
+            /// `ChipToggleStyle`.
+            let style: String
+        }
+
         let contract: ComponentContract
         let source: String
         /// `Button` for `button`, `ListRow` for `list-row`.
         let component: String
-        /// `Button` for `SwiftUI.Button`.
-        let control: String
-        /// `buttonStyle` for `SwiftUI.Button`.
-        let modifier: String
+        /// The overloads, in the order of the bases.
+        let targets: [Target]
         let enums: [Enum]
         /// The size option, when the contract has one: an enum option named `size`.
         let size: Enum?
         /// By OS, the states it does not enter.
         let skippedStates: [(os: String, states: [String])]
 
-        var style: String { "\(component)VariantStyle" }
         var stateType: String { "\(component)State" }
+        /// The type of the forms, in a contract with forms.
+        var formType: String { "\(component)Form" }
 
-        init(_ contract: ComponentContract, apple: ComponentContract.Apple, base: String, source: String)
-            throws(ContractProblem)
-        {
+        init(_ contract: ComponentContract, apple: ComponentContract.Apple, source: String) throws(ContractProblem) {
             func problem(_ path: DocumentPath, _ message: String) -> ContractProblem {
                 ContractProblem(source: source, path: path, message)
             }
             self.contract = contract
             self.source = source
             component = AppleComponents.typeName(contract.id)
-            control = String(base.split(separator: ".").last ?? Substring(base))
             let applePath = DocumentPath.root.key("platforms").key("apple")
-            // A control without a style modifier, such as SwiftUI.Slider, cannot take a style (SystemStyles).
-            guard let modifier = SystemStyles.byBase[base]?.modifier else {
-                throw problem(
-                    applePath.key("base"),
-                    "no style modifier is known for \(base) (SystemStyles.byBase), so there is no overload to generate")
+            var targets: [Target] = []
+            for entry in apple.styledBases {
+                let control = String(entry.base.split(separator: ".").last ?? Substring(entry.base))
+                let path = entry.form.map { applePath.key("bases").key($0) } ?? applePath.key("base")
+                // A control without a style modifier, such as SwiftUI.Slider, cannot take a style (SystemStyles).
+                guard let modifier = SystemStyles.byBase[entry.base]?.modifier else {
+                    throw problem(
+                        path,
+                        "no style modifier is known for \(entry.base) (SystemStyles.byBase), so there is no overload to "
+                            + "generate")
+                }
+                let style = entry.form == nil ? "\(component)VariantStyle" : "\(component)\(control)Style"
+                targets.append(Target(form: entry.form, control: control, modifier: modifier, style: style))
             }
-            self.modifier = modifier
+            self.targets = targets
             for option in contract.options {
                 if case .tokenGroup(let group, _) = option.kind {
                     throw problem(
@@ -507,10 +541,19 @@ public struct AppleComponents: Generator {
             let origin =
                 "Generated from \(source) by `tools/westron generate`. Do not edit: change the contract and generate "
                 + "again (spec/conventions.md)."
+            func list(_ names: [String]) -> String {
+                let quoted = names.map { "`\($0)`" }
+                return quoted.count == 1
+                    ? quoted[0] : quoted.dropLast().joined(separator: ", ") + " and " + quoted.last!
+            }
             let purpose =
-                "\(component)'s API from its contract: the enums of its options, the overload of `\(modifier)` that "
-                + "products call, which applies the hand-written `\(style)` (decisions/0001), and the tables that "
-                + "style reads."
+                targets.count == 1 && targets[0].form == nil
+                ? "\(component)'s API from its contract: the enums of its options, the overload of "
+                    + "`\(targets[0].modifier)` that products call, which applies the hand-written `\(targets[0].style)` "
+                    + "(decisions/0001), and the tables that style reads."
+                : "\(component)'s API from its contract: the enums of its options, an overload of each form's style "
+                    + "modifier that products call, \(list(targets.map(\.modifier))), each applying its hand-written "
+                    + "style, \(list(targets.map(\.style))) (decisions/0001), and the tables those styles read."
             var out =
                 AppleTokensSwift.wrap(origin, width: width).map { "// " + $0 } + ["//"]
                 + AppleTokensSwift.wrap(purpose, width: width).map { "// " + $0 }
@@ -518,7 +561,9 @@ public struct AppleComponents: Generator {
             for item in enums {
                 out += [""] + enumDeclaration(item)
             }
-            out += [""] + overload()
+            for target in targets {
+                out += [""] + overload(target)
+            }
             if let size {
                 out += [""] + controlSizeMapping(size)
             }
@@ -527,6 +572,9 @@ public struct AppleComponents: Generator {
             }
             if !contract.states.isEmpty {
                 out += [""] + states()
+            }
+            if !contract.forms.isEmpty {
+                out += [""] + forms()
             }
             return out.joined(separator: "\n") + "\n"
         }
@@ -593,10 +641,12 @@ public struct AppleComponents: Generator {
             return parts.joined(separator: ", ")
         }
 
-        private func overload() -> [String] {
+        private func overload(_ target: Target) -> [String] {
+            let (control, modifier, style) = (target.control, target.modifier, target.style)
             var out = ["extension View {"]
+            let form = target.form.map { " in its form `\($0)`" } ?? ""
             var paragraphs = [
-                "Applies westron's \(component) style, from its contract, to the system's `\(control)` in this "
+                "Applies westron's \(component) style\(form), from its contract, to the system's `\(control)` in this "
                     + "view: `.\(modifier)(\(example))`."
             ]
             var items: [String] = []
@@ -779,6 +829,35 @@ public struct AppleComponents: Generator {
                     )
                 }, otherwise: ["return true"], indent: 2)
             out += ["    }", "}"]
+            return out
+        }
+
+        /// The forms of a contract with forms, each with its base and the states it enters, for the hand-written styles
+        /// and the catalog: `package`, so the catalog's generated matrix can name a cell's form, and never public.
+        private func forms() -> [String] {
+            var out = doc(
+                [
+                    "The forms of a \(component) in its contract, in its order: the same look, each on its own system "
+                        + "control, which a product picks by the control it writes (spec/conventions.md, \"Forms\"): "
+                        + contract.forms.map { form in
+                            let target = targets.first { $0.form == form.name }
+                            return "\(form.name), `.\(target?.modifier ?? "")` on `\(target?.control ?? "")`"
+                        }.joined(separator: "; ") + "."
+                ], indent: 0)
+            out.append("package enum \(formType): String, CaseIterable, Sendable {")
+            out += contract.forms.map { "    case \(SwiftName.declared($0.name))" }
+            // A contract with no states has no state type to list.
+            guard !contract.states.isEmpty else { return out + ["}"] }
+            out.append("")
+            out += doc(["The states the form enters (the contract's `forms`)."], indent: 1)
+            out.append("    var states: Set<\(stateType)> {")
+            out.append("        switch self {")
+            for form in contract.forms {
+                out.append(
+                    "        case .\(form.name): "
+                        + "[\(form.states.map { "." + $0 }.joined(separator: ", "))]")
+            }
+            out += ["        }", "    }", "}"]
             return out
         }
 

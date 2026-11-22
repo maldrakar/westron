@@ -195,7 +195,9 @@ extension Westron.Color {
                 ["color.background.accent-subtle"],
             ])
 
-        /// Text and glyphs that come second: captions, metadata, a row's details, timestamps.
+        /// Text and glyphs that come second: captions, metadata, a row's details, timestamps. On background.muted-hover
+        /// and muted-pressed it is only a glyph, never text: the icon of an unlit chip under the pointer or pressed,
+        /// decorative beside the chip's label (spec/components/chip, decisions/0001), so those pairs are non-text, 3:1.
         public static let secondary = Westron.Color(
             name: "color.text.secondary",
             light: Westron.RGB(hex: 0x656970),
@@ -211,6 +213,8 @@ extension Westron.Color {
                 ["color.background.pressed"],
                 ["color.background.selected"],
                 ["color.background.accent-subtle"],
+                ["color.background.muted-hover"],
+                ["color.background.muted-pressed"],
             ])
 
         /// The placeholder of an empty field. It meets the text target, as all words do.
@@ -314,6 +318,22 @@ extension Westron.Color {
         /// The focus ring, and the outline of a selected item in high contrast.
         public static let focus = Westron.Color(
             name: "color.border.focus",
+            light: Westron.RGB(hex: 0x5283E1),
+            dark: Westron.RGB(hex: 0x4474D0),
+            lightHighContrast: Westron.RGB(hex: 0x3765C0),
+            darkHighContrast: Westron.RGB(hex: 0x6194F2),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.background.sunken"],
+                ["color.background.hover"],
+                ["color.background.selected"],
+            ])
+
+        /// The line that marks where a dragged item would be dropped: an insertion rule. The focus ring's blue, a token
+        /// of its own so that each can change without the other.
+        public static let insertion = Westron.Color(
+            name: "color.border.insertion",
             light: Westron.RGB(hex: 0x5283E1),
             dark: Westron.RGB(hex: 0x4474D0),
             lightHighContrast: Westron.RGB(hex: 0x3765C0),
@@ -812,6 +832,7 @@ extension Westron.Color {
         border.default,
         border.strong,
         border.focus,
+        border.insertion,
         status.danger.background,
         status.danger.border,
         status.danger.icon,
