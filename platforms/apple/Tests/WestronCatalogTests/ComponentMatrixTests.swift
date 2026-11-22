@@ -116,6 +116,35 @@ struct ComponentMatrixTests {
         #endif
     }
 
+    @Test("IconTile's matrix: 36 glyphs down the rows × 3 scales across, as Icon's, and its catalog entry")
+    func iconTile() throws {
+        let matrix = try #require(ComponentMatrix.all.first { $0.component == "icon-tile" })
+        #expect(matrix.states.isEmpty && matrix.notes.isEmpty)
+        #expect(matrix.rowOption == "glyph" && matrix.columnName == "scale")
+        #expect(matrix.drawnCombinations.count == 36 * 3)
+        #expect(Westron.Icon.allCases.map(\.rawValue) == matrix.options[0].values)
+        #expect(matrix.sheets.count == 6)
+        for sheet in matrix.sheets {
+            #expect(sheet.fixed.isEmpty && sheet.columns == ["small", "medium", "large"] && sheet.rows.count == 6)
+        }
+        #expect(Catalog.entry(id: "icon-tile")?.section == .components)
+    }
+
+    @Test("IconTile's supplements: the list colors, beside a title and an empty screen, one sheet of one glyph each")
+    func iconTileSupplements() throws {
+        let matrix = try #require(ComponentMatrix.all.first { $0.component == "icon-tile" })
+        let supplements = matrix.supplements
+        #expect(supplements.map { $0.supplement?.id } == ["list-colors", "beside-title", "empty-screen"])
+        for supplement in supplements {
+            #expect(supplement.sheets.count == 1)
+            let sheet = try #require(supplement.sheets.first)
+            #expect(sheet.rows.count == 1 && sheet.columns == ["small", "medium", "large"])
+            #expect(supplement.drawnCombinations.count == 3)
+            #expect(sheet.id == "\(supplement.supplement?.id ?? "")_all")
+        }
+        #expect(matrix.sheets.count == 6, "the generated matrix stays the contract's")
+    }
+
     #if !os(macOS)
         @Test("Checkbox's list colors take three rows to a picture at accessibility5, so they fit an iPhone's screen")
         func checkboxListColorsAtAccessibility5() throws {

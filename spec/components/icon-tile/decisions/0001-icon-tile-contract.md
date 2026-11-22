@@ -1,9 +1,10 @@
 # 0001. The IconTile contract
 
-Date: 2026-11-22. Status: draft, for the first gate (#118). In phase 4 the owner delegates the approval of a contract to
-the coordinating agent (decisions/0014, "Process"). There was no interview: the agent answered the questions of
-`/new-component` from the owner's decision, the documents and the pilot, and gives the source of each answer. An answer
-no source gives is marked as a guess and listed under "Open questions", with the agent's recommendation.
+Date: 2026-11-22. Status: approved on 2026-11-22 by the coordinating agent under the owner's delegation of the first
+gate in phase 4 (decisions/0014, "Process"), with question 3, the fill of a list's color, open with the owner. There was
+no interview: the agent answered the questions of `/new-component` from the owner's decision, the documents and the
+pilot, and gave the source of each answer; the answers no source gave were the open questions below, which the
+approver answered ("The approval").
 
 ## Context
 
@@ -58,59 +59,61 @@ corner is 0.27 to 0.29 of its side; sides of 30 and 26 in a phone row, 22 and 18
 - With no list color, considered: (a) a neutral tile, `color.background.muted` and `color.text.secondary`; (b) the
   accent, as a checked Checkbox, `background.accent-subtle` and `text.accent`, whose description names "the tile behind
   an empty state's icon".
-- **Proposed: (a).** The accent marks the primary action and the selection (design-language/00, principle 3; 02, "One
-  accent"); a list with no color is not selected. The pilot draws a list with no color and "Top level" neutral. The pair
-  exists and is declared (`text.secondary` on `muted`, 4.74:1 in light), and `muted` is already "a tag or a badge
-  without a color". The conventions let a contract choose its nil ("nil being the contract's default"). A guess: open
-  question 2.
+- **Chosen: (a)** (approved, question 2). The accent marks the primary action and the selection (design-language/00,
+  principle 3; 02, "One accent"); a list with no color is not selected. The pilot draws a list with no color and "Top
+  level" neutral. The pair exists and is declared (`text.secondary` on `muted`, 4.74:1 in light), and `muted` is already
+  "a tag or a badge without a color". The conventions let a contract choose its nil ("nil being the contract's
+  default"); the doc comment of `.category(_:)` now names both defaults.
 
-### C. The fill: a quiet ground with a colored glyph
+### C. The fill of a list's color: solid, with the quiet pair open with the owner
 
 - Considered: (a) quiet: `color.category.<name>.background` with the glyph in `color.category.<name>.icon`; (b) solid:
   `color.category.<name>.fill` with the glyph in `on-fill`; (c) both, as an option.
 - Both pairs are declared in `tokens/` and pass in every theme (`tools/westron tokens contrast --all`, 2026-11-22):
   (a) `icon` on `background`, non-text, 3.19–3.22 in light, 3.48–3.52 in dark, 4.79–4.85 in light-hc and 5.21–5.27 in
   dark-hc against 3 and 4.5; (b) `on-fill` on `fill`, text, at least 4.5, and 7 in high contrast.
-- **Proposed: (a).** It is the pilot's role and keeps a column of twelve hues calm (principle 3; direction B's soft
-  look, decisions/0013). It leaves the solid list color to the checked check (`control`), so a tile, a square, never
-  reads as a checked disc beside it on the List screen. Its neutral twin exists (B), and a solid one does not: no
-  neutral `fill` and `on-fill` pair exists outside `status.neutral`, which means a status. Against it: design-language/02
-  and the `control` tokens' usage notes say "tags, tiles and statuses keep `fill`", a sentence written when separating
-  `control` from `fill` (decisions/0012, revision of 2026-11-18), which assumes a solid tile. (c) has no pilot use
-  (rule 6). A guess: open question 3.
-- No line in any theme: the glyph carries the meaning, its ratio rises in high contrast on the same ground, and a
-  tile's edge is not information (WCAG 1.4.11 asks it of the glyph). Surface's high-contrast line answers a shadow,
-  which a tile does not have.
+- The agent recommended (a): the pilot's role, a calm column of twelve hues (principle 3; direction B's soft look,
+  decisions/0013), the solid list color left to the checked check, and a neutral twin that exists where a neutral solid
+  pair does not.
+- **Implemented: (b), pending the owner (question 3).** design-language/02 and the usage notes of every
+  `color.category.<name>.control` token say "tags, tiles and statuses keep `fill`", an accepted chapter of the look, so
+  the approver did not settle the fill against it and asked the owner. Until they answer, a list's tile is solid; the
+  neutral tile stays `background.muted` and `text.secondary` either way. The two mappings sit in one place,
+  `IconTileColors` in `WestronUI/IconTile/IconTileTokens.swift`, so the owner's answer is a two-line change there and in
+  the contract's description. The catalog's supplementary sheet "list colors and none" draws, under the contract's
+  row, a second row captioned "quiet: open with the owner" from the same tokens, through a `package` environment value
+  no product sees (`IconTileCatalogSupport.swift`), so the owner compares both in one picture; it goes once they choose.
+  (c) has no pilot use (rule 6).
+- A rounded square, not a circle, so a solid tile is not read as a checked disc. No line in any theme: the glyph carries
+  the meaning, its pair holds in high contrast on the same ground, and a tile's edge is not information (WCAG 1.4.11
+  asks it of the glyph). Surface's high-contrast line answers a shadow, which a tile does not have.
 
 ### D. Size, Dynamic Type and the corner: from the text, no size option
 
 - Considered: (a) sized by the text role of its context, as Icon and Checkbox are, with Icon's relative `scale`;
   (b) an enum `size` (`s`, `m`, `l`) bound to `size.control.*`; (c) `size` bound to new tile tokens.
-- **Proposed: (a).** design-language/07 decides it: "Inside a shape, an icon is sized by the shape … and the shape
-  scales with the text beside it"; "A relative scale is the only size choice". It grows with Dynamic Type with the text
-  it stands by, and it follows the platform's text: the Mac's 13 pt body gives a smaller tile than the phone's 17 pt, as
-  the pilot's 22 and 30 differ. The pilot's tiles are 1.42–1.58 times the line of the text they stand by (30 beside a
-  17 pt body line of about 20.3, 22 beside a 13 pt line of about 15.5, 64 for an empty screen whose tile takes a
-  34 pt role's line of about 41), so the side is proposed at about 1.5 lines and the glyph at about 0.6 of the side, set
-  at implementation and reviewed in the snapshot matrix, as Checkbox's 1.2 was (its decisions/0001, P10). The roles:
-  a row takes its title's role; a header and an empty screen set a role, or a scale, on the tile, which is the pilot's
-  composition. (b) misuses `size.control.*`, the heights of controls whose usage note avoids anything else; it fits the
-  rows (28 and 24) and the header (36 and 32) but not the empty screen (50 and 40 against 64 and 60); it does not grow
-  with text; and an own component's `size` option is not derived yet (below). (c) invents values. The choice between
-  them is open question 1.
-- The corner is a quarter of the side, westron's ratio of a corner to a height (design-language/04, "About a quarter of
-  the height"), and scales with the tile. A shape "whose corner scales with its own size keeps its rule in its
-  contract" (04, "Off-ladder corners belong to one component"), so no radius token is bound. `radius.control`, 8 at
-  every size, was considered: it is a quarter at 32 only, an eighth at 64 and a third at 24. Continuous on Apple,
-  circular elsewhere (04). A rounded square, not a circle: the circle is the check's shape.
+- **Chosen: (a)** (approved, question 1). design-language/07 decides it: "Inside a shape, an icon is sized by the shape
+  … and the shape scales with the text beside it"; "A relative scale is the only size choice". It grows with Dynamic
+  Type with the text it stands by, and follows the platform's text: the Mac's 13 pt body gives a smaller tile than the
+  phone's 17 pt, as the pilot's 22 and 30 differ. (b) misuses `size.control.*`, control heights whose usage note avoids
+  anything else; it does not fit the empty screen (50 and 40 against the pilot's 64 and 60), does not grow with text,
+  and an own component's `size` option is not derived yet. (c) invents values.
+- **The proportions** (approved, question 5, settled against the renders of 2026-11-22): the side is 1.5 times the line
+  height of the role, the glyph is fitted into a square of 0.6 of the side, the corner is a quarter of the side. The
+  pilot's tiles are 1.42–1.58 lines (30 beside a 17 pt line of about 20.3, 22 beside a 13 pt line of about 15.5, 64 for a
+  34 pt role's line of about 41), its glyphs 0.5–0.63 of the tile. In the renders the glyph sits clear of the corners at
+  every scale and role, and beside heading.large and at accessibility5 the tile reads as the line's mark, not larger
+  than its title. The constants are in `IconTileMetrics`, marked `// westron-lint: allow` as Checkbox's 1.2 is.
+- The corner scales with the tile: a shape "whose corner scales with its own size keeps its rule in its contract"
+  (design-language/04, "Off-ladder corners belong to one component"), so no radius token is bound. `radius.control`,
+  8 at every size, was considered: a quarter at 32 only, an eighth at 64 and a third at 24.
 
 ### E. Accessibility
 
 - Role `image`, label `optional`, as Icon (its decisions/0001, "Screen readers"). Without a label the tile is hidden:
   beside its list's title it would only repeat it, and the glyph's system name ("tray") and the color name say nothing
-  of the list. With a label, the list's name, it is announced as an image. No pilot use today stands without the title
-  (the drag card carries it too), so the label is a guess kept for parity with Icon and for a tile without its
-  title, at no cost to the generator: open question 4.
+  of the list. With a label, the list's name, it is one element announced as an image (approved, question 4: kept for
+  parity with Icon and a tile without its title, though every pilot tile today stands beside its title).
 - Not interactive: no intents, no hit area. A product that makes a tile act puts it in a Button, which carries the
   target.
 
@@ -121,49 +124,36 @@ corner is 0.27 to 0.29 of its side; sides of 30 and 26 in a phone row, 22 and 18
   watchOS subset, decided separately (#34). Web, Linux and Android are planned, their cells provisional as the
   conventions' are.
 
-## What the tools derive today
+## What the tools derive
 
-Read in `tools/Sources/WestronTools/Contracts/AppleOwnComponents.swift` (`AppleComponents.Own.init`) and
-`SnapshotMatrix.swift`; approving the draft to run them was not done, since approval is the gate's. The contract has
-the shape Icon has: a view, an option whose values are icons (the first, unlabeled `Westron.Icon`), `scale` as a system
-option (no parameter, no enum), the one slot `label` with `accessibility.label: optional` (three initializers), no states
-and no restriction (a watchOS entry with only a description passes). So, approved, it generates no
-`IconTile+Contract.swift` (it has no enum option of its own), the API parity lint expects `public struct IconTile: View`
-with `init(_: Westron.Icon)`, `init(_: Westron.Icon, label: LocalizedStringKey)`,
-`@_disfavoredOverload init<S: StringProtocol>(_: Westron.Icon, label: S)` and `public var body: some View`, and the
-matrix generator writes `IconTile+Matrix.swift`, glyph down the rows and `scale` across, on a hand-written
-`IconTileMatrixCell`. The list colors are no axis (they are the context's), so the twelve colors and the neutral tile are
-a hand-written supplement, as the text sizes are. No tool changes.
+Unchanged tools derive it, as read before the approval in `AppleOwnComponents.swift` and confirmed after it:
+`tools/westron generate` wrote `WestronCatalog/Generated/IconTile+Matrix.swift` (glyph down the rows, scale across, 108
+combinations on 6 sheets) and no `IconTile+Contract.swift`, since the contract has no enum option of its own; before the
+view existed, `tools/westron lint api-parity` reported exactly the missing `public struct IconTile: View` with
+`init(_: Westron.Icon)`, `init(_: Westron.Icon, label: LocalizedStringKey)`,
+`@_disfavoredOverload init<S: StringProtocol>(_: Westron.Icon, label: S)` and `public var body: some View`.
 
-With option (b) of D, the tools would need: `Own.init` to derive an enum option named `size` on an own view (today "a
-size option: not derived yet", since a style's `size` defaults from `controlSize` and an own view has no such rule), the
-conventions to say whether an own view's size reads `controlSize` or takes its contract default, the parity lint's
-expectation and tests to follow; and a watchOS restriction of it would need the `offered` tables an own component lacks.
+## The implementation on Apple
 
-## Tokens
+- `IconTile` lays out five subviews: a hidden line of the context's text, which gives the side and the tile's text
+  baseline (its middle, so a row aligned on the first baseline centers the tile on its title's line); the glyph hidden
+  at the context's image scale and at medium, whose ratio is the scale's step; the shape; and the resizable glyph,
+  which keeps the weight of the font in the environment, seen in the renders beside body and the Onest headings.
+- The snapshot matrix's own cells stop growing at accessibility2: six rows of tiles at accessibility5 run past an
+  iPhone's height, and the generated sheets take six rows to a picture for every component. The supplement "beside a
+  title" grows to accessibility5.
+- The in-process render on macOS (`CARenderer`) draws no icon of `ContentUnavailableView`, not even a plain `Icon`, so
+  the supplement "an empty screen" is read on iOS; the catalog entry's screenshot shows it on the Mac.
 
-Every bound token exists in every mode (`tools/westron spec check`). Missing with the proposals: none. Missing with the
-alternatives: a neutral solid pair (C (b)); size tokens for a tile that fit the empty screen and grow with text (D (c));
-a radius token cannot express a proportion, so the quarter rule stays in the contract with any option.
+## Open with the owner
 
-## Open questions for the approver
-
-1. **Size: from the text role, or a `size` option?** Recommended: from the text role, with `scale` (D (a)): the design
-   language decides it, it grows with Dynamic Type, and the tools derive it today. The alternative, `size: [s, m, l]` on
-   `size.control.*`, does not fit the empty screen, does not grow with text and needs tool work.
-2. **No list color: neutral or the accent?** Recommended: neutral, `background.muted` and `text.secondary` (B (a)).
-   If the accent is chosen, `accent-subtle` and `text.accent`, and the picker's "Top level" needs its own answer.
-3. **Quiet or solid?** Recommended: quiet, `category.<name>.background` and `.icon` (C (a)). If chosen,
-   design-language/02 and the usage notes of `color.category.<name>.control` should say that tiles take `background`
-   and `icon`, not `fill`. If solid is chosen, the neutral tile needs a solid pair or the accent.
-4. **The spoken label.** Recommended: keep `label` (E), for parity with Icon and a tile without its title, at no cost.
-   Without it the tile is always hidden and no pilot use loses anything today.
-5. **The proportions.** Recommended: about 1.5 lines for the side, 0.6 of the side for the glyph, a quarter of the side
-   for the corner, settled in the snapshot matrix at the second gate, as Checkbox's were.
+3. **Quiet or solid?** The contract and the code take solid, as design-language/02 says; the catalog shows the quiet
+   pair beside it. If the owner chooses quiet: the two lines of `IconTileColors`, the contract's description,
+   design-language/02 and the usage notes of `color.category.<name>.control` change, and the catalog's second row and
+   `IconTileCatalogSupport.swift` go.
 
 ## Consequences
 
-- Approved, `/implement-platform icon-tile apple` writes `WestronUI/IconTile/IconTile.swift`, its matrix cell and the
-  color supplement. The doc comment of `.category(_:)` (`Category.swift`), which says nil draws the accent, then names the
-  tile's neutral default as well.
 - ListRow (#119), the pilot's header, picker, drag card and empty screen take `IconTile` in their compositions.
+- The description of `color.background.accent-subtle` ("the tile behind an empty state's icon") no longer names a
+  westron component's use; it is left as it is for a product's own composition, a token change out of this issue.

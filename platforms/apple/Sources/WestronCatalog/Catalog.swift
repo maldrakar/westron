@@ -14,6 +14,7 @@ public enum Catalog {
         .buttonBehavior,
         .text,
         .icon,
+        .iconTile,
         .surface,
         .rule,
         .checkbox,
