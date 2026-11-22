@@ -177,7 +177,7 @@ answers.
 | Q10 | `space.125` on both sides |
 | Q11 | A laid-out frame at least `size.target.minimum` high |
 | Tools, item 7 | Yes, here, since ListRow (#119) needs it too: a case that matches only when all the states it names hold, `state: { all: [checked, pressed] }`. The hover and pressed tints moved from the description into the bindings (P8, P11) |
-| Tokens | Add the two missing contrast declarations, `color.text.secondary` on `muted-hover` and `muted-pressed`, unless a pair fails; then report instead of changing a value. Both pairs fail: below |
+| Tokens | Add the two missing contrast declarations, `color.text.secondary` on `muted-hover` and `muted-pressed`, unless a pair fails; then report instead of changing a value. Both failed as text; on review they were declared as non-text, since the icon is the only thing drawn there: below |
 
 What changed from the draft: P1's bases and P13's accessibility are now `forms` and `bases` (the schema carries
 them); P11 is answered by cases over several states, so the tints are bindings; P16's web and GTK bases are per form.
@@ -215,21 +215,21 @@ changes with the fill and the state is announced, so "on" is not color alone for
 fill is the signal. No token changed (the approver's instruction); the owner decides at the second gate whether to
 accept it, as for the text field's edge, or to answer it, with a check mark (Q9's alternative) or other fills.
 
-### Two contrast declarations that fail
+### Two contrast declarations, as non-text
 
-`color.text.secondary`, the unlit chip's icon, on `color.background.muted-hover` and `muted-pressed`, as text
-(4.5:1; 7:1 in high contrast), measured by `tools/westron tokens contrast` with the two declarations added:
+`color.text.secondary` on `color.background.muted-hover` and `muted-pressed` is drawn only by an unlit chip's icon
+under the pointer or pressed: a decorative glyph beside the chip's label, never text (the label is
+`color.text.primary`). Declared first as text (4.5:1; 7:1 in high contrast), all eight pairs failed. The approver
+then had them declared as non-text (3:1; 4.5:1 in high contrast), with the reason in the token's description
+(`tokens/semantic/color.tokens.json`); no value changed. `tools/westron tokens contrast`:
 
-| Pair | light | dark | light-hc | dark-hc |
+| Pair (non-text) | light | dark | light-hc | dark-hc |
 |---|---|---|---|---|
 | text.secondary on muted-hover | 4.20 | 4.42 | 6.59 | 6.85 |
 | text.secondary on muted-pressed | 3.71 | 3.77 | 5.81 | 5.84 |
 
-All eight fail the text target; all pass 3:1 as a non-text glyph in the standard themes, and 4.5:1 in high contrast.
-As instructed, the declarations were not kept and no value changed: `tokens contrast` passes without them, and the
-contract still binds the icon to `color.text.secondary` under the pointer and pressed. Open for the owner: accept the
-icon as a non-text glyph (declare the pairs as `non-text`), draw it in `color.text.primary` in those states (a case
-over hover and pressed), or darken `color.text.secondary`.
+All eight pass. A future use of `text.secondary` as words on those fills would need its own declaration as text,
+which fails today.
 
 ## Implementation on Apple
 
@@ -244,23 +244,36 @@ of the snapshot matrix (the second gate).
   never selected; so is the style's body with no representation. So the fallback: the representation is a system
   Button with the toggle trait removed and `.isSelected` while on. Measured on iOS 26.3 and macOS 26: a button,
   labelled with the chip's words, selected while on, not while off; the pressable chip a button never selected; the
-  static chip's words a text. The surrounding Toggle still gives the element the value 0 or 1, which a style cannot
-  clear (`.accessibilityValue` inside it changed nothing); what VoiceOver itself speaks for it is not measured.
-  iOS 17, macOS 14 and watchOS run the same code, not measured (ChipBehaviorTests).
+  static chip's words a text. A chip whose label is only text (`Toggle("Reading", isOn:)`) is the same element. The
+  element also carries the value 0 or 1 (XCUITest reads the lit Home chip as a button, label "Home", value 1,
+  selected): the product's Toggle around the style gives it, and the style cannot clear it, since
+  `.accessibilityValue` inside the representation or around it on the style's body changed nothing (iOS 26.3). Only
+  a product that wrote a plain Button with `.isSelected` instead of a Toggle would lose it, which would give up the
+  system Toggle as the base (Q1), so it was not tried. What VoiceOver itself speaks for it is not measured. iOS 17,
+  macOS 14 and watchOS run the same code, not measured (ChipBehaviorTests).
 - **Q11.** The selectable and pressable forms lay out a frame at least `size.target.minimum` high around the drawn
   capsule, every point of it taking the press; across, the chip's width (ChipStyleTests; ChipBehaviorTests presses
   2 pt inside the frame's top edge, above the capsule). On macOS the system's focus ring follows the drawn capsule
-  (`contentShape(.focusEffect, …)`); keyboard focus is not measured.
-- **Truncation.** The label is one line, truncated at its end, in the width the container gives; the icon keeps its
-  size.
+  (`contentShape(.focusEffect, …)`). `ChipBehaviorTests.testKeyboardFocusAndSpace` tabs to the selectable chip,
+  presses Space twice and checks that the next Tab reaches the next chip (one focus stop, not two); it runs on a Mac
+  with keyboard navigation on and is skipped otherwise, and the Mac it ran on had it off, so keyboard focus is still
+  not measured.
+- **Truncation and the text role.** The label is one line, truncated at its end, in the width the container gives,
+  in `label.font`; the icon keeps its size. The selectable and pressable styles set the text role, the one line and
+  the truncation around the whole label, as Button's does, so a label that is only text, which no label style
+  reaches, is drawn as a `Label`'s title is (ChipStyleTests, `textOnlyLabel`; the catalog's "A label that is only
+  text"; the supplements `text-only-selectable` and `text-only-pressable`).
 - **The snapshot matrix** draws each form in the states it enters, and supplementary sheets: a chip lit in the accent
   in each state (accent-hover and accent-pressed, which the generated sheets, each state alone, do not draw), the
-  twelve list colors lit in each state, three to a sheet, and a long label in a narrow place in each form and state.
+  twelve list colors lit in each state, three to a sheet, a long label in a narrow place in each form and state, and
+  a label that is only text, short and long, in each state of the selectable and pressable forms.
   The list-color sheets stop growing at the default text size, so a cell is one line on an iPhone; the text sizes
   are the generated sheets'.
 - **The accessibility audit** of the `chip` entry passes on iOS 26.3 in its five configurations, with three
   suppressions, each in `CatalogAccessibilityAuditTests` with its reason: contrast on the disabled samples, which
-  the system disables (WCAG exempts an inactive control); "text clipped" on the long label, truncated by the
-  contract while the element's label is the whole name; and "text clipped" at accessibility5 on the pressable chip
-  the catalog holds pressed, drawn at 0.98 of its size and whole in the screenshot. No lit chip and no list color
-  was reported at the default size or in the other themes.
+  the system disables (WCAG exempts an inactive control); "text clipped" on the long label, with an icon or text
+  only, truncated by the contract while the element's label is the whole name; and "text clipped" on the pressable
+  chip the catalog holds pressed, in every configuration that runs that audit (the default settings and
+  accessibility5). Its cause is measured: the contract draws a pressed chip at 0.98 of its size, and with the scale
+  set to 1 the finding was gone; the text is whole in the screenshots. A real press draws the same scale while it
+  lasts, when no audit runs. No lit chip and no list color was reported at the default size or in the other themes.

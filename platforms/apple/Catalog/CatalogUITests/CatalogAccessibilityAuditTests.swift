@@ -620,17 +620,22 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                 Suppression(.entry("rule"), type: .textClipped, reason: "a rule's label truncated by its contract") {
                     $0 == "HOUSEHOLD ERRANDS, REPAIRS AND EVERYTHING FOR THE GARDEN"
                 },
-                // "Text clipped" on the chips with a long label in a narrow place: the Chip contract draws its label
+                // "Text clipped" on the chips with a long label in a narrow place, with an icon or text only, in
+                // every form: the Chip contract draws its label
                 // on one line and truncates it at its end (spec/components/chip, decisions/0001), and the element's
                 // label is the whole name. Only this one label matches; it is `ChipSample.long`, which this target
                 // cannot import.
                 Suppression(.entry("chip"), type: .textClipped, reason: "a chip's label truncated by its contract") {
                     $0 == "A tag whose name runs much longer than its chip"
                 },
-                // "Text clipped" at accessibility5 on the pressable chip held pressed by the catalog: the contract
-                // draws a pressed chip at 0.98 of its size, and its text is whole in the screenshot of the page at
-                // accessibility5 (measured on iOS 26.3, 2026-11-22). Only the enabled "pressed" sample matches; the
-                // same chip at rest is audited as usual.
+                // "Text clipped" on the pressable chip the catalog holds pressed, in every configuration that runs the
+                // text clipped audit (the default settings and accessibility5): the contract draws a pressed chip at
+                // 0.98 of its size (`ChipTokens.pressScale`, design-language/05), and the audit reports the scaled
+                // text as clipped. Measured on iOS 26.3, 2026-11-22: with the scale set to 1 the finding is gone, and
+                // the text is whole in the page's screenshots at the default size and at accessibility5. A real press
+                // draws the same scale, only while it lasts, when no audit runs. The selectable chip held pressed is
+                // not reported, since its text is behind its accessibility representation. Only an enabled element
+                // labelled "pressed" matches, the state's sample on the page; every other chip is audited as usual.
                 Suppression(
                     .entry("chip"), type: .textClipped, reason: "a pressed chip drawn at 0.98 of its size",
                     enabled: true

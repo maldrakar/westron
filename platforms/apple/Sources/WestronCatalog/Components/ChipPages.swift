@@ -110,6 +110,20 @@ private struct ChipPage: View {
             section("A long label, in a narrow place") {
                 ChipLongLabels()
             }
+            section("A label that is only text") {
+                // Words of their own, so that the UI tests find each live chip's name once.
+                VStack(alignment: .leading, spacing: .space100) {
+                    ChipSamples {
+                        Toggle("Reading", isOn: .constant(true)).toggleStyle(.chip)
+                        Toggle("Music", isOn: .constant(false)).toggleStyle(.chip)
+                        Button("Wed") {}.buttonStyle(.chip)
+                    }
+                    Toggle(ChipSample.long, isOn: .constant(false)).toggleStyle(.chip)
+                        .frame(maxWidth: ChipSample.narrowWidth, alignment: .leading)
+                    Button(ChipSample.long) {}.buttonStyle(.chip)
+                        .frame(maxWidth: ChipSample.narrowWidth, alignment: .leading)
+                }
+            }
         }
     }
 
@@ -212,6 +226,32 @@ struct ChipLongLabels: View {
     }
 }
 
+/// A selectable or pressable chip whose label is only text, as the commonest call writes it: the short name, and the
+/// long one in a narrow place, side by side, so that a sheet of every state fits a window.
+struct ChipTextOnly: View {
+    let form: ChipForm
+    var checked = false
+
+    var body: some View {
+        HStack(spacing: .space100) {
+            chip(ChipSample.tag)
+            chip(ChipSample.long)
+                .frame(maxWidth: ChipSample.narrowWidth, alignment: .leading)
+        }
+    }
+
+    @ViewBuilder private func chip(_ title: String) -> some View {
+        switch form {
+        case .selectable:
+            Toggle(title, isOn: .constant(checked))
+                .toggleStyle(.chip)
+        case .pressable, .static:
+            Button(title) {}
+                .buttonStyle(.chip)
+        }
+    }
+}
+
 /// Samples side by side, wrapping onto as many lines as they need, as a tag bar wraps in a narrow pane.
 private struct ChipSamples<Content: View>: View {
     @ViewBuilder let content: Content
@@ -298,6 +338,25 @@ extension ComponentMatrix.Supplement {
         "Every chip is on, and in the row's state too: a list's fill stays under the pointer and pressed "
         + "(decisions/0001, Q4). The color comes from .category(_:). Drawn at the default text size at most: how "
         + "the chip grows is the generated sheets'."
+
+    /// A label that is only text, the commonest call (`Toggle("Work", isOn:)`, `Button("Tue")`), in each state of the
+    /// two controls, short and given less width than it needs: no label style reaches such a label, so the style sets
+    /// its text role and its one line around it. The static form takes a `Label`, so it has no such sheet.
+    static let chipTextOnly: [Self] = [ChipForm.selectable, .pressable].map { form in
+        ComponentMatrix.Supplement(
+            component: "chip", id: "text-only-\(form.rawValue)", title: "a label that is only text",
+            note: "The label is a string, with no icon: label.font, one line; the long one, given "
+                + "\(Int(ChipSample.narrowWidth)) pt, truncated at its end with an ellipsis. Drawn at the default "
+                + "text size at most, so that a row fits an iPhone: how the chip grows is the generated sheets'.",
+            keeps: ["form": form.rawValue]
+        ) { combination in
+            let state = combination.state.flatMap(ChipCatalogState.init(named:))
+            ChipTextOnly(form: form, checked: state?.isChecked ?? false)
+                .forcingChipStates(state.map { $0.isForced ? [$0] : [] } ?? [])
+                .disabled(state?.isDisabled ?? false)
+                .dynamicTypeSize(...DynamicTypeSize.large)
+        }
+    }
 
     /// A long label in each form and state, given less width than it needs (#72): the width is the container's, not a
     /// contract option.

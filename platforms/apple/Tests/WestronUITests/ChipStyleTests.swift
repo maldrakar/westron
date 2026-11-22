@@ -216,6 +216,34 @@ struct ChipStyleTests {
         #expect(abs(long.height - short.height) < 0.5, "one line: \(long) against \(short)")
     }
 
+    @Test(
+        "a label that is only text, the commonest call, is drawn in label.font on one line, truncated, in both controls"
+    )
+    func textOnlyLabel() {
+        let name = "Work"
+        let long = "A tag whose name runs much longer than its chip"
+        let width: CGFloat = 120
+        let given = CGSize(width: width, height: 1000)
+        let selectable = { (title: String) in AnyView(Toggle(title, isOn: .constant(false)).toggleStyle(.chip)) }
+        let pressable = { (title: String) in AnyView(Button(title) {}.buttonStyle(.chip)) }
+        // The words in label.font, and the padding on both sides: the width of the chip. In the system's body font,
+        // which a label style never reaching the text would leave, the words are wider.
+        let words = fittingSize(Text(name).textRole(ChipMetrics.labelFont)).width
+        let wordsInBody = fittingSize(Text(name).font(.body)).width
+        #expect(wordsInBody > words + 0.5, "the fonts must differ for this test to tell them apart")
+        let expected = words + 2 * CGFloat(ChipMetrics.paddingHorizontal)
+        // The same height as the chip whose label is a Label: the hit area's, around one line.
+        let withIcon = fittingSize(Toggle(isOn: .constant(false)) { Label(name, icon: .hash) }.toggleStyle(.chip))
+        for (form, chip) in [("selectable", selectable), ("pressable", pressable)] {
+            let short = fittingSize(chip(name))
+            #expect(abs(short.width - expected) < 1, "\(form): \(short.width) against \(expected) in label.font")
+            #expect(abs(short.height - withIcon.height) < 0.5, "\(form): \(short) against \(withIcon)")
+            let truncated = fittingSize(chip(long), in: given)
+            #expect(truncated.width <= width + 0.5, "\(form): \(truncated)")
+            #expect(abs(truncated.height - short.height) < 0.5, "\(form), one line: \(truncated) against \(short)")
+        }
+    }
+
     #if os(iOS)
         @Test("the chip grows with Dynamic Type")
         func growsWithDynamicType() {

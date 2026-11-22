@@ -195,7 +195,9 @@ extension Westron.Color {
                 ["color.background.accent-subtle"],
             ])
 
-        /// Text and glyphs that come second: captions, metadata, a row's details, timestamps.
+        /// Text and glyphs that come second: captions, metadata, a row's details, timestamps. On background.muted-hover
+        /// and muted-pressed it is only a glyph, never text: the icon of an unlit chip under the pointer or pressed,
+        /// decorative beside the chip's label (spec/components/chip, decisions/0001), so those pairs are non-text, 3:1.
         public static let secondary = Westron.Color(
             name: "color.text.secondary",
             light: Westron.RGB(hex: 0x656970),
@@ -211,6 +213,8 @@ extension Westron.Color {
                 ["color.background.pressed"],
                 ["color.background.selected"],
                 ["color.background.accent-subtle"],
+                ["color.background.muted-hover"],
+                ["color.background.muted-pressed"],
             ])
 
         /// The placeholder of an empty field. It meets the text target, as all words do.

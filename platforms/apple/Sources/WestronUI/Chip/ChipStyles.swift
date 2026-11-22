@@ -38,7 +38,8 @@ private struct ChipToggleBody: View {
         // selected`), with the toggle's trait taken off. Measured on iOS 26.3 (CatalogUITests/ChipBehaviorTests): the
         // system's own toggle in its button style as the representation, and the body with no representation, are
         // both a switch with the value 0 or 1, never selected; this one is a button, selected while on. The
-        // surrounding Toggle still gives it the value 0 or 1 (the contract's decisions/0001, Q6).
+        // surrounding Toggle, the product's, still gives it the value 0 or 1: `.accessibilityValue` inside the
+        // representation or around it, on this body, does not change that (the contract's decisions/0001, Q6).
         .accessibilityRepresentation {
             Button {
                 isOn.wrappedValue.toggle()
@@ -102,7 +103,14 @@ private struct ChipControl<Label: View>: View {
     var body: some View {
         let states = Set(ChipState.allCases.filter(isIn))
         ChipSurface(variant: variant, states: states, hitHeight: ChipMetrics.minimumHitHeight) {
-            label.labelStyle(ChipContentStyle())
+            // The text role and the one line around the whole label, as Button's style does: a label that is only
+            // text, `Toggle("Work", isOn:)` or `Button("Tue")`, never reaches a label style, and would otherwise be
+            // drawn in the system's body font and wrap. A `Label` gets the same from `ChipContent`.
+            label
+                .labelStyle(ChipContentStyle())
+                .textRole(ChipMetrics.labelFont)
+                .lineLimit(1)
+                .truncationMode(.tail)
         }
         #if !os(watchOS)
             .onHover { hovering in
@@ -129,8 +137,8 @@ struct ChipLabelStyle: LabelStyle {
     }
 }
 
-/// Lays out a `Label` in a selectable or pressable chip as the static form does; a label that is only text is drawn as
-/// it is, in the chip's text role and color.
+/// Lays out a `Label` in a selectable or pressable chip as the static form does. A label that is only text never
+/// reaches it: `ChipControl` gives such a label the text role, the one line and the truncation around it.
 private struct ChipContentStyle: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
         ChipContent(icon: configuration.icon, title: configuration.title)

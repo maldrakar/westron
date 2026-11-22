@@ -79,9 +79,10 @@ platforms:                      # all four; each is `status: planned` or a strat
 ```
 
 An enum option without a `default` must be named in every use; a variant has none (`spec/conventions.md`).
-Names of options, values, slots, states and intents are lowerCamelCase: they become identifiers on every platform.
-Swift, the pilot platform's language, cannot use a few words there: no value or state is `init`, `self` or `none`, and
-no option is `inout`, `var` or `let` (an option becomes an argument label). Other Swift keywords are fine.
+Names of options, values, slots, states, forms and intents are lowerCamelCase: they become identifiers on every
+platform. Swift, the pilot platform's language, cannot use a few words there: no value, state or form is `init`,
+`self` or `none`, and no option is `inout`, `var` or `let` (an option becomes an argument label). Other Swift keywords
+are fine.
 `description` is allowed on the contract, an option, a constraint, `accessibility`, a platform and an Apple OS.
 
 - **YAML words.** A boolean is `true` or `false`. YAML 1.1 also reads an unquoted `yes`, `no`, `on` and `off`
@@ -224,8 +225,8 @@ Besides the schema, the check enforces what a schema cannot:
 - no unquoted YAML 1.1 boolean word other than `true` and `false`; where a name is meant, YAML's `true`, `false` or a
   number is reported as such, with the advice to quote it;
 - no list repeats a name; an enum option's default, when it has one, is one of its values; no option is named `state`;
-- no value or state is `init`, `self` or `none`, and no option `inout`, `var` or `let`: Swift cannot use them in the
-  generated API (above);
+- no value, state or form is `init`, `self` or `none`, and no option `inout`, `var` or `let`: Swift cannot use them in
+  the generated API (above);
 - no option value is the name of a system style of the Apple base control, such as `plain` for `SwiftUI.Button`
   (decisions/0003); a base the check has no style modifier and style names for is an error until they are added to
   `tools/Sources/WestronTools/Contracts/SystemStyles.swift`, which knows `SwiftUI.Button`, `SwiftUI.TextField` and

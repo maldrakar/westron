@@ -226,8 +226,8 @@ struct ContractRules {
     /// compile there, and `var` and `let` compile only with a warning.
     static let unusableLabels: Set<String> = ["inout", "var", "let"]
 
-    /// Option values, states and option names become Swift names on Apple, the pilot platform: none may be a word
-    /// Swift cannot use there.
+    /// Option values, states, forms and option names become Swift names on Apple, the pilot platform: none may be a
+    /// word Swift cannot use there.
     mutating func checkSwiftNames() {
         for member in document["options"]?.members ?? [] {
             let path = DocumentPath.root.key("options").key(member.key)
@@ -247,6 +247,11 @@ struct ContractRules {
         for (index, element) in (document["states"]?.elements ?? []).enumerated() {
             guard let state = element.string, let reason = Self.unusableCases[state] else { continue }
             report(.root.key("states").index(index), "\"\(state)\" cannot be a state: \(reason); choose another name")
+        }
+        // A form is a case of the generated `<Component>Form` too.
+        for form in document["forms"]?.members ?? [] {
+            guard let reason = Self.unusableCases[form.key] else { continue }
+            report(.root.key("forms").key(form.key), "\"\(form.key)\" cannot be a form: \(reason); choose another name")
         }
     }
 

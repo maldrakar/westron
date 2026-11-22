@@ -1,9 +1,9 @@
 import XCTest
 
 /// Chip's behavior that a unit test cannot reach, on the catalog's `chip` entry: what assistive technology meets for
-/// each form (the selectable chip the system's own toggle in its button style, selected while on; the pressable chip a
-/// button; the static chip its text), a press that toggles or activates, and the hit area laid out around the drawn
-/// chip.
+/// each form (the selectable chip a system Button selected while on, `.isSelected`, the style's accessibility
+/// representation; the pressable chip a button; the static chip its text), a press that toggles or activates, the hit
+/// area laid out around the drawn chip, keyboard focus and Space on macOS, and a label that is only text.
 ///
 /// The entry says which live chips are on, and how often the pressable one was pressed, in a text,
 /// `ChipCatalogID.summary` in WestronCatalog.
@@ -136,5 +136,68 @@ final class ChipBehaviorTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(work.frame.height, target)
         press(work.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0)).withOffset(CGVector(dx: 0, dy: 2)))
         XCTAssertEqual(summary, "on: work, home; pressed: 0", "a press in the hit area above the chip did not toggle")
+    }
+
+    /// Whether the element with the identifier has the keyboard focus.
+    @MainActor
+    private func hasFocus(_ id: String) -> Bool {
+        app.descendants(matching: .any)[id].value(forKey: "hasKeyboardFocus") as? Bool ?? false
+    }
+
+    /// macOS, with the system's keyboard navigation on (System Settings, Keyboard, "Keyboard navigation"): Tab moves the
+    /// focus to the selectable chip, Space toggles it both ways, and the chip is one focus stop, not two (the system
+    /// button the style draws and the toggle around it): the next Tab goes to the next chip. The screenshot attached
+    /// shows the system's focus ring.
+    ///
+    /// The setting is the person's, global, and a test does not change it: with it off, as on a Mac by default, the
+    /// test is skipped, as `CheckboxBehaviorTests.testKeyboardFocusAndSpace` is.
+    @MainActor
+    func testKeyboardFocusAndSpace() throws {
+        #if os(macOS)
+            // Bit 1 of the global AppleKeyboardUIMode is keyboard navigation (2 or 3 when on).
+            guard UserDefaults.standard.integer(forKey: "AppleKeyboardUIMode") & 2 != 0 else {
+                throw XCTSkip("the system's keyboard navigation is off on this Mac")
+            }
+            launch()
+            app.windows.firstMatch.click()
+            XCTAssertEqual(summary, "on: home; pressed: 0")
+            // Tab through the page until the focus reaches Work: the chips before it are the states' samples.
+            var reached = false
+            for _ in 0..<40 {
+                app.typeKey(.tab, modifierFlags: [])
+                if hasFocus(ID.work) {
+                    reached = true
+                    break
+                }
+            }
+            XCTAssertTrue(reached, "Tab never moved the keyboard focus to the chip")
+            let ring = XCTAttachment(screenshot: app.windows.firstMatch.screenshot())
+            ring.name = "chip-keyboard-focus"
+            ring.lifetime = .keepAlways
+            add(ring)
+            app.typeKey(" ", modifierFlags: [])
+            XCTAssertEqual(summary, "on: work, home; pressed: 0", "Space did not toggle the focused chip")
+            app.typeKey(" ", modifierFlags: [])
+            XCTAssertEqual(summary, "on: home; pressed: 0", "Space did not toggle the focused chip back")
+            // One stop: the next Tab leaves Work for Home, the next chip, not for a second element of Work.
+            app.typeKey(.tab, modifierFlags: [])
+            XCTAssertFalse(hasFocus(ID.work), "the chip kept the focus after a Tab: it is two focus stops")
+            XCTAssertTrue(hasFocus(ID.home), "the Tab after the chip did not reach the next chip")
+        #else
+            throw XCTSkip("keyboard focus is measured on macOS")
+        #endif
+    }
+
+    /// A chip whose label is only text, `Toggle("Reading", isOn:)` and `Button("Wed")`: the same element as one with a
+    /// `Label`, a button labelled with its words, selected while on.
+    @MainActor
+    func testTextOnlyLabel() {
+        launch()
+        let reading = app.buttons["Reading"]
+        XCTAssertTrue(reading.waitForExistence(timeout: 5), "no button Reading")
+        XCTAssertTrue(reading.isSelected)
+        XCTAssertFalse(app.buttons["Music"].isSelected)
+        XCTAssertFalse(app.buttons["Wed"].isSelected)
+        print("chip: text only: Reading value \(String(describing: reading.value)), selected \(reading.isSelected)")
     }
 }

@@ -77,6 +77,16 @@ struct FormsTests {
         #expect(chipProblems(chipFixture) == [])
     }
 
+    @Test("rule: a form is a case of the generated forms' type, so no form is a word Swift cannot use as one")
+    func formNames() {
+        for word in ["init", "self", "none"] {
+            let renamed = chipFixture.replacingOccurrences(of: "  static:", with: "  \(word):")
+            let found = chipProblems(renamed)
+            #expect(has(found, "forms.\(word)", "\"\(word)\" cannot be a form"))
+            #expect(found.count == 1, "\(found)")
+        }
+    }
+
     @Test("rule: a form enters only declared states, and every declared state is entered by some form")
     func formStates() {
         let unknown = chipProblems(
