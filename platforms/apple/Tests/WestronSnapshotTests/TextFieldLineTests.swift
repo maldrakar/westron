@@ -609,7 +609,15 @@
                     let remadeBefore = TextFieldLineWorkaround.remade
                     let axis: Axis = index == 0 ? .horizontal : .vertical
                     let remadeOwnBefore = TextFieldLineWorkaround.remadeOnAxis[axis, default: 0]
-                    for _ in 0..<perPhase {
+                    // The field's last phase goes on, up to four times as long, until its own font has been made anew
+                    // while it was edited, which a multi-line field's is less often.
+                    var phaseAttempts = 0
+                    while phaseAttempts < perPhase
+                        || (marked && !unfixed && phaseAttempts < 4 * perPhase
+                            && remadeEdited[index] + TextFieldLineWorkaround.remadeOnAxis[axis, default: 0]
+                                - remadeOwnBefore == 0)
+                    {
+                        phaseAttempts += 1
                         attempt += 1
                         var font = WeakFont(nil)
                         autoreleasepool {
