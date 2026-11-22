@@ -200,7 +200,8 @@ the contract (Text: `.textRole(_: Westron.TextRole)` on `View`, and its twin on 
 generator checks its shape: one option, whose values are the tokens of a group with an accessor on Apple
 (`AppleComponents.tokenAccessors`: `typography` → `Westron.TextRole`), and no states; it fails on any other. An
 approved style with an optional option whose values are icons gets a labeled argument of its overload,
-`<name>: Westron.Icon? = nil`, after the other options and passed to its `<Component>VariantStyle` (TextField:
+`<name>: Westron.Icon? = nil`, in the contract's order of options after the variant, and passed to its
+`<Component>VariantStyle` (TextField:
 `.textFieldStyle(.framed, leadingIcon: .magnifier)`), and the API parity lint expects exactly that. A style's icons
 option every use names, and an extension's, fail generation and the lint as not supported yet, and so does an own
 modifier with one: the conventions derive a required one for an own view alone. An

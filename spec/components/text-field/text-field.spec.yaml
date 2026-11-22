@@ -6,7 +6,10 @@
 # (#115): a glyph at the field's start and at its end, the options leadingIcon and trailingIcon, so that a search field
 # is this field, approved that day by the coordinating agent under the owner's delegation of the phase's contracts
 # (decisions/0014; decisions/0003-icons-at-the-start-and-the-end.md). Revised again that day, before the merge: the
-# glyphs and their gap stop growing at xxxLarge (decisions/0003, "Revision: the glyphs stop at xxxLarge").
+# glyphs and their gap stop growing at xxxLarge (decisions/0003, "Revision: the glyphs stop at xxxLarge"); and once
+# more after the accessibility audit: a glyph names the field's purpose, never an action, a search field's prompt is
+# in color.text.placeholder, and at the accessibility sizes a glyph is centred on the first line (decisions/0003,
+# "Second revision: what a glyph draws, and where").
 id: text-field
 status: approved
 description: >-
@@ -30,7 +33,11 @@ description: >-
   (design-language/08). The placeholder is in color.text.placeholder. A field may carry a glyph of the icon registry
   at its start, at its end or at both (leadingIcon, trailingIcon). A glyph is decoration, never a control: it is
   hidden from assistive technology, a touch or a click on it is one on the field, which it focuses, and it adds
-  nothing to the focus order. It stands inside the field, on its fill and inside its focus ring: at the field's
+  nothing to the focus order. So a glyph names what the field is for, as a magnifier, a calendar or a number sign for
+  a tag does, and never draws an action the person could expect to perform, such as a microphone, a clear mark or a
+  chevron: an inert microphone beside the keyboard's real dictation key misleads, and Voice Control cannot act on
+  it. Such a glyph waits for a slot for a control, which this version does not have (decisions/0003, second revision
+  of 2026-11-22). It stands inside the field, on its fill and inside its focus ring: at the field's
   horizontal padding from the field's edge and container.gap from the text, beside the first line of a field of
   several lines, on that line's baseline, as a letter of it would; start and end follow the layout direction, so
   right to left the leading glyph is at the right. It takes its size from the field's text, framed's body.regular or
@@ -38,10 +45,12 @@ description: >-
   not an accessibility size (xxxLarge on Apple); at the accessibility sizes the glyph, its gap and the room the field
   leaves it stay as they are there while the text grows on, since inside a field the width is what the person types
   into and the glyph is decoration (a named exception to design-language/07, decisions/0003, revision of 2026-11-22;
-  the field's padding still grows with the text). It draws in
+  the field's padding still grows with the text). There, where a glyph is smaller than its text, it is centred on
+  the first line instead of standing on its baseline, which would set it low like a subscript; at the other sizes it
+  stands on the baseline. It draws in
   color.text.secondary in every state, with the placeholder shown or text entered, focused or not; disabled dims it
   with the rest of the field. A search field is no component of its own (decisions/0014): it is a framed field with
-  the magnifier at its start, and a glyph at its end where the product has one. There is no error state, hint or message in
+  the magnifier at its start. There is no error state, hint or message in
   this version: no pilot screen shows one, and a field marked only by a danger border would tell an error by color
   alone (design-language/08, "Color is never the only signal"). The text, and with it a framed field's height,
   follows the person's text size (design-language/08, "Settings the person chooses"). A field is never drawn lower
@@ -89,9 +98,10 @@ options:
     type: icons
     optional: true
     description: >-
-      The glyph at the field's end, or none, such as the microphone at the end of the pilot's search field.
-      Decoration, as the leading one: a glyph that acts when it is pressed, such as a clear button or one that starts
-      dictation, is not this option (decisions/0003-icons-at-the-start-and-the-end.md).
+      The glyph at the field's end, or none, such as a number sign at the end of a field that holds a tag's name.
+      Decoration, as the leading one: it names what the field is for. A glyph that acts when it is pressed, or draws
+      an action, such as a clear mark or a microphone that starts dictation, is not this option
+      (decisions/0003-icons-at-the-start-and-the-end.md).
 
 slots: [label, placeholder]
 states: [focus, disabled]
@@ -212,19 +222,26 @@ platforms:
       space.100 across and space.50 up and down beyond the field (a proposal of the implementation, decisions/0001,
       I4). Corners are continuous.
       leadingIcon and trailingIcon are labeled arguments of the overload, Westron.Icon? with nil as their default:
-      .textFieldStyle(.framed, leadingIcon: .magnifier, trailingIcon: .microphone). They cannot come through the
+      .textFieldStyle(.framed, leadingIcon: .magnifier, trailingIcon: .hash). They cannot come through the
       field's label, as Button's icon does: a TextFieldStyle is given the field alone, whose label is its title, and
       has no public way to read the label's parts. Like the variant and the size they reach every field the modifier
       is set on, in a container too. The style draws each glyph as Icon draws a decorative one, hidden from
-      assistive technology, in a row with the system field aligned on its first text baseline, inside the fill, the
-      high-contrast outline, the focus ring and the area that focuses the field on a tap or a click. Each glyph and
-      its gap are drawn at the context's Dynamic Type size held to xxxLarge (.dynamicTypeSize(...xxxLarge) on them,
-      not on the field), and the field leaves them the room they take there; macOS has no Dynamic Type, so nothing
-      changes there. A search field
-      on Apple is this field where the product places its search itself, in a bar or a pane of its own, named and
-      given the system's trait for a search field by the product: TextField("Search", text: $query, prompt:
-      Text("Search")).textFieldStyle(.framed, leadingIcon: .magnifier).accessibilityLabel("Search")
-      .accessibilityAddTraits(.isSearchField). Where the system places the search, SwiftUI's .searchable (the
+      assistive technology, over the system field's own room aligned on its first text baseline, inside the fill, the
+      high-contrast outline, the focus ring and the area that focuses the field on a tap or a click. The system field
+      keeps one place in the style's views whether it has glyphs or not, so a product that adds or removes a glyph
+      while the person types, such as one shown only while the field is empty, keeps the same field and its focus.
+      Each glyph and its gap are drawn at the context's Dynamic Type size held to xxxLarge
+      (.dynamicTypeSize(...xxxLarge) on them, not on the field), and the field leaves them the room they take there;
+      at the accessibility sizes the glyph is centred on the box of a line of the field's text role at the text's
+      size, aligned on the field's first baseline. macOS has no Dynamic Type, so nothing changes there. A search
+      field on Apple is this field where the product places its search itself, in a bar or a pane of its own, named
+      and given the system's trait for a search field by the product, with its prompt in color.text.placeholder,
+      since a search field's only visible name is its placeholder (the system's own placeholder color measures
+      1.69:1 on the fill in light and 2.43:1 in dark on iOS): TextField("Search", text: $query, prompt:
+      Text("Search").foregroundStyle(.text.placeholder)).textFieldStyle(.framed, leadingIcon: .magnifier)
+      .accessibilityLabel("Search").accessibilityAddTraits(.isSearchField). macOS ignores the prompt's color (the
+      macos block), so there the placeholder stays the system's, the open point of decisions/0001.
+      Where the system places the search, SwiftUI's .searchable (the
       navigation bar, the toolbar, the top of a sidebar, and from iOS 26 a bottom toolbar), the field is the
       system's, with its own magnifier, dictation and Cancel, and takes no westron style: SwiftUI has no style for it,
       and westron leaves it to the system as it leaves a menu or an alert (decisions/0014).

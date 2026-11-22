@@ -42,8 +42,8 @@ extension View {
     ///   - size: The size; without it, the size comes from `controlSize` (`TextFieldSize.init(_:)`).
     ///   - leadingIcon: The glyph at the field's start, a name of the icon registry, or none: a use that leaves it out
     ///     draws no glyph there and gives the text that room. A name of `Westron.Icon`; by default `nil`, none.
-    ///   - trailingIcon: The glyph at the field's end, or none, such as the microphone at the end of the pilot's search
-    ///     field. A name of `Westron.Icon`; by default `nil`, none.
+    ///   - trailingIcon: The glyph at the field's end, or none, such as a number sign at the end of a field that holds a
+    ///     tag's name. A name of `Westron.Icon`; by default `nil`, none.
     public func textFieldStyle(
         _ variant: TextFieldVariant,
         size: TextFieldSize? = nil,

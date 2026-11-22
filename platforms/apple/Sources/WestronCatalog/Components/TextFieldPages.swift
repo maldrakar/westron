@@ -49,8 +49,10 @@ enum TextFieldCatalogID {
     static let notes = "text-field.live.notes"
     /// A framed SecureField.
     static let secure = "text-field.live.secure"
-    /// A search field: a framed field at size m with the magnifier at its start and the microphone at its end.
+    /// A search field: a framed field at size m with the magnifier at its start.
     static let search = "text-field.live.search"
+    /// A tag's name: a framed field at size m with a number sign at its end.
+    static let tag = "text-field.live.tag"
     /// The text that names the focused field: "Focused: small", "Focused: none".
     static let focused = "text-field.live.focused"
     /// The button that takes the focus away from every field.
@@ -112,16 +114,17 @@ struct TextFieldSample: View {
 }
 
 /// A search field as a product writes it with westron's field (the contract's decisions/0003): a framed field with the
-/// magnifier at its start and, as the pilot's search bar draws it, the microphone at its end, both decoration. The
-/// product names the field and gives it the search field's trait, which the style does not (the contract's
-/// accessibility); the glyphs are hidden from assistive technology.
+/// magnifier at its start, decoration. No microphone at its end, as the pilot's search bar draws one: a glyph names
+/// what the field is for, never an action (decisions/0003, second revision). The product names the field, gives it the
+/// search field's trait, which the style does not (the contract's accessibility), and colors its prompt, its only
+/// visible name, in `text.placeholder` (macOS ignores the color); the glyph is hidden from assistive technology.
 struct TextFieldSearchSample: View {
     var size: TextFieldSize? = nil
     @State private var text = ""
 
     var body: some View {
-        TextField("Search", text: $text, prompt: Text("Search"))
-            .textFieldStyle(.framed, size: size, leadingIcon: .magnifier, trailingIcon: .microphone)
+        TextField("Search", text: $text, prompt: Text("Search").foregroundStyle(.text.placeholder))
+            .textFieldStyle(.framed, size: size, leadingIcon: .magnifier)
             .accessibilityLabel("Search")
             .accessibilityAddTraits(.isSearchField)
     }
@@ -220,7 +223,8 @@ extension ComponentMatrix.Supplement {
     /// The same style on SecureField.
     static let textFieldSecure = ComponentMatrix.Supplement(
         component: "text-field", id: "secure-field", title: "SecureField",
-        note: "SecureField takes the same .textFieldStyle(_:size:) as TextField (the contract's platforms.apple); the "
+        note: "SecureField takes the same .textFieldStyle(_:size:leadingIcon:trailingIcon:) as TextField (the "
+            + "contract's platforms.apple); the "
             + "kind of field is not a contract option. Each cell holds an empty field and one with a password; iOS "
             + "keeps a secure field's text out of screen captures, so there the second looks empty.",
         keeps: ["size": "m", "lines": "single"]
@@ -240,7 +244,8 @@ extension ComponentMatrix.Supplement {
 
     /// The glyphs at a field's start and its end (#115), on every generated sheet again: each variant, size, value of
     /// lines and state, the generated cell's fields, empty and with text, with the magnifier at the start
-    /// (`textFieldGlyphLeading`), the microphone at the end (`textFieldGlyphTrailing`), or both (`textFieldGlyphsBoth`).
+    /// (`textFieldGlyphLeading`), a number sign at the end, as for a tag's name (`textFieldGlyphTrailing`), or both
+    /// (`textFieldGlyphsBoth`). Each glyph names what the field is for, never an action (decisions/0003).
     /// They are optional options of the contract, `leadingIcon` and `trailingIcon`, which are no axis of the generated
     /// matrix: it draws every combination without them (spec/conventions.md, "Snapshot matrix").
     static let textFieldGlyphLeading = glyphs(
@@ -248,11 +253,11 @@ extension ComponentMatrix.Supplement {
         which: "the magnifier "
             + "at the start, leadingIcon: .magnifier")
     static let textFieldGlyphTrailing = glyphs(
-        leading: nil, trailing: .microphone, id: "glyph-trailing", title: "a glyph at the end",
-        which: "the microphone at the end, trailingIcon: .microphone")
+        leading: nil, trailing: .hash, id: "glyph-trailing", title: "a glyph at the end",
+        which: "a number sign at the end, as for a tag's name, trailingIcon: .hash")
     static let textFieldGlyphsBoth = glyphs(
-        leading: .magnifier, trailing: .microphone, id: "glyphs-both", title: "glyphs at the start and the end",
-        which: "the magnifier at the start and the microphone at the end, as a search field")
+        leading: .magnifier, trailing: .hash, id: "glyphs-both", title: "glyphs at the start and the end",
+        which: "the magnifier at the start and a number sign at the end, as a search among tags")
 
     private static func glyphs(
         leading: Westron.Icon?, trailing: Westron.Icon?, id: String, title: String, which: String
@@ -264,7 +269,7 @@ extension ComponentMatrix.Supplement {
                 + "draw the generated cells again with \(which). A glyph stands at the field's padding and "
                 + "container.gap from the text, on the first line's baseline, in text.secondary in every state, at "
                 + "the text's size up to xxxLarge; at the accessibility sizes the glyph and its gap stay as at "
-                + "xxxLarge while the text grows on.",
+                + "xxxLarge while the text grows on, and the glyph is centred on the first line.",
             keeps: [:],
             // At the largest text size the glyphs still take some width from the text, which wraps more: a column of
             // three multiline cells is taller than an iPhone's screen, so a picture holds one row.
@@ -291,8 +296,8 @@ extension ComponentMatrix.Supplement {
     static let textFieldGlyphsRightToLeft = ComponentMatrix.Supplement(
         component: "text-field", id: "glyphs-right-to-left", title: "glyphs right to left",
         note: "The layout direction is not a contract option. Right to left, with a long Hebrew text, the glyph at the "
-            + "start (the magnifier) stands at the right and the one at the end (the microphone) at the left; the "
-            + "text stops at, or wraps before, the gap before the microphone.",
+            + "start (the magnifier) stands at the right and the one at the end (the number sign) at the left; the "
+            + "text stops at, or wraps before, the gap before the number sign.",
         keeps: ["size": "m"],
         rowsPerPicture: 1
     ) { combination in
@@ -399,7 +404,7 @@ private struct TextFieldLongTextSample: View {
         let (variant, size, lines, stateName) = values.fields
         TextFieldSample(
             variant: variant, size: size, axis: Axis(textFieldLines: lines), filled: true, leadingIcon: .magnifier,
-            trailingIcon: .microphone, text: direction == .rightToLeft ? Self.hebrew : Self.english
+            trailingIcon: .hash, text: direction == .rightToLeft ? Self.hebrew : Self.english
         )
         .environment(\.layoutDirection, direction)
         .padding(variant.focusRingClearance)
@@ -526,10 +531,10 @@ private struct TextFieldGlyphsPage: View {
     var body: some View {
         TokenPage(
             title: "TextField: glyphs",
-            summary: "A search field, framed at size m with the magnifier at its start and the microphone at its end, "
-                + "named and given the search field's trait by the product; then each variant with a glyph at the "
-                + "start, at the end, and both on several lines. A glyph is decoration, in text.secondary, at the "
-                + "text's size up to xxxLarge."
+            summary: "A search field, framed at size m with the magnifier at its start, named, given the search "
+                + "field's trait and its prompt's color by the product; then each variant with the magnifier at the "
+                + "start, a number sign at the end, and both on several lines. A glyph is decoration that names what "
+                + "the field is for, never an action, in text.secondary, at the text's size up to xxxLarge."
         ) {
             SectionRow {
                 section("a search field, size m") {
@@ -539,10 +544,10 @@ private struct TextFieldGlyphsPage: View {
                     VariantColumns { variant in
                         VStack(alignment: .leading, spacing: .space150) {
                             TextFieldSample(variant: variant, size: .m, filled: true, leadingIcon: .magnifier)
-                            TextFieldSample(variant: variant, size: .m, filled: true, trailingIcon: .microphone)
+                            TextFieldSample(variant: variant, size: .m, filled: true, trailingIcon: .hash)
                             TextFieldSample(
                                 variant: variant, size: .m, axis: .vertical, filled: true, leadingIcon: .magnifier,
-                                trailingIcon: .microphone)
+                                trailingIcon: .hash)
                         }
                     }
                 }
@@ -569,13 +574,13 @@ extension TextFieldMatrixValues {
     }
 }
 
-/// Live fields: a framed field at size s, a card's inline title and multiline notes, a framed SecureField and a search
-/// field with glyphs. With
+/// Live fields: a framed field at size s, a card's inline title and multiline notes, a framed SecureField, a search
+/// field with the magnifier at its start and a tag's field with a number sign at its end. With
 /// `focusing`, the page focuses that field for real once it appears, as a product does with `.focused(_:)`, to show
 /// westron's ring and that the system draws none.
 private struct TextFieldLivePage: View {
     enum Field: String, Hashable {
-        case small, title, notes, secure, search
+        case small, title, notes, secure, search, tag
     }
 
     /// The field to focus: `framed` focuses the size s field, `inline` the card's title.
@@ -586,13 +591,14 @@ private struct TextFieldLivePage: View {
     @State private var notes = "Milk, bread and apples"
     @State private var password = ""
     @State private var query = ""
+    @State private var tag = ""
     @FocusState private var focused: Field?
 
     var body: some View {
         TokenPage(
             title: "TextField · live",
             summary: "Real fields. A framed field at size s takes touches and clicks in the platform's target "
-                + "around what it draws; a tap or a click on its padding, or on a search field's glyph, focuses it."
+                + "around what it draws; a tap or a click on its padding, or on a field's glyph, focuses it."
         ) {
             VStack(alignment: .leading, spacing: .space200) {
                 TextField("List name", text: $name, prompt: Text("Untitled"))
@@ -623,13 +629,19 @@ private struct TextFieldLivePage: View {
                     .accessibilityLabel("Password")
                     .focused($focused, equals: .secure)
                     .accessibilityIdentifier(TextFieldCatalogID.secure)
-                // A tap or a click on a glyph focuses the field, as one on its padding does.
-                TextField("Search", text: $query, prompt: Text("Search"))
-                    .textFieldStyle(.framed, size: .m, leadingIcon: .magnifier, trailingIcon: .microphone)
+                // A tap or a click on a glyph focuses the field, as one on its padding does: the magnifier at the
+                // search field's start, the number sign at the tag field's end.
+                TextField("Search", text: $query, prompt: Text("Search").foregroundStyle(.text.placeholder))
+                    .textFieldStyle(.framed, size: .m, leadingIcon: .magnifier)
                     .accessibilityLabel("Search")
                     .accessibilityAddTraits(.isSearchField)
                     .focused($focused, equals: .search)
                     .accessibilityIdentifier(TextFieldCatalogID.search)
+                TextField("Tag", text: $tag, prompt: Text("Tag"))
+                    .textFieldStyle(.framed, size: .m, trailingIcon: .hash)
+                    .accessibilityLabel("Tag")
+                    .focused($focused, equals: .tag)
+                    .accessibilityIdentifier(TextFieldCatalogID.tag)
                 HStack(spacing: .space200) {
                     Text("Focused: \(focused?.rawValue ?? "none")")
                         .textRole(.footnote.regular)

@@ -19,6 +19,7 @@ final class TextFieldBehaviorTests: XCTestCase {
         static let notes = "text-field.live.notes"
         static let secure = "text-field.live.secure"
         static let search = "text-field.live.search"
+        static let tag = "text-field.live.tag"
         static let focused = "text-field.live.focused"
         static let clearFocus = "text-field.live.clear-focus"
     }
@@ -128,30 +129,31 @@ final class TextFieldBehaviorTests: XCTestCase {
         XCTAssertEqual(press(at: CGPoint(x: drawn.midX, y: drawn.midY)), "Focused: small")
     }
 
-    /// The search field's glyphs (the contract's decisions/0003, #115) stand at its padding, `space.250` at size m, and
-    /// `container.gap`, `space.100`, from its text: a touch or a click on either focuses the field, as one on the
-    /// padding does (the style's hit area takes the whole field). The glyphs are about 17 to 20 pt wide at body.regular;
-    /// the points are 6 pt into each.
+    /// A field's glyphs (the contract's decisions/0003, #115) stand at its padding, `space.250` at size m, and
+    /// `container.gap`, `space.100`, from its text: a touch or a click on one focuses the field, as one on the padding
+    /// does (the style's hit area takes the whole field). The glyphs are about 17 to 20 pt wide at body.regular; the
+    /// points are 6 pt into each: the magnifier at the search field's start, the number sign at the tag field's end.
     @MainActor
     func testATouchOrClickOnAGlyphFocusesTheField() {
-        let frame = field(ID.search).frame
+        let search = field(ID.search).frame
+        let tag = field(ID.tag).frame
         let into: CGFloat = 6
         #if os(iOS)
             // On iOS the element's frame is the drawn field, padding included (measured: the small field's is the
             // page's width less its margins), so a glyph starts at the padding.
             let padding: CGFloat = 20
-            let start = frame.minX + padding + into
-            let end = frame.maxX - padding - into
+            let start = search.minX + padding + into
+            let end = tag.maxX - padding - into
         #else
-            // On macOS it is the system field's, between the glyphs, so a glyph ends at the gap before it.
+            // On macOS it is the system field's, beside the glyph, so a glyph ends at the gap before it.
             let gap: CGFloat = 8
-            let start = frame.minX - gap - into
-            let end = frame.maxX + gap + into
+            let start = search.minX - gap - into
+            let end = tag.maxX + gap + into
         #endif
         XCTAssertEqual(
-            press(at: CGPoint(x: start, y: frame.midY)), "Focused: search", "the magnifier at the start, in \(frame)")
+            press(at: CGPoint(x: start, y: search.midY)), "Focused: search", "the magnifier at the start, in \(search)")
         XCTAssertEqual(
-            press(at: CGPoint(x: end, y: frame.midY)), "Focused: search", "the microphone at the end, in \(frame)")
+            press(at: CGPoint(x: end, y: tag.midY)), "Focused: tag", "the number sign at the end, in \(tag)")
     }
 
     /// The search field is one: the product gives it the trait, and its label. Its glyphs are decoration, hidden from
@@ -163,8 +165,8 @@ final class TextFieldBehaviorTests: XCTestCase {
         #if os(iOS)
             XCTAssertTrue(app.searchFields[ID.search].exists, "not a search field: \(search.elementType.rawValue)")
         #else
-            XCTAssertTrue(
-                [.searchField, .textField].contains(search.elementType), "macOS: \(search.elementType.rawValue)")
+            // The trait makes the field a search field on macOS too (measured with Xcode 27.1 on macOS 26.7.1).
+            XCTAssertEqual(search.elementType, .searchField, "macOS: \(search.elementType.rawValue)")
         #endif
         XCTAssertEqual(app.images.count, 0, "images on the page: \(app.images.allElementsBoundByIndex.map(\.label))")
     }

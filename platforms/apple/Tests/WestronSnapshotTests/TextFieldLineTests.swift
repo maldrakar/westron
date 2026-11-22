@@ -220,14 +220,14 @@
             case .inlineHeading: Self.inline(.heading.small, axis: .horizontal)
             case .inlineFootnote: Self.inline(.footnote.regular, axis: .horizontal)
             case .inlineSeveral: Self.inline(.body.regular, axis: .vertical)
-            case .framedSGlyph: Self.framed(.s, axis: .horizontal, trailingIcon: .microphone)
-            case .framedMGlyph: Self.framed(.m, axis: .horizontal, trailingIcon: .microphone)
-            case .framedSeveralGlyph: Self.framed(.m, axis: .vertical, trailingIcon: .microphone)
+            case .framedSGlyph: Self.framed(.s, axis: .horizontal, trailingIcon: .hash)
+            case .framedMGlyph: Self.framed(.m, axis: .horizontal, trailingIcon: .hash)
+            case .framedSeveralGlyph: Self.framed(.m, axis: .vertical, trailingIcon: .hash)
             case .framedSecureGlyph:
                 SecureField("Password", text: .constant("secret"))
-                    .textFieldStyle(.framed, size: .m, trailingIcon: .microphone)
-            case .inlineBodyGlyph: Self.inline(.body.regular, axis: .horizontal, trailingIcon: .microphone)
-            case .inlineSeveralGlyph: Self.inline(.body.regular, axis: .vertical, trailingIcon: .microphone)
+                    .textFieldStyle(.framed, size: .m, trailingIcon: .hash)
+            case .inlineBodyGlyph: Self.inline(.body.regular, axis: .horizontal, trailingIcon: .hash)
+            case .inlineSeveralGlyph: Self.inline(.body.regular, axis: .vertical, trailingIcon: .hash)
             }
         }
 
@@ -564,10 +564,10 @@
             VStack(spacing: .zero) {
                 if glyphs {
                     TextField("Name", text: Binding(get: { model.text }, set: { model.text = $0 }))
-                        .textFieldStyle(.framed, size: .m, trailingIcon: .microphone)
+                        .textFieldStyle(.framed, size: .m, trailingIcon: .hash)
                         .modifier(RecordingGlyphs(size: size, key: 0))
                     TextField("Note", text: Binding(get: { model.note }, set: { model.note = $0 }), axis: .vertical)
-                        .textFieldStyle(.framed, size: .m, trailingIcon: .microphone)
+                        .textFieldStyle(.framed, size: .m, trailingIcon: .hash)
                         .lineLimit(1...4)
                         .modifier(RecordingGlyphs(size: size, key: 1))
                 } else {

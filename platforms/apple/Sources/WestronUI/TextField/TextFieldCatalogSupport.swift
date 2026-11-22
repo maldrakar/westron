@@ -91,7 +91,7 @@ package struct TextFieldResolvedAxes: PreferenceKey {
 /// Where a westron text field with glyphs placed them, and the system field between them: the bounds of each part of
 /// the row `TextFieldGlyphs` draws, of the one field a view holds (with more, the last field's part wins). Tests read
 /// it to measure the padding, the gap and the baseline (TextFieldGlyphTests); a field with no glyph reports nothing,
-/// since its view is the one it was before the glyphs. Package only: a product never reads it.
+/// since it has no glyph to measure. Package only: a product never reads it.
 package struct TextFieldGlyphAnchors: PreferenceKey {
     package enum Part: Hashable, Sendable {
         case leading, field, trailing

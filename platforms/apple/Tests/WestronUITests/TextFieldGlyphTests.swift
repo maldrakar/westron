@@ -61,7 +61,7 @@ struct TextFieldGlyphTests {
         arguments: [TextFieldVariant.framed, .inline], TextFieldSize.allCases)
     func paddingAndGap(variant: TextFieldVariant, size: TextFieldSize) throws {
         let (padding, gap) = Self.metrics(variant, size.offered)
-        let laidOut = Self.layOut(Self.field(variant, size: size, trailing: .microphone))
+        let laidOut = Self.layOut(Self.field(variant, size: size, trailing: .hash))
         let leading = try #require(laidOut.parts[.leading])
         let field = try #require(laidOut.parts[.field])
         let trailing = try #require(laidOut.parts[.trailing])
@@ -77,7 +77,7 @@ struct TextFieldGlyphTests {
     func rightToLeft() throws {
         let (padding, gap) = Self.metrics(.framed, .m)
         let laidOut = Self.layOut(
-            Self.field(.framed, text: "מצרכים", trailing: .microphone), direction: .rightToLeft)
+            Self.field(.framed, text: "מצרכים", trailing: .hash), direction: .rightToLeft)
         let leading = try #require(laidOut.parts[.leading])
         let field = try #require(laidOut.parts[.field])
         let trailing = try #require(laidOut.parts[.trailing])
@@ -96,8 +96,8 @@ struct TextFieldGlyphTests {
         let bare = Self.layOut(Self.field(variant, axis: axis, text: text, leading: nil))
         // framed draws its glyphs in body.regular; inline in the context's role, which `field` sets to body.regular.
         let magnifier = Self.layOut(Icon(.magnifier).textRole(.body.regular))
-        let microphone = Self.layOut(Icon(.microphone).textRole(.body.regular))
-        let laidOut = Self.layOut(Self.field(variant, axis: axis, text: text, trailing: .microphone))
+        let hash = Self.layOut(Icon(.hash).textRole(.body.regular))
+        let laidOut = Self.layOut(Self.field(variant, axis: axis, text: text, trailing: .hash))
         let leading = try #require(laidOut.parts[.leading])
         let trailing = try #require(laidOut.parts[.trailing])
         // The field gives its first line's baseline, not its bottom, which a view without a baseline gives.
@@ -107,12 +107,12 @@ struct TextFieldGlyphTests {
             #expect(bare.baseline < bare.size.height / 2, "\(bare)")
         }
         // The glyphs change neither the field's height nor where its text stands: they are drawn over the field's own
-        // room and add no height, even where one reaches higher above its baseline than the first line (on iOS the
-        // microphone, by a pixel, which a glyph beside the field in a stack added to a multi-line field's height).
+        // room and add no height, even where one reaches higher above its baseline than the first line (on iOS a glyph
+        // by a pixel, which a glyph beside the field in a stack added to a multi-line field's height).
         #expect(abs(laidOut.size.height - bare.size.height) < Self.tolerance, "\(laidOut.size) for \(bare.size)")
         #expect(abs(laidOut.baseline - bare.baseline) < Self.tolerance, "\(laidOut.baseline) for \(bare.baseline)")
         // Each glyph stands on the field's first baseline, its place rounded to the pixel.
-        for (frame, glyph) in [(leading, magnifier), (trailing, microphone)] {
+        for (frame, glyph) in [(leading, magnifier), (trailing, hash)] {
             #expect(
                 abs(frame.minY + glyph.baseline - laidOut.baseline) <= Self.pixel, "\(frame), \(glyph), \(laidOut)")
         }
@@ -128,7 +128,7 @@ struct TextFieldGlyphTests {
         let text = axis == .vertical ? "Milk\nApples" : "Groceries"
         func layOut(_ size: DynamicTypeSize) throws -> (leading: CGRect, trailing: CGRect, field: CGRect) {
             let laidOut = Self.layOut(
-                Self.field(variant, axis: axis, text: text, trailing: .microphone).dynamicTypeSize(size))
+                Self.field(variant, axis: axis, text: text, trailing: .hash).dynamicTypeSize(size))
             return (
                 try #require(laidOut.parts[.leading]), try #require(laidOut.parts[.trailing]),
                 try #require(laidOut.parts[.field])
@@ -167,19 +167,61 @@ struct TextFieldGlyphTests {
         #endif
     }
 
+    @Test(
+        "at the accessibility sizes a glyph is centred on the field's first line; up to xxxLarge it stands on its baseline",
+        arguments: [TextFieldVariant.framed, .inline], [Axis.horizontal, .vertical])
+    func centredOnTheFirstLineAtTheAccessibilitySizes(variant: TextFieldVariant, axis: Axis) throws {
+        let text = axis == .vertical ? "Milk\nApples" : "Groceries"
+        for size in [DynamicTypeSize.large, .xxxLarge, .accessibility1, .accessibility3, .accessibility5] {
+            let laidOut = Self.layOut(
+                Self.field(variant, axis: axis, text: text, trailing: .hash).dynamicTypeSize(size))
+            // A line of the field's text role at this size, and the glyphs as they are drawn, at most at xxxLarge.
+            let line = Self.layOut(Text(verbatim: "A").textRole(.body.regular).dynamicTypeSize(size))
+            let largest = min(size, TextFieldGlyph.largestTextSize)
+            let glyphs: [(CGRect, Laidout)] = [
+                (
+                    try #require(laidOut.parts[.leading]),
+                    Self.layOut(Icon(.magnifier).textRole(.body.regular).dynamicTypeSize(largest))
+                ),
+                (
+                    try #require(laidOut.parts[.trailing]),
+                    Self.layOut(Icon(.hash).textRole(.body.regular).dynamicTypeSize(largest))
+                ),
+            ]
+            for (frame, glyph) in glyphs {
+                #if os(macOS)
+                    let centred = false
+                #else
+                    let centred = size.isAccessibilitySize
+                #endif
+                if centred {
+                    let middle = laidOut.baseline - line.baseline + line.size.height / 2
+                    #expect(abs(frame.midY - middle) <= Self.pixel, "\(size): \(frame) for a line's middle \(middle)")
+                    // Centred, it stands higher than on the baseline: the glyph is smaller than its text.
+                    #expect(
+                        frame.minY + glyph.baseline < laidOut.baseline - 1, "\(size): \(frame), \(glyph), \(laidOut)")
+                } else {
+                    #expect(
+                        abs(frame.minY + glyph.baseline - laidOut.baseline) <= Self.pixel,
+                        "\(size): \(frame), \(glyph), \(laidOut)")
+                }
+            }
+        }
+    }
+
     @Test("the generated overload takes the glyphs, each optional, after the variant and the size")
     func generatedSignature() {
         let both = TextField("Search", text: .constant(""))
-            .textFieldStyle(.framed, size: .m, leadingIcon: .magnifier, trailingIcon: .microphone)
+            .textFieldStyle(.framed, size: .m, leadingIcon: .magnifier, trailingIcon: .hash)
         let leading = TextField("Search", text: .constant("")).textFieldStyle(.framed, leadingIcon: .magnifier)
-        let trailing = TextField("Search", text: .constant("")).textFieldStyle(.inline, trailingIcon: .microphone)
+        let trailing = TextField("Search", text: .constant("")).textFieldStyle(.inline, trailingIcon: .hash)
         let neither = TextField("Search", text: .constant("")).textFieldStyle(.framed, size: .s)
         _ = (both, leading, trailing, neither)
         let style = TextFieldVariantStyle(
             variant: .framed, size: nil, leadingIcon: .magnifier, trailingIcon: nil)
         #expect(style.leadingIcon == .magnifier && style.trailingIcon == nil)
         #expect(TextFieldGlyphNames(leading: nil, trailing: nil).isEmpty)
-        #expect(!TextFieldGlyphNames(leading: nil, trailing: .microphone).isEmpty)
+        #expect(!TextFieldGlyphNames(leading: nil, trailing: .hash).isEmpty)
     }
 
     @Test("a glyph takes the field's text role on framed and the context's on inline, in text.secondary in every state")

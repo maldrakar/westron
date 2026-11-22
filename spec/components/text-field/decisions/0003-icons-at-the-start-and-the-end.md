@@ -398,3 +398,58 @@ that is not an accessibility size, and no further:
   long-lived fields with the microphone at their end, each edited in turn with text selected and then while an input
   method composes, kept their text, selection, marked text and lines, with their own fonts made anew 40 and 13 times
   while edited and no runtime warning of SwiftUI's but the canary's. Without the hold, 140 times off their lines.
+
+## Second revision: what a glyph draws, and where
+
+Decided on 2026-11-22 (#115) by the coordinating agent under the owner's delegation of the phase's contracts
+(decisions/0014), after the review and the accessibility audit of the first revision. It changes answers 3, 4 and 8
+above and the revision before it where they say otherwise; the record above stays as it was asked and answered.
+
+- **A glyph names what the field is for, never an action.** The magnifier of a search field, a calendar on a date's
+  field, a number sign on a tag's name: decoration that says what the field holds. A glyph that draws an action the
+  person could expect to perform is not this option: a microphone, a clear mark, a chevron. An inert microphone beside
+  the keyboard's own dictation key tells the person they can press it, and Voice Control, which shows the names of
+  what can be pressed, cannot act on it. Such a glyph waits for a slot for a control, which this revision does not
+  add. So the pilot's search field is the magnifier alone in westron; its microphone, inert in the pilot too (above,
+  "What the pilot draws and does"), stays the pilot's until that slot exists (decisions/0014's row, changed to say
+  so). The contract's example of `trailingIcon` is a number sign at the end of a tag's field (`hash`, the registry's
+  "A number sign"); the catalog's samples and supplements, the package tests and `TextFieldLineTests` draw it where
+  they drew the microphone, and the live page's click on a glyph at the end is on a tag field's number sign.
+- **A search field's prompt is in `color.text.placeholder`.** A search field's only visible name is its placeholder,
+  and the system's placeholder color, which a TextFieldStyle cannot change (the contract's `platforms.apple`),
+  measured 1.69:1 against the field's fill in light and 2.43:1 in dark on iOS. The recipe, in the contract, the
+  catalog and `.claude/rules/apple.md`, now colors the prompt itself: `prompt:
+  Text("Search").foregroundStyle(.text.placeholder)`. Measured from the catalog's `text-field-glyphs` page on the
+  iPhone 17 simulator of iOS 26.3, the darkest pixel of "Search" against the fill: 4.74:1 in light, 7.43:1 in light
+  high contrast, 5.03:1 in dark and 7.78:1 in dark high contrast (the search field is drawn on that page, not in the
+  snapshot matrix, whose fields keep the prompt as a product leaves it). macOS ignores a prompt's color (the
+  contract's `platforms.macos`), so there the placeholder stays the system's, the open point of the contract's
+  decisions/0001.
+- **At the accessibility sizes a glyph is centred on the first line.** Held at xxxLarge (the revision before this),
+  a glyph is smaller than its text at accessibility1 to 5, and on the baseline it sat low beside the line, like a
+  subscript (the `glyphs-both` sheets at accessibility5). There it is now centred on the box of a line of the field's
+  text role at the text's size, set on the field's first baseline; up to xxxLarge it stands on the baseline as before.
+  On Apple the row places a hidden line of that role beside the field at those sizes only, and macOS, which has no
+  Dynamic Type, never centres. Measured: an iOS render of TextField's sheets with the style before this revision and
+  after it differs in 132 sheets, every one a glyph supplement at accessibility5, each only where its glyphs are; the
+  other 184, those sheets at every other size and theme among them, are the same files. On several lines the glyphs
+  stay centred on the first line (`glyphs-long-text`, `lines: multiple`, at accessibility5). `TextFieldGlyphTests`
+  checks both variants on one line and on several at large, xxxLarge and accessibility1, 3 and 5: centred within half a
+  point of the line's middle at the accessibility sizes, higher than the baseline would set it, and on the baseline
+  below them.
+- **One field whether there are glyphs or not.** The style drew the field in one view without glyphs and in another
+  with them, so a product that added the first glyph or removed the last one while the person typed made SwiftUI build
+  a new system field, and the person lost the field mid-word (the review's probe on macOS: from no glyph to one, a new
+  field and no first responder). The row is now one layout in every case, the system field always its first view,
+  with no room and no glyph when there is none. `TextFieldGlyphIdentityTests` focuses a field and changes its glyphs,
+  none to leading, leading to none, none to both, both to none and leading to both: the same `NSTextField` on macOS
+  and `UITextField` on iOS, still the first responder. With the style before this revision four of the five fail on
+  both platforms (leading to both passed).
+- **The room is measured in the same layout pass.** The field's room for each glyph was a width the glyph reported
+  after it was laid out, a round trip through state. The row is now a `Layout` that measures each glyph and offers the
+  field the rest in one pass, sizes the row by the field alone (so a glyph that reaches above the first line adds no
+  height, as the overlays it replaces did not), and gives the row the field's baselines. No frame of a field under
+  its glyph was observed with the old round trip either: after a single layout pass, before the run loop turned, the
+  field already stood past its glyph on macOS and iOS (`TextFieldGlyphIdentityTests`, the first layout, passes with
+  both styles), so the change removes a dependency on SwiftUI applying that state before it draws, not an observed
+  defect. A render of every component's matrix on macOS with the overlays and with the row is the same, file for file.
