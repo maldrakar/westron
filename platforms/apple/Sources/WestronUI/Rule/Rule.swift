@@ -16,7 +16,8 @@ import SwiftUI
 ///   `stroke.thick`, its ends round. Where it stands, and when, is the list's or the product's, which follows the drag.
 /// - `Rule("Work")`, or `Rule(area.name)` for a label that is not localized, is a horizontal separator that names
 ///   the group under it: the label at its leading end in `heading.overline` and `text.secondary`, on one line and
-///   truncated at its end when the rule is narrower than it, then `space100` and the line across the rest. The product
+///   truncated at its end when the rule is narrower than it, then `space100`, scaled with the label, and the line
+///   across the rest. The product
 ///   writes the label's capitals. The label is a heading for assistive technology.
 ///
 /// The product gives the rule its length and the space around it with its stack and spacing tokens. A rule without a
@@ -25,6 +26,10 @@ public struct Rule: View {
     let axis: RuleAxis
     let purpose: RulePurpose
     let label: Text?
+
+    /// The gap between the label and the line, `space100`, scaled with the label's text style, so that it keeps its
+    /// proportion to the label at every text size.
+    @ScaledMetric(relativeTo: .caption) private var gap: CGFloat = .space100
 
     /// - Parameters:
     ///   - axis: See `RuleAxis`; by default `.horizontal`.
@@ -42,17 +47,18 @@ public struct Rule: View {
         self.label = Text(label)
     }
 
-    /// A horizontal separator with a label that is not localized, such as a name the person gave.
+    /// A horizontal separator with a label that is not localized, such as a name the person gave. An empty name is
+    /// no label: the rule is drawn alone and hidden, as an unnamed area's line is.
     @_disfavoredOverload
     public init<S: StringProtocol>(_ label: S) {
         axis = .horizontal
         purpose = .separator
-        self.label = Text(label)
+        self.label = label.isEmpty ? nil : Text(label)
     }
 
     public var body: some View {
         if let label {
-            HStack(spacing: .space100) {
+            HStack(spacing: gap) {
                 label
                     .textRole(.heading.overline)
                     .foregroundStyle(.text.secondary)

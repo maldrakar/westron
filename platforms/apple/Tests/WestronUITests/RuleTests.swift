@@ -4,8 +4,10 @@ import Testing
 
 @testable import WestronUI
 
-/// Rule against its contract, spec/components/rule/rule.spec.yaml: `stroke.thin` across its axis, the length it is
-/// offered along it, and `horizontal` by default.
+/// Rule against its contract, spec/components/rule/rule.spec.yaml: `stroke.thin` across its axis for a separator and
+/// `stroke.thick` for an insertion rule, the length it is offered along it, `horizontal` and `separator` by default,
+/// and a label that makes it a horizontal separator as tall as the label's line, truncated rather than widened. What
+/// assistive technology gets of it is audited on the catalog's `rule` entry (`tools/apple/check.sh a11y`).
 @Suite("Rule")
 @MainActor
 struct RuleTests {
@@ -73,6 +75,13 @@ struct RuleTests {
             #expect(rule.axis == .horizontal && rule.purpose == .separator && rule.label != nil)
         }
         #expect(Rule().label == nil)
+    }
+
+    @Test("an empty name is no label: the rule alone, as an unnamed area's line")
+    func emptyLabel() {
+        let unnamed = Rule(String())
+        #expect(unnamed.label == nil)
+        #expect(fittingSize(unnamed, in: Self.offered) == CGSize(width: 240, height: .stroke.thin))
     }
 
     @Test("a labelled rule spans the width it is offered and is as tall as its label's line")

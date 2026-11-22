@@ -55,7 +55,7 @@ struct RuleLabelled: View {
         VStack(alignment: .leading, spacing: .space100) {
             Rule("WORK")
             row("Reports")
-            Rule(Self.longName.uppercased())
+            Rule(Self.longName.localizedUppercase)
             row("Garden")
             Rule()
             row("Someday")

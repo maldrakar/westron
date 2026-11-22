@@ -603,6 +603,16 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             // iOS 26.3, 2026-11-19, #86). Hidden with `.labelsHidden()` instead, the label was measured as if drawn in
             // the circle's square, and needed three suppressions here.
         ]
+        suppressions += [
+            // "Text clipped" on the labelled rule whose name is longer than the column: the Rule contract draws a
+            // label on one line and truncates it at its end, and design-language/03 allows that when the whole text
+            // is still read, which it is: the element's label is the whole name (spec/components/rule,
+            // decisions/0002). Only this one label matches; it is `RuleLabelled.longName` in capitals, which this
+            // target cannot import.
+            Suppression(.entry("rule"), type: .textClipped, reason: "a rule's label truncated by its contract") {
+                $0 == "HOUSEHOLD ERRANDS, REPAIRS AND EVERYTHING FOR THE GARDEN"
+            }
+        ]
         #if os(iOS)
             // The TextField focus pages focus a field for real, so the system keyboard is up while they are audited
             // (spec/components/text-field). The keyboard's own prediction cells, empty or carrying a suggestion
