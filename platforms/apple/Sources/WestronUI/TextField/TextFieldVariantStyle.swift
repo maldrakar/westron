@@ -73,7 +73,8 @@ private struct TextFieldBody: View {
             let metrics = TextFieldMetrics(
                 variant: variant, size: .resolved(explicit: explicitSize, controlSize: controlSize), axis: axis)
             TextFieldSurface(
-                field: field, variant: variant, axis: axis, tokens: tokens, metrics: metrics, isFocused: $isFocused
+                field: field, variant: variant, lineAxis: TextFieldAxis.read(field), tokens: tokens, metrics: metrics,
+                isFocused: $isFocused
             )
             // What the style resolved, for the tests (`TextFieldResolvedAxes`).
             .preference(key: TextFieldResolvedAxes.self, value: [axis])
@@ -116,8 +117,8 @@ private struct TextFieldBody: View {
     private struct TextFieldSurface: View {
         let field: TextField<TextFieldVariantStyle._Label>
         let variant: TextFieldVariant
-        /// The field's axis, the contract's `lines`.
-        let axis: Axis
+        /// The field's axis as reflection reads it, nil where it does not (`TextFieldLine`).
+        let lineAxis: Axis?
         let tokens: TextFieldTokens
         let metrics: TextFieldMetrics
         let isFocused: FocusState<Bool>.Binding
@@ -130,12 +131,12 @@ private struct TextFieldBody: View {
         @State private var drawnHeight: CGFloat = .zero
 
         init(
-            field: TextField<TextFieldVariantStyle._Label>, variant: TextFieldVariant, axis: Axis,
+            field: TextField<TextFieldVariantStyle._Label>, variant: TextFieldVariant, lineAxis: Axis?,
             tokens: TextFieldTokens, metrics: TextFieldMetrics, isFocused: FocusState<Bool>.Binding
         ) {
             self.field = field
             self.variant = variant
-            self.axis = axis
+            self.lineAxis = lineAxis
             self.tokens = tokens
             self.metrics = metrics
             self.isFocused = isFocused
@@ -154,7 +155,7 @@ private struct TextFieldBody: View {
                 .textFieldStyle(.plain)
                 // Inside the text role, so that it sees the field's font: on macOS, the field held to its own lines
                 // against SwiftUI's defect of #113 (TextFieldLine.swift).
-                .modifier(TextFieldLine(axis: axis))
+                .modifier(TextFieldLine(axis: lineAxis))
                 .modifier(TextFieldText(font: tokens.textFont, color: tokens.textColor))
                 .focused(isFocused)
                 .padding(.horizontal, padding)

@@ -20,15 +20,33 @@
 // - when SwiftUI has laid the system field out at a height that is not its lines' (one line on a single-line field, a
 //   whole number of lines on a multi-line one), the style gives the field its font with `leading(.standard)` added once
 //   more, the leading the font has anyway, so that it draws the same pixels: a font SwiftUI resolves anew, makes a new
-//   object for and measures, often at another address. The field takes its own height within the same layout: in the
-//   forced state the third such font has been the first right one, rarely the fourth; at most eight are made;
+//   object for and measures, often at another address. With it, the field is offered a width less by 1/2048 of a point
+//   more, up to 31/2048 and then from none again, under a pixel at any scale: a width SwiftUI has not sized the field
+//   for, so that it sizes it anew. A new font alone has not been enough where the field's text and width stay the
+//   same: SwiftUI then kept the field at the other font's height whatever font it was given, until the text or the
+//   width changed (`TextFieldLineTests`, a field being edited);
+// - it does so up to eight times in a row, and the count starts again once the field is laid out at its own lines, so
+//   a field on screen for long is held each time the state comes back. In the forced states of the tests no field has
+//   needed more than three;
 // - a single-line field takes exactly its line's height, the system field at the top of it, so the layout around the
 //   field and the place of its text are its own while SwiftUI holds the system field taller than its line.
-// Neither changes a field laid out at its own height: the same layout and the same pixels (the snapshot matrix).
+// None of it changes a field laid out at its own height: the same layout and the same pixels (`TextFieldLineTests`, the
+// snapshot matrix). A field being edited keeps its field editor, its text, its selection and an input method's marked
+// text while its font is made anew, with no runtime warning from SwiftUI (`TextFieldLineTests`).
 //
-// Not covered: macOS 14 and 15, where no public API resolves a font (whether the defect exists there is not known); a
-// field with no font in its environment, which the system draws in the font of its control size; iOS and watchOS, where
-// the defect has not been seen and nothing here applies.
+// Not covered:
+// - a multi-line field held at another font's height that is a whole number of its own lines: a body.regular field (a
+//   line of 16 pt) holding one line under `lineLimit(1...4)` laid out 32 pt high. The style cannot tell it from a field
+//   of two lines without the field's text and line limit, which the style does not see, and leaves it; in the review's
+//   probe, 1 to 26 of 750 layouts of such a field, as without the style;
+// - macOS 14 and 15, where no public API resolves a font (whether the defect exists there is not known);
+// - a field whose axis reflection cannot read (`TextFieldAxis.read`), which the style leaves as SwiftUI lays it out, as
+//   it cannot know whether one line or a whole number of lines is its own;
+// - a field with no font in its environment, which the system draws in the font of its control size;
+// - iOS and watchOS, where the defect has not been seen and nothing here applies.
+//
+// Each font made anew adds one `leading(.standard)` to the field's font for as long as the field lives, so that it is a
+// font SwiftUI has not resolved before: a field held often resolves a longer font.
 
 import SwiftUI
 
@@ -47,12 +65,13 @@ package enum TextFieldLineWorkaround {
 
 /// On macOS 26 and later, the field held to the height of its own lines (#113); elsewhere the field as it is.
 struct TextFieldLine: ViewModifier {
-    /// The field's axis, the contract's `lines`.
-    let axis: Axis
+    /// The field's axis, the contract's `lines`, as read from the field; nil where it could not be read, and then the
+    /// field is left as it is: a multi-line field taken for a single-line one would be held to one line.
+    let axis: Axis?
 
     func body(content: Content) -> some View {
         #if os(macOS)
-            if TextFieldLineWorkaround.isEnabled, #available(macOS 26, *) {
+            if TextFieldLineWorkaround.isEnabled, let axis, #available(macOS 26, *) {
                 content.modifier(TextFieldOwnLine(axis: axis))
             } else {
                 content
@@ -69,11 +88,18 @@ struct TextFieldLine: ViewModifier {
         let axis: Axis
         @Environment(\.font) private var font
         @Environment(\.fontResolutionContext) private var context
-        /// How many times this field's font has been made anew.
+        /// How many times this field's font has been made anew, in all: each time a font SwiftUI has not resolved before.
         @State private var remade = 0
+        /// How many times it has been made anew since the field was last laid out at its own lines.
+        @State private var inARow = 0
 
-        /// The most times one field's font is made anew.
-        private static let mostRemade = 8
+        /// The most times a field's font is made anew in a row: the budget starts again once the field is laid out at
+        /// its own lines, so that a field on screen for long is held each time the state comes back.
+        private static let mostInARow = 8
+        /// How many of a point less width the field is offered at each font made anew, and after how many it starts
+        /// again: under a pixel in all, 31/2048 of a point at most.
+        private static let narrower: CGFloat = 1 / 2048  // westron-lint: allow a part of a pixel, no token's
+        private static let narrowerSteps = 32
 
         func body(content: Content) -> some View {
             if let font {
@@ -85,10 +111,17 @@ struct TextFieldLine: ViewModifier {
                     .onGeometryChange(for: LaidOut.self) {
                         LaidOut(height: $0.size.height, line: line, remade: remade)
                     } action: { laidOut in
-                        guard laidOut.remade < Self.mostRemade, !laidOut.isOwn(axis: axis) else { return }
+                        if laidOut.isOwn(axis: axis) {
+                            if inARow != .zero { inARow = .zero }
+                            return
+                        }
+                        guard inARow < Self.mostInARow else { return }
+                        inARow += 1
                         self.remade = laidOut.remade + 1
                         TextFieldLineWorkaround.remade += 1
                     }
+                    // A width SwiftUI has not sized the field for, so that it measures the field anew.
+                    .padding(.trailing, CGFloat(remade % Self.narrowerSteps) * Self.narrower)
                     .frame(height: axis == .horizontal ? line : nil, alignment: .top)
             } else {
                 content
