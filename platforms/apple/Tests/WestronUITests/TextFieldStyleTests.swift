@@ -52,11 +52,20 @@ struct TextFieldStyleTests {
         return Array(rest[..<end])
     }
 
-    /// The cases of a binding: `  <name>:`, `    cases:`, then one `- { when: { k: v, … }, token: t }` per line. The
-    /// contract writes each condition with a single value.
+    /// The cases of a binding: `  <name>:`, `    cases:`, then one `- { when: { k: v, … }, token: t }` per line; a
+    /// binding's default, `    token: t` before its cases, or a binding of one token, `  <name>: t`, is a last case
+    /// with no condition. The contract writes each condition with a single value.
     static func cases(_ binding: String) throws -> [Case] {
         let lines = try tokenLines()
-        let start = try #require(lines.firstIndex(of: "  \(binding):"[...]), "no binding \(binding) in the contract")
+        if let single = lines.first(where: { $0.hasPrefix("  \(binding): ") }) {
+            return [Case(when: [:], token: String(single.dropFirst("  \(binding): ".count)))]
+        }
+        var start = try #require(lines.firstIndex(of: "  \(binding):"[...]), "no binding \(binding) in the contract")
+        var fallback: Case?
+        if lines[start + 1].hasPrefix("    token: ") {
+            fallback = Case(when: [:], token: String(lines[start + 1].dropFirst("    token: ".count)))
+            start += 1
+        }
         #expect(lines[start + 1] == "    cases:")
         var result: [Case] = []
         for line in lines[(start + 2)...] {
@@ -74,7 +83,7 @@ struct TextFieldStyleTests {
             result.append(Case(when: conditions, token: value))
         }
         #expect(!result.isEmpty, "no cases for \(binding)")
-        return result
+        return result + (fallback.map { [$0] } ?? [])
     }
 
     /// Every combination of the contract's states, the empty one (rest) included.
@@ -98,7 +107,8 @@ struct TextFieldStyleTests {
         let drawn: Set = [
             "container.height", "container.shape", "container.radius", "container.paddingHorizontal",
             "container.paddingVertical", "container.background", "container.opacity", "text.font", "text.color",
-            "focusRing.color", "focusRing.width",
+            "focusRing.color", "focusRing.width", "container.gap", "leadingIcon.font", "leadingIcon.color",
+            "trailingIcon.font", "trailingIcon.color",
         ]
         // A TextFieldStyle cannot color the system field's prompt (TextFieldTokens): the contract binds it for the
         // platforms that can, and its `platforms.apple` records the difference (decisions/0001, I1). A binding added
@@ -135,6 +145,11 @@ struct TextFieldStyleTests {
             ("text.color", { $0.textColor?.name }),
             ("focusRing.color", { $0.focusRingColor?.name }),
             ("focusRing.width", { $0.focusRingWidth?.name }),
+            ("container.gap", { _ in metrics.gap.name }),
+            ("leadingIcon.font", { $0.glyphFont?.name }),
+            ("leadingIcon.color", { $0.glyphColor.name }),
+            ("trailingIcon.font", { $0.glyphFont?.name }),
+            ("trailingIcon.color", { $0.glyphColor.name }),
         ]
         #expect(Self.stateCombinations.count == 4)
         for states in Self.stateCombinations {

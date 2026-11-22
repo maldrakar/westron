@@ -2,10 +2,10 @@
 # decisions/0001-text-field-contract.md records the owner's answers of 2026-11-18, what the documents already decide,
 # and the proposals approved on top of them, the ones the agent decided under the delegation marked as such. Revised on
 # 2026-11-20 (#85): the look the owner chose, a muted fill with no outline, a capsule on one line and a rounded
-# rectangle on several, and the option lines (decisions/0002-the-look-of-2026-11-20.md).
-# A revision is proposed for approval (#115): a glyph at the field's start and its end, so that a search field is this
-# field. decisions/0003-icons-at-the-start-and-the-end.md holds it in full; nothing below has changed yet, and the
-# revision moves here with the tools that generate it.
+# rectangle on several, and the option lines (decisions/0002-the-look-of-2026-11-20.md). Revised on 2026-11-22
+# (#115): a glyph at the field's start and at its end, the options leadingIcon and trailingIcon, so that a search field
+# is this field, approved that day by the coordinating agent under the owner's delegation of the phase's contracts
+# (decisions/0014; decisions/0003-icons-at-the-start-and-the-end.md).
 id: text-field
 status: approved
 description: >-
@@ -26,7 +26,17 @@ description: >-
   against the field's edge, outside it with no gap, and follows the field's shape, the capsule or the rounded
   rectangle; the system's own focus ring is turned off where it has one.
   watchOS enters no focus. Disabled draws the whole field at opacity.disabled, with no colors of its own
-  (design-language/08). The placeholder is in color.text.placeholder. There is no error state, hint or message in
+  (design-language/08). The placeholder is in color.text.placeholder. A field may carry a glyph of the icon registry
+  at its start, at its end or at both (leadingIcon, trailingIcon). A glyph is decoration, never a control: it is
+  hidden from assistive technology, a touch or a click on it is one on the field, which it focuses, and it adds
+  nothing to the focus order. It stands inside the field, on its fill and inside its focus ring: at the field's
+  horizontal padding from the field's edge and container.gap from the text, beside the first line of a field of
+  several lines, on that line's baseline, as a letter of it would; start and end follow the layout direction, so
+  right to left the leading glyph is at the right. It takes its size from the field's text, framed's body.regular or
+  inline's context, at the text's own scale, so it grows with the person's text size, and it draws in
+  color.text.secondary in every state, with the placeholder shown or text entered, focused or not; disabled dims it
+  with the rest of the field. A search field is no component of its own (decisions/0014): it is a framed field with
+  the magnifier at its start, and a glyph at its end where the product has one. There is no error state, hint or message in
   this version: no pilot screen shows one, and a field marked only by a danger border would tell an error by color
   alone (design-language/08, "Color is never the only signal"). The text, and with it a framed field's height,
   follows the person's text size (design-language/08, "Settings the person chooses"). A field is never drawn lower
@@ -63,6 +73,20 @@ options:
       at the default text size, makes a field of one line as tall as a single one of its size, and that does not grow
       with the text, as the minimum heights do not; inline draws both alike. On Apple it is the
       system field's own axis (platforms.apple.systemOptions).
+  leadingIcon:
+    type: icons
+    optional: true
+    description: >-
+      The glyph at the field's start, a name of the icon registry, or none: a use that leaves it out draws no glyph
+      there and gives the text that room. A search field's magnifier. It is decoration and says nothing to assistive
+      technology, so the field's label still names the field.
+  trailingIcon:
+    type: icons
+    optional: true
+    description: >-
+      The glyph at the field's end, or none, such as the microphone at the end of the pilot's search field.
+      Decoration, as the leading one: a glyph that acts when it is pressed, such as a clear button or one that starts
+      dictation, is not this option (decisions/0003-icons-at-the-start-and-the-end.md).
 
 slots: [label, placeholder]
 states: [focus, disabled]
@@ -102,6 +126,18 @@ tokens:
     cases:
       - { when: { variant: framed }, token: color.text.primary }
   placeholder.color: color.text.placeholder
+  container.gap:
+    token: space.100
+    cases:
+      - { when: { variant: framed, size: s }, token: space.75 }
+  leadingIcon.font:
+    cases:
+      - { when: { variant: framed }, token: typography.body.regular }
+  leadingIcon.color: color.text.secondary
+  trailingIcon.font:
+    cases:
+      - { when: { variant: framed }, token: typography.body.regular }
+  trailingIcon.color: color.text.secondary
   focusRing.color:
     cases:
       - { when: { state: focus }, token: color.border.focus }
@@ -118,7 +154,11 @@ accessibility:
   description: >-
     Every field has an accessible label that names what it holds ("List name"), also where no label is visible; a
     placeholder is not a label, since it disappears as the person types. The text is the field's value. In
-    disabled, the field is announced as unavailable.
+    disabled, the field is announced as unavailable. A glyph at the start or the end is decorative and hidden: it
+    never names the field, and a magnifier does not make it a search field. A field a person searches with is
+    named for what it searches ("Search", "Search lists") and announced as a search field wherever the platform has
+    that role: the product says so, as it gives the label, since westron cannot tell from a glyph what a field is
+    for (platforms).
 
 platforms:
   apple:
@@ -166,6 +206,20 @@ platforms:
       with no gap (the owner's decision of 2026-11-20, decisions/0002), on inline
       space.100 across and space.50 up and down beyond the field (a proposal of the implementation, decisions/0001,
       I4). Corners are continuous.
+      leadingIcon and trailingIcon are labeled arguments of the overload, Westron.Icon? with nil as their default:
+      .textFieldStyle(.framed, leadingIcon: .magnifier, trailingIcon: .microphone). They cannot come through the
+      field's label, as Button's icon does: a TextFieldStyle is given the field alone, whose label is its title, and
+      has no public way to read the label's parts. Like the variant and the size they reach every field the modifier
+      is set on, in a container too. The style draws each glyph as Icon draws a decorative one, hidden from
+      assistive technology, in a row with the system field aligned on its first text baseline, inside the fill, the
+      high-contrast outline, the focus ring and the area that focuses the field on a tap or a click. A search field
+      on Apple is this field where the product places its search itself, in a bar or a pane of its own, named and
+      given the system's trait for a search field by the product: TextField("Search", text: $query, prompt:
+      Text("Search")).textFieldStyle(.framed, leadingIcon: .magnifier).accessibilityLabel("Search")
+      .accessibilityAddTraits(.isSearchField). Where the system places the search, SwiftUI's .searchable (the
+      navigation bar, the toolbar, the top of a sidebar, and from iOS 26 a bottom toolbar), the field is the
+      system's, with its own magnifier, dictation and Cancel, and takes no westron style: SwiftUI has no style for it,
+      and westron leaves it to the system as it leaves a menu or an alert (decisions/0014).
     ios:
       description: >-
         Focus is the field being edited, with the keyboard up. There is no pointer to hover with on an iPhone, and
@@ -174,7 +228,8 @@ platforms:
         past either edge, at the same target, focuses it (the catalog's TextFieldBehaviorTests);
         a one-off probe of #30 found the reach ending between 16 and 18 pt. The style's tap gesture, which focuses a
         field from its padding, is what takes these touches: with it removed, a tap on the padding and one at the
-        target missed. The style grows no frame of its own on iOS. A product reaches color.text.placeholder by
+        target missed. A tap on a glyph is taken by the same gesture and focuses the field. The style grows no frame
+        of its own on iOS. A product reaches color.text.placeholder by
         coloring its prompt itself: prompt: Text("Untitled").foregroundStyle(.text.placeholder).
     macos:
       description: >-
@@ -211,7 +266,14 @@ platforms:
         largeTitle and in Helvetica at 6 pt came and went); macOS 14 and 15, which have no API to resolve a font; a field whose axis the style cannot read, which it leaves as SwiftUI lays it out; and a field
         with no font in its context, which the system draws in its control size's font. Measured with Xcode 27.1 on
         macOS 26.7.1 (TextFieldLineTests); the owner decided on 2026-11-22 that westron works around the defect
-        (#113).
+        (#113). The hold is on the system field alone, inside the row of glyphs: the font it makes anew is the
+        field's, not a glyph's, and the width it offers the field more is taken back outside the field, so the
+        glyphs keep their places while it holds the field. Beside a trailing glyph the field's right edge stands
+        where the glyph's width puts it, at any part of a point; with a glyph at the end, framed fields at s and m on
+        one line and on several, a SecureField and inline fields keep their lines, their frames and every glyph's
+        place in the forced state, a field that stays on screen too at 2x and at 1x left to right and right to left,
+        and without the hold they lose them (TextFieldLineTests, #115). That a glyph keeps its place shows the
+        field's first baseline reaching the row through the hold's frame.
     watchos:
       options: { size: [m] }
       fallback: { size: m }
@@ -219,7 +281,9 @@ platforms:
       description: >-
         The watch's field is the system's as it is: a tap opens the system's text input, there is no focus to draw,
         and roundedBorder, like westron's fill and capsule, has no place there. Both variants and both values of lines
-        draw the system field; the Swift enum keeps every size and the style falls back to m.
+        draw the system field; the Swift enum keeps every size and the style falls back to m. leadingIcon and
+        trailingIcon compile on the watch and draw nothing there, a difference the contract cannot restrict, since
+        no platform restriction names an option whose values are icons; #34 decides the watch's subset.
   web:
     strategy: style-on-system-control
     base: input
@@ -228,13 +292,21 @@ platforms:
       focus ring is an outline in focusRing.color and focusRing.width on :focus-visible, at outline-offset 0 on
       framed, so it touches the field's edge. Corners are circular; the
       capsule is a border-radius of half the height or more, so its ends stay round as the field grows. The
-      high-contrast outline applies under prefers-contrast: more.
+      high-contrast outline applies under prefers-contrast: more. An <input> takes no children, so a field with a
+      glyph is an element around it that draws the fill, the glyphs as inline SVGs hidden with aria-hidden, and the
+      ring on :focus-within, the input inside with no frame of its own; a search field is <input type="search">,
+      the searchbox role.
   linux:
     strategy: style-on-system-control
     base: GtkEntry
     description: >-
       Provisional until phase 7: the stock GtkEntry with westron's style classes for the variants and the sizes, and
       for lines multiple a GtkTextView with the same classes; the focus ring there is decided with the GNOME library.
-      Corners are circular; the capsule is a border-radius of half the height or more, as on the web.
+      Corners are circular; the capsule is a border-radius of half the height or more, as on the web. The glyphs are
+      GtkEntry's own primary and secondary icons, by their symbolic names, not activatable; whether a search field
+      is GtkSearchEntry, which draws the magnifier itself, is decided in phase 7.
   android:
     status: planned
+    description: >-
+      Provisional until phase 8: Material3's TextField, whose leadingIcon and trailingIcon slots take westron's glyph
+      with no content description.

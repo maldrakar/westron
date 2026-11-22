@@ -136,7 +136,10 @@ are fine.
   them, so it cannot drift from the registry, which `tools/westron icons check` validates. It has no default: every
   use names its glyph (the registry's own `default` is what draws for a name a version does not know). As with tokens,
   constraints, cases, bindings by value and platform restrictions do not name such an option yet, and it is never a
-  system option. Icon, the first such contract, needs none of them.
+  system option. Icon, the first such contract, needs none of them. With `optional: true` a use may name no glyph,
+  and then none is drawn: TextField's `leadingIcon: { type: icons, optional: true }`, the glyph at a field's start
+  (#115). It is allowed only on a style on a system control, which takes it as an argument that defaults to none; an
+  own view's glyph is always named. An optional one is no axis of the snapshot matrix (below).
 - **Constraints on a slot.** A constraint's `when` may name, under the key `slots`, the slots an instance fills
   instead of options: `{ when: { slots: [label] }, require: { axis: horizontal, purpose: separator }, severity:
   error }` says that a labelled rule is a horizontal separator. It is as narrow as what the conventions derive from
@@ -196,15 +199,21 @@ argument is the token accessor the token generator already writes, and the API p
 the contract (Text: `.textRole(_: Westron.TextRole)` on `View`, and its twin on `Text`, which returns a `Text`). The
 generator checks its shape: one option, whose values are the tokens of a group with an accessor on Apple
 (`AppleComponents.tokenAccessors`: `typography` → `Westron.TextRole`), and no states; it fails on any other. An
-approved style or extension with an option whose values are icons fails generation and the API parity lint as not
-supported yet, and so does an own modifier with one: the conventions derive such an option for an own view alone. An
+approved style with an optional option whose values are icons gets a labeled argument of its overload,
+`<name>: Westron.Icon? = nil`, after the other options and passed to its `<Component>VariantStyle` (TextField:
+`.textFieldStyle(.framed, leadingIcon: .magnifier)`), and the API parity lint expects exactly that. A style's icons
+option every use names, and an extension's, fail generation and the lint as not supported yet, and so does an own
+modifier with one: the conventions derive a required one for an own view alone. An
 approved `style-on-system-control` with an option whose values are tokens still fails, as not supported yet, and so
 does an approved own component with such an option.
 
 Every approved contract with API on Apple, any strategy, gets its snapshot matrix too,
 `platforms/apple/Sources/WestronCatalog/Generated/<Component>+Matrix.swift` (#24): an option whose values are tokens is
 an axis of the group's tokens, in token order, read from `tokens/`; one whose values are icons an axis of the registry's
-names, in its order, read from `spec/icons/icons.yaml`, which runs down the rows of a contract without states.
+names, in its order, read from `spec/icons/icons.yaml`, which runs down the rows of a contract without states. An
+optional option whose values are icons is no axis: the generated matrix draws every combination without the glyph, and
+the component's hand-written supplements draw the glyphs, marked "not a contract option" (TextField's `glyph-leading`,
+`glyph-trailing`, `glyphs-both`).
 
 Generation fails, with every problem, when a contract does not pass the check below; when a generated name is a
 public SwiftUI type; when two contracts generate one type name (`button`'s option `groupSize` and `button-group`'s
@@ -239,7 +248,8 @@ Besides the schema, the check enforces what a schema cannot:
 - an option whose values are tokens names a group of `tokens/`, not a token and not a path with nothing under it; the
   group's tokens are semantic, exist in every mode and are of one type; its default is one of them, by its path after
   the group; no constraint, case, binding by value, platform restriction or `systemOptions` names it;
-- no constraint, case, platform restriction or `systemOptions` names an option whose values are icons;
+- no constraint, case, platform restriction or `systemOptions` names an option whose values are icons; one is
+  `optional: true` only on a contract whose Apple strategy is `style-on-system-control`;
 - constraints and cases name options, values and states that exist, a bool option with `true` or `false`; a
   constraint on slots (`when: { slots: [...] }`) names declared slots and no option in its `when`, has severity
   `error`, gives each option it requires one value, and is only on an Apple `own-component` of form `view` whose one

@@ -73,6 +73,7 @@ struct ContractRules {
         checkRepeats()
         checkOptions()
         checkTokenOptions()
+        checkIconOptions()
         checkSwiftNames()
         checkSystemStyles()
         checkConstraints()
@@ -363,6 +364,23 @@ struct ContractRules {
             report(
                 path.key("default"),
                 "\"\(fallback)\" is not a token of \(group): \(values.joined(separator: ", "))")
+        }
+    }
+
+    /// An optional option whose values are icons (`optional: true`) is derived only for a style on a system control,
+    /// as a labeled `Westron.Icon? = nil` of its overload (spec/conventions.md, "Option whose values are icons"); an
+    /// own view's glyph, Icon's, is always named, and an extension takes no such option.
+    mutating func checkIconOptions() {
+        let strategy = document["platforms"]?["apple"]?["strategy"]?.string
+        for member in document["options"]?.members ?? []
+        where member.value["type"] == .string("icons") && member.value["optional"] == .bool(true) {
+            guard strategy != AppleComponents.strategy else { continue }
+            report(
+                .root.key("options").key(member.key).key("optional"),
+                "an optional glyph is derived only for a \(AppleComponents.strategy), as an argument of its overload "
+                    + "that defaults to none (spec/conventions.md); "
+                    + (strategy.map { "an \($0) names its glyph in every use" } ?? "the Apple entry has no strategy")
+                    + ": remove optional")
         }
     }
 

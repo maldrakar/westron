@@ -350,10 +350,15 @@ public enum APIParity {
             var first: [SwiftDeclarations.Parameter] = []
             var rest: [SwiftDeclarations.Parameter] = []
             var types: Set<String> = []
+            var underived: [String] = []
             for option in item.contract.options where apple.systemOptions[option.name] == nil {
                 switch option.kind {
-                case .tokenGroup, .icons:
-                    continue  // The generator gives a style no such option yet, and fails on it.
+                case .tokenGroup, .icons(optional: false):
+                    // The generator gives a style no such option yet, and fails on it: the lint cannot say what the
+                    // overload takes, so it says so rather than expect an overload without it.
+                    underived.append(option.name)
+                case .icons(optional: true):
+                    rest.append(.init(label: option.name, type: AppleIcons.iconType + "?", defaultValue: "nil"))
                 case .bool(let value):
                     rest.append(.init(label: option.name, type: "Bool", defaultValue: "\(value)"))
                 case .enumeration(let values, let defaultValue):
@@ -368,6 +373,17 @@ public enum APIParity {
                         rest.append(.init(label: option.name, type: type, defaultValue: defaultValue.map { ".\($0)" }))
                     }
                 }
+            }
+            guard underived.isEmpty else {
+                for name in underived {
+                    expected.problems.append(
+                        Problem(
+                            file: item.source, line: item.line(of: name),
+                            "the lint cannot derive \(item.component)'s style overload: the conventions give a style "
+                                + "no argument for \(name), whose values are tokens or icons every use names; generate "
+                                + "reports it too"))
+                }
+                continue
             }
             var modifierStates: [String] = []
             for target in apple.styledBases {

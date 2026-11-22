@@ -1,11 +1,12 @@
 # 0003. Icons at the start and the end
 
-Date: 2026-11-22. Status: proposed (#115), for the first gate. In phase 4 the owner delegates the approval of a
-contract to the coordinating agent (decisions/0014, "Process"). Until it is approved, the contract
-`text-field.spec.yaml` is unchanged and stays approved as it was: the proposed revision is the YAML at the end of this
-record (below, "How the revision is held"). There was no one to interview: the agent answered the questions of the
-`new-component` interview from the sources, and names the source of each answer; every answer it had to guess is an
-open question for the approver, with a recommendation (below, "Open questions").
+Date: 2026-11-22. Status: approved on 2026-11-22 (#115) by the coordinating agent, to whom the owner delegates the
+approval of a contract in phase 4 (decisions/0014, "Process"), with one answer other than the proposal: the glyphs are
+no axis of the generated snapshot matrix (below, "The approver's answers", 10). The revision is in
+`text-field.spec.yaml`. There was no one to interview: the agent answered the questions of the `new-component`
+interview from the sources, and names the source of each answer; every answer it had to guess was a question for the
+approver, with a recommendation, and the approver's answer follows each below. The implementation's measurements are
+under "Measured at implementation".
 
 ## Context
 
@@ -228,31 +229,31 @@ With glyphs:
 
 ## What the tools need
 
-Checked on a copy of the proposed contract: `tools/westron spec check` on it reports only `optional`, "unknown key: the
-schema does not allow it here", and with `optional` taken out it passes (the new bindings, their cases and their
-tokens are valid). Put into the repository with `optional` taken out, `tools/westron generate --check` fails with
-"leadingIcon takes its values from the icon registry: the generator does not give a style such an option yet", while
-`tools/westron lint api-parity` passes, since it skips such an option on a style instead of expecting it. So:
+Checked on a copy of the proposed contract before the approval: `tools/westron spec check` on it reported only
+`optional`, "unknown key: the schema does not allow it here", and with `optional` taken out it passed (the new
+bindings, their cases and their tokens are valid). Put into the repository with `optional` taken out, `tools/westron
+generate --check` failed with "leadingIcon takes its values from the icon registry: the generator does not give a style
+such an option yet", while `tools/westron lint api-parity` passed, since it skipped such an option on a style instead
+of expecting it. What the implementation changed:
 
-1. **Schema** (`spec/schema/component.schema.json`, `iconOption`): `optional`, a boolean, default false. The README's
-   "Options whose values are icons" and the schema's description say what it means.
-2. **The contract model** (`ComponentContract.swift`): the icons kind carries whether it is optional.
-3. **The checker** (`ContractRules.swift`): `optional` only where the conventions derive it, a style on a system control
-   for now; an own view's icons option, Icon's glyph, stays required. The ban on naming an icons option in a
-   constraint, a case, a restriction or `systemOptions` stays.
-4. **The generator** (`AppleComponents.swift`, the style's options): an optional icons option becomes a labeled
-   argument `<name>: Westron.Icon? = nil`, in the contract's order after the other options, passed to
-   `<Component>VariantStyle`; a required one on a style stays unsupported.
-5. **The parity lint** (`APIParity.swift`): expect the same parameters instead of skipping the option, so a missing or
-   changed argument fails.
-6. **The snapshot matrix** (`SnapshotMatrix.swift`, `AppleSnapshotMatrix.swift`): an icons option runs the registry's
-   names down the rows only in a contract without states. An optional icons option on a style becomes an axis of two
-   values, without and with a glyph, and the hand-written `TextFieldMatrixCell` chooses the glyph (`magnifier` at the
-   start, `microphone` at the end). TextField's matrix goes from 36 combinations on 6 sheets to 144 on 24. Considered:
-   leaving the glyphs out of the generated matrix and drawing them on a hand-written supplement, which the README keeps
-   for what no contract option sets; this is a contract option. Open question 10.
-7. **The conventions** (`spec/conventions.md`): the rows "Option whose values are icons" and "Slots" give a style its
-   optional icons arguments; "A search field" goes beside "What the system presents" (point 3).
+1. **Schema** (`spec/schema/component.schema.json`, `iconOption`): `optional`, a boolean, false when left out.
+2. **The contract model** (`ComponentContract.swift`): the icons kind carries whether it is optional,
+   `.icons(optional:)`.
+3. **The checker** (`ContractRules.checkIconOptions`): `optional: true` only on a contract whose Apple strategy is a
+   style on a system control; an own view's icons option, Icon's glyph, stays required, and an extension takes none.
+   The ban on naming an icons option in a constraint, a case, a restriction or `systemOptions` stays.
+4. **The generator** (`AppleComponents.swift`, the style's options): an optional icons option is a labeled argument
+   `<name>: Westron.Icon? = nil`, in the contract's order after the other options, passed to `<Component>VariantStyle`;
+   one every use names stays unsupported on a style, and an optional one on an own view is reported as not derived.
+5. **The parity lint** (`APIParity.swift`): it expects the same parameters, so a missing or changed argument fails; an
+   option of a style that the conventions give no argument (tokens, or icons every use names) is now reported as one
+   the lint cannot derive, where it used to be skipped (`OptionalIconOptionTests`, `IconOptionContractTests`).
+6. **The snapshot matrix** (`SnapshotMatrix.swift`, `AppleSnapshotMatrix.swift`): an optional icons option is no axis;
+   the generated matrix draws every combination without the glyph, and the registry is read only for an icons option
+   that is one. The component draws the glyphs on hand-written supplementary sheets (the approver's answer 10, below).
+7. **The conventions and the README** (`spec/conventions.md`, `spec/components/README.md`): the rows "Option whose values
+   are icons" and "Slots" give a style its optional icons arguments; a note on `.searchable` beside the paragraph on
+   what the system presents.
 
 Nothing in the icon registry: `magnifier` and `microphone` exist.
 
@@ -260,366 +261,92 @@ Nothing in the icon registry: `magnifier` and `microphone` exist.
 
 Nothing new. `space.75`, `space.100`, `typography.body.regular` and `color.text.secondary` exist, and
 `color.text.secondary` has declared text pairs on `background.muted`, `canvas`, `surface` and `sunken`. Missing, and
-not added now:
+not added:
 
 - no `color.icon.*` role for a glyph that comes second; `color.text.secondary`'s usage covers glyphs, so none is needed;
 - no pair for anything on glass: the pilot's bar stands its capsule on the bar's glass, which is #121's; a framed field
   there keeps its muted fill, and what it measures against glass is #121's to say.
 
-## How the revision is held
+## How the revision was held
 
-The contract is approved and generates WestronUI's API, its matrix and its parity expectations, so its YAML cannot
-change before the tools follow: with `optional`, `spec check` fails on the schema; without it, `generate` fails on an
-icons option of a style; and `status: draft` would delete the generated API that the catalog and the tests build on.
-So this record carries the proposed contract in full (below), checked as far as today's tools can (above), and the
-contract has a comment under its header that points here and says nothing in it has changed. Once it is approved, the
-implementation moves this YAML into the contract with the tool changes in the same pull request, takes the comment
-out, and the checks hold the two together from then on.
+The contract was approved and generated WestronUI's API, its matrix and its parity expectations, so its YAML could not
+change before the tools followed: with `optional`, `spec check` failed on the schema; without it, `generate` failed on
+an icons option of a style; and `status: draft` would have deleted the generated API that the catalog and the tests
+build on. So the first version of this record carried the proposed contract in full, checked as far as the tools could,
+and the contract carried a comment that pointed here. On approval the revision moved into `text-field.spec.yaml` with
+the tool changes, the comment and the copy here went, and the checks hold the contract and the code together.
 
-## Open questions for the approver
+## The approver's answers
 
-Each with the agent's recommendation; each is a guess where no source decided it.
+Approved on 2026-11-22 by the coordinating agent under the owner's delegation of the phase's contracts
+(decisions/0014, "Process"). The questions, each with the agent's recommendation as proposed, and the answer:
 
-1. **The API shape** (point 1). Recommended: arguments of the generated overload, `leadingIcon:` and `trailingIcon:`,
-   `Westron.Icon?`, nil by default; not westron modifiers through the environment.
-2. **The concept in the contract** (point 2). Recommended: options of type `icons` with a new `optional: true`, rather
-   than slots; and the keyword's name `optional`.
-3. **Search on Apple** (point 3). Recommended: both, the styled field where the product places its search and
-   `.searchable` where the system places it, unstyled. Whether the pilot adopts the field before its search epic is
-   the pilot's: today its capsule is inert and a real field would open the keyboard on a tap. Recommended: it adopts
-   the field with its search epic and keeps its inert drawing until then.
-4. **The glyph at the end is decoration only** (point 4). Recommended: yes; a control at the end, a clear button or
-   dictation, waits for a consumer. Whether the pilot keeps drawing a microphone that starts nothing is the pilot's
-   choice; westron draws it as the owner described the field (decisions/0014).
-5. **Variants and lines** (point 5). Recommended: the glyphs on both variants and both values of `lines`, since
-   nothing can forbid them and a dropped argument is a trap; the pilot needs `framed` and `single`.
-6. **The glyph's inset and the gap** (point 5). Recommended: the glyph at the field's horizontal padding, unchanged, and
-   `container.gap` of `space.75` at `s` and `space.100` at `m`, `l` and on `inline`. The alternative is a tighter inset
-   for the glyph, `space.100`, `space.150`, `space.200` by size.
-7. **The glyph's color** (point 6). Recommended: `color.text.secondary` in every state. The alternative on Apple is the
-   system's placeholder color, which would match the system's prompt beside it and miss chapter 08's text target as
-   that prompt does.
-8. **The glyph's size** (point 7). Recommended: the field's text at its own scale (`medium`), not Button's `small`.
-9. **The search field's announcement** (point 8). Recommended: the product adds the platform's search-field role, as it
-   gives the label; westron adds no option for the field's purpose.
-10. **The snapshot matrix** (tools, item 6). Recommended: each optional icons option an axis of two values, the cell
-    choosing the glyph, 144 combinations on 24 sheets.
-11. **watchOS** (point 10). Recommended: no glyph on the watch until #34, said in the contract's words.
+1. **The API shape** (point 1): arguments of the generated overload, `leadingIcon:` and `trailingIcon:`,
+   `Westron.Icon? = nil`. **Approved.**
+2. **The concept in the contract** (point 2): options of type `icons` with `optional: true`. **Approved**, allowed only
+   where the generator derives it, a style on a system control; Icon's and IconTile's `glyph` stay required. The
+   api-parity lint's gap, which skipped an icons option on a style rather than expect it, is closed, with a test.
+3. **Search on Apple** (point 3): both, the styled field where the product places its search and `.searchable` where
+   the system places it, unstyled. **Approved**; the note on `.searchable` goes into `spec/conventions.md` beside the
+   paragraph on the system's presentations. Whether the pilot adopts the field before its search epic stays the
+   pilot's; the recommendation was that it adopts the field with that epic.
+4. **The glyph at the end is decoration only** (point 4). **Approved.**
+5. **Variants and lines** (point 5): the glyphs on both variants and both values of `lines`. **Approved.**
+6. **The glyph's inset and the gap** (point 5): the glyph at the field's horizontal padding; `container.gap` of
+   `space.75` at `s` and `space.100` otherwise. **Approved.**
+7. **The glyph's color** (point 6): `color.text.secondary` in every state. **Approved.**
+8. **The glyph's size** (point 7): the text's own scale. **Approved.**
+9. **The search field's announcement** (point 8): the product adds the search-field trait. **Approved.**
+10. **The snapshot matrix** (tools, item 6). Proposed: each optional icons option an axis of two values, 144
+    combinations on 24 sheets. **Not approved**: that would quadruple the field's references for a decoration. An
+    optional icons option is no axis of the generated matrix, which stays as it was, drawn with no glyph; the tools
+    make that their rule. The glyphs get hand-written supplementary sheets, marked "not a contract option": leading,
+    trailing and both, for framed at `s`, `m` and `l` and for inline, single and multiple lines, at rest, focused,
+    disabled and with text entered, plus a long text that reaches the trailing glyph, right to left, and a large text
+    size.
+11. **watchOS** (point 10): no glyph on the watch until #34, said in the contract's words. **Approved.**
 
-## The proposed contract in full
+## Measured at implementation
 
-The approved contract with this revision, as it would replace `text-field.spec.yaml`. What changes: the header
-comment; a paragraph of the description; the options `leadingIcon` and `trailingIcon`; the bindings `container.gap`,
-`leadingIcon.font`, `leadingIcon.color`, `trailingIcon.font` and `trailingIcon.color`; the accessibility description;
-and the `platforms` descriptions of Apple, iOS, macOS, watchOS, the web, Linux and Android.
+With Xcode 27.1, on macOS 26.7.1 and the iPhone 17 simulator of iOS 26.3, on 2026-11-22:
 
-```yaml
-# westron's TextField contract (#30), approved on 2026-11-18 under the owner's delegation of that day:
-# decisions/0001-text-field-contract.md records the owner's answers of 2026-11-18, what the documents already decide,
-# and the proposals approved on top of them, the ones the agent decided under the delegation marked as such. Revised on
-# 2026-11-20 (#85): the look the owner chose, a muted fill with no outline, a capsule on one line and a rounded
-# rectangle on several, and the option lines (decisions/0002-the-look-of-2026-11-20.md). Revised on 2026-11-22
-# (#115): a glyph at the field's start and at its end, the options leadingIcon and trailingIcon, so that a search field
-# is this field (decisions/0003-icons-at-the-start-and-the-end.md).
-id: text-field
-status: approved
-description: >-
-  A field a person types text into: westron's style on the platform's own text field, which keeps editing,
-  selection, input methods, the keyboard and the system's text input. framed is a field that stands on its own, such
-  as the name field in a list's row: filled with color.background.muted, the secondary button's fill, with no
-  outline; on one line it is the platform's capsule, its ends round at any height, and on several lines a rounded
-  rectangle, since a capsule's ends would cut into its lines (option lines). The fill stands about 1.1:1 off the
-  canvas in light and 1.2:1 in dark, below the 3:1 that WCAG 1.4.11 asks of a component's boundary: a deviation the
-  owner accepted on 2026-11-20 for the standard themes, which design-language/08 records with the measured values
-  (decisions/0002). In the high-contrast themes a framed field also draws an outline, color.border.strong at
-  stroke.thin, over its fill, in every state, as the secondary button does: the fill stays as quiet there, and a
-  control a person must find meets the non-text target in high contrast. The bindings below cannot say this, since a
-  case has no contrast key, so this description is the contract for it, as Button's is for its outline. inline is a
-  field set into a text it belongs to, such as the title and the notes inside an open task card: no fill, no outline
-  and no padding, in the text role and the text color of its context. Focus is westron's ring, color.border.focus at
-  stroke.thick, around the field in both variants, on iOS, on macOS and on the web; around a framed field it lies
-  against the field's edge, outside it with no gap, and follows the field's shape, the capsule or the rounded
-  rectangle; the system's own focus ring is turned off where it has one.
-  watchOS enters no focus. Disabled draws the whole field at opacity.disabled, with no colors of its own
-  (design-language/08). The placeholder is in color.text.placeholder. A field may carry a glyph of the icon registry
-  at its start, at its end or at both (leadingIcon, trailingIcon). A glyph is decoration, never a control: it is
-  hidden from assistive technology, a touch or a click on it is one on the field, which it focuses, and it adds
-  nothing to the focus order. It stands inside the field, on its fill and inside its focus ring: at the field's
-  horizontal padding from the field's edge and container.gap from the text, beside the first line of a field of
-  several lines, on that line's baseline, as a letter of it would; start and end follow the layout direction, so
-  right to left the leading glyph is at the right. It takes its size from the field's text, framed's body.regular or
-  inline's context, at the text's own scale, so it grows with the person's text size, and it draws in
-  color.text.secondary in every state, with the placeholder shown or text entered, focused or not; disabled dims it
-  with the rest of the field. A search field is no component of its own (decisions/0014): it is a framed field with
-  the magnifier at its start, and a glyph at its end where the product has one. There is no error state, hint or message in
-  this version: no pilot screen shows one, and a field marked only by a danger border would tell an error by color
-  alone (design-language/08, "Color is never the only signal"). The text, and with it a framed field's height,
-  follows the person's text size (design-language/08, "Settings the person chooses"). A field is never drawn lower
-  than its text needs, in either variant: its height is that of its lines and its padding, or its minimum height,
-  whichever is more, and a layout that offers it less height does not squeeze it; a multiline field has as many lines
-  as its text and the product's line limit give, and scrolls past them.
-consumers: [todo-app/lists-screen, todo-app/list-screen]
-
-options:
-  variant:
-    type: enum
-    values: [framed, inline]
-    description: >-
-      No default: every use names its variant. The system's own style names (automatic, plain, roundedBorder,
-      squareBorder, bordered) are not values: westron's overload would shadow them (decisions/0003).
-  size:
-    type: enum
-    values: [s, m, l]
-    default: m
-    description: >-
-      framed: the height is size.control.s, m or l, 24, 32 and 40 with a pointer (macOS), 28, 36 and 50 on iOS and
-      iPadOS, 44 on watchOS, as a minimum, so the field grows with its text; its padding follows the size, and its
-      text is body.regular at every size. A field drawn below size.target.minimum, the platform's recommended target,
-      28 pt on macOS and 44 pt on iOS, keeps a hit area of that height (design-language/08): at s on macOS, at s and
-      m on iOS. inline takes its height and its text role from its context, so the size changes nothing on it.
-  lines:
-    type: enum
-    values: [single, multiple]
-    default: single
-    description: >-
-      single is a field of one line, whose text scrolls sideways, such as a list's name; multiple is a field whose
-      text wraps and which grows a line at a time, such as a card's notes. framed draws single as a capsule and
-      multiple as a rounded rectangle of radius.150, its lines held off its top and bottom edges by a padding that,
-      at the default text size, makes a field of one line as tall as a single one of its size, and that does not grow
-      with the text, as the minimum heights do not; inline draws both alike. On Apple it is the
-      system field's own axis (platforms.apple.systemOptions).
-  leadingIcon:
-    type: icons
-    optional: true
-    description: >-
-      The glyph at the field's start, a name of the icon registry, or none: a use that leaves it out draws no glyph
-      there and gives the text that room. A search field's magnifier. It is decoration and says nothing to assistive
-      technology, so the field's label still names the field.
-  trailingIcon:
-    type: icons
-    optional: true
-    description: >-
-      The glyph at the field's end, or none, such as the microphone at the end of the pilot's search field.
-      Decoration, as the leading one: a glyph that acts when it is pressed, such as a clear button or one that starts
-      dictation, is not this option (decisions/0003-icons-at-the-start-and-the-end.md).
-
-slots: [label, placeholder]
-states: [focus, disabled]
-
-tokens:
-  container.height:
-    cases:
-      - { when: { variant: framed, size: s }, token: size.control.s }
-      - { when: { variant: framed, size: m }, token: size.control.m }
-      - { when: { variant: framed, size: l }, token: size.control.l }
-  container.shape:
-    cases:
-      - { when: { variant: framed, lines: single }, token: capsule }
-  container.radius:
-    cases:
-      - { when: { variant: framed, lines: multiple }, token: radius.150 }
-  container.paddingHorizontal:
-    cases:
-      - { when: { variant: framed, size: s }, token: space.200 }
-      - { when: { variant: framed, size: m }, token: space.250 }
-      - { when: { variant: framed, size: l }, token: space.300 }
-  container.paddingVertical:
-    cases:
-      - { when: { variant: framed, lines: multiple, size: s }, token: space.50 }
-      - { when: { variant: framed, lines: multiple, size: m }, token: space.100 }
-      - { when: { variant: framed, lines: multiple, size: l }, token: space.150 }
-  container.background:
-    cases:
-      - { when: { variant: framed }, token: color.background.muted }
-  container.opacity:
-    cases:
-      - { when: { state: disabled }, token: opacity.disabled }
-  text.font:
-    cases:
-      - { when: { variant: framed }, token: typography.body.regular }
-  text.color:
-    cases:
-      - { when: { variant: framed }, token: color.text.primary }
-  placeholder.color: color.text.placeholder
-  container.gap:
-    token: space.100
-    cases:
-      - { when: { variant: framed, size: s }, token: space.75 }
-  leadingIcon.font:
-    cases:
-      - { when: { variant: framed }, token: typography.body.regular }
-  leadingIcon.color: color.text.secondary
-  trailingIcon.font:
-    cases:
-      - { when: { variant: framed }, token: typography.body.regular }
-  trailingIcon.color: color.text.secondary
-  focusRing.color:
-    cases:
-      - { when: { state: focus }, token: color.border.focus }
-  focusRing.width:
-    cases:
-      - { when: { state: focus }, token: stroke.thick }
-
-accessibility:
-  role: textField
-  intents: [edit]
-  keyboardIntents: [edit]
-  label: required
-  states: { disabled: disabled }
-  description: >-
-    Every field has an accessible label that names what it holds ("List name"), also where no label is visible; a
-    placeholder is not a label, since it disappears as the person types. The text is the field's value. In
-    disabled, the field is announced as unavailable. A glyph at the start or the end is decorative and hidden: it
-    never names the field, and a magnifier does not make it a search field. A field a person searches with is
-    named for what it searches ("Search", "Search lists") and announced as a search field wherever the platform has
-    that role: the product says so, as it gives the label, since westron cannot tell from a glyph what a field is
-    for (platforms).
-
-platforms:
-  apple:
-    strategy: style-on-system-control
-    base: SwiftUI.TextField
-    systemOptions: { lines: SwiftUI.Axis }
-    description: >-
-      .textFieldStyle(.framed, size: .s) on the system TextField, and on SecureField, which takes the same modifier.
-      lines is the system field's own axis, so no enum is generated for it and the overload takes no lines: argument:
-      TextField(_:text:axis:) with .vertical is multiple, any other field single. A TextFieldStyle has no public way
-      to read the axis, so the style reads it from the field it is given, the configuration, whose stored axis
-      reflection (Mirror) finds, measured with Xcode 27.1 on iOS 17.5, iOS 26.3 and macOS 26.7 (TextFieldStyleTests);
-      where reflection finds no axis, the style draws single (decisions/0002, pending the owner's confirmation). The
-      shapes are SwiftUI's Capsule and a RoundedRectangle, both with continuous corners, and the high-contrast outline
-      follows colorSchemeContrast, as Button's does. The style fixes the field's vertical size, so that it keeps its
-      height: without it, offered 8 pt at accessibility5 on iOS 26.3, a framed field of one line took 36 pt for its
-      65, a framed multiline one 36 for 142 and an inline multiline one 8 for 126 (TextFieldStyleTests). So a
-      multiline field takes its text's height, and a product's fixed-height frame does not squeeze it into scrolling:
-      the field spills past the frame. A product bounds a multiline field with lineLimit, not with a fixed-height
-      frame; here westron's field differs from the system's, which scrolls inside such a frame.
-      The style is a TextFieldStyle, which SwiftUI declares with only the underscored requirement
-      _body(configuration:). The probe of #30 with Xcode 27.1, run on iOS 26.3 and macOS 26.7 and compiled for iOS 17,
-      macOS 14 and watchOS 10 (no older runtime and no watch runtime to run on): the requirement is not isolated to the
-      main actor, so the conformance is @preconcurrency with a main-actor witness, and the style applies; the
-      configuration is the system field, drawn inside the style in the system's plain style, which has no bezel and no
-      focus ring of its own; focus is read with a @FocusState the style binds to the field, since
-      @Environment(\.isFocused) in the style describes the field's ancestors and stays false, and a product's own
-      .focused(_:) on the field keeps working beside it. A tap or a click on a framed field's padding focuses it. A call
-      without size: takes it from controlSize (spec/conventions.md). The placeholder is the system field's own prompt,
-      and so is a multiline field, TextField(_:text:axis:) with .vertical, such as a card's notes. The label: on iOS
-      26.3, and on macOS 26.7 outside a Form, the system field with a prompt exposes no accessibility label from its
-      title, with westron's style or without it, and the prompt is only its placeholder value (measured in #30; inside
-      a macOS Form the title becomes a static text and the field's title element in the accessibility tree), so the
-      product gives the field its name itself: TextField("List name", text: $name, prompt: Text("Untitled")).accessibilityLabel("List
-      name"). The placeholder's color differs from the contract on Apple: a TextFieldStyle cannot set the prompt's
-      color (neither foregroundStyle at any level nor tint reaches it), so the prompt is drawn in the system's
-      placeholder color, not color.text.placeholder, which stays bound for the platforms that can apply it. Against
-      background.canvas it measures 1.72:1 on iOS in light and 2.42:1 in dark, and about 3.9:1 on macOS in light,
-      where color.text.placeholder gives 5.27:1 and 6.22:1: on Apple the placeholder misses chapter 08's contrast
-      target for text. Decided on 2026-11-19 under the owner's delegation of 2026-11-18, pending the owner's
-      confirmation, as is the label above; westron
-      drawing its own prompt, an API change, stays open for the owner (decisions/0001). westron's focus ring is drawn
-      outside the field's laid out frame, so a focused field needs room around it that no clipping parent and no
-      close neighbor takes: on framed stroke.thick beyond the field's edge on every side, the ring touching the edge
-      with no gap (the owner's decision of 2026-11-20, decisions/0002), on inline
-      space.100 across and space.50 up and down beyond the field (a proposal of the implementation, decisions/0001,
-      I4). Corners are continuous.
-      leadingIcon and trailingIcon are labeled arguments of the overload, Westron.Icon? with nil as their default:
-      .textFieldStyle(.framed, leadingIcon: .magnifier, trailingIcon: .microphone). They cannot come through the
-      field's label, as Button's icon does: a TextFieldStyle is given the field alone, whose label is its title, and
-      has no public way to read the label's parts. Like the variant and the size they reach every field the modifier
-      is set on, in a container too. The style draws each glyph as Icon draws a decorative one, hidden from
-      assistive technology, in a row with the system field aligned on its first text baseline, inside the fill, the
-      high-contrast outline, the focus ring and the area that focuses the field on a tap or a click. A search field
-      on Apple is this field where the product places its search itself, in a bar or a pane of its own, named and
-      given the system's trait for a search field by the product: TextField("Search", text: $query, prompt:
-      Text("Search")).textFieldStyle(.framed, leadingIcon: .magnifier).accessibilityLabel("Search")
-      .accessibilityAddTraits(.isSearchField). Where the system places the search, SwiftUI's .searchable (the
-      navigation bar, the toolbar, the top of a sidebar, and from iOS 26 a bottom toolbar), the field is the
-      system's, with its own magnifier, dictation and Cancel, and takes no westron style: SwiftUI has no style for it,
-      and westron leaves it to the system as it leaves a menu or an alert (decisions/0014).
-    ios:
-      description: >-
-        Focus is the field being edited, with the keyboard up. There is no pointer to hover with on an iPhone, and
-        the field shows nothing on hover on an iPad either. At s, drawn 28 pt high, a tap 8 pt past the drawn edge,
-        at the 44 pt target, focuses the field, and one 24 pt past it does not; at m, drawn 36 pt high, a tap 4 pt
-        past either edge, at the same target, focuses it (the catalog's TextFieldBehaviorTests);
-        a one-off probe of #30 found the reach ending between 16 and 18 pt. The style's tap gesture, which focuses a
-        field from its padding, is what takes these touches: with it removed, a tap on the padding and one at the
-        target missed. A tap on a glyph is taken by the same gesture and focuses the field. The style grows no frame
-        of its own on iOS. A product reaches color.text.placeholder by
-        coloring its prompt itself: prompt: Text("Untitled").foregroundStyle(.text.placeholder).
-    macos:
-      description: >-
-        westron's focus ring replaces the system's, so focus is drawn in color.border.focus rather than in the accent
-        color the person chose in System Settings. The system draws no ring because the style draws the field in the
-        system's plain style, which has none; focusEffectDisabled() does not turn off the ring of the default,
-        bezeled field (the probe of #30). This is the owner's decision for this component (its decisions/0001);
-        design-language/08 ("Keyboard and focus"), 09 ("What stays with the system", macOS) and spec/conventions.md
-        ("States the system control has") record the exception. At s the field takes clicks in at least 28 pt around
-        its drawn 24 pt, as chapter 08 asks, with no exception like Button's. macOS 26 ignores a color the product
-        sets on its prompt, so there the placeholder is always the system's. A disabled field's text is dimmed twice:
-        the system field draws it in its own disabled text color under westron's opacity.disabled, (57, 60, 66)
-        against background.canvas (17, 19, 24) in dark where text.primary at opacity.disabled alone would be (96, 101,
-        108); the fill, westron's, is at opacity.disabled alone. Recorded on 2026-11-19 under the owner's
-        delegation of 2026-11-18, pending the owner's confirmation.
-        A defect of SwiftUI on macOS (#99, #113) can lay the system field out at another font's line height: SwiftUI
-        takes a field's line height from a cache of the three fonts it measured last, keyed by the font object's
-        address, so a font made where a freed one was takes that one's height, and a field of one line, or of several
-        lines held by its line limit (one line under lineLimit(1...4)), comes out a point or more taller or shorter
-        than its lines; shorter cuts off the bottom of its text. SwiftUI holds the system field to that height whatever
-        it is offered, and the font object it measures is its own, which no public API returns. From macOS 26 the style
-        holds a field of one line to its line, and a field of several lines to a whole number of its lines: it
-        measures its font's line itself (AppKit's default line height of the font Font.resolve(in:) gives), gives a
-        field of one line exactly that height with the system field at its top, and where SwiftUI has laid the field
-        out at another height it gives the field the same font with leading(.standard) added once more, which draws
-        the same pixels and which SwiftUI resolves and measures anew, and offers it a width more by a part of a pixel
-        at its right edge, so that SwiftUI sizes it anew; up to eight times in a row, and again each time the field
-        has been back at its lines, so a field on screen for long is held each time. A field laid out at its own lines
-        is unchanged, in layout and in pixels; a field it held keeps its frame, at 1x and 2x, left to right and right
-        to left; and editing in a field it holds keeps its text, its selection and an input method's marked text. Not
-        covered: a field of several lines held at another font's height that is a whole number of its own lines,
-        which the style takes for a field of that many lines (a framed body.regular field holding one line under
-        lineLimit(1...4) laid out 32 pt high, two of its lines, in 1 to 26 of 750 layouts while plain fields in
-        largeTitle and in Helvetica at 6 pt came and went); macOS 14 and 15, which have no API to resolve a font; a field whose axis the style cannot read, which it leaves as SwiftUI lays it out; and a field
-        with no font in its context, which the system draws in its control size's font. Measured with Xcode 27.1 on
-        macOS 26.7.1 (TextFieldLineTests); the owner decided on 2026-11-22 that westron works around the defect
-        (#113). The hold is on the system field alone, inside the row of glyphs: the font it makes anew is the
-        field's, not a glyph's, and the width it offers the field more is taken back outside the field, so the
-        glyphs keep their places while it holds the field. Beside a trailing glyph the field's right edge stands
-        where the glyph's width puts it, at any part of a point, so that the field keeps its frame there at 1x and
-        2x is measured with the glyphs (TextFieldLineTests, #115).
-    watchos:
-      options: { size: [m] }
-      fallback: { size: m }
-      states: [disabled]
-      description: >-
-        The watch's field is the system's as it is: a tap opens the system's text input, there is no focus to draw,
-        and roundedBorder, like westron's fill and capsule, has no place there. Both variants and both values of lines
-        draw the system field; the Swift enum keeps every size and the style falls back to m. leadingIcon and
-        trailingIcon compile on the watch and draw nothing there, a difference the contract cannot restrict, since
-        no platform restriction names an option whose values are icons; #34 decides the watch's subset.
-  web:
-    strategy: style-on-system-control
-    base: input
-    description: >-
-      Provisional until phase 6 (#40): a native <input> with westron's CSS, lines multiple a <textarea>. The
-      focus ring is an outline in focusRing.color and focusRing.width on :focus-visible, at outline-offset 0 on
-      framed, so it touches the field's edge. Corners are circular; the
-      capsule is a border-radius of half the height or more, so its ends stay round as the field grows. The
-      high-contrast outline applies under prefers-contrast: more. An <input> takes no children, so a field with a
-      glyph is an element around it that draws the fill, the glyphs as inline SVGs hidden with aria-hidden, and the
-      ring on :focus-within, the input inside with no frame of its own; a search field is <input type="search">,
-      the searchbox role.
-  linux:
-    strategy: style-on-system-control
-    base: GtkEntry
-    description: >-
-      Provisional until phase 7: the stock GtkEntry with westron's style classes for the variants and the sizes, and
-      for lines multiple a GtkTextView with the same classes; the focus ring there is decided with the GNOME library.
-      Corners are circular; the capsule is a border-radius of half the height or more, as on the web. The glyphs are
-      GtkEntry's own primary and secondary icons, by their symbolic names, not activatable; whether a search field
-      is GtkSearchEntry, which draws the magnifier itself, is decided in phase 7.
-  android:
-    status: planned
-    description: >-
-      Provisional until phase 8: Material3's TextField, whose leadingIcon and trailingIcon slots take westron's glyph
-      with no content description.
-```
+- **The row.** The style gives each glyph its width and `container.gap` of the field's own room, inside its horizontal
+  padding, and draws the glyph there as an overlay aligned on the field's first text baseline, within the fill,
+  outline, ring and hit area; with no glyph the field's view is the one it was. A first version set the glyphs beside
+  the field in an `HStack(alignment: .firstTextBaseline)`: it drew the same, but on iOS it added a pixel to a multi-line
+  field whose microphone reaches higher than its first line, and the overlays leave the system field the only view of
+  the row's height. A glyph stands at the field's padding and the field `container.gap` from it, at every
+  size of both variants, and right to left the start is at the right (`TextFieldGlyphTests`, within 0.05 pt).
+- **The baseline.** The system field gives its first line's baseline, not its bottom, on one line and on several, on
+  macOS and iOS: a glyph's baseline is the field's first baseline, within half a point, the pixel it is rounded to
+  (`TextFieldGlyphTests`). The glyphs change neither the field's height nor where its text stands (within 0.05 pt). On macOS the
+  baseline also reaches the row through the hold of #113: in the state that hands a field another font's line height,
+  every glyph keeps its place (below).
+- **The hold of #113 beside a trailing glyph** (`TextFieldLineTests`, 1500 attempts each): framed fields at `s` and
+  `m` on one line and on several, a SecureField and inline fields of one line and of several, each with the microphone
+  at its end, kept their lines, their sizes and their glyph rows, with fonts made anew 23 times; a field that stays on
+  screen kept its lines, its frame and its glyph's place at 2x (fonts made anew 64 times), at 1x left to right (45)
+  and at 1x right to left (70); the same fields laid out with the hold and without it, in a process where the state
+  cannot arise, were laid out the same. Without the hold (`WESTRON_FIELD_LINE_UNFIXED=1`) the same tests fail: fields
+  163 to 347 times off their lines, and the glyph row moving with them, a point up beside a field laid out 17 pt high.
+- **A tap or a click on a glyph** focuses the field, through the style's hit area (the catalog's
+  `TextFieldBehaviorTests`, `testATouchOrClickOnAGlyphFocusesTheField`, 6 pt into each glyph; passed on iOS; on macOS
+  the run could not activate the catalog app on 2026-11-22, the Mac's screen being unavailable, and is still to run).
+- **Assistive technology.** The glyphs are hidden: the catalog's live page, with a search field, exposes no image,
+  and the search field is a search field, named "Search", by the product's trait and label (`TextFieldBehaviorTests`;
+  a package test's window exposes no accessibility elements, so this is checked in the app).
+- **Pixels.** A render of every component's matrix on macOS before the change and after it: 256 images the same file
+  for file, and 88 added, the text field's supplementary sheets of glyphs (`glyph-leading`, `glyph-trailing`,
+  `glyphs-both` on every generated sheet, `glyphs-long-text` and `glyphs-right-to-left` at `m`).
+- **The accessibility audit on iOS** reports "Text clipped" on the single-line fields with a glyph at the end: at
+  accessibility5, where the glyphs and the padding leave the text too little room and "Search" and "Groceries" scroll
+  in the field; and at the default size on the search field, with the detail "may be clipped at larger Dynamic Type
+  sizes", which it does not report with the magnifier alone (measured with the trait removed and with text entered: the
+  same; with the microphone removed: none). The catalog suppresses none of it: it is the approved scale's cost, for the
+  owner to weigh with the sheets at accessibility5, not a fault the catalog can fix.
+- **At the largest text size on a phone**, the glyphs scale with the text, as approved, and so does the padding: a
+  framed field at `l` with both glyphs, alone across an iPhone 17 at accessibility5, leaves its text about a third of
+  the field's width, and "Milk" and "Apples" break inside the word (the supplement `glyphs-both`, size `l`, lines
+  `multiple`, accessibility5). A field of one line scrolls its text instead. This is how the approved scale draws, not
+  a defect of the implementation; whether a glyph should stop growing at the accessibility sizes, as some system
+  glyphs do, is a question for the owner's review of the sheets.

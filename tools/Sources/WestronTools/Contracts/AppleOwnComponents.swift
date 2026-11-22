@@ -135,7 +135,11 @@ extension AppleComponents {
                 switch option.kind {
                 case .tokenGroup:
                     throw problem(path, "an option whose values are tokens: \(notYet)")
-                case .icons:
+                case .icons(optional: true):
+                    throw problem(
+                        path,
+                        "an optional option whose values are icons: an own view's glyph is always named; \(notYet)")
+                case .icons(optional: false):
                     guard form == .view else {
                         throw problem(path, "a modifier with an option whose values are icons: \(notYet)")
                     }
