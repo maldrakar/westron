@@ -135,10 +135,15 @@ view existed, `tools/westron lint api-parity` reported exactly the missing `publ
 
 ## The implementation on Apple
 
-- `IconTile` lays out five subviews: a hidden line of the context's text, which gives the side and the tile's text
-  baseline (its middle, so a row aligned on the first baseline centers the tile on its title's line); the glyph hidden
-  at the context's image scale and at medium, whose ratio is the scale's step; the shape; and the resizable glyph,
-  which keeps the weight of the font in the environment, seen in the renders beside body and the Onest headings.
+- `IconTile` lays out five subviews: a hidden line of the context's text, which gives the side and, centered in the
+  tile, its text baseline (so a row aligned on the first baseline centers the tile on its title's line); one reference
+  symbol, the registry's default, hidden at the context's image scale and at medium, whose ratio is the scale's step
+  (the tile's own glyph gave sides that differed from glyph to glyph at large, caught by a unit test); the shape; and
+  the resizable glyph, which keeps the weight of the font in the environment, seen in the renders beside body and the
+  Onest headings.
+- The tile is one accessibility element through `.accessibilityRepresentation`: on iOS the symbol inside stayed an
+  image of its own, named after the symbol, under `.accessibilityElement(children: .ignore)` and under
+  `.accessibilityHidden(true)` on the glyph, which the catalog's UI test `IconTileAccessibilityTests` found.
 - The snapshot matrix's own cells stop growing at accessibility2: six rows of tiles at accessibility5 run past an
   iPhone's height, and the generated sheets take six rows to a picture for every component. The supplement "beside a
   title" grows to accessibility5.

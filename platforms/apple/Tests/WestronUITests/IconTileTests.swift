@@ -83,12 +83,16 @@ struct IconTileTests {
         #expect(abs(tile.width - expected) < 0.5 && abs(tile.height - expected) < 0.5, "\(role.name): \(tile)")
     }
 
-    @Test("the side does not depend on the glyph or the list's color")
-    func sideIsTheTextsAlone() {
-        let reference = fittingSize(IconTile(.tray).textRole(.body.regular))
+    @Test(
+        "at each scale the side does not depend on the glyph or the list's color, so tiles in a column line up",
+        arguments: [Image.Scale.small, .medium, .large])
+    func sideIsTheTextsAlone(scale: Image.Scale) {
+        let reference = fittingSize(IconTile(.tray).imageScale(scale).textRole(.body.regular))
         for icon in Westron.Icon.allCases {
-            let size = fittingSize(IconTile(icon).textRole(.body.regular).category(.amber))
-            #expect(abs(size.width - reference.width) < 0.5 && abs(size.height - reference.height) < 0.5, "\(icon)")
+            let size = fittingSize(IconTile(icon).imageScale(scale).textRole(.body.regular).category(.amber))
+            #expect(
+                abs(size.width - reference.width) < 0.5 && abs(size.height - reference.height) < 0.5,
+                "\(icon) at \(scale): \(size) against \(reference)")
         }
     }
 
@@ -98,7 +102,7 @@ struct IconTileTests {
             fittingSize(IconTile(.folder).imageScale(scale).textRole(.body.regular)).height
         }
         func symbol(_ scale: Image.Scale) -> CGFloat {
-            fittingSize(Image(Westron.Icon.folder).imageScale(scale).textRole(.body.regular)).height
+            fittingSize(Image(IconTileMetrics.scaleReference).imageScale(scale).textRole(.body.regular)).height
         }
         let line = fittingSize(Text(verbatim: "X").textRole(.body.regular)).height
         #expect(abs(side(.medium) - IconTileMetrics.side(lineHeight: line, scaleStep: 1)) < 0.5)

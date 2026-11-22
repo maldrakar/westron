@@ -58,10 +58,12 @@ public struct IconTile: View {
             // The line of the context's text, which sizes the tile and gives it its baseline.
             Text(verbatim: "X")
                 .hidden()
-            // The glyph at the context's scale and at medium: their ratio is the scale's step.
-            Image(icon)
+            // One symbol at the context's scale and at medium: their ratio is the scale's step. It is the same symbol
+            // for every tile, not the tile's glyph, whose ratio differs a little from glyph to glyph at large, so
+            // that tiles in a column keep one side.
+            Image(IconTileMetrics.scaleReference)
                 .hidden()
-            Image(icon)
+            Image(IconTileMetrics.scaleReference)
                 .imageScale(.medium)
                 .hidden()
             IconTileShape()
@@ -72,9 +74,14 @@ public struct IconTile: View {
                 .scaledToFit()
                 .foregroundStyle(colors.glyph)
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(label ?? Text(verbatim: ""))
-        .accessibilityAddTraits(.isImage)
+        // The tile is one element, an image with its label. On iOS the symbol inside stays an image of its own, named
+        // after the symbol, under `.accessibilityElement(children: .ignore)` or `.accessibilityHidden(true)` on it
+        // (IconTileAccessibilityTests), so the tile replaces what its parts expose.
+        .accessibilityRepresentation {
+            Color.clear
+                .accessibilityLabel(label ?? Text(verbatim: ""))
+                .accessibilityAddTraits(.isImage)
+        }
         .accessibilityHidden(label == nil)
     }
 }

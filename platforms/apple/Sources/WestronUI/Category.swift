@@ -1,8 +1,8 @@
 // Hand-written. The list color of a subtree: the context a westron control takes its color from where its contract
 // says the list's color fills it, as the checked Checkbox does (spec/components/checkbox, decisions/0001) and IconTile
-// does (spec/components/icon-tile). It is not a
-// contract option: a row does not pass its list's color to each control, it sets it once around them, as `.tint(_:)`
-// sets the system controls' tint (spec/conventions.md, "Context a style reads").
+// does (spec/components/icon-tile). It is not a contract option: a row does not pass its list's color to each control,
+// it sets it once around them, as `.tint(_:)` sets the system controls' tint (spec/conventions.md, "Context a style
+// reads").
 
 import SwiftUI
 

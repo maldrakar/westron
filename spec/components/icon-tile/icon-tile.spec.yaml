@@ -82,9 +82,10 @@ platforms:
       follows the line height of the font in the environment, measured on a hidden line of text as Checkbox measures
       its circle, so the tile follows .textRole(_:) and Dynamic Type; scale is SwiftUI's own Image.Scale, which the
       product sets with .imageScale(_:) on the tile or its container, and the tile takes the step from the ratio of
-      its glyph's height at that scale to its height at medium, measured on two hidden symbols, so IconTile takes no
-      scale argument and no enum is generated. The tile's text baseline is the middle of that hidden line, so in a row
-      aligned on the first text baseline its center sits on the middle of the title's first line. Inside
+      one reference symbol's height at that scale to its height at medium, the same symbol for every tile so that
+      tiles of different glyphs in a column keep one side, measured on two hidden symbols, so IconTile takes no
+      scale argument and no enum is generated. The tile's text baseline is that of the hidden line centered in it, so
+      in a row aligned on the first text baseline its center sits on the middle of the title's first line. Inside
       ContentUnavailableView, the empty screen's system view (decisions/0014), the tile stands in the label's icon and
       takes the font the system gives that icon. The shape is a continuous rounded rectangle. The name is no SwiftUI
       type (tools/Sources/WestronTools/Contracts/SwiftUITypes.swift, Xcode 27.1); SwiftUI has no tile, so westron

@@ -46,6 +46,10 @@ struct IconTileColors: Equatable, Sendable {
 /// its context, as Checkbox's circle is, and its glyph and corner by the tile (design-language/07, "Inside a shape, an
 /// icon is sized by the shape"; design-language/04, "Off-ladder corners belong to one component").
 enum IconTileMetrics {
+    /// The symbol whose height at the context's image scale against medium gives every tile its scale's step: the
+    /// registry's default glyph, so the step is one for all tiles whatever they draw.
+    static let scaleReference: Westron.Icon = .fallback
+
     /// The side as a multiple of the line height of the text role in the context: the pilot's tiles stand 1.42 to
     /// 1.58 lines tall beside their text, and the contract settles on 1.5 against the snapshot matrix.
     static let sidePerLine: CGFloat = 1.5  // westron-lint: allow a proportion to the text, the contract's 1.5 lines
