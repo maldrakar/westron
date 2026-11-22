@@ -1,0 +1,156 @@
+# 0001. The Chip contract: a tag, a filter, a value
+
+Date: 2026-11-22. Status: draft for the first gate (decisions/0005), whose approval the owner delegated to the
+coordinating agent for phase 4 (decisions/0014, "Process"). There was no interview: the agent that wrote the draft
+answered the questions of `/new-component` from the sources, and each answer below names its source. Where the
+sources are silent, the answer is the agent's guess and is listed under "Open questions", each with a recommendation.
+
+## Context
+
+decisions/0014 puts Chip in the core of phase 4 (#117): "a compact capsule with a label and an optional icon,
+selectable (a filter) or pressable (a value)". The pilot, todo-app, composes three things on `todo-app/list-screen`
+from it (read at todo-app's `Sources/DesignSystemComponents/`, `Sources/Features/TaskList/` and
+`Apps/Apple/Sources/TodoAppleUI/ListScreen/`):
+
+| Pilot family | What it is | How the pilot draws it |
+|---|---|---|
+| Tag chip (`TagChipModel`, `TagChipStyle`, in `TagBarView`) | A tag of the list's tasks in the tag bar; a tap lights it and filters the screen (list-screen.md, section 7) | A `Button` with `.plain` style, a capsule 30 high on the phone and 26 on the Mac, in a tap area 44 and 32 high; unlit on the neutral fill with the title in ink and the hash in ink 2; lit on the list's check fill with both in its mark's color; `.isSelected` while lit; tinted under the pointer on the Mac; the colors change on an ease of 0.18 s |
+| Pill (`PillModel`, `PillStyle`, in `TaskCardView`) | The open card's When, Deadline and one per tag (list-screen.md, section 3) | A capsule 32 high on the phone and 26 on the Mac on the neutral fill, with a glyph and a text; "drawn and inert in this epic", since "the pickers are the Task screen's" (list-screen.md, lines 31 and 57) |
+| Meta item with a capsule (`MetaItemStyle.Capsule`) | The tag in a task row's line of metadata on the Mac (`TaskList+PaneMetrics.swift`, `paneTagCapsule`) | A capsule 20 high on the neutral fill, padded 8, with the tag's name; not a control: the row is |
+
+The pilot is right about behavior and roles; the look is westron's (decisions/0011–0013). The pilot's numbers are
+compared below, not taken.
+
+## Already decided by the documents
+
+| What | Source |
+|---|---|
+| A system control beats westron's own; westron gives it a style, named by an unlabeled variant | decisions/0003, spec/conventions.md |
+| A tag is a capsule, the platform's own, at any height; a tag casts no shadow | design-language/04:32–35, 04:73 |
+| `color.background.muted` is "a tag or a badge without a color" | design-language/02:19; the token's usage note |
+| A list's color: `background` a tag's ground, `fill` a lit tag, `on-fill` the words on that fill; tags keep `fill`, not `control` | design-language/02:79–90; the usage notes of `color.category.<name>.control` and `on-control` |
+| A muted control darkens to `muted-hover` and `muted-pressed`; the accent fill to `accent-hover` and `accent-pressed` | design-language/02:19–23, 02:42–45 |
+| `typography.footnote.strong` is "the words on a chip, a pill or a small button" | design-language/03:59, 03:74 |
+| `motion.fade` is a hover tint and a selection; `motion.press` a press, scaling to 98 %; Reduce Motion drops the scale and keeps the tint | design-language/05:21–22, 05:82–94 |
+| The hit area is at least `size.target.minimum`, 44 pt on iOS and watchOS and 28 on macOS, also where the drawn control is smaller | design-language/08:115–131 |
+| Disabled is the whole control at `opacity.disabled`, announced as unavailable | design-language/08:43–47 |
+| States are announced: selected, unavailable, busy | design-language/08:110 |
+| A value from the context, the list's color, reaches a style through `.category(_:)`, the accent when none is set | spec/conventions.md, "Context a style reads"; Checkbox |
+| The pilot's tag filter chips, card pills and the Mac row's tag are a Chip; the tag bar is the pilot's composition | decisions/0014, "The pilot's families, mapped" |
+
+## The interview, answered from the sources
+
+1. **Purpose.** A person lights tag chips in the tag bar to filter the list, and sees a task's day, deadline and
+   tags as pills in its open card and its tags in its row on the Mac (above, "Context").
+2. **System control.** On Apple the selectable chip is a value that is on or off, the system `Toggle`, as Checkbox
+   is; the pressable chip is the system `Button`; the static chip is the system `Label`, which takes `labelStyle`.
+   The web has `<button>`, GTK `GtkToggleButton` and `GtkButton`. So westron gives styles (P1, P2).
+3. **Options.** One variant, no size, no flags (P3–P5, P15).
+4. **States.** checked, hover, focus, pressed, disabled; watchOS enters checked, pressed and disabled (P16).
+5. **Slots.** `label` and an optional `icon`: the pilot's chips and pills each have a glyph and a text.
+6. **Constraints.** None between options; the forms differ in the states they enter (P1).
+7. **Accessibility.** A toggle button announced as selected while on; a button; static text (P13).
+8. **Platform differences.** Hover only with a pointer; the hit area by platform; watchOS as plain as the schema
+   allows until #34 (P16).
+
+## Proposed
+
+| # | Proposal | Options considered, and why this one |
+|---|---|---|
+| P1 | **One contract, three forms on three Apple bases**: selectable `.toggleStyle(.chip)` on `SwiftUI.Toggle`, pressable `.buttonStyle(.chip)` on `SwiftUI.Button`, static `.labelStyle(.chip)` on `SwiftUI.Label`. The form is the control the product writes, not an argument. The draft names the Toggle as its base, since the schema takes one; the other two need the tools below before approval | (A) this, one look recorded once, every form the system's own control (decisions/0003), the issue's one component; it needs the tools. (B) Separate contracts, `chip` on `SwiftUI.Button`, `filter-chip` on `SwiftUI.Toggle` and a third on `SwiftUI.Label`: the tools allow it today (the variant `chip` collides with no value of Button or Checkbox on the shared modifiers, and every variant is required), but one look is written three times, nothing checks that the copies agree, and the core gets three names for one thing, against decisions/0014's small core. (C) One contract on `SwiftUI.Button` with a westron state `selected`, set by a shared `.selected(_:)` modifier and announced with `.isSelected`, as the pilot does: the tools allow it today and ListRow (#119) may share the modifier, but a value that is on or off would be the product's state on a button instead of the system toggle's value, unlike Checkbox, and the static form still needs a base. (D) The pressable chip as a variant of Button (`.buttonStyle(.chip)` in Button's contract) and the selectable one a contract on Toggle: it changes an approved contract and still splits one look in two. Recommended: A; if the tools cannot wait, B, and A merges B later |
+| P2 | **The static form is a style on `SwiftUI.Label`**, `Label(tag.name, icon: .hash).labelStyle(.chip)` | (a) this: a system view with a style modifier, so decisions/0003 asks for a style; like any label style it cascades to every `Label` below it, which a product sets on the chip itself. (b) An own view, `Chip(tag.name, icon: .hash)`, as Icon and Rule are: needs an own view with slots and a variant, which the tools do not derive yet. (c) No static form: the pilot composes a capsule from Text, Icon and tokens; decisions/0014 names the Mac's tag a Chip, and the look would drift from the chip's |
+| P3 | **One variant, `chip`**: `.toggleStyle(.chip)`, `.buttonStyle(.chip)`, `.labelStyle(.chip)` | Not a system style of any of the three bases (`SystemStyles`: Toggle's `automatic`, `button`, `checkbox`, `switch`; Button's ten; Label's `automatic`, `iconOnly`, `titleAndIcon`, `titleOnly`), nor a value of Button's or Checkbox's variant. Checkbox's `check` is the precedent of a one-value variant |
+| P4 | **No size option**: the height is `size.control.s`, a minimum, 28 pt on iOS, 24 on macOS, 32 on watchOS | The pilot's chips and pills are 30 and 32 on the phone and 26 on the Mac, between `s` and `m`, nearer `s`; one size serves every use the pilot has. The Mac row's tag, 20 in the pilot, is Q7 |
+| P5 | **Padding `space.125` on both sides, gap `space.50`** | The pilot pads 10 and 12 on the phone and 8 and 10 on the Mac, the icon's side narrower; a symmetric padding needs no case on whether an icon is there, which a binding cannot name (a slot is not an option). Button's size s gap is `space.50`; the pilot's is 5–6. Q10 |
+| P6 | **At rest**: fill `color.background.muted`, label `color.text.primary`, icon `color.text.secondary` | The documents' neutral tag; the pilot's title in ink and glyph in ink 2 |
+| P7 | **Checked**: with the accent, fill `color.background.accent`, label and icon `color.text.on-accent`; with a list's color, `color.category.<name>.fill` and `on-fill`. The bindings are the accent's, the description the contract for a list's color, as Checkbox's is | (a) `fill` and `on-fill`, the roles design-language/02 gives a lit tag. (b) `control` and `on-control`, the pilot's own choice (its lit chip is the check's fill and mark), which meets 3:1 on the ground; the token notes say to avoid them for tags. (c) `background.selected` under `text.primary` for the accent, quieter, but then the accent and a list's color would light differently. Recommended: (a), Q5 |
+| P8 | **Hover and pressed**: unchecked to `muted-hover` and `muted-pressed`; checked with the accent to `accent-hover` and `accent-pressed`; checked in a list's color keeps its fill; a disabled chip never tints or scales | The documents' tints. A list's color has no hover or pressed fill: Q4 |
+| P9 | **High contrast**: every chip draws `color.border.strong` at `stroke.thin` over its fill, in every state | Button's secondary does the same, for the same reason: the muted fill stands about 1.1:1 off the canvas, and a list's `fill` is held to no contrast on the ground. A case has no contrast key, so the description carries it, as Button's does |
+| P10 | **Hit area**: the selectable and pressable forms lay out a frame at least `size.target.minimum` high around the drawn chip; across, the chip's width; the static form takes no hit area | The pilot's tap areas are 44 and 32 high. Laid out, as Checkbox's square is, so it never takes a neighbor's clicks (Button's #75 on macOS). On iOS Button relies on the system's touch tolerance instead, which a neighbor within about 16 pt shares; chips stand 6 pt apart in the pilot's tag bar, so the frame is the safer choice. Q11 |
+| P11 | **Hover and pressed tints are in the description, not in the bindings** | A case's `state` matches any of the states it names, so no case can say "checked and pressed": the tint depends on both. Button escapes this with an option (its variant); a chip's selection is a state. The tools need a case that requires several states at once (below) |
+| P12 | **One line, truncated at the end; Dynamic Type grows the chip** | The pilot sets one line on both. Tag names are a person's and may be long; a chip in a scrolling bar gets its width, a chip in a row's metadata may not. The whole label stays the accessible name |
+| P13 | **Accessibility**: the selectable form a toggle button, announced as selected while on; the pressable form a button; the static form adds no role and reads as its label; the icon is hidden; the label is required | The pilot marks a lit chip `.isSelected`; design-language/08 names "selected". The draft's fields are the selectable form's (`role: button`, `intents: [toggle]`, `states: { checked: selected }`), since one contract has one accessibility block today. How Apple announces it is Q6 |
+| P14 | **Motion**: checking and hover change color in `motion.fade`; a press scales to 98 % in `motion.press`; Reduce Motion drops the scale | The documents. The pilot's chip changes color on an ease of 0.18 s, which is `motion.fade`'s role |
+| P15 | **No remove button, no icon-only form, no size option** | The pilot needs none: adding or removing a tag is outside the list screen (list-screen.md, line 31: editing a task's tags is the Task screen's), and every chip and pill has words (AGENTS.md, rule 6) |
+| P16 | **Platforms**: Apple as P1; iOS hovers only with a pointer; watchOS enters checked, pressed and disabled and nothing else is said, as plain as the schema allows until #34; the web and GTK provisional, the web's selectable form a `<button aria-pressed>`, GTK's a `GtkToggleButton`; Android planned | Button's and Checkbox's blocks. The web and GTK base fields name the selectable form's, as Apple's does |
+
+## What the tools need before an approved Chip is generated
+
+For P1, option A; options B and C need none of it.
+
+1. **Several bases in one contract.** The schema gives `platforms.<platform>.base` one string. Chip needs its forms
+   named once in the neutral part, each with the states it enters and its accessibility, and a base per form on each
+   platform. One shape: a top-level `forms:` map, `{ selectable: { states: [checked, hover, focus, pressed,
+   disabled], accessibility: { role: button, intents: [toggle], states: { checked: selected } } }, pressable: {
+   states: [hover, focus, pressed, disabled], accessibility: { role: button, intents: [activate] } }, static: {
+   states: [], accessibility: { role: none } } }`, and `platforms.apple.bases: { selectable: SwiftUI.Toggle,
+   pressable: SwiftUI.Button, static: SwiftUI.Label }` in place of `base`. A contract without `forms` keeps `base`.
+2. **`spec check`**: each base checked as `base` is now (in `SystemStyles`, the strategy fits it, no option value is
+   one of its system styles); each form's states a subset of the contract's, and a state the base does not carry
+   (`SystemStyles.Base.states`) one a westron modifier sets; the `role: none` rules per form.
+3. **`SystemStyles`** gains `SwiftUI.Label`: modifier `labelStyle`, protocol `LabelStyle`, styles `automatic`,
+   `iconOnly`, `titleAndIcon`, `titleOnly`, no states; `SwiftUITypesTests` holds it to SwiftUI's interface.
+4. **The generator** writes one overload per base, `toggleStyle(_: ChipVariant)`, `buttonStyle(_: ChipVariant)` and
+   `labelStyle(_: ChipVariant)`, each applying its own hand-written style (today the one style is
+   `<Component>VariantStyle`; three need three names, such as `ChipToggleStyle`, `ChipButtonStyle`, `ChipLabelStyle`,
+   which the type-name collision check covers), and `ChipState.isEntered` per form. The ambiguity check runs per
+   modifier: Chip beside Button on `buttonStyle` and beside Checkbox on `toggleStyle` passes, since the variants
+   share no value and all are required.
+5. **The API parity lint** expects the three overloads.
+6. **The snapshot matrix** gets a row per form, each in the states it enters.
+7. **Cases over several states at once** (P11): a case that matches only when every named state holds, such as
+   `when: { state: { all: [checked, pressed] } }`, so that the tints are bindings and not prose. Without it the
+   description carries them, as it carries Button's high-contrast outline. Its reachability check has to enumerate
+   the sets of states, which it does not today.
+8. **`spec/conventions.md`** and `spec/components/README.md` describe forms.
+
+## What the tokens need
+
+- **Contrast declarations, no new values**: `color.text.secondary`, the resting icon, is declared on
+  `color.background.muted`, `hover` and `pressed` but not on `muted-hover` and `muted-pressed`, which an unchecked
+  chip's icon sits on under the pointer and pressed. `tools/westron tokens contrast` then proves them.
+- **If Q4 is answered (b)**: `color.category.<name>.fill-hover` and `fill-pressed` for the twelve list colors, solved
+  by the palette generator as `accent-hover` and `accent-pressed` are, with `on-fill` declared on them.
+- Nothing else: every other binding is an existing token.
+
+## Open questions
+
+Each is a guess the sources do not settle; the recommendation comes first.
+
+- **Q1. One contract with three bases, or separate contracts?** (P1.) Recommended: one contract (A), with the tools
+  above as a separate issue before the implementation; the draft stays a draft until then. If the phase cannot wait,
+  B now, merged into A when the tools carry forms.
+- **Q2. Does westron hold the static form?** (P2.) Recommended: yes, as `.labelStyle(.chip)`: decisions/0014 names
+  the Mac row's tag a Chip, and a composition in the pilot would copy the look. The alternative is the pilot's own
+  capsule from Text, Icon and tokens.
+- **Q3. The pressable form has no live consumer yet.** The pilot's pills are "drawn and inert in this epic" and the
+  pickers are the Task screen's (list-screen.md, lines 31 and 57); the issue and decisions/0014 name the pressable
+  chip, and the brief says the pills open pickers. Recommended: keep it, since the pills become pressable with the
+  pickers and the form costs a base, not a look; until then the pilot draws its pills as static chips. The
+  alternative is to drop it until the Task screen's epic (AGENTS.md, rule 6).
+- **Q4. A list's color under the pointer and pressed.** (P8.) (a) The fill stays, and the press's 98 % scale is the
+  feedback; (b) new tokens `fill-hover` and `fill-pressed` for each list color. Recommended: (a) now; (b) if the
+  owner finds the lit chip too still in the snapshot matrix.
+- **Q5. Which fill lights a chip in a list's color?** (P7.) Recommended: `fill` and `on-fill`, as design-language/02
+  says for a lit tag. The pilot uses the check's fill, `control`, which meets 3:1 on the ground; in a list whose color
+  is amber or olive, a lit chip and a checked task check would then differ in shade on one screen.
+- **Q6. How Apple announces the selectable chip.** Recommended: the style's accessibility representation is the
+  system's own `Toggle` in its `.button` style, on the same value and label, so that the system decides the words;
+  measured at the implementation in the accessibility hierarchy, as Checkbox's were. If that is not announced as
+  selected, a system `Button` with `.isSelected` while on, as the pilot does.
+- **Q7. The Mac row's tag is 20 pt high in the pilot; the chip is `size.control.s`, 24.** Recommended: accept the
+  4 pt now and revisit with ListRow (#119), where the line of metadata is laid out. The alternative is a static form
+  that hugs its text, with no minimum height, since it is not a control.
+- **Q8. The pills' meaning colors and their empty look.** The pilot draws an unset When or Deadline in ink 2 with its
+  placeholder word, the set day's sun in Today's amber, and a due deadline in red. Recommended: none of it in this
+  contract until the pills become pressable (Q3); the chip draws westron's colors and the product writes the words.
+  The alternative is an option, such as a `tone` with `neutral` and `danger`, or a placeholder flag, decided with the
+  Task screen's pickers.
+- **Q9. A second signal for checked.** The fill and the words' color change together, and the state is announced;
+  there is no check mark. Recommended: no mark, as the pilot draws it and as the system's button-style toggle does.
+  The alternative is the `check` glyph in the icon's place while on, as Material's filter chip has.
+- **Q10. Symmetric padding.** (P5.) Recommended: `space.125` both sides. The alternative is a narrower padding on the
+  icon's side, which needs a binding that knows whether the icon is there.
+- **Q11. A laid-out hit area on iOS.** (P10.) Recommended: laid out, as Checkbox's is and as the pilot's tag bar
+  needs it (44 pt). The alternative is Button's iOS rule, the system's touch tolerance, which the 6 pt gap between
+  chips would share.

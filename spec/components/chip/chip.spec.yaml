@@ -1,0 +1,146 @@
+# westron's Chip contract (#117), a draft for the first gate (decisions/0005), written on 2026-11-22 by an agent with
+# no interview: decisions/0001-chip-contract.md records each answer with its source and every guess as an open
+# question for the approver. It stays a draft, so nothing is generated: the contract describes one component in three
+# forms (selectable, pressable, static), and the schema and the tools carry one Apple base per contract today. The
+# draft names the selectable form's base, SwiftUI.Toggle; the decision's P1 says what the tools need for the other two.
+id: chip
+status: draft
+description: >-
+  A compact capsule with a short label and an optional leading icon: a tag, a filter, a value. One look in three
+  forms, which the product picks by the control it writes. Selectable: a filter that is on or off, such as a tag chip
+  of a tag bar; it is in the state checked while it is on. Pressable: a value that opens something when pressed, such
+  as a card's day, deadline or tag pill, which opens a picker. Static: a value shown and not acted on, such as the tag
+  in a task row's line of metadata on the Mac, whose row is the control. Only the selectable form enters checked; only
+  the selectable and pressable forms enter hover, focus, pressed and disabled; the static form has no states. It is
+  the platform's capsule at any height, its ends round when the text grows (design-language/04), flat, with no
+  shadow, glass or material. At rest it is filled with color.background.muted, its label in color.text.primary and its
+  icon in color.text.secondary. Checked, it is filled with the list's color and its label and icon are drawn in the
+  words' color on that fill: the list's color comes from the context, the accent when the context sets none, as
+  Checkbox's does. With the accent the fill is color.background.accent and the words color.text.on-accent; with a
+  list's color the fill is color.category.<name>.fill and the words color.category.<name>.on-fill, the roles
+  design-language/02 gives a lit tag, for each of the twelve list colors. The bindings below are the accent's, since
+  the list's color is the context's and not an option; this text is the contract for a list's color. Under the
+  pointer and pressed, an unchecked chip's fill darkens a step each, to color.background.muted-hover and
+  muted-pressed, and a checked chip's accent fill to color.background.accent-hover and accent-pressed; a checked chip
+  in a list's color keeps its fill under the pointer and pressed, since the list colors have no hover or pressed fill
+  yet (decisions/0001, open question Q4). The bindings below cannot say this, since a case cannot require two states
+  at once, checked and pressed (decisions/0001, P11), so this text is the contract for the tints. A disabled chip never
+  enters hover or pressed: its fill stays as at rest and it does not scale. A press scales the chip down to 98 % in
+  motion.press, which Reduce Motion drops; hover tints and checking change color in motion.fade (design-language/05).
+  In the high-contrast themes every chip also draws an outline, color.border.strong at stroke.thin, over its fill, in
+  every state, as Button's secondary does: the muted fill alone stands about 1.1:1 off the canvas, and a list's fill
+  is not held to a contrast on the ground (design-language/02, 08). The height is size.control.s, a minimum: the
+  chip grows with the person's text size and stays a capsule. The label is one line: it never wraps, and where the
+  container gives the chip less width than its label needs, the label is truncated at its end with an ellipsis, and
+  the whole label stays the accessible name. The hit area of the selectable and pressable forms is at least
+  size.target.minimum high, also where the drawn chip is lower, laid out around the chip so that it never overlaps a
+  neighbor's; across, it is the chip's width. Disabled draws the whole chip at opacity.disabled, with no colors of its
+  own. A chip has no remove button, no size option and no icon-only form: the pilot needs none of them (AGENTS.md,
+  rule 6).
+consumers: [todo-app/list-screen]
+
+options:
+  variant:
+    type: enum
+    values: [chip]
+    description: >-
+      The chip; the only variant, so that a call reads .toggleStyle(.chip), .buttonStyle(.chip) and .labelStyle(.chip).
+      No system style of the three bases is named chip, and neither is a value of Button's or Checkbox's variant, which
+      share two of the modifiers (decisions/0003; decisions/0001, P3).
+
+slots: [label, icon]
+states: [checked, hover, focus, pressed, disabled]
+
+tokens:
+  container.height: size.control.s
+  container.shape: capsule
+  container.paddingHorizontal: space.125
+  container.gap: space.50
+  container.background:
+    token: color.background.muted
+    cases:
+      - { when: { state: checked }, token: color.background.accent }
+  container.opacity:
+    cases:
+      - { when: { state: disabled }, token: opacity.disabled }
+  container.pressMotion: motion.press
+  container.hoverMotion: motion.fade
+  container.checkMotion: motion.fade
+  label.font: typography.footnote.strong
+  label.color:
+    token: color.text.primary
+    cases:
+      - { when: { state: checked }, token: color.text.on-accent }
+  icon.font: typography.footnote.strong
+  icon.color:
+    token: color.text.secondary
+    cases:
+      - { when: { state: checked }, token: color.text.on-accent }
+  focusRing.color: color.border.focus
+  focusRing.width: stroke.thick
+
+accessibility:
+  role: button
+  intents: [toggle]
+  keyboardIntents: [toggle]
+  label: required
+  states: { checked: selected, disabled: disabled }
+  description: >-
+    The label is the accessible name, the whole of it also when it is truncated; the icon beside it is decorative and
+    hidden. These fields are the selectable form's, the draft's base. The selectable form is a toggle button: its role
+    is a button, it is toggled, and while it is on it is announced as selected, in the platform's words, the word
+    design-language/08 gives a selection; off, it is announced with no state. The pressable form is a button that is
+    activated, with no checked state. The static form adds no role of its own: its label is read as text, and it takes
+    no intents. In disabled, a selectable or pressable chip is announced as unavailable.
+
+platforms:
+  apple:
+    strategy: style-on-system-control
+    base: SwiftUI.Toggle
+    description: >-
+      Three forms on three system bases, one per form (decisions/0001, P1): selectable, the system Toggle,
+      Toggle(isOn: $isPicked) { Label(tag.name, icon: .hash) }.toggleStyle(.chip), checked being configuration.isOn;
+      pressable, the system Button, Button { openPicker() } label: { Label("Tue", icon: .sun) }.buttonStyle(.chip);
+      static, the system Label, Label(tag.name, icon: .hash).labelStyle(.chip). The schema carries one base, so this
+      draft names the Toggle's; the Button's and the Label's need the tools of P1 before the contract is approved. The
+      list's color reaches the style through .category(_:), as it reaches Checkbox: set once around the tag bar,
+      .category(Westron.Category(rawValue: list.color)). The label and the icon are the title and the icon of a Label
+      in the control's label (spec/conventions.md, "Slots"); the icon is the symbol's small scale in the label's text
+      role, its baseline on the label's, as Button's is. ToggleStyleConfiguration has no isPressed, so the selectable
+      style follows a press as Checkbox's does (Checkbox's decisions/0001, P19), and its accessibility is meant to be
+      the system's own toggle in its button style, announced as selected while on (decisions/0001, Q6, to be measured
+      at the implementation). The focus ring is the system's, so the focusRing bindings do not apply, as for Button.
+      The high-contrast outline follows colorSchemeContrast, as Button's does. The hit area is laid out, not only
+      hit-tested: a frame of at least size.target.minimum high around the drawn chip, as Checkbox's square is
+      (Checkbox's decisions/0001, P17).
+    ios:
+      description: >-
+        Hover only with a pointer, on iPad; an iPhone never enters it. The hit area is at least 44 pt high around the
+        28 pt chip.
+    macos:
+      description: >-
+        The hit area is at least 28 pt high around the 24 pt chip. Keyboard focus follows the system's controls, as
+        Checkbox's does, and is measured at the implementation.
+    watchos:
+      states: [checked, pressed, disabled]
+      description: >-
+        As plain as the schema allows until #34 decides the watchOS subset of westron's components: no pointer, so no
+        hover, and no keyboard focus to draw. The style is the same code as on iOS. The pilot has no watchOS screen
+        with a chip.
+  web:
+    strategy: style-on-system-control
+    base: button
+    description: >-
+      Provisional until phase 6 (#40): the selectable form is a native <button> with aria-pressed, the pressable form
+      a native <button>, the static form a <span>, each with westron's CSS. aria-pressed is announced as pressed, not
+      selected, in most screen readers: whether the selectable form is a toggle button or a checkbox on the web is
+      phase 6's. The focus ring is an outline in focusRing.color and focusRing.width on :focus-visible. The capsule is
+      a border-radius of half the height or more.
+  linux:
+    strategy: style-on-system-control
+    base: GtkToggleButton
+    description: >-
+      Provisional until phase 7: the selectable form the stock GtkToggleButton, the pressable form a GtkButton, the
+      static form a GtkLabel in a box, each with westron's style class. The focus ring is the system's.
+  android:
+    status: planned
