@@ -46,7 +46,9 @@ B spends space generously, on the 8 px base. Each place has a role, and the role
   itself.
 - **The margins are for layout the product builds.** A `ScrollView`, a stack or a grid that the product lays out
   takes westron's page margin. The system's `List`, `Form`, toolbars and navigation bars keep their own insets, as a
-  system control keeps its own look (decisions/0003), so a westron screen next to a system one does not jump.
+  system control keeps its own look (decisions/0003), so a westron screen next to a system one does not jump. One
+  exception: a ListRow in a `List` draws its own padding and highlight, so the product sets the List's row insets to
+  zero for it (spec/components/list-row, decisions/0001, Q2).
 
 - **Groups show through space.** The gap between groups is twice the gap inside one, so a person sees the grouping
   before any line. Separators stay quiet (chapter 02), and a screen needs few of them (chapter 00, principle 4).

@@ -604,6 +604,16 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             Suppression(.entry("chip"), type: .contrast, reason: "an inactive control", enabled: false) {
                 ["disabled", "disabled, on"].contains($0 ?? "")
             },
+            // Contrast on the disabled ListRow samples, drawn whole at opacity.disabled by the contract, their slots
+            // with them: WCAG exempts an inactive control (design-language chapter 08). Only an element that is not
+            // enabled matches: the row's button and the texts under it, its title and its count; the same words in the
+            // other states are audited as usual.
+            Suppression(.entry("list-row"), type: .contrast, reason: "an inactive row", enabled: false) {
+                [
+                    "pressable, disabled", "pressable, disabled, 12", "static, disabled", "static, disabled, 12",
+                    "Archived", "12",
+                ].contains($0 ?? "")
+            },
             // No suppression for the checks with no drawn label beside separate titles (the live row here, the rows
             // of `checkbox-in-list`): written with `Toggle(isOn:accessibilityLabel:)`, their label is an `EmptyView`
             // carrying the name, and the audit reports neither contrast nor clipped text on them (measured on
@@ -627,6 +637,26 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                 // cannot import.
                 Suppression(.entry("chip"), type: .textClipped, reason: "a chip's label truncated by its contract") {
                     $0 == "A tag whose name runs much longer than its chip"
+                },
+                // "Text clipped" on the pressable row the catalog sets selected in the states' section, at the default
+                // settings and at accessibility5: its title is drawn in typography.body.strong, the contract's selected
+                // title. Measured on iOS 26, 2026-11-22: the title is whole in the entry's screenshots and in the
+                // matrix at the default size and at accessibility5; the live selected row ("Inbox, 12") and the
+                // static selected sample are not reported. Laying the accessibility representation's title out in
+                // the strong role as well moved the finding to the static selected sample too, so the representation
+                // keeps the regular role. Only this one label matches, enabled; every other row is audited as usual.
+                Suppression(
+                    .entry("list-row"), type: .textClipped, reason: "a selected row's strong title", enabled: true
+                ) { $0 == "pressable, selected" },
+                // "Text clipped" on the long title of the sample at level 4, which the page sets on one line: the
+                // ListRow contract truncates a title the product sets on one line at its end and keeps the whole
+                // title as the row's name (spec/components/list-row, decisions/0001, Q3), which it is. Only this one
+                // label matches; it is `ListRowSample.long`, which this target cannot import.
+                Suppression(
+                    .entry("list-row"), type: .textClipped,
+                    reason: "a row's title on one line, truncated by its contract"
+                ) {
+                    $0 == "A list whose name runs much longer than the room its row leaves"
                 },
                 // "Text clipped" on the pressable chip the catalog holds pressed, in every configuration that runs the
                 // text clipped audit (the default settings and accessibility5): the contract draws a pressed chip at

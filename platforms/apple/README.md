@@ -212,7 +212,10 @@ still drives every generated sheet and combination:
   listed again by hand. Each sheet and its section of the review page are marked "Not a contract option". Over a
   matrix whose rows are icons, a supplement keeps a few of them (`rows`), on one sheet. Where its cell is taller than
   a generated one, `rowsPerPicture` caps the rows of one picture at a text size that splits sheets
-  (`accessibility5`). There are ten (`SnapshotMatrix/Supplements.swift`, `Supplement.all`):
+  (`accessibility5`); `splitsAtEverySize` splits its sheets into pictures of that many rows at every text size, and
+  `columnsPerPicture` caps a picture's columns where the cells are wide. `ComponentMatrix.rowsAtLimit` caps the
+  generated sheets of a component whose cells grow tall at the splitting size (ListRow, one row a picture). Among them
+  (`SnapshotMatrix/Supplements.swift`, `Supplement.all`, lists every one):
   - Button, `label-without-icon`: its generated cells have an icon and a label or are icon-only, so a label without an
     icon, which while loading has the indicator before the label and widens the button (P13), is shown on the sheets
     with iconOnly false: every variant, size and role, at rest and in each state, 108 combinations on 6 sheets.
@@ -225,6 +228,13 @@ still drives every generated sheet and combination:
   - Text field, at size m: `card-notes`, a card's title and multiline notes (two rows to a picture at
     `accessibility5`); `secure-field`, the style on `SecureField`; `on-surface` and `on-sunken`, a field on those
     grounds.
+  - ListRow, eight: `selected`, the selected row in its themes, the high-contrast ring included; `tree`, rows at
+    levels 0 to 3 with their guides; `slots`, a row with a second line, a leading icon and a trailing count; `task`,
+    a static row with a check in its leading slot; `long-title`, a title on one line truncated at level 4; `drag`, the
+    insertion mark at a level and a drop target; `right-to-left`, the slots, indent and guides mirrored; and
+    `accessibility5`, the trailing slot under the text at level 0. All but `selected` and `accessibility5` are drawn at
+    `accessibility2` at most, and their header says why: at accessibility5 the scaled indent leaves a row at level 2 or
+    deeper no room for its words on a phone (spec/components/list-row, decisions/0001, "Measured").
 
   Like the matrix, supplements are not catalog entries, so the accessibility audit does not walk them.
 
@@ -360,11 +370,11 @@ checks again (a commit pushed by a workflow starts none).
 
 ### Behaviour UI tests
 
-`ButtonBehaviorTests`, `CheckboxBehaviorTests`, `ChipBehaviorTests`, `TextFieldBehaviorTests` and `IconAccessibilityTests`, in
+`ButtonBehaviorTests`, `CheckboxBehaviorTests`, `ChipBehaviorTests`, `ListRowBehaviorTests`, `TextFieldBehaviorTests` and `IconAccessibilityTests`, in
 `Catalog/CatalogUITests`, check on the catalog's entries what a unit test cannot reach: presses and hit areas, the
 accessibility hierarchy, the keyboard. Each class has branches of its own for iOS and macOS. `tools/apple/check.sh
 behavior` runs them, like the audit: the build first, a step of its own, then one `xcodebuild test-without-building`
-for the classes named (all four by default); it prints each failure with its message, each skip with its reason, the
+for the classes named (all of them by default); it prints each failure with its message, each skip with its reason, the
 test cases and the totals, and stops the simulator's test daemon afterwards. The log goes to
 `.build/logs/behavior-<platform>[-<classes>].log`, the result bundle to `.build/xcode/results/`.
 

@@ -328,7 +328,7 @@
       },
       "insertion": {
         "$value": "{color.blue.8}",
-        "$description": "The line that marks where a dragged item would be dropped: an insertion rule. The focus ring's blue, a token of its own so that each can change without the other.",
+        "$description": "The line that marks where a dragged item would be dropped: an insertion rule; and the ring of a row a dragged item would be dropped onto, on its accent-subtle highlight. The focus ring's blue, a token of its own so that each can change without the other.",
         "$extensions": {
           "dev.westron.contrast": [
             {
@@ -338,7 +338,9 @@
                 "color.background.surface",
                 "color.background.sunken",
                 "color.background.hover",
-                "color.background.selected"
+                "color.background.pressed",
+                "color.background.selected",
+                "color.background.accent-subtle"
               ]
             }
           ]

@@ -283,7 +283,12 @@ public struct AppleSnapshotMatrix: Generator {
             } else if axis.isBool {
                 type = "Bool"
             } else if axis.isForm {
-                out += doc(["The form: the system control the cell styles (the contract's `forms`)."], indent: 1)
+                out += doc(
+                    [
+                        matrix.ownForms
+                            ? "The form: the initializer the cell calls (the contract's `forms`)."
+                            : "The form: the system control the cell styles (the contract's `forms`)."
+                    ], indent: 1)
                 type = "\(component)Form"
             } else {
                 type = "\(component)\(axis.name.prefix(1).uppercased() + axis.name.dropFirst())"

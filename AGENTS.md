@@ -45,7 +45,7 @@ tools/apple/check.sh catalog      # build the catalog app and the UI tests
 tools/apple/check.sh a11y         # accessibility audit of every catalog entry on the iOS simulator (macOS: a11y macos);
                                   # a11y ios <test>… runs some of its five tests, WESTRON_ENTRY=<id>,… some entries
                                   # WESTRON_ENTRY_SHARD=<i>/<n> then every n-th of those entries, from the i-th
-tools/apple/check.sh behavior     # the behaviour UI tests (Button, Checkbox, Chip, TextField, Icon) on the iOS simulator;
+tools/apple/check.sh behavior     # the behaviour UI tests (Button, Checkbox, Chip, ListRow, TextField, Icon) on the iOS simulator;
                                   # behavior macos on the Mac, behavior ios <Class>… some classes; CI: nightly
 tools/apple/check.sh format       # swift format lint; to fix: tools/apple/check.sh fix-format
 tools/apple/check.sh all          # everything at once but a11y and behavior (package-ios included: boots the simulator)

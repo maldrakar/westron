@@ -357,8 +357,9 @@ extension Westron.Color {
                 ["color.background.accent-subtle"],
             ])
 
-        /// The line that marks where a dragged item would be dropped: an insertion rule. The focus ring's blue, a token
-        /// of its own so that each can change without the other.
+        /// The line that marks where a dragged item would be dropped: an insertion rule; and the ring of a row a
+        /// dragged item would be dropped onto, on its accent-subtle highlight. The focus ring's blue, a token of its
+        /// own so that each can change without the other.
         public static let insertion = Westron.Color(
             name: "color.border.insertion",
             light: Westron.RGB(hex: 0x5283E1),
@@ -370,7 +371,9 @@ extension Westron.Color {
                 ["color.background.surface"],
                 ["color.background.sunken"],
                 ["color.background.hover"],
+                ["color.background.pressed"],
                 ["color.background.selected"],
+                ["color.background.accent-subtle"],
             ])
     }
 

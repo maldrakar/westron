@@ -19,6 +19,8 @@ public enum Catalog {
         .checkbox,
         .checkboxInList,
         .chip,
+        .listRow,
+        .listRowInList,
         .textField,
         .textFieldBehavior,
         .textFieldFocusFramed,

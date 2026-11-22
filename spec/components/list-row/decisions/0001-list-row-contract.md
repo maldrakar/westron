@@ -1,7 +1,8 @@
 # 0001. The ListRow contract: the core row, its level and its guides
 
-Date: 2026-11-22. Status: proposed. A draft for the first gate (decisions/0005), whose approval the owner delegated to
-the coordinating agent for phase 4 (decisions/0014, "Process"). There was no interview: the agent that wrote the draft
+Date: 2026-11-22. Status: approved on 2026-11-22 by the coordinating agent under the owner's delegation for phase 4
+(decisions/0014, "Process"), with the answers and changes below ("Approval"); implemented on Apple, measured below
+("Measured"). It was a draft for the first gate (decisions/0005). There was no interview: the agent that wrote the draft
 answered the eight questions of `/new-component` from the sources, and each answer names its source. Where the sources
 are silent the answer is the agent's proposal; where a proposal changes the contract's shape it is an open question
 below, with the recommendation first, and the draft is written to the recommendation.
@@ -244,7 +245,8 @@ Hand-written supplements, marked "not a contract option":
 
 ## What the tools cannot express yet
 
-Nothing in the tools was changed. Each gap is described in the contract's text instead.
+Written for the draft, before any tool changed. The approval asked the tools to close gaps 1 to 4 honestly, with tests;
+"What the tools now express", below, says which closed and which stay open.
 
 1. **An integer option.** `level` is an `Int`; the schema's option types are enum, bool, tokens and icons.
 2. **Forms.** A row with an action is a button, one without adds no role; the main schema has one `accessibility`
@@ -340,3 +342,113 @@ Each changes the contract; the recommendation is first, and the draft follows it
   that nesting shown by an indent be determinable; this keeps it there without lengthening every row. Recommended.
   (b) In the row's value, spoken on every nested row: "Inbox, level 2, button".
   (c) Not announced: the order and the Disclosure's expanded state carry the tree.
+
+## Approval
+
+Approved on 2026-11-22 by the coordinating agent under the owner's delegation (decisions/0014, "Process"):
+
+- **Q1 (a).** Westron's own view; the row's action a system Button beside the slots' controls.
+- **Q2 (a), on condition of a measurement.** A behaviour UI test measures a ListRow inside a `List` on iOS and macOS:
+  the row's action runs, a Checkbox in the leading slot keeps its own press, and `.swipeActions` works. Were any to
+  fail, the answer would fall back to (c), "not promised inside a List", saying what was measured. It held ("Measured"),
+  so (a) stands, and design-language/06 records the exception to "the system's List keeps its own insets".
+- **Q3 (a).** The title truncates. If the pilot keeps its sideways scroll, that is the pilot's composition: a scroll
+  view around rows the product lays out wider; ListRow neither helps nor hinders it.
+- **Q4 (a).** `.insertionMark(_:level:)` draws `Rule(purpose: .insertion)`; the drop ring binds `color.border.insertion`
+  (merged from #116), not `color.border.focus`, so the line between rows and the ring onto a row are one color.
+- **Q5 (a).** `space.300`, scaled. Flagged for the second gate: 24 pt per level on the Mac against the pilot's 16; and,
+  measured, at accessibility5 on an iPhone the scaled indent leaves a row at level 2 or deeper little or no room for its
+  words ("Measured").
+- **Q6 (a).** A press tints and does not scale; design-language/05 points here.
+- **Q7 (a).** `color.border.guide`.
+- **Q8 (a).** The level as accessibility custom content.
+
+The approval also decided the place of the Disclosure chevron (below) and asked for the tools' gaps 1 to 4 to be
+closed in the tools, with tests, before the contract and the Apple implementation.
+
+## The Disclosure chevron's place
+
+Disclosure (#120) will be a style on `DisclosureGroup` whose label is a ListRow, and its chevron must stand at the
+row's end, inside the row's highlight, after the trailing slot. The mechanism is a package-internal environment hook,
+no public API: `EnvironmentValues.listRowDisclosureCell: AnyView?` in WestronUI. The Disclosure style sets it to the
+chevron's cell around its label; ListRow reads it and draws the cell as the last item at its end, `container.trailingGap`
+after the trailing slot, on the title's first line also at the accessibility sizes, inside the highlight so the row's
+tints run under it; and it clears the value for its own slots, so a ListRow inside a slot draws no cell. The cell is its
+own control and element, after the row's. The catalog's stand-in, `listRowDisclosureCell(_:)` (package access, catalog
+only), sets the same value with a chevron in a frame `size.target.minimum` wide; the unit tests measure the cell's place
+with a stand-in. Disclosure itself is #120's.
+
+**How a leaf lines up with a branch.** The row reserves nothing: a leaf among branches that wants its trailing slot in
+the branches' column ends that slot with an empty frame of the chevron cell's width plus the trailing gap, as the
+pilot's leaf rows keep the cell empty. A row in a list of leaves alone, the common case, keeps the room. The catalog's
+`ListRowCellColumn` shows a branch with the stand-in and a leaf beside it, their counts in one column.
+
+## What the tools now express
+
+Closed, with tests in `tools/Tests/WestronToolsTests/OwnViewSlotsTests.swift` and the updated `OwnComponentTests`,
+`IconViewTests`:
+
+1. **An integer option** (`type: integer`, `default`, `minimum`): a parameter `Int = default` on an own component; no
+   matrix axis; rejected in cases, constraints, restrictions and system options, and on a style; a default below its
+   minimum is rejected.
+2. **Forms on an own view**, two slots or more: an initializer per form, `action` for one whose intents include
+   `activate`; no `bases`; the generated package `ListRowForm` with `takesAction` and the states of each.
+3. **An own view with slots and states**: generic `@ViewBuilder` slots, the first required and the rest
+   `{ EmptyView() }`; hover, focus, pressed and disabled the view's own; selected and dropTarget the shared modifiers
+   `.selected(_:)` and `.dropTarget(_:)`, which the lint expects; the generated internal `ListRowState` with `isEntered`
+   per OS, from a watchOS restriction of states.
+4. **Marks**: the contract's top-level `marks`, `.insertionMark(_ edge: ListRowInsertionEdge?, level: Int = 0)`, its enum
+   generated and its signature held by the lint.
+
+Still open, carried by the contract's description: a binding by size class (5, the guides' width), a case by contrast
+(6, the high-contrast ring), cases over several states (7, from Chip's branch, not used here) and a scaled metric (8,
+the indent's scaling).
+
+## Measured
+
+On 2026-11-22, iOS 26 on the iPhone 17 simulator and macOS 26, in the catalog's `list-row` and `list-row-in-list`
+entries (`ListRowBehaviorTests`, `tools/apple/check.sh behavior ios|macos ListRowBehaviorTests`).
+
+**The accessibility shape.** The drawn row is a system Button whose label is the whole row, drawn by the row's
+ButtonStyle, so a control in the leading slot is nested in it and takes its own press, the inner gesture winning. What
+assistive technology meets is the row's `accessibilityRepresentation`: the same layout, with the control at the start
+as its own element, the words as one element with the button trait, `.isSelected` while selected, the level as more
+content, and an activate action that is the row's action, then the chevron's cell. A system Button inside the
+representation was tried first and measured wrong: it lost the selected trait, and its frame was the union of its
+texts, 20 pt high on iOS. The combined element replaced it; its frame is the words' column at the row's height, at
+least `size.target.minimum`. XCUITest's hierarchy:
+
+| Element | iOS | macOS |
+|---|---|---|
+| Pressable row "Inbox", count 12, selected | Button "Inbox, 12", Selected, 344 × 44 | Button "Inbox, 12", Selected, 670 × 28 |
+| Nested row "Today", level 1 | Button "Today", 321 × 44 | Button "Today", 647 × 28 |
+| The task's check | Switch "Call the plumber", value 0, 44 × 44 | CheckBox "Call the plumber", value 0, 32 × 32 |
+| The task's row, with a second line | Button "Call the plumber, Tomorrow", 290 × 50, after the check | Button "Call the plumber, Tomorrow", 628 × 43 |
+| A disabled row | Button "Archived", Disabled | Button "Archived", Disabled |
+| The leading icon | no element | no element |
+
+The words are listed under each button as texts too, as XCUITest lists them under a westron Button; nothing outside
+the button repeats them. The level as more content is not visible to XCUITest; it is read by VoiceOver's "More content"
+rotor, which no test here drives.
+
+**Presses.** A press on a row runs its action and chooses it; a press at the row's far end, past its words, and one in
+its bottom padding, run it too: the whole frame is the hit area. A press on the check toggles it and never runs the
+row's action. A disabled row takes no press. iOS and macOS alike.
+
+**In a List** (Q2): the row's action runs, the check in the first row's leading slot keeps its own press, and on iOS the
+List's `.swipeActions` (a destructive Delete) appears on a swipe and runs. Q2 (a) holds. The keyboard: with the Mac's
+keyboard navigation off, as on this Mac, `testKeyboardFocusAndSpace` skips itself, as Chip's and Checkbox's do; it is
+not measured.
+
+**Sizes at accessibility5.** The indent, the padding and the gaps scale with the title's style, about threefold at
+accessibility5 (75 pt a level). On an iPhone, 402 pt wide, a row at level 1 with a leading icon and the chevron's cell
+leaves its words about 25 pt; at level 2 or deeper, none. The generated sheets (level 1, no cell) are drawn at
+accessibility5 with the words wrapped over several lines; the supplements of deeper rows are drawn at accessibility2 at
+most and say so. For the second gate: whether the indent's scaling should stop at an accessibility size, or the indent
+be capped at the leading slot's half width plus a gap (Q5 (c)), is a contract change, not made here.
+
+**The audit** (`WESTRON_ENTRY=list-row,list-row-in-list tools/apple/check.sh a11y`, iOS): clean but for suppressions
+recorded in `CatalogAccessibilityAuditTests`: contrast on the disabled samples (an inactive row, at `opacity.disabled`
+by the contract), "Text clipped" on the long title the page sets on one line (truncated by the contract, Q3), and
+"Text clipped" on the pressable sample held selected, whose title is whole in the screenshots and the matrix at the
+default size and accessibility5.
