@@ -300,15 +300,31 @@ struct ContractRules {
     /// slots under `slots`, the slots an instance fills: then, as narrow as what the conventions derive from it
     /// (spec/conventions.md, "Own components"), it names slots the contract declares and no option, forbids (severity
     /// `error`), and its `require` gives enum options one value each, which an instance that fills the slots takes.
+    /// The conventions derive that only for an Apple `own-component` of form `view` whose one slot is `label`, drawn
+    /// text, with no option whose values are icons (`AppleComponents.Own`), so a constraint on a slot is an error on
+    /// any other contract: nothing would enforce it.
     mutating func checkConstraints() {
         let enums = enumOptions
         let declaredSlots = document["slots"]?.elements?.compactMap(\.string) ?? []
+        let apple = DocumentPath.root.key("platforms").key("apple")
+        let derived =
+            value(at: apple.key("strategy"))?.string == AppleComponents.ownStrategy
+            && value(at: apple.key("form"))?.string == AppleComponents.Own.Form.view.rawValue
+            && declaredSlots == ["label"] && iconOptions.isEmpty
         for (index, constraint) in (document["constraints"]?.elements ?? []).enumerated() {
             let path = DocumentPath.root.key("constraints").index(index)
             var when = constraint["when"]?.members ?? []
             if let slots = when.first(where: { $0.key == Self.slotsKey }) {
                 when.removeAll { $0.key == Self.slotsKey }
                 let place = path.key("when").key(Self.slotsKey)
+                if !derived {
+                    report(
+                        place,
+                        "a constraint on slots is derived only for an Apple \(AppleComponents.ownStrategy) of form "
+                            + "view whose one slot is label, drawn text, with no option whose values are icons "
+                            + "(spec/conventions.md, \"Own components\"): the conventions derive no API from it on "
+                            + "this contract yet")
+                }
                 let named: [(DocumentPath, JSON)] =
                     if case .array(let elements) = slots.value {
                         elements.enumerated().map { (place.index($0.offset), $0.element) }

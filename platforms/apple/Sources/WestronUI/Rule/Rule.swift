@@ -27,9 +27,12 @@ public struct Rule: View {
     let purpose: RulePurpose
     let label: Text?
 
-    /// The gap between the label and the line, `space100`, scaled with the label's text style, so that it keeps its
-    /// proportion to the label at every text size.
-    @ScaledMetric(relativeTo: .caption) private var gap: CGFloat = .space100
+    /// The label's text role, `heading.overline`.
+    private static let labelRole: Westron.TextRole = .heading.overline
+
+    /// The gap between the label and the line, `space100`, scaled with the text style of the label's role, so that it
+    /// keeps its proportion to the label at every text size and follows the role if its text style changes.
+    @ScaledMetric(relativeTo: Font.TextStyle(Rule.labelRole.textStyle)) private var gap: CGFloat = .space100
 
     /// - Parameters:
     ///   - axis: See `RuleAxis`; by default `.horizontal`.
@@ -60,7 +63,7 @@ public struct Rule: View {
         if let label {
             HStack(spacing: gap) {
                 label
-                    .textRole(.heading.overline)
+                    .textRole(Self.labelRole)
                     .foregroundStyle(.text.secondary)
                     .lineLimit(1)
                     .truncationMode(.tail)

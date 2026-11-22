@@ -123,12 +123,17 @@ no option is `inout`, `var` or `let` (an option becomes an argument label). Othe
   error }` says that a labelled rule is a horizontal separator. It is as narrow as what the conventions derive from
   it: it names slots the contract declares and no option in its `when`, its severity is `error`, and it gives each
   enum option it requires one value, which an instance that fills the slots takes; on Apple the initializers that
-  take the slot leave those options out (`spec/conventions.md`, "Own components"). No option is named `slots`. The
-  snapshot matrix draws no slot, so it leaves out nothing for such a constraint.
+  take the slot leave those options out (`spec/conventions.md`, "Own components"). The conventions derive that only
+  for an Apple `own-component` of form `view` whose one slot is `label`, drawn text, with no option whose values are
+  icons (Rule), so on any other contract, such as a style, a modifier or an icon's view, it is an error: nothing would
+  enforce it. No option is named `slots`. The snapshot matrix draws no slot, so it leaves out nothing for such a
+  constraint.
 - **No role of its own.** `accessibility.role: none` is a component that adds no role for assistive technology, as
   ARIA's `none`: its content, if it has any, is read as if the component were not there (Surface), and a component
-  with no content is hidden (Rule). Such a component has nothing to act on or announce, so it takes no `intents`,
-  `keyboardIntents` (its own or a platform's), `states` under `accessibility` and no `label: required`.
+  with no content is hidden. No contract has that shape yet: an unlabelled Rule is hidden too, but its role is
+  `heading`, and it is hidden because it has no label to announce. Such a component has nothing to act on or
+  announce, so it takes no `intents`, `keyboardIntents` (its own or a platform's), `states` under `accessibility`
+  and no `label: required`.
 - **A value that is on or off.** A control whose value is on or off, the system `Toggle` that Checkbox styles, is in
   the state `checked` when it is on and in none of it when it is off; `accessibility.states` announces it
   (`checked: checked`). The control carries it itself, as it carries `pressed` (`SystemStyles`), so no westron
@@ -218,7 +223,8 @@ Besides the schema, the check enforces what a schema cannot:
 - no constraint, case, platform restriction or `systemOptions` names an option whose values are icons;
 - constraints and cases name options, values and states that exist, a bool option with `true` or `false`; a
   constraint on slots (`when: { slots: [...] }`) names declared slots and no option in its `when`, has severity
-  `error`, and gives each option it requires one value; no option is named `slots`;
+  `error`, gives each option it requires one value, and is only on an Apple `own-component` of form `view` whose one
+  slot is `label`, with no option whose values are icons; no option is named `slots`;
 - a binding by value uses the values of one enum option, every one of them; every case is reachable, and so is a
   binding's `token`, which the cases leave no room for when they match every combination. The check enumerates the
   values of the options the cases name, not the states (Button's widest binding has 6 combinations); past 20 000 it

@@ -163,6 +163,37 @@ struct LabelledViewTests {
                 "options.slots: \"slots\" names the slots in a constraint's when; give the option another name"))
     }
 
+    @Test("a constraint on a slot is an error on a contract the conventions derive nothing from it for")
+    func onlyWhereDerived() {
+        let notDerived =
+            "constraints[0].when.slots: a constraint on slots is derived only for an Apple own-component of form view "
+            + "whose one slot is label, drawn text, with no option whose values are icons (spec/conventions.md, "
+            + "\"Own components\"): the conventions derive no API from it on this contract yet"
+        // Rule's shape stays valid.
+        #expect(!specProblems(labelledYAML).contains(notDerived))
+        // A style on a system control.
+        #expect(
+            specProblems(
+                replacing(
+                    "strategy: own-component\n    form: view",
+                    with: "strategy: style-on-system-control\n    base: SwiftUI.Button")
+            ).contains(notDerived))
+        // A modifier.
+        #expect(specProblems(replacing("form: view", with: "form: modifier")) == [notDerived])
+        // An icon's view, whose label is spoken, not drawn.
+        #expect(
+            specProblems(replacing("options:\n", with: "options:\n  glyph: { type: icons }\n")) == [notDerived])
+        // A view with another slot beside label.
+        #expect(specProblems(replacing("slots: [label]\n", with: "slots: [label, icon]\n")) == [notDerived])
+        // The same view without the constraint on the slot has nothing to report.
+        #expect(
+            specProblems(
+                replacing(
+                    "constraints:\n  - { when: { slots: [label] }, require: { axis: horizontal, purpose: separator }, "
+                        + "severity: error }\n", with: "", in: replacing("form: view", with: "form: modifier"))
+            ) == [])
+    }
+
     // MARK: - The API (generation)
 
     @Test("its API: every option without a label; the label first, unlabeled, without the options it fixes")
