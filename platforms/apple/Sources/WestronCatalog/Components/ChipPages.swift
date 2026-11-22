@@ -46,15 +46,20 @@ private struct ChipPage: View {
         TokenPage(
             title: "Chip",
             summary: "A capsule with a label and an optional icon in three forms: selectable, a Toggle with "
-                + ".toggleStyle(.chip), lit in the list's color, the accent without one; pressable, a Button with "
-                + ".buttonStyle(.chip); static, a Label with .labelStyle(.chip). Height size.control.s, a hit area "
-                + "at least size.target.minimum high for the two controls; one line, truncated at its end."
+                + ".toggleStyle(.chip), lit in the list's color, the accent without one, with a check; pressable, a "
+                + "Button with .buttonStyle(.chip); static, a Label with .labelStyle(.chip). Height size.control.s, a "
+                + "hit area at least size.target.minimum high and across for the two controls; one line, truncated "
+                + "at its end."
         ) {
             section("Selectable, in each state") {
-                // Each state alone, and each other state with the chip on: a lit chip under the pointer or pressed.
+                // At rest and unlit first, beside the chip at rest and lit, checked; then each other state alone, and
+                // with the chip on: a lit chip, with its check, under the pointer or pressed.
                 ForEach(ChipCatalogState.all.filter { $0.isEntered && $0.isEntered(by: .selectable) }, id: \.self) {
                     state in
                     ChipSamples {
+                        if state.isChecked {
+                            selectable(nil, checked: false)
+                        }
                         selectable(state, checked: state.isChecked)
                         if !state.isChecked {
                             selectable(state, checked: true)
@@ -227,9 +232,15 @@ struct ChipLongLabels: View {
 }
 
 /// A selectable or pressable chip whose label is only text, as the commonest call writes it: the short name, and the
-/// long one in a narrow place, side by side, so that a sheet of every state fits a window.
+/// long one in a narrow place, side by side, so that a sheet of every state fits a window. The static form takes a
+/// `Label`, so it has no such chip.
 struct ChipTextOnly: View {
-    let form: ChipForm
+    /// The two forms whose control takes a label that is only text.
+    enum Control: String, CaseIterable {
+        case selectable, pressable
+    }
+
+    let control: Control
     var checked = false
 
     var body: some View {
@@ -241,11 +252,11 @@ struct ChipTextOnly: View {
     }
 
     @ViewBuilder private func chip(_ title: String) -> some View {
-        switch form {
+        switch control {
         case .selectable:
             Toggle(title, isOn: .constant(checked))
                 .toggleStyle(.chip)
-        case .pressable, .static:
+        case .pressable:
             Button(title) {}
                 .buttonStyle(.chip)
         }
@@ -313,8 +324,9 @@ extension ComponentMatrix.Supplement {
     /// holds two states at once, which the generated sheets, each state alone, do not draw.
     static let chipLitAccent = ComponentMatrix.Supplement(
         component: "chip", id: "lit", title: "lit, in each state",
-        note: "The chip is on, and in the row's state too: the accent fill darkens under the pointer and pressed "
-            + "(accent-hover, accent-pressed), which the generated sheets, each state alone, do not draw.",
+        note: "The chip is on, with its check in the icon's place, and in the row's state too: the accent fill "
+            + "darkens under the pointer and pressed (accent-hover, accent-pressed), which the generated sheets, each "
+            + "state alone, do not draw.",
         keeps: ["form": "selectable"]
     ) { combination in
         ChipColorsCell(combination: combination, colors: [nil])
@@ -335,23 +347,25 @@ extension ComponentMatrix.Supplement {
     }
 
     private static let listColorsNote =
-        "Every chip is on, and in the row's state too: a list's fill stays under the pointer and pressed "
+        "Every chip is on, with its check in the icon's place in the list's on-fill, and in the row's state too: a "
+        + "list's fill stays under the pointer and pressed "
         + "(decisions/0001, Q4). The color comes from .category(_:). Drawn at the default text size at most: how "
         + "the chip grows is the generated sheets'."
 
     /// A label that is only text, the commonest call (`Toggle("Work", isOn:)`, `Button("Tue")`), in each state of the
     /// two controls, short and given less width than it needs: no label style reaches such a label, so the style sets
     /// its text role and its one line around it. The static form takes a `Label`, so it has no such sheet.
-    static let chipTextOnly: [Self] = [ChipForm.selectable, .pressable].map { form in
+    static let chipTextOnly: [Self] = ChipTextOnly.Control.allCases.map { control in
         ComponentMatrix.Supplement(
-            component: "chip", id: "text-only-\(form.rawValue)", title: "a label that is only text",
+            component: "chip", id: "text-only-\(control.rawValue)", title: "a label that is only text",
             note: "The label is a string, with no icon: label.font, one line; the long one, given "
-                + "\(Int(ChipSample.narrowWidth)) pt, truncated at its end with an ellipsis. Drawn at the default "
-                + "text size at most, so that a row fits an iPhone: how the chip grows is the generated sheets'.",
-            keeps: ["form": form.rawValue]
+                + "\(Int(ChipSample.narrowWidth)) pt, truncated at its end with an ellipsis. Lit, the check stands "
+                + "before the words and the chip grows by it and the gap. Drawn at the default text size at most, so "
+                + "that a row fits an iPhone: how the chip grows is the generated sheets'.",
+            keeps: ["form": control.rawValue]
         ) { combination in
             let state = combination.state.flatMap(ChipCatalogState.init(named:))
-            ChipTextOnly(form: form, checked: state?.isChecked ?? false)
+            ChipTextOnly(control: control, checked: state?.isChecked ?? false)
                 .forcingChipStates(state.map { $0.isForced ? [$0] : [] } ?? [])
                 .disabled(state?.isDisabled ?? false)
                 .dynamicTypeSize(...DynamicTypeSize.large)

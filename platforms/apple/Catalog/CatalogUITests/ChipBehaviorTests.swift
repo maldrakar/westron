@@ -1,9 +1,10 @@
 import XCTest
 
 /// Chip's behavior that a unit test cannot reach, on the catalog's `chip` entry: what assistive technology meets for
-/// each form (the selectable chip a system Button selected while on, `.isSelected`, the style's accessibility
-/// representation; the pressable chip a button; the static chip its text), a press that toggles or activates, the hit
-/// area laid out around the drawn chip, keyboard focus and Space on macOS, and a label that is only text.
+/// each form (the selectable chip the system's own toggle, the style's accessibility representation: a switch on iOS, a
+/// checkbox on macOS, with its value on or off; the pressable chip a button; the static chip its text), a press that
+/// toggles or activates, the hit area laid out around the drawn chip, keyboard focus and Space on macOS, and a label
+/// that is only text.
 ///
 /// The entry says which live chips are on, and how often the pressable one was pressed, in a text,
 /// `ChipCatalogID.summary` in WestronCatalog.
@@ -16,6 +17,9 @@ final class ChipBehaviorTests: XCTestCase {
         static let day = "chip.live.day"
         static let summary = "chip.live.summary"
     }
+
+    /// Must match `ChipSample.long` in WestronCatalog.
+    private static let long = "A tag whose name runs much longer than its chip"
 
     private var app: XCUIApplication!
 
@@ -44,6 +48,33 @@ final class ChipBehaviorTests: XCTestCase {
         return text.label.isEmpty ? (text.value as? String ?? "") : text.label
     }
 
+    /// The system's toggles: switches on iOS, checkboxes on macOS.
+    @MainActor
+    private var toggles: XCUIElementQuery {
+        #if os(macOS)
+            app.checkBoxes
+        #else
+            app.switches
+        #endif
+    }
+
+    /// The type of the system's toggle on this OS.
+    private var toggleType: XCUIElement.ElementType {
+        #if os(macOS)
+            .checkBox
+        #else
+            .switch
+        #endif
+    }
+
+    /// The selectable chip with the identifier, as the system's toggle.
+    @MainActor
+    private func toggle(_ id: String) -> XCUIElement {
+        let element = toggles[id]
+        XCTAssertTrue(element.waitForExistence(timeout: 5), "no toggle \(id)")
+        return element
+    }
+
     /// The element with the identifier, whatever its type.
     @MainActor
     private func element(_ id: String) -> XCUIElement {
@@ -52,11 +83,28 @@ final class ChipBehaviorTests: XCTestCase {
         return element
     }
 
-    /// Whether assistive technology meets the selectable chip as on: a selected button (the contract's
-    /// `checked: selected`).
+    /// The toggle's value as assistive technology reads it: on or off.
     @MainActor
     private func isOn(_ element: XCUIElement) -> Bool {
-        element.isSelected
+        switch element.value {
+        case let number as NSNumber: number.boolValue
+        case let string as String: string == "1"
+        default: false
+        }
+    }
+
+    /// The elements whose label is `label`, of any type.
+    @MainActor
+    private func named(_ label: String) -> XCUIElementQuery {
+        app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label))
+    }
+
+    /// One line of what the hierarchy holds for an element, printed and attached for the report.
+    @MainActor
+    private func line(_ name: String, _ element: XCUIElement) -> String {
+        "chip: \(name): type \(element.elementType.rawValue), label \(element.label), "
+            + "value \(String(describing: element.value)), selected \(element.isSelected), "
+            + "enabled \(element.isEnabled), frame \(element.frame)"
     }
 
     @MainActor
@@ -68,39 +116,82 @@ final class ChipBehaviorTests: XCTestCase {
         #endif
     }
 
-    /// The selectable chip is a button for assistive technology, selected while it is lit, labelled with its words, and
-    /// never a second element beside it; the pressable chip is a button, never selected; the static chip its text
-    /// alone. The system's toggle in its button style, as the style's accessibility representation, was measured
-    /// first (iOS 26.3, 2026-11-22): a switch with the value 0 or 1, never selected, so the style is the button with
-    /// `.isSelected` (the contract's decisions/0001, Q6). The hierarchy measured is printed and attached.
+    /// The selectable chip is the system's toggle for assistive technology (a switch on iOS, a checkbox on macOS),
+    /// labelled with its words, its value on or off, never selected, and no button beside it, which the style draws
+    /// with; the pressable chip is a button, never selected; the static chip its text alone. Each name is read once and
+    /// no icon is an element: the icon and the check are decorative and hidden. A truncated label is the whole name,
+    /// and a disabled chip is announced as unavailable. The hierarchy measured is printed and attached.
     @MainActor
     func testAssistiveTechnologyMeetsEachForm() {
         launch()
-        for (id, label, on) in [(ID.work, "Work", false), (ID.home, "Home", true), (ID.errands, "Errands", false)] {
-            let chip = element(id)
-            print(
-                "chip: \(id): type \(chip.elementType.rawValue), label \(chip.label), "
-                    + "value \(String(describing: chip.value)), selected \(chip.isSelected)")
-            XCTAssertEqual(chip.elementType, .button, "\(label) is a \(chip.elementType.rawValue), not a button")
-            XCTAssertEqual(chip.label, label)
-            XCTAssertEqual(isOn(chip), on, "\(label) is announced with the wrong state")
-            XCTAssertTrue(chip.isEnabled)
-            // The icon is decorative: the chip's name is its words alone, read once.
-            let named = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label))
-            XCTAssertEqual(named.count, 1, "\(label) is read more than once")
-        }
-        let day = element(ID.day)
-        print("chip: \(ID.day): type \(day.elementType.rawValue), label \(day.label), selected \(day.isSelected)")
-        XCTAssertEqual(day.elementType, .button)
-        XCTAssertEqual(day.label, "Tue")
-        XCTAssertFalse(day.isSelected)
-        // The static chips are text: their words, and no control.
-        let still = app.staticTexts["Garden"]
-        XCTAssertTrue(still.exists, "the static chip's words are not read as text")
         let hierarchy = XCTAttachment(string: app.debugDescription)
         hierarchy.name = "chip-hierarchy"
         hierarchy.lifetime = .keepAlways
         add(hierarchy)
+        for (id, label, on) in [(ID.work, "Work", false), (ID.home, "Home", true), (ID.errands, "Errands", false)] {
+            let chip = toggle(id)
+            print(line(id, chip))
+            XCTAssertEqual(chip.elementType, toggleType, "\(label) is a \(chip.elementType.rawValue), not the toggle")
+            XCTAssertEqual(chip.label, label)
+            XCTAssertEqual(isOn(chip), on, "\(label) is announced with the wrong value")
+            XCTAssertFalse(chip.isSelected, "\(label) is also announced as selected: its state would be said twice")
+            XCTAssertTrue(chip.isEnabled)
+            XCTAssertFalse(app.buttons[id].exists, "\(label) is also a button")
+            // The icon and the check are decorative: the chip's name is its words alone, read once.
+            XCTAssertEqual(named(label).count, 1, "\(label) is read more than once")
+            XCTAssertEqual(chip.descendants(matching: .image).count, 0, "\(label)'s icon is an element of its own")
+        }
+        let day = app.buttons[ID.day]
+        XCTAssertTrue(day.waitForExistence(timeout: 5), "the pressable chip is not a button")
+        print(line(ID.day, day))
+        for (index, element) in day.descendants(matching: .any).allElementsBoundByIndex.enumerated() {
+            print(line("\(ID.day) child \(index)", element))
+        }
+        XCTAssertEqual(day.label, "Tue")
+        XCTAssertFalse(day.isSelected)
+        // On iOS XCUITest also lists the button's own words under it as a text, as it does under a westron Button with
+        // a Label; the name is read once outside the button. The icon and the check under it are no image: under a
+        // westron Button with a Label the icon is an image named after its symbol, the check with the trait selected
+        // (measured on iOS 26.3, 2026-11-22). The chip's glyphs give an empty representation (`ChipDecorative`), and
+        // XCUITest still lists each as an element of type other with no label, no value and no trait; nothing in them
+        // is read.
+        let inside = day.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Tue")).count
+        XCTAssertEqual(named("Tue").count - inside, 1, "the pressable chip's name is read more than once")
+        XCTAssertEqual(day.descendants(matching: .image).count, 0, "the pressable chip's icon is an element of its own")
+        XCTAssertEqual(
+            day.descendants(matching: .any).matching(NSPredicate(format: "label != %@ AND label != %@", "Tue", ""))
+                .count, 0, "the pressable chip holds an element named other than with its words")
+        XCTAssertEqual(
+            day.descendants(matching: .any).matching(NSPredicate(format: "selected == true")).count, 0,
+            "an element under the pressable chip is announced as selected")
+        // The static chips are text: their words, once, and no control.
+        for word in ["Garden", "Groceries"] {
+            let still = app.staticTexts[word]
+            XCTAssertTrue(still.exists, "the static chip's words are not read as text")
+            print(line(word, still))
+            XCTAssertEqual(named(word).count, 1, "the static chip \(word) is read more than once")
+        }
+        // The long label, truncated on screen, is the whole name of each form's chip.
+        let long = NSPredicate(format: "label == %@", Self.long)
+        XCTAssertTrue(
+            toggles.matching(long).firstMatch.exists, "the truncated selectable chip is not named with its whole label")
+        XCTAssertTrue(
+            app.buttons.matching(long).firstMatch.exists,
+            "the truncated pressable chip is not named with its whole label")
+        XCTAssertTrue(
+            app.staticTexts.matching(NSPredicate(format: "label == %@ OR value == %@", Self.long, Self.long))
+                .firstMatch.exists, "the truncated static chip is not read with its whole label")
+        // The disabled samples are announced as unavailable: the selectable one off and on, and the pressable one.
+        for name in ["disabled", "disabled, on"] {
+            let disabled = toggles[name]
+            XCTAssertTrue(disabled.waitForExistence(timeout: 5), "no disabled toggle \(name)")
+            print(line(name, disabled))
+            XCTAssertFalse(disabled.isEnabled, "the disabled chip \(name) is not announced as unavailable")
+        }
+        let disabledButton = app.buttons["disabled"]
+        XCTAssertTrue(disabledButton.waitForExistence(timeout: 5), "no disabled pressable chip")
+        print(line("disabled button", disabledButton))
+        XCTAssertFalse(disabledButton.isEnabled, "the disabled pressable chip is not announced as unavailable")
     }
 
     /// A press toggles a selectable chip, both ways, and what assistive technology reads follows; a press on the
@@ -109,32 +200,47 @@ final class ChipBehaviorTests: XCTestCase {
     func testPressTogglesAndActivates() {
         launch()
         XCTAssertEqual(summary, "on: home; pressed: 0")
-        press(element(ID.work).coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)))
+        press(toggle(ID.work).coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)))
         XCTAssertEqual(summary, "on: work, home; pressed: 0")
-        XCTAssertTrue(isOn(element(ID.work)), "the lit chip is not announced as on")
+        XCTAssertTrue(isOn(toggle(ID.work)), "the lit chip is not announced as on")
+        XCTAssertFalse(toggle(ID.work).isSelected)
         #if os(macOS)
             Thread.sleep(forTimeInterval: NSEvent.doubleClickInterval)
         #endif
-        press(element(ID.work).coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)))
+        press(toggle(ID.work).coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)))
         XCTAssertEqual(summary, "on: home; pressed: 0")
-        XCTAssertFalse(isOn(element(ID.work)))
+        XCTAssertFalse(isOn(toggle(ID.work)))
         press(element(ID.day).coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)))
         XCTAssertEqual(summary, "on: home; pressed: 1")
     }
 
-    /// The hit area is at least the platform's target high, laid out around the lower drawn chip: the element is at
-    /// least 44 pt high on iOS (28 on macOS), and a press 2 pt inside its top edge, above the drawn capsule, toggles.
+    /// The hit area is at least the platform's target high, laid out around the drawn chip: a press where only the hit
+    /// area is, above the drawn capsule, toggles. The element's frame is measured and printed.
     @MainActor
     func testHitAreaAroundTheChip() {
         launch()
-        let work = element(ID.work)
+        let work = toggle(ID.work)
         #if os(macOS)
             let target: CGFloat = 28
+            let drawn: CGFloat = 24
         #else
             let target: CGFloat = 44
+            let drawn: CGFloat = 28
         #endif
-        XCTAssertGreaterThanOrEqual(work.frame.height, target)
-        press(work.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0)).withOffset(CGVector(dx: 0, dy: 2)))
+        print(line(ID.work, work))
+        let frame = work.frame
+        // How far above the element's top edge the press lands: inside the hit area, outside the drawn capsule.
+        let above: CGFloat
+        if frame.height >= target - 0.5 {
+            // The element's frame is the hit area: 1 pt inside its top edge, above the capsule.
+            above = -1
+        } else {
+            // The element's frame is the drawn capsule, centred in the hit area, which reaches (target - drawn) / 2
+            // above it: half that far above the capsule's top.
+            XCTAssertEqual(frame.height, drawn, accuracy: 1, "the element is neither the hit area nor the chip")
+            above = (target - drawn) / 4
+        }
+        press(work.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0)).withOffset(CGVector(dx: 0, dy: -above)))
         XCTAssertEqual(summary, "on: work, home; pressed: 0", "a press in the hit area above the chip did not toggle")
     }
 
@@ -189,15 +295,19 @@ final class ChipBehaviorTests: XCTestCase {
     }
 
     /// A chip whose label is only text, `Toggle("Reading", isOn:)` and `Button("Wed")`: the same element as one with a
-    /// `Label`, a button labelled with its words, selected while on.
+    /// `Label`, the system's toggle labelled with its words, its value on while lit, never selected; the button never
+    /// selected. The check before the lit words is decorative: the name is read once.
     @MainActor
     func testTextOnlyLabel() {
         launch()
-        let reading = app.buttons["Reading"]
-        XCTAssertTrue(reading.waitForExistence(timeout: 5), "no button Reading")
-        XCTAssertTrue(reading.isSelected)
-        XCTAssertFalse(app.buttons["Music"].isSelected)
+        let reading = toggles["Reading"]
+        XCTAssertTrue(reading.waitForExistence(timeout: 5), "no toggle Reading")
+        print(line("Reading", reading))
+        XCTAssertTrue(isOn(reading))
+        XCTAssertFalse(reading.isSelected)
+        XCTAssertEqual(named("Reading").count, 1, "Reading is read more than once")
+        XCTAssertFalse(isOn(toggles["Music"]))
+        XCTAssertTrue(app.buttons["Wed"].exists)
         XCTAssertFalse(app.buttons["Wed"].isSelected)
-        print("chip: text only: Reading value \(String(describing: reading.value)), selected \(reading.isSelected)")
     }
 }

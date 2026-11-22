@@ -633,9 +633,11 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                 // 0.98 of its size (`ChipTokens.pressScale`, design-language/05), and the audit reports the scaled
                 // text as clipped. Measured on iOS 26.3, 2026-11-22: with the scale set to 1 the finding is gone, and
                 // the text is whole in the page's screenshots at the default size and at accessibility5. A real press
-                // draws the same scale, only while it lasts, when no audit runs. The selectable chip held pressed is
-                // not reported, since its text is behind its accessibility representation. Only an enabled element
-                // labelled "pressed" matches, the state's sample on the page; every other chip is audited as usual.
+                // draws the same scale, only while it lasts, when no audit runs. Two samples on the page carry the
+                // label "pressed", both enabled: the pressable chip held pressed, which is reported, and the unlit
+                // selectable chip held pressed, which is not, since its text is behind its accessibility
+                // representation, the system toggle; the suppression matches both. The lit selectable sample is
+                // "pressed, on", and every other chip is audited as usual.
                 Suppression(
                     .entry("chip"), type: .textClipped, reason: "a pressed chip drawn at 0.98 of its size",
                     enabled: true
