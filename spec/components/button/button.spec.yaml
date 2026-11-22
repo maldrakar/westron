@@ -2,6 +2,8 @@
 # 2026-11-18 (#75) and the iOS one on 2026-11-21 (#102): decisions/0001-button-contract.md records the owner's answers and the bindings the owner confirmed
 # on top of them. Its look revised on 2026-11-20 (#85), the owner's choice from prototype renders, pending the owner's
 # review of this contract and its snapshot matrix together (decisions/0003-the-look-of-2026-11-20.md).
+# Proposed, not applied: the option floating for a button over content (#121), in decisions/0015-glass.md at the
+# repository's root as a patch to this file, applied with the code it needs.
 id: button
 status: approved
 description: >-
