@@ -29,17 +29,25 @@ struct TextFieldTokens: Equatable, Sendable {
     var focusRingColor: Westron.Color?
     /// `focusRing.width`; nil: no ring.
     var focusRingWidth: Westron.Dimension?
+    /// `leadingIcon.font` and `trailingIcon.font`, which the contract binds alike: the role a glyph takes its size from;
+    /// nil: the context's text role (inline).
+    var glyphFont: Westron.TextRole?
+    /// `leadingIcon.color` and `trailingIcon.color`, which the contract binds alike, in every state: disabled dims a
+    /// glyph with the whole field (`opacity`).
+    var glyphColor: Westron.Color
 
     /// The tokens of a field in `states`, which hold at once. A state the current OS never enters is ignored
     /// (`TextFieldState.isEntered`). `highContrast`: one of the high-contrast themes, `colorSchemeContrast ==
     /// .increased`.
     init(variant: TextFieldVariant, states: Set<TextFieldState>, highContrast: Bool) {
         let states = states.filter(\.isEntered)
+        glyphColor = .text.secondary
         switch variant.offered {
         case .framed:
             background = .background.muted
             textFont = .body.regular
             textColor = .text.primary
+            glyphFont = .body.regular
             // The muted fill stands about 1.1:1 off the canvas in every theme, the high-contrast ones included, so
             // there a framed field also draws its edge, in every state, as a secondary button does (the contract's
             // description). In the standard themes it has none: the owner accepted the fill alone (decisions/0002).
@@ -51,6 +59,7 @@ struct TextFieldTokens: Equatable, Sendable {
             borderWidth = nil
             textFont = nil
             textColor = nil
+            glyphFont = nil
         }
         opacity = states.contains(.disabled) ? .opacity.disabled : nil
         let focused = states.contains(.focus)
@@ -72,10 +81,13 @@ struct TextFieldMetrics: Equatable, Sendable {
     var isCapsule: Bool
     /// `container.radius`; nil: no corners of its own, a capsule or none (inline).
     var radius: Westron.Dimension?
+    /// `container.gap`: between a glyph at the start or the end and the field's text.
+    var gap: Westron.Dimension
 
     /// The metrics of `variant` at the size the current OS draws for `size` (`TextFieldSize.offered`), on a field of
     /// `axis`.
     init(variant: TextFieldVariant, size: TextFieldSize, axis: Axis) {
+        gap = variant.offered == .framed && size.offered == .s ? .space75 : .space100
         switch variant.offered {
         case .framed:
             let multiple = axis == .vertical

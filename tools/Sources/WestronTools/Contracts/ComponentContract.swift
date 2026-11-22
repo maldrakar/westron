@@ -11,8 +11,15 @@ public struct ComponentContract: Equatable, Sendable {
             /// when every use must name one. The values are in tokens/, not in the contract.
             case tokenGroup(String, default: String?)
             /// The names of the icon registry, `spec/icons/icons.yaml`, in its order: the values are in the registry,
-            /// not in the contract. There is no default: every use names its glyph.
-            case icons
+            /// not in the contract. There is no default: every use names its glyph, unless the option is `optional`, and
+            /// then a use that names none draws no glyph (a style's `Westron.Icon? = nil`, spec/conventions.md).
+            case icons(optional: Bool)
+
+            /// Whether the values are the icon registry's names, optional or not.
+            public var isIcons: Bool {
+                if case .icons = self { return true }
+                return false
+            }
         }
 
         public let name: String
@@ -230,7 +237,8 @@ public struct ComponentContract: Equatable, Sendable {
                         name: member.key, kind: .tokenGroup(group, default: member.value["default"]?.string),
                         description: description))
             case "icons":
-                options.append(Option(name: member.key, kind: .icons, description: description))
+                let optional = member.value["optional"] == .bool(true)
+                options.append(Option(name: member.key, kind: .icons(optional: optional), description: description))
             default:
                 throw problem(path.key("type"), "must be enum, bool, tokens or icons")
             }

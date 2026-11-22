@@ -165,12 +165,16 @@
       }
     },
     "iconOption": {
-      "description": "One icon of westron's icon registry, spec/icons/icons.yaml: the values are the registry's names, in its order, such as `tray` or `chevron`. The contract does not list them, so the option and the registry cannot drift; `tools/westron icons check` validates the registry. It has no default: every use names its glyph (the registry's own `default` is what draws for a name a version does not know, not what a use without a name draws). Constraints, cases and platform restrictions do not name such an option yet, and it is never a system option.",
+      "description": "One icon of westron's icon registry, spec/icons/icons.yaml: the values are the registry's names, in its order, such as `tray` or `chevron`. The contract does not list them, so the option and the registry cannot drift; `tools/westron icons check` validates the registry. It has no default: every use names its glyph (the registry's own `default` is what draws for a name a version does not know, not what a use without a name draws), unless it is `optional`: then a use may name none, and no glyph is drawn. Constraints, cases and platform restrictions do not name such an option yet, and it is never a system option.",
       "type": "object",
       "required": ["type"],
       "additionalProperties": false,
       "properties": {
         "type": { "const": "icons" },
+        "optional": {
+          "description": "true: a use may name no glyph, and then none is drawn, such as the glyph at a text field's start (spec/components/text-field). Allowed only where the conventions derive it, an option of a style on a system control; an own view's glyph is always named. An optional option is no axis of the snapshot matrix, which draws it absent: hand-written supplements draw the glyphs (spec/conventions.md).",
+          "type": "boolean"
+        },
         "description": { "$ref": "#/$defs/text" }
       }
     },

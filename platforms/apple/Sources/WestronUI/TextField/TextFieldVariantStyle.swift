@@ -1,5 +1,6 @@
 // Hand-written. TextField's look and behavior from its contract, spec/components/text-field/text-field.spec.yaml, on
-// SwiftUI's own TextField and SecureField (decisions/0001, 0003). The generated `textFieldStyle(_:size:)`
+// SwiftUI's own TextField and SecureField (decisions/0001, 0003), with a glyph at its start or its end (decisions/0003,
+// #115). The generated `textFieldStyle(_:size:leadingIcon:trailingIcon:)`
 // (Generated/TextField+Contract.swift) applies it; the tokens it draws come from TextFieldTokens.swift.
 //
 // It is a `TextFieldStyle`, which SwiftUI declares with only the underscored requirement `_body(configuration:)`: the
@@ -25,15 +26,31 @@
 
 import SwiftUI
 
-/// westron's TextField style, which the generated `textFieldStyle(_:size:)` applies (decisions/0001, 0003).
+/// westron's TextField style, which the generated `textFieldStyle(_:size:leadingIcon:trailingIcon:)` applies
+/// (decisions/0001, 0003).
 struct TextFieldVariantStyle: @preconcurrency TextFieldStyle {
     let variant: TextFieldVariant
     /// nil: the size comes from `controlSize`.
     let size: TextFieldSize?
+    /// The glyph at the field's start, the contract's `leadingIcon`; nil: none.
+    var leadingIcon: Westron.Icon? = nil
+    /// The glyph at the field's end, the contract's `trailingIcon`; nil: none.
+    var trailingIcon: Westron.Icon? = nil
 
     @MainActor func _body(configuration: TextField<_Label>) -> some View {
-        TextFieldBody(field: configuration, variant: variant, explicitSize: size)
+        TextFieldBody(
+            field: configuration, variant: variant, explicitSize: size,
+            glyphs: TextFieldGlyphNames(leading: leadingIcon, trailing: trailingIcon))
     }
+}
+
+/// The glyphs a field draws at its start and its end, the contract's `leadingIcon` and `trailingIcon`.
+struct TextFieldGlyphNames: Equatable, Sendable {
+    var leading: Westron.Icon?
+    var trailing: Westron.Icon?
+
+    /// Whether the field draws no glyph: then the row leaves it all its room and reports no anchors (#115).
+    var isEmpty: Bool { leading == nil && trailing == nil }
 }
 
 /// Reads the field's states and draws it from its tokens.
@@ -41,6 +58,7 @@ private struct TextFieldBody: View {
     let field: TextField<TextFieldVariantStyle._Label>
     let variant: TextFieldVariant
     let explicitSize: TextFieldSize?
+    let glyphs: TextFieldGlyphNames
 
     @Environment(\.controlSize) private var controlSize
     @Environment(\.isEnabled) private var isEnabled
@@ -65,7 +83,8 @@ private struct TextFieldBody: View {
         let tokens = TextFieldTokens(variant: variant, states: states, highContrast: contrast == .increased)
         #if os(watchOS)
             // The watch's field is the system's as it is, in both variants and at every size (the contract's
-            // `watchos` block); a tap opens the system's text input, and there is no focus to draw.
+            // `watchos` block); a tap opens the system's text input, and there is no focus to draw. It draws no glyph
+            // until the watch's look is settled (#34; the contract's `watchos` block).
             field
                 .opacity(tokens.opacity.map(Double.init) ?? 1)
         #else
@@ -74,7 +93,7 @@ private struct TextFieldBody: View {
                 variant: variant, size: .resolved(explicit: explicitSize, controlSize: controlSize), axis: axis)
             TextFieldSurface(
                 field: field, variant: variant, lineAxis: TextFieldAxis.read(field), tokens: tokens, metrics: metrics,
-                isFocused: $isFocused
+                glyphs: glyphs, isFocused: $isFocused
             )
             // What the style resolved, for the tests (`TextFieldResolvedAxes`).
             .preference(key: TextFieldResolvedAxes.self, value: [axis])
@@ -121,6 +140,7 @@ private struct TextFieldBody: View {
         let lineAxis: Axis?
         let tokens: TextFieldTokens
         let metrics: TextFieldMetrics
+        let glyphs: TextFieldGlyphNames
         let isFocused: FocusState<Bool>.Binding
         @ScaledMetric private var padding: CGFloat
         /// The padding above and below a multiline framed field's text, which holds its lines off the field's edges.
@@ -132,13 +152,15 @@ private struct TextFieldBody: View {
 
         init(
             field: TextField<TextFieldVariantStyle._Label>, variant: TextFieldVariant, lineAxis: Axis?,
-            tokens: TextFieldTokens, metrics: TextFieldMetrics, isFocused: FocusState<Bool>.Binding
+            tokens: TextFieldTokens, metrics: TextFieldMetrics, glyphs: TextFieldGlyphNames,
+            isFocused: FocusState<Bool>.Binding
         ) {
             self.field = field
             self.variant = variant
             self.lineAxis = lineAxis
             self.tokens = tokens
             self.metrics = metrics
+            self.glyphs = glyphs
             self.isFocused = isFocused
             let textStyle = Font.TextStyle((tokens.textFont ?? .body.regular).textStyle)
             _padding = ScaledMetric(
@@ -158,6 +180,7 @@ private struct TextFieldBody: View {
                 .modifier(TextFieldLine(axis: lineAxis))
                 .modifier(TextFieldText(font: tokens.textFont, color: tokens.textColor))
                 .focused(isFocused)
+                .modifier(TextFieldGlyphs(glyphs: glyphs, tokens: tokens, metrics: metrics))
                 .padding(.horizontal, padding)
                 .padding(.vertical, verticalPadding)
                 .frame(minHeight: metrics.height.map(CGFloat.init))
@@ -226,6 +249,218 @@ private struct TextFieldBody: View {
             #else
                 return .zero
             #endif
+        }
+    }
+
+    /// The glyphs at the field's start and its end (the contract's `leadingIcon` and `trailingIcon`, #115), beside the
+    /// field inside its padding: the field gives each its width and `container.gap` of its own room, and the glyph is
+    /// drawn there, so that it stands at the field's horizontal padding and `container.gap` from its text, and the
+    /// field's fill, ring and hit area take it in. A glyph's baseline is the field's first line's, on one line and on
+    /// several (TextFieldGlyphTests). A glyph is `Icon(_:)`, decoration hidden from assistive technology: a search
+    /// field's role is the product's to give (the trait `isSearchField`), and a glyph names what the field is for, never
+    /// an action (decisions/0003, second revision). It is drawn in `leadingIcon.color` in every state, disabled dimming
+    /// it with the field, and in the field's text role, `framed`'s or on `inline` the context's, so that it scales with
+    /// the text; the gap scales with Dynamic Type from its token, as the padding does. Both stop growing at
+    /// `TextFieldGlyph.largestTextSize`, while the field's text grows on (decisions/0003, "Revision: the glyphs stop at
+    /// xxxLarge"); past it, at the accessibility sizes, a glyph is centred on the first line (`TextFieldGlyphRow`).
+    ///
+    /// The system field is the row's first view whether there are glyphs or not, so adding or removing one keeps the
+    /// same field, its focus and its editing (TextFieldGlyphIdentityTests); with no glyph the row lays the field out as
+    /// it would alone, to the same pixels.
+    private struct TextFieldGlyphs: ViewModifier {
+        let glyphs: TextFieldGlyphNames
+        let tokens: TextFieldTokens
+        let metrics: TextFieldMetrics
+        @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+        @Environment(\.displayScale) private var displayScale
+
+        init(glyphs: TextFieldGlyphNames, tokens: TextFieldTokens, metrics: TextFieldMetrics) {
+            self.glyphs = glyphs
+            self.tokens = tokens
+            self.metrics = metrics
+        }
+
+        /// The glyphs are placed by a layout that sizes the row by the field alone, not by a stack: a stack added a
+        /// pixel to a multi-line field whose glyph reaches higher than its first line (decisions/0003). The layout
+        /// measures each glyph in the same pass as it lays out the field, so a field never draws its text under a
+        /// glyph waiting for the glyph's width.
+        func body(content: Content) -> some View {
+            // macOS has no Dynamic Type, so a glyph there always stands on the baseline.
+            #if os(macOS)
+                let centred = false
+            #else
+                let centred = !glyphs.isEmpty && dynamicTypeSize > TextFieldGlyph.largestTextSize
+            #endif
+            TextFieldGlyphRow(centredOnTheFirstLine: centred, displayScale: max(displayScale, 1)) {
+                content
+                    .anchorPreference(key: TextFieldGlyphAnchors.self, value: .bounds) {
+                        glyphs.isEmpty ? [:] : [.field: $0]
+                    }
+                if let leading = glyphs.leading {
+                    glyph(leading, part: .leading)
+                }
+                if let trailing = glyphs.trailing {
+                    glyph(trailing, part: .trailing)
+                }
+                if centred {
+                    // A line of the field's text role at the text's size, never drawn: the box a glyph is centred on.
+                    Text(verbatim: "A")
+                        .modifier(TextFieldGlyphRole(font: tokens.glyphFont))
+                        .fixedSize()
+                        .hidden()
+                        .accessibilityHidden(true)
+                        .layoutValue(key: TextFieldGlyphRow.Role.self, value: .line)
+                }
+            }
+        }
+
+        private func glyph(_ icon: Westron.Icon, part: TextFieldGlyphAnchors.Part) -> some View {
+            TextFieldGlyph(icon: icon, part: part, tokens: tokens, metrics: metrics)
+                .dynamicTypeSize(...TextFieldGlyph.largestTextSize)
+                .layoutValue(key: TextFieldGlyphRow.Role.self, value: part == .leading ? .leading : .trailing)
+        }
+    }
+
+    /// The field and its glyphs in a row: the field is offered the row's width less each glyph's, and the row is the
+    /// field's height, which a glyph does not change even where it reaches higher than the field's first line. A glyph
+    /// stands on the field's first baseline; at the accessibility sizes, where it is smaller than its text, it is
+    /// centred on the field's first line instead, the box of a line of the field's text role (decisions/0003, second
+    /// revision). The row's baselines are the field's. SwiftUI mirrors the places right to left.
+    private struct TextFieldGlyphRow: Layout {
+        /// What a view of the row is: the field, a glyph, or the line a glyph is centred on.
+        enum Role: LayoutValueKey {
+            case field, leading, trailing, line
+            static let defaultValue = Role.field
+        }
+
+        let centredOnTheFirstLine: Bool
+        /// The screen's pixels to a point, which a centred glyph is placed on.
+        let displayScale: CGFloat
+
+        private struct Parts {
+            var field: LayoutSubview?
+            var leading: LayoutSubview?
+            var trailing: LayoutSubview?
+            var line: LayoutSubview?
+
+            init(_ subviews: Subviews) {
+                for subview in subviews {
+                    switch subview[Role.self] {
+                    case .field: field = field ?? subview
+                    case .leading: leading = subview
+                    case .trailing: trailing = subview
+                    case .line: line = subview
+                    }
+                }
+            }
+
+            /// The width each glyph takes, its gap included: a glyph is drawn at its own size whatever it is offered.
+            var leadingWidth: CGFloat { leading?.sizeThatFits(.unspecified).width ?? .zero }
+            var trailingWidth: CGFloat { trailing?.sizeThatFits(.unspecified).width ?? .zero }
+
+            /// What the field is offered: what the row is offered less the glyphs' widths.
+            func fieldProposal(_ proposal: ProposedViewSize) -> ProposedViewSize {
+                ProposedViewSize(
+                    width: proposal.width.map { max(.zero, $0 - leadingWidth - trailingWidth) },
+                    height: proposal.height)
+            }
+        }
+
+        func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+            let parts = Parts(subviews)
+            guard let field = parts.field else { return .zero }
+            let size = field.sizeThatFits(parts.fieldProposal(proposal))
+            return CGSize(width: size.width + parts.leadingWidth + parts.trailingWidth, height: size.height)
+        }
+
+        func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+            let parts = Parts(subviews)
+            guard let field = parts.field else { return }
+            let fieldProposal = parts.fieldProposal(proposal)
+            field.place(
+                at: CGPoint(x: bounds.minX + parts.leadingWidth, y: bounds.minY), anchor: .topLeading,
+                proposal: fieldProposal)
+            let baseline = field.dimensions(in: fieldProposal)[.firstTextBaseline]
+            // The middle of the field's first line, where a glyph is centred at the accessibility sizes.
+            let lineMiddle = parts.line.map { line -> CGFloat in
+                let dimensions = line.dimensions(in: .unspecified)
+                return baseline - dimensions[.firstTextBaseline] + dimensions.height / 2
+            }
+            if let line = parts.line {
+                line.place(at: bounds.origin, anchor: .topLeading, proposal: .unspecified)
+            }
+            for (glyph, x, anchor) in [
+                (parts.leading, bounds.minX, UnitPoint.topLeading),
+                (parts.trailing, bounds.maxX, UnitPoint.topTrailing),
+            ] {
+                guard let glyph else { continue }
+                let dimensions = glyph.dimensions(in: .unspecified)
+                let y =
+                    if centredOnTheFirstLine, let lineMiddle {
+                        // On the pixel, so that the glyph keeps its drawn size: from the middle of a line its top falls
+                        // between pixels, and a glyph snapped at both edges came out a pixel taller.
+                        ((bounds.minY + lineMiddle - dimensions.height / 2) * displayScale).rounded() / displayScale
+                    } else {
+                        bounds.minY + baseline - dimensions[.firstTextBaseline]
+                    }
+                glyph.place(at: CGPoint(x: x, y: y), anchor: anchor, proposal: .unspecified)
+            }
+        }
+
+        func explicitAlignment(
+            of guide: VerticalAlignment, in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews,
+            cache: inout ()
+        ) -> CGFloat? {
+            let parts = Parts(subviews)
+            guard let field = parts.field else { return nil }
+            return bounds.minY + field.dimensions(in: parts.fieldProposal(proposal))[guide]
+        }
+    }
+
+    /// One glyph and its gap to the field's text, at the text size of its context up to `largestTextSize`, which
+    /// `TextFieldGlyphs` holds it to.
+    struct TextFieldGlyph: View {
+        /// The largest text size a glyph and its gap follow, the largest one that is not an accessibility size. Inside
+        /// a field the width is what the person types into and the glyph is decoration, so at accessibility1 to 5 the
+        /// glyph, its gap and the room the field leaves them stay as they are at xxxLarge while the field's text grows
+        /// on: a named exception to an icon scaling with the text beside it (design-language/07; decisions/0003,
+        /// "Revision: the glyphs stop at xxxLarge"). macOS has no Dynamic Type, so nothing changes there.
+        static let largestTextSize = DynamicTypeSize.xxxLarge
+
+        let icon: Westron.Icon
+        let part: TextFieldGlyphAnchors.Part
+        let tokens: TextFieldTokens
+        @ScaledMetric private var gap: CGFloat
+
+        init(icon: Westron.Icon, part: TextFieldGlyphAnchors.Part, tokens: TextFieldTokens, metrics: TextFieldMetrics) {
+            self.icon = icon
+            self.part = part
+            self.tokens = tokens
+            let textStyle = Font.TextStyle((tokens.textFont ?? .body.regular).textStyle)
+            _gap = ScaledMetric(wrappedValue: CGFloat(metrics.gap), relativeTo: textStyle)
+        }
+
+        var body: some View {
+            Icon(icon)
+                .modifier(TextFieldGlyphRole(font: tokens.glyphFont))
+                .foregroundStyle(tokens.glyphColor)
+                .fixedSize()
+                .anchorPreference(key: TextFieldGlyphAnchors.self, value: .bounds) { [part: $0] }
+                // Between the glyph and the text: after the glyph at the start, before the one at the end.
+                .padding(part == .trailing ? .leading : .trailing, gap)
+        }
+    }
+
+    /// A glyph's text role: `framed`'s, or on `inline`, where it is nil, the context's.
+    private struct TextFieldGlyphRole: ViewModifier {
+        let font: Westron.TextRole?
+
+        func body(content: Content) -> some View {
+            if let font {
+                content.textRole(font)
+            } else {
+                content
+            }
         }
     }
 
