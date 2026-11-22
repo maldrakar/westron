@@ -96,7 +96,10 @@ cannot use `none` as a case, and it would be a registry name.
 decisions/0003 binds a contract to the system control where one exists. The system's search is `.searchable`: a
 modifier on a navigation container that puts the system's search field where the system places it (the navigation
 bar's drawer on iOS 17 to 25, the toolbar on macOS, the top of a sidebar, from iOS 26 a bottom toolbar), with its own
-magnifier, dictation, Cancel, scopes and suggestions. SwiftUI has no style for it, so westron could not style it; and
+magnifier, dictation, Cancel, scopes and suggestions. SwiftUI has no style for it (the SwiftUI interfaces of Xcode
+27.1 for iOS and macOS declare no `SearchFieldStyle`; the search in a toolbar, `ToolbarDefaultItemKind.search`, is iOS
+26 and macOS 26; the trait `AccessibilityTraits.isSearchField` exists from iOS 13 and macOS 10.15), so westron could
+not style it; and
 it cannot stand where the pilot puts its search, in a bar of the product's own before iOS 26, or at the bottom of a
 Mac sidebar.
 
@@ -201,7 +204,8 @@ With glyphs:
   gives the row; the glyphs keep theirs.
 - **The height.** A single-line field is pinned to its line; the row is as high as the taller of the field's line and
   the glyph. At the default text size the minimum heights, 24, 32 and 40 on macOS, are more than either, so the field's
-  height does not change; the glyph aligns on the field's first text baseline, which the hold's frame passes through.
+  height does not change. The glyph aligns on the field's first text baseline, which a frame around a view passes on
+  from it; that the hold's frame does so for the system field is to be measured with the rest below.
 - **What must be measured.** The hold keeps a held field's frame at 1x and 2x because a right edge at a half point
   rounds the same way with the width added (`TextFieldLineTests`). Beside a trailing glyph, the field's right edge
   stands where the glyph's width puts it, at any part of a point, so an edge just below a rounding boundary could move
