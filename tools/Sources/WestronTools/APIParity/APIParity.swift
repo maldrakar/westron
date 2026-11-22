@@ -193,8 +193,12 @@ public enum APIParity {
             return (entered ?? contract.states).filter { !carried.contains($0) }
         }
 
-        /// Whether the base control carries the state itself, on every base that enters it.
+        /// Whether the base control carries the state itself, on every base that enters it; for an own view, whether
+        /// the view carries it (`AppleComponents.Own.systemStates`).
         func isSystemState(_ state: String) -> Bool {
+            if contract.apple?.strategy == AppleComponents.ownStrategy {
+                return AppleComponents.Own.systemStates.contains(state)
+            }
             guard let apple = contract.apple, !apple.styledBases.isEmpty else { return false }
             return apple.styledBases.allSatisfy { !modifierStates(on: $0).contains(state) }
                 && apple.styledBases.contains { SystemStyles.byBase[$0.base]?.states.contains(state) ?? false }
@@ -301,7 +305,14 @@ public enum APIParity {
                         "the lint cannot derive \(item.component)'s API: \(error.message); spec check reports it too"))
             }
             if item.contract.apple?.strategy == AppleComponents.ownStrategy {
-                expectOwn(item, into: &expected)
+                // An own view's states it does not carry itself take the shared state modifiers, as a style's do.
+                for state in expectOwn(item, into: &expected)?.modifierStates ?? [] {
+                    if let index = stateOwners.firstIndex(where: { $0.state == state }) {
+                        stateOwners[index].contracts.append(item)
+                    } else {
+                        stateOwners.append((state, [item]))
+                    }
+                }
                 continue
             }
             guard let apple = item.contract.apple, !apple.styledBases.isEmpty else { continue }
@@ -352,7 +363,7 @@ public enum APIParity {
             var types: Set<String> = []
             for option in item.contract.options where apple.systemOptions[option.name] == nil {
                 switch option.kind {
-                case .tokenGroup, .icons:
+                case .tokenGroup, .icons, .integer:
                     continue  // The generator gives a style no such option yet, and fails on it.
                 case .bool(let value):
                     rest.append(.init(label: option.name, type: "Bool", defaultValue: "\(value)"))

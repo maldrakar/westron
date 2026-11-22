@@ -213,9 +213,11 @@ still drives every generated sheet and combination:
   listed again by hand. Each sheet and its section of the review page are marked "Not a contract option". Over a
   matrix whose rows are icons, a supplement keeps a few of them (`rows`), on one sheet. Where its cell is taller than
   a generated one, `rowsPerPicture` caps the rows of one picture at a text size that splits sheets
-  (`accessibility5`). A supplement whose render on one OS is not worth reading, or not the same twice, names the
-  OSes it is drawn on (`onlyOn`), and its note says why. There are twenty-two (`SnapshotMatrix/Supplements.swift`,
-  `Supplement.all`):
+  (`accessibility5`); `splitsAtEverySize` splits its sheets into pictures of that many rows at every text size, and
+  `columnsPerPicture` caps a picture's columns where the cells are wide. `ComponentMatrix.rowsAtLimit` caps the
+  generated sheets of a component whose cells grow tall at the splitting size (ListRow, one row a picture). A
+  supplement whose render on one OS is not worth reading, or not the same twice, names the OSes it is drawn on
+  (`onlyOn`), and its note says why. There are thirty (`SnapshotMatrix/Supplements.swift`, `Supplement.all`):
   - Button, `label-without-icon`: its generated cells have an icon and a label or are icon-only, so a label without an
     icon, which while loading has the indicator before the label and widens the button (P13), is shown on the sheets
     with iconOnly false: every variant, size and role, at rest and in each state, 108 combinations on 6 sheets.
@@ -238,6 +240,13 @@ still drives every generated sheet and combination:
     holds two states at once; `list-colors-1` to `list-colors-4`, the twelve list colors lit, three to a sheet; on
     each control, `text-only-selectable` and `text-only-pressable`, a label that is only text, short and truncated; and
     in every form, `long-label`, a long label in a narrow place.
+  - ListRow, eight: `selected`, the selected row's bar in every state and theme, also beside a title whose role the
+    product set; `tree`, rows at levels 0 to 3 with their guides; `slots`, a row with a second line, a leading icon
+    and a trailing count; `task`, a static row with a check in its leading slot; `long-title`, a title on one line
+    truncated at level 4; `drag`, the insertion mark at a level, drawn above the next row's highlight, and a drop
+    target; `right-to-left`, the slots, indent, guides and bar mirrored; and `accessibility5`, the trailing slot under
+    the text at level 0. Every one is drawn at every text size of the sheet, accessibility5 included, where the row's
+    horizontal spacing stops at its xxxLarge width (spec/components/list-row, decisions/0001, D2).
 
   Like the matrix, supplements are not catalog entries, so the accessibility audit does not walk them.
 
@@ -374,13 +383,13 @@ checks again (a commit pushed by a workflow starts none).
 ### Behaviour UI tests
 
 `ButtonBehaviorTests`, `CheckboxBehaviorTests`, `TextFieldBehaviorTests`, `IconAccessibilityTests`,
-`IconTileAccessibilityTests` and `ChipBehaviorTests`, in `Catalog/CatalogUITests`, check on the catalog's entries what
-a unit test cannot reach: presses, hit areas and hover, the accessibility hierarchy, the keyboard. Each class has
-branches of its own for iOS and macOS where the platforms differ. `tools/apple/check.sh behavior` runs them, like the
-audit: the build first, a step of its own, then one `xcodebuild test-without-building` for the classes named (all six
-by default); it prints each failure with its message, each skip with its reason, the test cases and the totals, and
-stops the simulator's test daemon afterwards. The log goes to `.build/logs/behavior-<platform>[-<classes>].log`, the
-result bundle to `.build/xcode/results/`.
+`IconTileAccessibilityTests`, `ChipBehaviorTests` and `ListRowBehaviorTests`, in `Catalog/CatalogUITests`, check on
+the catalog's entries what a unit test cannot reach: presses, hit areas and hover, the accessibility hierarchy, the
+keyboard. Each class has branches of its own for iOS and macOS where the platforms differ. `tools/apple/check.sh
+behavior` runs them, like the audit: the build first, a step of its own, then one `xcodebuild test-without-building`
+for the classes named (all seven by default); it prints each failure with its message, each skip with its reason, the
+test cases and the totals, and stops the simulator's test daemon afterwards. The log goes to
+`.build/logs/behavior-<platform>[-<classes>].log`, the result bundle to `.build/xcode/results/`.
 
 A run whose log gains no line for `WESTRON_BEHAVIOR_STALL_LIMIT` seconds (default 300; xcodebuild's own `[MT]`
 messages do not count) has stopped making progress: the script stops it, says so in its output and the log, and

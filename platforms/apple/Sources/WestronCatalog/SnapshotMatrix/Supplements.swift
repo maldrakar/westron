@@ -9,5 +9,5 @@ extension ComponentMatrix.Supplement {
             .checkboxTextRoles, .textFieldCardNotes, .textFieldSecure, .textFieldOnSurface, .textFieldOnSunken,
             .ruleLabelled, .iconTileListColors, .iconTileBesideTitle, .iconTileEmptyScreen, .chipLitAccent,
             .chipLongLabel,
-        ] + chipListColors + chipTextOnly
+        ] + chipListColors + chipTextOnly + listRowAll
 }

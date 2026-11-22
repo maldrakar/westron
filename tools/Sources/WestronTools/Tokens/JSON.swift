@@ -39,6 +39,12 @@ public indirect enum JSON: Equatable, Sendable {
         return nil
     }
 
+    /// A number that is whole, such as an integer option's default.
+    public var integer: Int? {
+        guard case .number(let value) = self, value == value.rounded(), abs(value) < 1e15 else { return nil }
+        return Int(value)
+    }
+
     public var members: [Member]? {
         if case .object(let members) = self { return members }
         return nil

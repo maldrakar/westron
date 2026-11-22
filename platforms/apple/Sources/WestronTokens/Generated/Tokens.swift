@@ -123,8 +123,8 @@ extension Westron.Color {
 
         /// A selected row or item, tinted with the accent.
         ///
-        /// Use for: selected row, selected item. Avoid: Color alone: in high contrast a selected row also shows a check
-        /// or a border.focus outline.
+        /// Use for: selected row, selected item. Avoid: Color alone: a selected row also shows a mark that is not a
+        /// color, in every theme, such as a check or ListRow's border.focus bar at its leading edge.
         public static let selected = Westron.Color(
             name: "color.background.selected",
             light: Westron.RGB(hex: 0xDDEAFF),
@@ -281,7 +281,9 @@ extension Westron.Color {
                 ["color.background.surface"],
                 ["color.background.sunken"],
                 ["color.background.hover"],
+                ["color.background.pressed"],
                 ["color.background.selected"],
+                ["color.background.accent-subtle"],
             ])
     }
 
@@ -298,6 +300,26 @@ extension Westron.Color {
             darkHighContrast: Westron.RGB(hex: 0x656B72),
             backgrounds: [["color.background.canvas"], ["color.background.surface"], ["color.background.sunken"]])
 
+        /// The guides down the levels of a tree, one under each ancestor level of a nested row: decorative in the
+        /// standard themes, where the indent also shows the nesting, and 3:1 in high contrast on every ground a row
+        /// stands on, its highlights included, which border.default does not reach there. The palette's guides step
+        /// (decisions/0012).
+        public static let guide = Westron.Color(
+            name: "color.border.guide",
+            light: Westron.RGB(hex: 0xC5C8CE),
+            dark: Westron.RGB(hex: 0x3C4147),
+            lightHighContrast: Westron.RGB(hex: 0x6C6F74),
+            darkHighContrast: Westron.RGB(hex: 0x82888F),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.background.sunken"],
+                ["color.background.hover"],
+                ["color.background.pressed"],
+                ["color.background.selected"],
+                ["color.background.accent-subtle"],
+            ])
+
         /// The border of a control that must be seen: a radio ring; and in the high-contrast themes a framed text field
         /// and a secondary button, where their muted fill alone does not mark their edge against the ground, and an
         /// unchecked check's ring, which is border.default in the standard themes. The ground is what that border is
@@ -313,9 +335,12 @@ extension Westron.Color {
                 ["color.background.surface"],
                 ["color.background.sunken"],
                 ["color.background.muted"],
+                ["color.background.hover"],
+                ["color.background.pressed"],
+                ["color.background.selected"],
             ])
 
-        /// The focus ring, and the outline of a selected item in high contrast.
+        /// The focus ring, and the bar or outline that marks a selected item, such as a selected ListRow's bar.
         public static let focus = Westron.Color(
             name: "color.border.focus",
             light: Westron.RGB(hex: 0x5283E1),
@@ -327,11 +352,14 @@ extension Westron.Color {
                 ["color.background.surface"],
                 ["color.background.sunken"],
                 ["color.background.hover"],
+                ["color.background.pressed"],
                 ["color.background.selected"],
+                ["color.background.accent-subtle"],
             ])
 
-        /// The line that marks where a dragged item would be dropped: an insertion rule. The focus ring's blue, a token
-        /// of its own so that each can change without the other.
+        /// The line that marks where a dragged item would be dropped: an insertion rule; and the ring of a row a
+        /// dragged item would be dropped onto, on its accent-subtle highlight. The focus ring's blue, a token of its
+        /// own so that each can change without the other.
         public static let insertion = Westron.Color(
             name: "color.border.insertion",
             light: Westron.RGB(hex: 0x5283E1),
@@ -343,7 +371,9 @@ extension Westron.Color {
                 ["color.background.surface"],
                 ["color.background.sunken"],
                 ["color.background.hover"],
+                ["color.background.pressed"],
                 ["color.background.selected"],
+                ["color.background.accent-subtle"],
             ])
     }
 
@@ -830,6 +860,7 @@ extension Westron.Color {
         text.accent,
         icon.tertiary,
         border.default,
+        border.guide,
         border.strong,
         border.focus,
         border.insertion,
