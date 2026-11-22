@@ -8,8 +8,10 @@ import Testing
 /// combination of states of each form, read from the contract's own bindings, and every binding drawn; a disabled row
 /// that never tints; the selected row's bar; the drop target's ring; the motion; the metrics; the indent per level and
 /// the horizontal spacing that stops growing at xxxLarge; the guides, their place and their width; the slots on the
-/// title's first line; the trailing slot under the text at the accessibility sizes; right to left; the insertion mark;
-/// the level as more content; and the Disclosure chevron's cell, with a stand-in.
+/// title's first line; the trailing slot under the text at the accessibility sizes; right to left; the insertion mark,
+/// at the default size and at accessibility5; what is drawn over what, read from pixels: the ring over a guide, and a
+/// bottom mark over the next row's highlight; the level as more content; and the Disclosure chevron's cell, with a
+/// stand-in.
 @Suite("ListRow")
 @MainActor
 struct ListRowTests {
@@ -262,12 +264,111 @@ struct ListRowTests {
         #expect(abs(press.width - 320) < 0.5)
     }
 
-    @Test("the drop target's ring is drawn over the row's content, and the guides stay under it")
+    /// A view drawn by `ImageRenderer` in the light theme at twice its size, as 8-bit sRGB pixels: shapes only, which it
+    /// draws as the screen does (it misdraws system controls, and the samples below avoid every text).
+    @MainActor
+    struct Drawn {
+        static let scale: CGFloat = 2
+        let width: Int
+        let height: Int
+        let bytes: [UInt8]
+
+        /// The colour of the pixel at a point of the view, in points from its top leading corner.
+        func color(x: CGFloat, y: CGFloat) -> Color.Resolved? {
+            let column = Int((x * Self.scale).rounded(.down))
+            let row = Int((y * Self.scale).rounded(.down))
+            guard (0..<width).contains(column), (0..<height).contains(row) else { return nil }
+            let index = (row * width + column) * 4
+            return Color.Resolved(
+                colorSpace: .sRGB, red: Float(bytes[index]) / 255, green: Float(bytes[index + 1]) / 255,
+                blue: Float(bytes[index + 2]) / 255, opacity: Float(bytes[index + 3]) / 255)
+        }
+
+        /// Whether the pixel at a point is a token's light colour, within three 8-bit steps in each channel.
+        func shows(_ token: Westron.Color, x: CGFloat, y: CGFloat) -> Bool {
+            guard let pixel = color(x: x, y: y) else { return false }
+            let expected = TokenAccessorTests.resolved(token[.light])
+            let step: Float = 3 / 255
+            return abs(pixel.red - expected.red) <= step && abs(pixel.green - expected.green) <= step
+                && abs(pixel.blue - expected.blue) <= step
+        }
+    }
+
+    func draw(_ view: some View) throws -> Drawn {
+        let renderer = ImageRenderer(content: view.environment(\.colorScheme, .light))
+        renderer.scale = Drawn.scale
+        let image = try #require(renderer.cgImage)
+        let space = try #require(CGColorSpace(name: CGColorSpace.sRGB))
+        var bytes = [UInt8](repeating: 0, count: image.width * image.height * 4)
+        let context = try #require(
+            CGContext(
+                data: &bytes, width: image.width, height: image.height, bitsPerComponent: 8,
+                bytesPerRow: image.width * 4, space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        return Drawn(width: image.width, height: image.height, bytes: bytes)
+    }
+
+    @Test("the drop target's ring is drawn over the row's content: where a guide crosses the ring, the ring shows")
     func ringOverContent() throws {
-        let probe = show(ListRow(level: 2, action: {}) { Text("Inbox") }.dropTarget(true).frame(width: 320))
+        func row() -> some View {
+            ListRow(level: 2, action: {}) {
+                Text("Inbox")
+            } leading: {
+                Color.clear.frame(width: 20, height: 20)
+            }
+            .dropTarget(true)
+            .listRowProbed("row")
+            .frame(width: 320)
+        }
+        let probe = show(row())
         let ring = try #require(probe["ring"])
+        let frame = try #require(probe["row"])
+        let guide = try #require(probe["guide 1"])
         #expect(abs(ring.width - 320) < 0.5)
-        #expect(probe["guide 0"] != nil)
+        let drawn = try draw(row())
+        // The guide's centre, from the row's leading edge, clear of the ring's rounded corners.
+        let x = guide.midX - frame.minX
+        #expect(x > CGFloat(ListRowMetrics.radius) + 1, "\(guide) \(frame)")
+        // Halfway down the row, the guide is drawn there, over the highlight.
+        let middle = frame.height / 2
+        #expect(
+            drawn.shows(ListRowMetrics.guideColor, x: x, y: middle),
+            "\(String(describing: drawn.color(x: x, y: middle)))")
+        // In the ring's band at the top and at the bottom, the ring covers the guide.
+        let band = CGFloat(Westron.Dimension.stroke.thick) / 2
+        for y in [band, frame.height - band] {
+            #expect(
+                drawn.shows(.border.insertion, x: x, y: y),
+                "at \(y): \(String(describing: drawn.color(x: x, y: y)))")
+        }
+    }
+
+    @Test("a bottom insertion mark is drawn above the next row's highlight: its half over the next row shows")
+    func markAboveTheNextRow() throws {
+        func rows() -> some View {
+            VStack(spacing: 0) {
+                ListRow(action: {}) { Text("Garden") }
+                    .listRowProbed("row")
+                    .insertionMark(.bottom)
+                ListRow(action: {}) { Text("Seeds") }.selected(true)
+            }
+            .frame(width: 320)
+        }
+        let probe = show(rows())
+        let row = try #require(probe["row"])
+        let mark = try #require(probe["mark"])
+        let drawn = try draw(rows())
+        // Half a point below the edge between the rows, on the selected row's highlight, in the middle of the line.
+        let x = mark.midX - row.minX
+        let edge = row.height
+        #expect(
+            drawn.shows(.border.insertion, x: x, y: edge + 0.5),
+            "\(String(describing: drawn.color(x: x, y: edge + 0.5)))")
+        // Below the line, the next row's highlight is there to be covered.
+        let below = edge + CGFloat(Westron.Dimension.stroke.thick) + 1
+        #expect(
+            drawn.shows(.background.selected, x: x, y: below),
+            "\(String(describing: drawn.color(x: x, y: below)))")
     }
 
     @Test("the highlight and the mark change in their motion tokens, which Reduce Motion keeps")
@@ -521,6 +622,50 @@ struct ListRowTests {
             }
         }
         #expect(show(ListRow(action: {}) { Text("Garden") }.insertionMark(nil).frame(width: 320))["mark"] == nil)
+    }
+
+    /// At an accessibility size the row's horizontal spacing stops at its xxxLarge width (D2), and the mark reads the
+    /// same spacing: it starts where a row at its level starts its words and ends at the row's trailing padding, as
+    /// that row lays them out at that size.
+    @Test("at accessibility5 the mark lines up with a row at its level, as laid out at that size")
+    func insertionMarkAtAnAccessibilitySize() throws {
+        let size = DynamicTypeSize.accessibility5
+        for edge in ListRowInsertionEdge.allCases {
+            for level in [0, 2] {
+                let reference = show(
+                    ListRow(level: level, action: {}) { Text("Seeds") }.listRowProbed("row").frame(width: 320)
+                        .dynamicTypeSize(size))
+                let referenceRow = try #require(reference["row"])
+                let words = try #require(reference["words"])
+                let probe = show(
+                    VStack(spacing: 0) {
+                        ListRow(level: 1, action: {}) { Text("Garden") }
+                            .listRowProbed("row")
+                            .insertionMark(edge, level: level)
+                        ListRow(level: 1, action: {}) { Text("Seeds") }.selected(true)
+                    }
+                    .frame(width: 320)
+                    .dynamicTypeSize(size), height: 900)
+                let mark = try #require(probe["mark"], "\(edge) \(level)")
+                let row = try #require(probe["row"])
+                #expect(
+                    abs((mark.minX - row.minX) - (words.minX - referenceRow.minX)) < 0.5,
+                    "\(edge) \(level): \(mark) \(row), words at \(words) in \(referenceRow)")
+                #expect(
+                    abs((row.maxX - mark.maxX) - (referenceRow.maxX - words.maxX)) < 0.5,
+                    "\(edge) \(level): \(mark) \(row), words at \(words) in \(referenceRow)")
+                let line = edge == .top ? row.minY : row.maxY
+                #expect(abs(mark.midY - line) < 0.5, "\(edge): \(mark) \(row)")
+                #if os(iOS)
+                    // The spacing is the scaled one, not the tokens' own: wider than at the default size.
+                    if level == 2 {
+                        let base = ListRowMetrics.slotStart(
+                            level: level, indent: ListRowSpacing.base.indent, padding: ListRowSpacing.base.padding)
+                        #expect(mark.minX - row.minX > base + 0.5, "\(mark) \(row)")
+                    }
+                #endif
+            }
+        }
     }
 
     // MARK: - The Disclosure chevron's cell

@@ -516,11 +516,17 @@ ring (the matrix's `selected` supplement, row dropTarget). For the owner at the 
   selected and branch titles are strong: a product that sets the title's role sets it on the title it passes, which the
   representation lays out as drawn.
 - The insertion mark fades, never travels: two fixed overlays, top and bottom, each fading in and out by its edge and
-  level; it is drawn above the next row (`zIndex`), so a bottom mark is whole over a highlighted neighbour; it is drawn
-  whole beside a disabled row (G7); watchOS draws nothing.
-- The drop ring is drawn above the content.
+  level; it is drawn above the next row (`zIndex`), so a bottom mark is whole over a highlighted neighbour in one
+  stack (`ListRowTests.markAboveTheNextRow` reads the pixel half a point below the edge, the mark's blue, over the next
+  row's `background.selected`); `zIndex` orders the children of one stack only, so in a `List` it is measured apart
+  (below, "The insertion mark in a List"); it is drawn whole beside a disabled row (G7); watchOS draws nothing. Its
+  start and end at accessibility5 are a row's at that size, the spacing stopped at xxxLarge
+  (`insertionMarkAtAnAccessibilitySize`).
+- The drop ring is drawn above the content: `ListRowTests.ringOverContent` reads the pixels where a guide crosses the
+  ring's band at the row's top and bottom, the ring's blue, and the guide's own colour halfway down the row.
 - The activate action is added only while the row is enabled; the live Archived row has a counting action, and a press
-  on it counts nothing.
+  on it counts nothing. That press is an event, which a disabled Button ignores by itself; the guard itself, an
+  activation sent to the element as VoiceOver sends it, is unmeasured (below, "Open points").
 - "Level" is in `Localizable.xcstrings`; the contract gives the spoken example, a row at level 1 gives "Level, 2".
 - Q2 on macOS: the swipe is a trackpad's gesture that XCUITest cannot make; the claim is narrowed to iOS, and on the Mac
   a product offers the swipe's actions as context menu items or accessibility actions.
@@ -588,5 +594,51 @@ title in the drawn font (D4) neither the pressable nor the static one is, so the
 selected" was removed. With every sheet at accessibility5, the page at that size is 17 screenfuls; the contrast audit
 gave up ("Audit failed to complete in time") on every try at the 14th, over the drag samples, and completed in a third
 of a second with the page 30 pt before or 60 pt past that position. The harness now tries such a screenful a third time
-with the page moved on by a tenth of the screen, which the overlap of the screenfuls covers; it did, and the audit
-passed.
+with the page moved on by a tenth of the screen; it did, and the audit passed. The tenth the nudge scrolls off the top
+was audited on the screenful before, which overlaps by more than a tenth; on the first screenful, and the first window
+of the Dynamic Type pass, nothing was, so there the harness drags the page back after the nudged audit and audits it
+once more where it was, and fails the entry for infrastructure if that audit gives up too (after the review, N2). Each
+nudge and each drag back prints a line of its own in the log.
+
+## The insertion mark in a List
+
+`zIndex` orders the children of one stack; in a `List` each row is a cell of its own, which the row cannot draw above.
+Measured on 2026-11-22 in the `list-row-in-list` entry, which now ends with rows at level 1 laid out as the contract
+gives a row in a List: Garden with a bottom mark over Seeds, selected; Errands, selected, over Home with a top mark;
+Work with a bottom mark over Bills, at rest; and Notes with a bottom mark over Trips with a top mark; every mark at
+level 2.
+Read from the screenshots' pixels (`catalog-screenshot.sh ios|macos --entry list-row-in-list`, dark):
+
+| | iOS 26, iPhone 17 | macOS 26 |
+|---|---|---|
+| The rows | 44 pt each, in cells 8 pt apart | 28 pt each, the cells abutting |
+| A bottom mark over a selected next row (Garden) | whole, 2 pt, centred on Garden's bottom edge, in the gap | its upper half only, 1 pt, inside Garden; Seeds' highlight shows below it |
+| A top mark under a selected row (Home) | whole, 2 pt, centred on Home's top edge | its lower half only, 1 pt, inside Home |
+| A bottom mark over a row at rest (Work) | whole | its upper half only: clipped by its cell, not covered |
+| Both rows marked (Notes' bottom, Trips' top) | two lines, 8 pt apart | one whole line, 2 pt, centred on the edge between them |
+
+So the List clips, on the Mac: the contract's `platforms` say so, rather than fighting the List. In a List on the Mac a
+product marks both rows beside the place, whose halves meet in one line; on iOS it marks one, either edge, whole in the
+gap. The 8 pt between the List's cells on iOS also parts the rows' highlights there, which a row outside a List does
+not show; why the List sets its 44 pt rows 8 pt apart (its default minimum row height or its own spacing) is not
+measured, and the swipe and the presses measured in that entry are not affected by it.
+
+## Open points
+
+- **A control at the end of the row** (after the review, N5). The trailing slot holds words and decorative content
+  only: its words join the row's name, and `accessibilityElement(children: .combine)` over the words cannot keep a
+  control apart from a slot's content, which the row sees only as an opaque view; measured, a toggle there became the
+  row's role and value (above, "Revision of Q1 at implementation", b). Two ways out were not taken. A trailing slot of
+  its own elements, outside the combined words, after the row's element as the chevron's cell is: a control there
+  keeps its role, but the slot's words leave the row's name, so "Inbox, 12" becomes "Inbox" and a separate "12". And a
+  separate accessory place at the end, a third kind of content beside the trailing words, as the Disclosure chevron's
+  cell is, with the same hook or a public slot. The pilot's rows need neither (above, "The pilot's rows, composed");
+  a later revision decides when a product does.
+- **The activation guard** (after the review, N6). The words' element carries the row's activation only while the row
+  is enabled (D4). An activation sent to the element, as VoiceOver's double tap sends it, does not reach it from this
+  repository's tests: in-process, the hosting view of a unit test's window exposes no accessibility elements on iOS or
+  macOS (tried: walking `accessibilityElements` and `accessibilityChildren()` found nothing to activate), XCUITest
+  presses with events only, and the Accessibility API's `AXPress` from the Mac's UI test runner needs the runner to be
+  trusted for accessibility, which it is not on this Mac. Unmeasured: the code adds `accessibilityAction` only when the
+  row is enabled, and the disabled row's events are measured ("Presses").
+- **The Mac keyboard in a tree** (D4): with the pilot's tree and Disclosure (#120).

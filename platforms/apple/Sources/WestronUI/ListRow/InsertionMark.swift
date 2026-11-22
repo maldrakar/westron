@@ -9,8 +9,10 @@ extension View {
     /// edge, from the leading edge of `level`'s leading slot to the row's trailing padding. No gap opens. nil draws no
     /// mark. The product follows its drag: `.insertionMark(drag.edge(for: row), level: drag.level)`. The mark does not
     /// travel: moved to another edge or level, the old mark fades out and the new one in. It is drawn above the rows
-    /// beside it, and it is not announced: the drag's other way is the product's (decisions/0001, Q4). watchOS has no
-    /// drag and drop, so there the modifier draws nothing.
+    /// beside it in one stack, and it is not announced: the drag's other way is the product's (decisions/0001, Q4). In a
+    /// `List`, where each row is a cell of its own, mark one row on iOS and both rows beside the place on macOS, whose
+    /// cells clip each mark to its own row's half (the contract's `platforms`). watchOS has no drag and drop, so there
+    /// the modifier draws nothing.
     ///
     /// - Parameters:
     ///   - edge: The edge of the row the mark is drawn over; nil for none.

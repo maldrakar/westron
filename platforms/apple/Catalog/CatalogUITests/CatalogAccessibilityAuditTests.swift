@@ -323,9 +323,13 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         // that gives up twice at a screenful is run a third time with the page moved on by a tenth of the screen:
         // measured on 2026-11-22 (ListRow, #119), the contrast audit gave up on every try at one scroll position of
         // `list-row` at accessibility5, and completed in a third of a second with the page 30 pt before it or 60 pt
-        // past it; the screenfuls overlap by more than the nudge, so nothing goes unaudited. If that fails too, the
-        // entry fails for infrastructure (`tools/apple/check.sh a11y` then audits it again in a run of its own), but
-        // this run goes on to the next entry.
+        // past it. The nudge scrolls a tenth of the screen off its top. From the second screenful on, the screenful
+        // before showed that strip, since the screenfuls overlap by more than the nudge (`step`). On the first, screen
+        // 1 of `auditScreens` and window 1 of the Dynamic Type pass, nothing did: there the page is dragged back after
+        // the nudged audit and audited once more where it was, so that the strip is audited too, or, if that audit
+        // gives up again, the entry fails for infrastructure rather than pass with the strip unaudited. When the
+        // audit cannot complete, the entry fails for infrastructure (`tools/apple/check.sh a11y` then audits it again
+        // in a run of its own), but this run goes on to the next entry.
         do {
             return try performAudit(app, entryID, configuration, types: types, screen: screen, nextDrag: nextDrag)
         } catch {
@@ -338,14 +342,28 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                     if entry.exists {
                         print(
                             "a11y: auditing \(entryID), screen \(screen) again, the page moved on by a tenth: \(error)")
-                        let start = entry.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-                        let end = entry.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.4))
-                        start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.2)
+                        nudge(entry, from: 0.5, to: 0.4)
                         settle(entry, entryID, screen: screen)
                         if let issues = try? performAudit(
                             app, entryID, configuration, types: types, screen: screen, nextDrag: nextDrag)
                         {
-                            return issues
+                            guard screen == 1 else { return issues }
+                            print(
+                                "a11y: auditing \(entryID), screen 1 once more, the page moved back, for the strip "
+                                    + "the nudge scrolled off its top")
+                            nudge(entry, from: 0.4, to: 0.5)
+                            settle(entry, entryID, screen: screen)
+                            do {
+                                let back = try performAudit(
+                                    app, entryID, configuration, types: types, screen: screen, nextDrag: nextDrag)
+                                return issues + back.filter { !issues.contains($0) }
+                            } catch {
+                                XCTFail(
+                                    "\(Self.infrastructurePrefix)\(entryID), screen 1: the audit completed with the "
+                                        + "page moved on by a tenth, but not moved back, so the strip above was not "
+                                        + "audited: \(error)")
+                                return []
+                            }
                         }
                     }
                 #endif
@@ -459,6 +477,17 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
     private func scrollPosition(_ entry: XCUIElement) -> CGRect {
         entry.descendants(matching: .staticText).firstMatch.frame
     }
+
+    #if os(iOS)
+        /// Drags the page slowly between two heights of the entry, as fractions of it, without momentum: from 0.5 to
+        /// 0.4 moves it on by a tenth of the screen, from 0.4 to 0.5 back.
+        @MainActor
+        private func nudge(_ entry: XCUIElement, from start: CGFloat, to end: CGFloat) {
+            let from = entry.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: start))
+            let to = entry.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: end))
+            from.press(forDuration: 0.05, thenDragTo: to, withVelocity: .slow, thenHoldForDuration: 0.2)
+        }
+    #endif
 
     /// Scrolls the page up by most of a screen, so that consecutive screenfuls overlap, without momentum.
     @MainActor

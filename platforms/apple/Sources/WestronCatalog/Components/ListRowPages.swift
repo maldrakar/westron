@@ -4,7 +4,7 @@ import WestronUI
 // ListRow's catalog entries, from spec/components/list-row/list-row.spec.yaml: `list-row`, both forms in every state
 // each enters (the contract's `forms`), a tree of levels with guides, the insertion mark and a drop target, the
 // Disclosure chevron's cell with a stand-in, and a live sample; `list-row-in-list`, rows in a system List with swipe
-// actions. The states come from the generated `ListRowState` through `ListRowCatalogState`, so the pages follow the
+// actions, and the insertion mark in a List. The states come from the generated `ListRowState` through `ListRowCatalogState`, so the pages follow the
 // contract.
 
 extension View {
@@ -322,7 +322,8 @@ private struct ListRowPage: View {
 
 /// Rows in a system `List`, as the contract's Apple entry gives them: no insets, no background and no separator of the
 /// List's, no List selection; the List keeps its swipe actions. A row's action counts, its check toggles, and a swipe
-/// deletes.
+/// deletes. Under the summary, rows with insertion marks, where the List's cells, not one stack, decide what each mark
+/// shows.
 private struct ListRowListPage: View {
     @State private var rows = ["Call the plumber", "Pay the rent", "Buy seeds"]
     @State private var actions = 0
@@ -362,8 +363,31 @@ private struct ListRowListPage: View {
             .textRole(.footnote.regular)
             .foregroundStyle(.text.secondary)
             .accessibilityIdentifier(ListRowCatalogID.listSummary)
+            // The insertion mark in a List, where each row is a cell of its own and `zIndex` orders nothing across
+            // cells: a bottom mark over a selected next row, then a selected row over a top mark (decisions/0001,
+            // "The insertion mark in a List").
+            dragRow("Garden").insertionMark(.bottom, level: 2)
+            dragRow("Seeds").selected(true)
+            dragRow("Errands").selected(true)
+            dragRow("Home").insertionMark(.top, level: 2)
+            dragRow("Work").insertionMark(.bottom, level: 2)
+            dragRow("Bills")
+            dragRow("Notes").insertionMark(.bottom, level: 2)
+            dragRow("Trips").insertionMark(.top, level: 2)
         }
         .listStyle(.plain)
+    }
+
+    /// A row of the drag samples, at level 1, laid out in the List as the contract's Apple entry gives it.
+    private func dragRow(_ title: String) -> some View {
+        ListRow(level: 1, action: {}) {
+            Text(verbatim: title)
+        } leading: {
+            Icon(.folder)
+        }
+        .listRowInsets(EdgeInsets())
+        .listRowBackground(Color.clear)
+        .listRowSeparatorHidden()
     }
 }
 

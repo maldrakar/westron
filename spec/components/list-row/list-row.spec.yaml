@@ -21,7 +21,11 @@ description: >-
   "Measured"), so a row being renamed is replaced by the product's field for that time. The end's words join the row's
   spoken name, so the trailing slot holds no control either: a control there turns the row's element into that
   control's role (measured); the one control that stands at the end is the Disclosure chevron (#120), which is not a
-  slot but the chevron's cell, below. The leading and the trailing slot take typography.body.regular, the title's role
+  slot but the chevron's cell, below. This is a known limitation, open for a later revision: the trailing slot's words
+  join the row's name, and the combining of the row's words into one element cannot keep a control apart from a
+  slot's content, which the row does not see into. Two ways out were not taken: a trailing slot whose elements stay
+  their own, after the row's element, at the cost of its words leaving the row's name ("Inbox" without "12"); and a
+  separate place for a control at the end, as the chevron's cell is (decisions/0001, "Open points"). The leading and the trailing slot take typography.body.regular, the title's role
   at rest, so that an Icon there sizes from it; words the product puts there set their own role, such as a count in
   typography.subheadline.regular, and a product that sets another role on its title sets it on an Icon beside it too.
   Two forms (`forms`). Pressable, a row with an action, such as opening a list or a task: a press anywhere on the row
@@ -94,9 +98,10 @@ description: >-
   (spec/components/rule, #116), drawn over the row's top or bottom edge at the level the drop would take, from the
   leading edge of that level's leading slot to the row's trailing padding; no gap opens and no dashed slot is drawn,
   on any platform (decisions/0001, Q4). The mark does not travel: moved to another edge or level, the old mark fades
-  out and the new one in, in motion.fade. It is drawn above the rows beside it, so that the next row's highlight never
-  covers the half of a bottom mark that stands on it, and whole beside a disabled row: it shows where a drop lands,
-  which the disabled row does not own. What a drag carries, the lifted copy, is a ListRow on a dragged Surface; the row
+  out and the new one in, in motion.fade. It is drawn above the rows beside it in one stack, so that the next row's
+  highlight never covers the half of a bottom mark that stands on it, and whole beside a disabled row: it shows where a drop lands,
+  which the disabled row does not own. In a List each row is a cell of its own, which the row cannot draw above: what
+  a mark shows there differs by platform (platforms; decisions/0001, "The insertion mark in a List"). What a drag carries, the lifted copy, is a ListRow on a dragged Surface; the row
   it was lifted from stays as the system's drag leaves it. Neither the mark nor dropTarget is announced: a drag has
   another way, a menu item or a named accessibility action, which is the product's (design-language/08, "Every gesture
   has another way"). Swipe actions are not this component's: they are the system's .swipeActions in a List, and the
@@ -280,7 +285,10 @@ platforms:
         Full Keyboard Access or the iPad's keyboard navigation. A row is at least 44 pt high, size.target.minimum,
         its whole frame the row's hit area. The guides are stroke.regular in the compact horizontal size class, an
         iPhone's and an iPad's narrow window's, and stroke.thin in the regular one, the iPad's sidebar. In a List the
-        swipe actions are the List's, measured: a swipe uncovers them and a press runs them.
+        swipe actions are the List's, measured: a swipe uncovers them and a press runs them. In a List (iOS 26,
+        measured) the List sets its 44 pt rows 8 pt apart, and an insertion mark is drawn whole in that gap, centred on
+        its own row's edge: mark one row there, the upper row's bottom edge or the lower row's top edge; marking both
+        draws two lines 8 pt apart.
     macos:
       description: >-
         A row is at least 28 pt high, size.target.minimum; with a Checkbox at the start it is 32, the check's hit
@@ -290,7 +298,11 @@ platforms:
         on, Tab reaches the row's action and the controls nested in it, and Space activates them; the arrow keys move
         between rows only in a List, and a tree outside a List gets them from the product's container (decisions/0001,
         open points). In a List the swipe actions are the List's; the Mac offers them as the row's accessibility
-        actions and to a trackpad's swipe, not measured here.
+        actions and to a trackpad's swipe, not measured here. In a List (macOS 26, measured) the rows' cells abut and
+        each clips its row, so a mark shows only its half inside its own row, 1 pt of its 2, on either edge, beside a
+        highlighted row or not. In a List on the Mac a product marks both rows beside the place, the upper row's bottom
+        edge and the lower row's top edge at one level: their halves meet in one whole line, as one mark draws it
+        outside a List.
     watchos:
       states: [pressed, selected, disabled]
       description: >-
