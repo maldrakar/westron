@@ -253,14 +253,16 @@ private struct TextFieldBody: View {
     }
 
     /// The glyphs at the field's start and its end (the contract's `leadingIcon` and `trailingIcon`, #115), beside the
-    /// field inside its padding: the field gives each its width and `container.gap` of its own room, and the glyph is
-    /// drawn there, so that it stands at the field's horizontal padding and `container.gap` from its text, and the
-    /// field's fill, ring and hit area take it in. A glyph's baseline is the field's first line's, on one line and on
-    /// several (TextFieldGlyphTests). A glyph is `Icon(_:)`, decoration hidden from assistive technology: a search
+    /// system field inside its padding, in one layout (`TextFieldGlyphRow`) that offers the field the row's width less
+    /// each glyph and its gap and sizes the row by the field alone: so a glyph stands at the field's horizontal padding
+    /// and `container.gap` from its text, and the field's fill, ring and hit area take it in. A glyph stands on the
+    /// field's first text baseline, on one line and on several (TextFieldGlyphTests). A glyph is `Icon(_:)`, decoration hidden from assistive technology: a search
     /// field's role is the product's to give (the trait `isSearchField`), and a glyph names what the field is for, never
     /// an action (decisions/0003, second revision). It is drawn in `leadingIcon.color` in every state, disabled dimming
     /// it with the field, and in the field's text role, `framed`'s or on `inline` the context's, so that it scales with
-    /// the text; the gap scales with Dynamic Type from its token, as the padding does. Both stop growing at
+    /// the text, at the image scale `medium` whatever its context's (`TextFieldGlyph`); the gap scales with Dynamic Type
+    /// from its token, as the padding does, on the curve of `framed`'s text style, body's, which is `inline`'s too: a
+    /// text field style cannot read its context's text style. Both stop growing at
     /// `TextFieldGlyph.largestTextSize`, while the field's text grows on (decisions/0003, "Revision: the glyphs stop at
     /// xxxLarge"); past it, at the accessibility sizes, a glyph is centred on the first line (`TextFieldGlyphRow`).
     ///
@@ -436,12 +438,17 @@ private struct TextFieldBody: View {
             self.icon = icon
             self.part = part
             self.tokens = tokens
+            // On `inline` the context's text style is out of reach (SwiftUI's font is opaque, and `.textRole(_:)` sets
+            // no value a style reads), so the gap scales on body's curve there: the contract's `platforms.apple`.
             let textStyle = Font.TextStyle((tokens.textFont ?? .body.regular).textStyle)
             _gap = ScaledMetric(wrappedValue: CGFloat(metrics.gap), relativeTo: textStyle)
         }
 
         var body: some View {
             Icon(icon)
+                // The text's own scale, fixed: a context's `.imageScale(_:)` changes neither the glyph nor the room the
+                // field leaves it, as Button and Chip fix their icons' (the contract's description).
+                .imageScale(.medium)
                 .modifier(TextFieldGlyphRole(font: tokens.glyphFont))
                 .foregroundStyle(tokens.glyphColor)
                 .fixedSize()

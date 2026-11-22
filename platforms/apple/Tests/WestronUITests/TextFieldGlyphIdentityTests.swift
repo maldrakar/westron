@@ -64,8 +64,8 @@ struct TextFieldGlyphIdentityTests {
         let host = Host(Field(model: Model(glyphs: .leading)), settles: false)
         defer { host.close() }
         let field = try #require(host.fields.first, "no system field")
-        // One layout pass, before the run loop has turned: the glyph and its gap, at least 17 + 8 pt, are already at
-        // the field's start, inside the padding of 15.
+        // One layout pass, before the run loop has turned: the glyph and its gap, the glyph more than 10 pt wide, are
+        // already at the field's start, past its horizontal padding at m (container.paddingHorizontal, space.250).
         let frame = field.convert(field.bounds, to: host.root)
         let metrics = TextFieldMetrics(variant: .framed, size: .m, axis: .horizontal)
         let padding = metrics.paddingHorizontal.map(CGFloat.init) ?? .zero

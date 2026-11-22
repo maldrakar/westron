@@ -9,7 +9,8 @@
 # glyphs and their gap stop growing at xxxLarge (decisions/0003, "Revision: the glyphs stop at xxxLarge"); and once
 # more after the accessibility audit: a glyph names the field's purpose, never an action, a search field's prompt is
 # in color.text.placeholder, and at the accessibility sizes a glyph is centred on the first line (decisions/0003,
-# "Second revision: what a glyph draws, and where").
+# "Second revision: what a glyph draws, and where"), and its review's findings: the glyph's image scale fixed, how
+# the row lays the glyphs out, the gap on inline, mirroring, the cap's mapping and a glyph taller than its line.
 id: text-field
 status: approved
 description: >-
@@ -40,14 +41,23 @@ description: >-
   of 2026-11-22). It stands inside the field, on its fill and inside its focus ring: at the field's
   horizontal padding from the field's edge and container.gap from the text, beside the first line of a field of
   several lines, on that line's baseline, as a letter of it would; start and end follow the layout direction, so
-  right to left the leading glyph is at the right. It takes its size from the field's text, framed's body.regular or
-  inline's context, at the text's own scale, so it grows with the person's text size up to the largest size that is
-  not an accessibility size (xxxLarge on Apple); at the accessibility sizes the glyph, its gap and the room the field
-  leaves it stay as they are there while the text grows on, since inside a field the width is what the person types
-  into and the glyph is decoration (a named exception to design-language/07, decisions/0003, revision of 2026-11-22;
-  the field's padding still grows with the text). There, where a glyph is smaller than its text, it is centred on
-  the first line instead of standing on its baseline, which would set it low like a subscript; at the other sizes it
-  stands on the baseline. It draws in
+  right to left the leading glyph is at the right. Whether the glyph itself mirrors right to left is the platform's,
+  per symbol, as for any icon: the magnifier does not, its handle at the lower right in both directions. It takes its
+  size from the field's text, framed's body.regular or inline's context, at the text's own scale, which is fixed: a
+  scale a context sets for its icons (smaller or larger than the text, design-language/07) changes neither the glyph
+  nor the room the field leaves it. So it grows with the person's text size up to the largest text size that is not
+  one of the accessibility sizes, the sizes a platform sets apart above its standard ones for large text (on Apple
+  that size is xxxLarge, and the accessibility sizes are accessibility1 to 5; a platform without such sizes caps
+  nothing); at the
+  accessibility sizes the glyph, its gap and the room the field leaves it stay as they are at that size while the
+  text grows on, since inside a field the width is what the person types into and the glyph is decoration (a named
+  exception to design-language/07, decisions/0003, revision of 2026-11-22; the field's padding still grows with the
+  text). There, where a glyph is smaller than its text, it is centred on the first line instead of standing on its
+  baseline, which would set it low like a subscript; at the other sizes it stands on the baseline. A glyph is about
+  as tall as a line of its text, and a few symbols are a little taller (on macOS, beside a 16 pt line of
+  body.regular, the trash is 16.5 pt and the wrench 18): the field does not grow for such a glyph, which stays on the
+  baseline and reaches past its line by what it exceeds, into a framed field's padding, inside its fill, and on
+  inline, which has no padding, past the field's frame by as much. It draws in
   color.text.secondary in every state, with the placeholder shown or text entered, focused or not; disabled dims it
   with the rest of the field. A search field is no component of its own (decisions/0014): it is a framed field with
   the magnifier at its start. There is no error state, hint or message in
@@ -91,17 +101,17 @@ options:
     type: icons
     optional: true
     description: >-
-      The glyph at the field's start, a name of the icon registry, or none: a use that leaves it out draws no glyph
-      there and gives the text that room. A search field's magnifier. It is decoration and says nothing to assistive
-      technology, so the field's label still names the field.
+      The glyph at the field's start, a name of the icon registry that names what the field is for, never an action,
+      or none, which draws no glyph there and gives the text that room. A search field's magnifier. It is decoration
+      and says nothing to assistive technology, so the field's label still names the field.
   trailingIcon:
     type: icons
     optional: true
     description: >-
-      The glyph at the field's end, or none, such as a number sign at the end of a field that holds a tag's name.
-      Decoration, as the leading one: it names what the field is for. A glyph that acts when it is pressed, or draws
-      an action, such as a clear mark or a microphone that starts dictation, is not this option
-      (decisions/0003-icons-at-the-start-and-the-end.md).
+      The glyph at the field's end, a name of the icon registry that names what the field is for, never an action,
+      or none, such as a number sign at the end of a field that holds a tag's name. Decoration, as the leading one. A
+      glyph that acts when it is pressed, or draws an action, such as a clear mark or a microphone that starts
+      dictation, is not this option (decisions/0003-icons-at-the-start-and-the-end.md).
 
 slots: [label, placeholder]
 states: [focus, disabled]
@@ -226,8 +236,15 @@ platforms:
       field's label, as Button's icon does: a TextFieldStyle is given the field alone, whose label is its title, and
       has no public way to read the label's parts. Like the variant and the size they reach every field the modifier
       is set on, in a container too. The style draws each glyph as Icon draws a decorative one, hidden from
-      assistive technology, over the system field's own room aligned on its first text baseline, inside the fill, the
-      high-contrast outline, the focus ring and the area that focuses the field on a tap or a click. The system field
+      assistive technology, at .imageScale(.medium), which it sets itself, as Button and Chip set their icons', so a
+      context's .imageScale(_:) does not reach it. Each glyph stands beside the system field in one layout, which
+      offers the field the row's width less each glyph and its gap, sizes the row by the field alone and stands each
+      glyph on the field's first text baseline, inside the fill, the high-contrast outline, the focus ring and the
+      area that focuses the field on a tap or a click. The gap scales with Dynamic Type relative to the field's text
+      style: framed's body.regular, and on inline body's too, not the context's, since a TextFieldStyle cannot read
+      the text style of its context (SwiftUI's font in the environment is opaque, and .textRole(_:) sets no value a
+      style reads); so an inline field in heading.small or footnote.regular has the gap a body field has at the same
+      Dynamic Type size, while its glyph is the context's size. The system field
       keeps one place in the style's views whether it has glyphs or not, so a product that adds or removes a glyph
       while the person types, such as one shown only while the field is empty, keeps the same field and its focus.
       Each glyph and its gap are drawn at the context's Dynamic Type size held to xxxLarge

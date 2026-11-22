@@ -119,12 +119,14 @@ struct TextFieldSample: View {
 /// search field's trait, which the style does not (the contract's accessibility), and colors its prompt, its only
 /// visible name, in `text.placeholder` (macOS ignores the color); the glyph is hidden from assistive technology.
 struct TextFieldSearchSample: View {
+    /// framed, as the contract's recipe has it; the snapshot supplement `search-prompt` draws its inline column too.
+    var variant: TextFieldVariant = .framed
     var size: TextFieldSize? = nil
     @State private var text = ""
 
     var body: some View {
         TextField("Search", text: $text, prompt: Text("Search").foregroundStyle(.text.placeholder))
-            .textFieldStyle(.framed, size: size, leadingIcon: .magnifier)
+            .textFieldStyle(variant, size: size, leadingIcon: .magnifier)
             .accessibilityLabel("Search")
             .accessibilityAddTraits(.isSearchField)
     }
@@ -277,6 +279,23 @@ extension ComponentMatrix.Supplement {
         ) { combination in
             TextFieldMatrixCell(TextFieldMatrixValues(combination), leadingIcon: leading, trailingIcon: trailing)
         }
+    }
+
+    /// The contract's search field, empty (`TextFieldSearchSample`): its prompt in `text.placeholder`, which only
+    /// iOS draws, so that the references hold the prompt's colour.
+    static let textFieldSearchPrompt = ComponentMatrix.Supplement(
+        component: "text-field", id: "search-prompt", title: "a search field's prompt",
+        note: "A search field is no contract option: it is a framed field with the magnifier at its start, and the "
+            + "product colours its prompt, the field's only visible name, in text.placeholder: TextField(\"Search\", "
+            + "text: $query, prompt: Text(\"Search\").foregroundStyle(.text.placeholder)).textFieldStyle(.framed, "
+            + "leadingIcon: .magnifier) (the contract's platforms.apple). Each cell holds that field, empty, its "
+            + "prompt shown; the inline column draws the same field inline. iOS only: macOS ignores a prompt's colour "
+            + "and draws the system's (the contract's platforms.apple.macos), so there the sheet would only repeat "
+            + "glyph-leading's empty fields.",
+        keeps: ["size": "m", "lines": "single"], onlyOn: ["ios"]
+    ) { combination in
+        TextFieldSearchPromptSample(values: TextFieldMatrixValues(combination))
+            .matrixCellTakesOfferedWidth()
     }
 
     /// A text longer than the field, which reaches the glyph at its end, left to right and right to left.
@@ -661,5 +680,18 @@ private struct TextFieldLivePage: View {
             try? await Task.sleep(for: .milliseconds(300))
             focused = focusing == .framed ? .small : .title
         }
+    }
+}
+
+/// The search field of `TextFieldSearchSample`, empty, in the combination's variant, size and state.
+private struct TextFieldSearchPromptSample: View {
+    let values: TextFieldMatrixValues
+
+    var body: some View {
+        let (variant, size, _, stateName) = values.fields
+        TextFieldSearchSample(variant: variant, size: size)
+            // Room for the ring, drawn outside the field's frame, as in the generated cell.
+            .padding(variant.focusRingClearance)
+            .forcingTextFieldState(stateName.flatMap(TextFieldCatalogState.init(named:)))
     }
 }

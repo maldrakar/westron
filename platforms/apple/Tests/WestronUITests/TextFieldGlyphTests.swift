@@ -106,9 +106,10 @@ struct TextFieldGlyphTests {
             // Three lines: the first baseline is in the top third.
             #expect(bare.baseline < bare.size.height / 2, "\(bare)")
         }
-        // The glyphs change neither the field's height nor where its text stands: they are drawn over the field's own
-        // room and add no height, even where one reaches higher above its baseline than the first line (on iOS a glyph
-        // by a pixel, which a glyph beside the field in a stack added to a multi-line field's height).
+        // The glyphs change neither the field's height nor where its text stands: they stand beside the field in a row
+        // that is sized by the field alone, and add no height, even where one reaches higher above its baseline than
+        // the first line (on iOS a glyph by a pixel, which a glyph beside the field in a stack added to a multi-line
+        // field's height).
         #expect(abs(laidOut.size.height - bare.size.height) < Self.tolerance, "\(laidOut.size) for \(bare.size)")
         #expect(abs(laidOut.baseline - bare.baseline) < Self.tolerance, "\(laidOut.baseline) for \(bare.baseline)")
         // Each glyph stands on the field's first baseline, its place rounded to the pixel.
@@ -141,8 +142,17 @@ struct TextFieldGlyphTests {
         func rooms(_ parts: (leading: CGRect, trailing: CGRect, field: CGRect)) -> (CGFloat, CGFloat) {
             (parts.field.minX - parts.leading.minX, parts.trailing.maxX - parts.field.maxX)
         }
+        // The gap itself, between each glyph and the field's text.
+        func gaps(_ parts: (leading: CGRect, trailing: CGRect, field: CGRect)) -> (CGFloat, CGFloat) {
+            (parts.field.minX - parts.leading.maxX, parts.trailing.minX - parts.field.maxX)
+        }
         for size in [DynamicTypeSize.accessibility1, .accessibility3, .accessibility5] {
             let parts = try layOut(size)
+            // The gaps are xxxLarge's, not the glyph's room alone.
+            let (leadingGap, trailingGap) = gaps(parts)
+            let (leadingGapAtLargest, trailingGapAtLargest) = gaps(largest)
+            #expect(abs(leadingGap - leadingGapAtLargest) < Self.tolerance, "\(size): gap \(leadingGap)")
+            #expect(abs(trailingGap - trailingGapAtLargest) < Self.tolerance, "\(size): gap \(trailingGap)")
             // The glyphs are drawn as at xxxLarge, and the field leaves them the same room.
             for (glyph, atLargest) in [(parts.leading, largest.leading), (parts.trailing, largest.trailing)] {
                 #expect(abs(glyph.width - atLargest.width) < Self.tolerance, "\(size): \(glyph) for \(atLargest)")
@@ -161,6 +171,9 @@ struct TextFieldGlyphTests {
             // Up to xxxLarge the glyph grows with the text, as an icon beside text does.
             #expect(largest.leading.height > large.leading.height + 1, "\(largest.leading) for \(large.leading)")
             #expect(rooms(largest).0 > rooms(large).0 + 1, "\(rooms(largest)) for \(rooms(large))")
+            // And so does the gap, on its own: a gap that kept its default size beside a growing glyph would fail.
+            #expect(gaps(largest).0 > gaps(large).0 + 1, "gaps \(gaps(largest)) for \(gaps(large))")
+            #expect(gaps(largest).1 > gaps(large).1 + 1, "gaps \(gaps(largest)) for \(gaps(large))")
         #else
             // macOS has no Dynamic Type: the glyph is the same at every text size.
             #expect(abs(largest.leading.height - large.leading.height) < Self.tolerance)
@@ -204,6 +217,71 @@ struct TextFieldGlyphTests {
                     #expect(
                         abs(frame.minY + glyph.baseline - laidOut.baseline) <= Self.pixel,
                         "\(size): \(frame), \(glyph), \(laidOut)")
+                }
+            }
+        }
+    }
+
+    @Test(
+        "a context's image scale changes neither a glyph nor the room the field leaves it",
+        arguments: [TextFieldVariant.framed, .inline], [Image.Scale.small, .large])
+    func imageScaleIsFixed(variant: TextFieldVariant, scale: Image.Scale) throws {
+        let plain = Self.layOut(Self.field(variant, trailing: .hash))
+        let scaled = Self.layOut(Self.field(variant, trailing: .hash).imageScale(scale))
+        for part in [TextFieldGlyphAnchors.Part.leading, .field, .trailing] {
+            let expected = try #require(plain.parts[part])
+            let laidOut = try #require(scaled.parts[part])
+            #expect(
+                abs(laidOut.minX - expected.minX) < Self.tolerance && abs(laidOut.minY - expected.minY) < Self.tolerance
+                    && abs(laidOut.width - expected.width) < Self.tolerance
+                    && abs(laidOut.height - expected.height) < Self.tolerance,
+                "\(part) under \(scale): \(laidOut) for \(expected)")
+        }
+        #expect(scaled.size == plain.size)
+    }
+
+    @Test(
+        "a glyph taller than its line grows no field, and on framed stays inside the field, up to xxxLarge",
+        arguments: [DynamicTypeSize.large, .xxxLarge])
+    func aGlyphTallerThanItsLine(size: DynamicTypeSize) throws {
+        // framed's text role, body.regular, which `field` gives inline's context too; each glyph at its fixed scale.
+        let line = Self.layOut(Text(verbatim: "A").textRole(.body.regular).dynamicTypeSize(size))
+        let heights = Westron.Icon.allCases.map { icon in
+            (
+                icon,
+                Self.layOut(Icon(icon).imageScale(.medium).textRole(.body.regular).dynamicTypeSize(size)).size.height
+            )
+        }
+        // The glyphs taller than a line (on macOS the trash and the wrench), and the tallest, whether it is or not.
+        let tallest = try #require(heights.max { $0.1 < $1.1 })
+        let taller = heights.filter { $0.1 > line.size.height }.map(\.0)
+        print(
+            "TextFieldGlyphTests at \(size): a line \(line.size.height) pt; taller: \(heights.filter { $0.1 > line.size.height })"
+        )
+        for icon in Set(taller + [tallest.0]).sorted(by: { $0.rawValue < $1.rawValue }) {
+            for variant in [TextFieldVariant.framed, .inline] {
+                for fieldSize in TextFieldSize.allCases {
+                    for axis in [Axis.horizontal, .vertical] {
+                        let text = axis == .vertical ? "Milk\nApples" : "Groceries"
+                        let bare = Self.layOut(
+                            Self.field(variant, size: fieldSize, axis: axis, text: text, leading: nil)
+                                .dynamicTypeSize(size))
+                        let laidOut = Self.layOut(
+                            Self.field(variant, size: fieldSize, axis: axis, text: text, leading: icon, trailing: icon)
+                                .dynamicTypeSize(size))
+                        let name = "\(icon) on \(variant) \(fieldSize) \(axis) at \(size)"
+                        // The row is the field's height: the glyph adds none.
+                        #expect(
+                            abs(laidOut.size.height - bare.size.height) < Self.tolerance, "\(name): \(laidOut.size)")
+                        guard variant == .framed else { continue }
+                        // On framed, the glyph reaches into the field's padding, inside its fill.
+                        for part in [TextFieldGlyphAnchors.Part.leading, .trailing] {
+                            let frame = try #require(laidOut.parts[part])
+                            #expect(
+                                frame.minY >= -Self.tolerance && frame.maxY <= laidOut.size.height + Self.tolerance,
+                                "\(name): \(frame) in \(laidOut.size)")
+                        }
+                    }
                 }
             }
         }

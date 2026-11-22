@@ -193,7 +193,8 @@
     enum LineField: CaseIterable {
         case framedS, framedM, framedL, framedEmpty, framedSecure, framedSeveral
         case inlineBody, inlineHeading, inlineFootnote, inlineSeveral
-        case framedSGlyph, framedMGlyph, framedSeveralGlyph, framedSecureGlyph, inlineBodyGlyph, inlineSeveralGlyph
+        case framedSGlyph, framedMGlyph, framedSSeveralGlyph, framedSeveralGlyph, framedSecureGlyph, inlineBodyGlyph
+        case inlineSeveralGlyph
 
         /// The fields without a glyph, laid out as before #115.
         static let plain: [LineField] = [
@@ -202,8 +203,8 @@
         ]
         /// The fields with a glyph at their end, the side where the hold widens the field (#115).
         static let withGlyphs: [LineField] = [
-            .framedSGlyph, .framedMGlyph, .framedSeveralGlyph, .framedSecureGlyph, .inlineBodyGlyph,
-            .inlineSeveralGlyph,
+            .framedSGlyph, .framedMGlyph, .framedSSeveralGlyph, .framedSeveralGlyph, .framedSecureGlyph,
+            .inlineBodyGlyph, .inlineSeveralGlyph,
         ]
 
         @MainActor @ViewBuilder var view: some View {
@@ -222,6 +223,7 @@
             case .inlineSeveral: Self.inline(.body.regular, axis: .vertical)
             case .framedSGlyph: Self.framed(.s, axis: .horizontal, trailingIcon: .hash)
             case .framedMGlyph: Self.framed(.m, axis: .horizontal, trailingIcon: .hash)
+            case .framedSSeveralGlyph: Self.framed(.s, axis: .vertical, trailingIcon: .hash)
             case .framedSeveralGlyph: Self.framed(.m, axis: .vertical, trailingIcon: .hash)
             case .framedSecureGlyph:
                 SecureField("Password", text: .constant("secret"))

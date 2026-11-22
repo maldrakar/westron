@@ -142,7 +142,8 @@ pilot's need. A control at the end is a later revision, with its consumer.
   and `container.gap` from the text: `space.75` (6) at `s`, `space.100` (8) at `m` and `l` and on `inline`. The pilot's
   gaps are 8 on the phone and 6 on the Mac; Button's gap, 4 and 6, sits between an icon and a strong label, and a
   magnifier before a placeholder reads apart at 6 to 8. The gap scales with Dynamic Type as the padding does, relative
-  to the field's text style. Considered: a tighter inset for the glyph than for the text, such as `space.100`,
+  to the field's text style (on Apple an inline field's gap scales on body's curve, since a style cannot read its
+  context's text style: below, "The review's findings"). Considered: a tighter inset for the glyph than for the text, such as `space.100`,
   `space.150` and `space.200`, which would sit it in the capsule's round end as the system's search fields do (the
   pilot's is 15 in at 48 high); it adds a binding per glyph and moves the text of a search field off the text of the
   fields stacked with it. Open question 6.
@@ -176,7 +177,8 @@ I1): the two differ in color until westron draws its own prompt, the open point 
   contract asks of an icon next to text. Button's icon is a scale smaller, beside a strong label; the pilot's glyph is
   the size of its word (17 pt beside 17 pt). Open question 8.
 - Start and end follow the layout direction: right to left, the magnifier is at the right and the microphone at the
-  left. Whether a glyph itself mirrors is the system's, per symbol; neither `magnifyingglass` nor `mic` was measured.
+  left. Whether a glyph itself mirrors is the system's, per symbol; neither `magnifyingglass` nor `mic` was measured
+  (the magnifier was later: it does not mirror, below, "The review's findings").
 
 ### 8. Accessibility
 
@@ -317,7 +319,9 @@ With Xcode 27.1, on macOS 26.7.1 and the iPhone 17 simulator of iOS 26.3, on 202
   the field in an `HStack(alignment: .firstTextBaseline)`: it drew the same, but on iOS it added a pixel to a multi-line
   field whose microphone reaches higher than its first line, and the overlays leave the system field the only view of
   the row's height. A glyph stands at the field's padding and the field `container.gap` from it, at every
-  size of both variants, and right to left the start is at the right (`TextFieldGlyphTests`, within 0.05 pt).
+  size of both variants, and right to left the start is at the right (`TextFieldGlyphTests`, within 0.05 pt). The
+  overlays are superseded: the second revision (below, "The room is measured in the same layout pass") sets the glyphs
+  beside the field in one `Layout`, which draws the same, file for file on macOS.
 - **The baseline.** The system field gives its first line's baseline, not its bottom, on one line and on several, on
   macOS and iOS: a glyph's baseline is the field's first baseline, within half a point, the pixel it is rounded to
   (`TextFieldGlyphTests`). The glyphs change neither the field's height nor where its text stands (within 0.05 pt). On macOS the
@@ -330,6 +334,8 @@ With Xcode 27.1, on macOS 26.7.1 and the iPhone 17 simulator of iOS 26.3, on 202
   and at 1x right to left (70); the same fields laid out with the hold and without it, in a process where the state
   cannot arise, were laid out the same. Without the hold (`WESTRON_FIELD_LINE_UNFIXED=1`) the same tests fail: fields
   163 to 347 times off their lines, and the glyph row moving with them, a point up beside a field laid out 17 pt high.
+  The second revision (below) put a number sign where the microphone was, and the framed field on several lines was
+  at `m` only until the review's findings added one at `s` (below, with the runs since).
 - **A tap or a click on a glyph** focuses the field, through the style's hit area (the catalog's
   `TextFieldBehaviorTests`, `testATouchOrClickOnAGlyphFocusesTheField`, 6 pt into each glyph; passed on iOS and on
   macOS). On macOS the class's `testMultilineAndSecureFieldsEdit` fails on this Mac, the text typed into the inline
@@ -395,7 +401,7 @@ that is not an accessibility size, and no further:
   end; the same fields drawn without glyphs do the same (the `glyphs-right-to-left` sheets rendered with no glyph), so
   it is the system field's, not the glyphs'.
 - **Editing beside a glyph** (`TextFieldLineTests`, `anEditedFieldWithAGlyphKeepsItsEditing`, 1500 attempts): the two
-  long-lived fields with the microphone at their end, each edited in turn with text selected and then while an input
+  long-lived fields with the microphone at their end (a number sign since the second revision, below), each edited in turn with text selected and then while an input
   method composes, kept their text, selection, marked text and lines, with their own fonts made anew 40 and 13 times
   while edited and no runtime warning of SwiftUI's but the canary's. Without the hold, 140 times off their lines.
 
@@ -453,3 +459,48 @@ above and the revision before it where they say otherwise; the record above stay
   field already stood past its glyph on macOS and iOS (`TextFieldGlyphIdentityTests`, the first layout, passes with
   both styles), so the change removes a dependency on SwiftUI applying that state before it draws, not an observed
   defect. A render of every component's matrix on macOS with the overlays and with the row is the same, file for file.
+
+## The review's findings
+
+Applied on 2026-11-22 (#115) after the review of the second revision, contract text first. With Xcode 27.1, on macOS
+26.7.1 and the iPhone 17 simulator of iOS 26.3:
+
+- **How the row is described.** The contract and the comments said a glyph was drawn "over the system field's own
+  room", the overlays the second revision replaced. They now say what the code does: the glyphs stand beside the
+  system field in one layout that offers the field the row's width less each glyph and its gap, sizes the row by the
+  field alone and stands each glyph on the field's first text baseline, inside the fill.
+- **The glyph's image scale is fixed.** `TextFieldGlyph` set none, so a context's `.imageScale(.large)` resized the
+  glyph and the room the field leaves it. It now sets `.imageScale(.medium)`, the text's own scale, as Button and Chip
+  set their icons'; the contract says a context's scale does not change the glyph. `TextFieldGlyphTests`
+  (`imageScaleIsFixed`) lays both variants out under `.imageScale(.small)` and `.large` against a field under none:
+  the same glyphs, field and room within 0.05 pt; with the line taken out it fails in every case.
+- **The gap itself is tested.** `glyphsStopAtTheLargestTextSize` measured each glyph's room, its width and gap
+  together, so a gap that never scaled would have passed. It now also asserts the gap, the field's edge less the
+  glyph's: equal to xxxLarge's at accessibility1, 3 and 5 on both platforms, and on iOS more than a point wider at
+  xxxLarge than at large.
+- **The gap on inline.** A `TextFieldStyle` cannot read its context's text style: SwiftUI's font in the environment is
+  opaque, and `.textRole(_:)` sets no value of its own. So on Apple an inline field's gap scales on body's curve, the
+  style's fallback, not on its context's (point 5 said "the field's text style"); the contract's `platforms.apple`
+  says so. The glyph itself is in the context's role.
+- **Mirroring.** Whether a glyph mirrors right to left is the platform's, per symbol, as for any icon: in the
+  `glyphs-right-to-left` sheets the magnifier's handle is at the lower right in both directions, on macOS and on iOS.
+  The contract says so.
+- **The cap, platform-neutral.** The contract names the cap as the largest text size that is not an accessibility
+  size, the sizes a platform sets apart above its standard ones for large text, with Apple's mapping (xxxLarge, and
+  accessibility1 to 5); a platform without such sizes caps nothing.
+- **A glyph taller than its line.** Measured over the whole registry in `body.regular` at medium scale, at large and at
+  xxxLarge (`TextFieldGlyphTests`, `aGlyphTallerThanItsLine`): on macOS, beside a line of 16 pt, the trash is 16.5 pt
+  and the wrench 18, the rest no taller than the line. The field does not grow for such a glyph: the row is the
+  field's height on both variants, at every size, on one line and on several, and on framed the glyph stays inside the
+  field, in its padding. On inline, which has no padding, it reaches past the field's frame by what it exceeds. The
+  contract says so rather than that no glyph is taller.
+- **A search field's prompt in the references.** A supplement, `search-prompt`, draws the contract's search recipe
+  empty, its prompt in `text.placeholder`, on iOS only (`onlyOn`), since macOS ignores a prompt's color: the
+  references now hold the prompt's color, which until now only the catalog page showed.
+- **The generated doc comment.** The generator copies an option's first sentence into the overload's documentation, so
+  both options' first sentences now say that a glyph names what the field is for, never an action.
+- **The hold beside a glyph at `s`.** `TextFieldLineTests` had a framed field of several lines with a glyph only at
+  `m`; one at `s` is added, so the contract's sentence on framed fields at `s` and `m`, on one line and on several,
+  holds. The runs with it, 1500 attempts each: the fields with a glyph kept their lines, sizes and glyph rows with
+  fonts made anew 42 times; a field that stays on screen at 2x (74), at 1x left to right (103) and right to left (45);
+  without the hold, 100 times off their lines.

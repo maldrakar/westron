@@ -8,7 +8,7 @@ extension ComponentMatrix.Supplement {
             .buttonLabelWithoutIcon, .iconBesideText, .iconColorRoles, .surfaceNesting, .checkboxListColors,
             .checkboxTextRoles, .textFieldCardNotes, .textFieldSecure, .textFieldOnSurface, .textFieldOnSunken,
             .textFieldGlyphLeading, .textFieldGlyphTrailing, .textFieldGlyphsBoth, .textFieldGlyphsLongText,
-            .textFieldGlyphsRightToLeft,
+            .textFieldGlyphsRightToLeft, .textFieldSearchPrompt,
             .ruleLabelled, .iconTileListColors, .iconTileBesideTitle, .iconTileEmptyScreen, .chipLitAccent,
             .chipLongLabel,
         ] + chipListColors + chipTextOnly
