@@ -319,9 +319,13 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         screen: Int, nextDrag: CGFloat?
     ) -> [String] {
         guard !types.isEmpty else { return [] }
-        // An audit now and then gives up ("Audit failed to complete in time", -56): it is run once more, and if it
-        // fails again the entry fails for infrastructure (`tools/apple/check.sh a11y` then audits it again in a run
-        // of its own), but this run goes on to the next entry.
+        // An audit now and then gives up ("Audit failed to complete in time", -56): it is run once more. On iOS, one
+        // that gives up twice at a screenful is run a third time with the page moved on by a tenth of the screen:
+        // measured on 2026-11-22 (ListRow, #119), the contrast audit gave up on every try at one scroll position of
+        // `list-row` at accessibility5, and completed in a third of a second with the page 30 pt before it or 60 pt
+        // past it; the screenfuls overlap by more than the nudge, so nothing goes unaudited. If that fails too, the
+        // entry fails for infrastructure (`tools/apple/check.sh a11y` then audits it again in a run of its own), but
+        // this run goes on to the next entry.
         do {
             return try performAudit(app, entryID, configuration, types: types, screen: screen, nextDrag: nextDrag)
         } catch {
@@ -329,6 +333,22 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             do {
                 return try performAudit(app, entryID, configuration, types: types, screen: screen, nextDrag: nextDrag)
             } catch {
+                #if os(iOS)
+                    let entry = app.descendants(matching: .any)[CatalogAccessibilityID.entry]
+                    if entry.exists {
+                        print(
+                            "a11y: auditing \(entryID), screen \(screen) again, the page moved on by a tenth: \(error)")
+                        let start = entry.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                        let end = entry.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.4))
+                        start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.2)
+                        settle(entry, entryID, screen: screen)
+                        if let issues = try? performAudit(
+                            app, entryID, configuration, types: types, screen: screen, nextDrag: nextDrag)
+                        {
+                            return issues
+                        }
+                    }
+                #endif
                 XCTFail(
                     "\(Self.infrastructurePrefix)\(entryID), screen \(screen): the audit did not complete: \(error)")
                 return []
@@ -604,6 +624,16 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             Suppression(.entry("chip"), type: .contrast, reason: "an inactive control", enabled: false) {
                 ["disabled", "disabled, on"].contains($0 ?? "")
             },
+            // Contrast on the disabled ListRow samples, drawn whole at opacity.disabled by the contract, their slots
+            // with them: WCAG exempts an inactive control (design-language chapter 08). Only an element that is not
+            // enabled matches: the row's button and the texts under it, its title and its count; the same words in the
+            // other states are audited as usual.
+            Suppression(.entry("list-row"), type: .contrast, reason: "an inactive row", enabled: false) {
+                [
+                    "pressable, disabled", "pressable, disabled, 12", "static, disabled", "static, disabled, 12",
+                    "Archived", "12",
+                ].contains($0 ?? "")
+            },
             // No suppression for the checks with no drawn label beside separate titles (the live row here, the rows
             // of `checkbox-in-list`): written with `Toggle(isOn:accessibilityLabel:)`, their label is an `EmptyView`
             // carrying the name, and the audit reports neither contrast nor clipped text on them (measured on
@@ -627,6 +657,21 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                 // cannot import.
                 Suppression(.entry("chip"), type: .textClipped, reason: "a chip's label truncated by its contract") {
                     $0 == "A tag whose name runs much longer than its chip"
+                },
+                // No suppression for the selected ListRow samples: with the accessibility representation's title laid
+                // out in the drawn font, body.strong while selected (decisions/0001, D4), the text clipped audit
+                // reports neither the pressable nor the static selected sample, at the default settings or at
+                // accessibility5 (measured on iOS 26, 2026-11-22). Before, the representation's regular title was
+                // reported on the pressable one.
+                // "Text clipped" on the long title of the sample at level 4, which the page sets on one line: the
+                // ListRow contract truncates a title the product sets on one line at its end and keeps the whole
+                // title as the row's name (spec/components/list-row, decisions/0001, Q3), which it is. Only this one
+                // label matches; it is `ListRowSample.long`, which this target cannot import.
+                Suppression(
+                    .entry("list-row"), type: .textClipped,
+                    reason: "a row's title on one line, truncated by its contract"
+                ) {
+                    $0 == "A list whose name runs much longer than the room its row leaves"
                 },
                 // "Text clipped" on the pressable chip the catalog holds pressed, in every configuration that runs the
                 // text clipped audit (the default settings and accessibility5): the contract draws a pressed chip at

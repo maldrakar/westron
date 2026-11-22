@@ -11,6 +11,7 @@ extension ComponentMatrix {
         .chip,
         .icon,
         .iconTile,
+        .listRow,
         .rule,
         .surface,
         .text,

@@ -84,7 +84,9 @@ overshooting curve would differ on each (decisions/0013).
 The tokens give timing: a duration, a curve and a spring. What moves, and how far, belongs to the component's
 contract: a check's pop in scale, a card's entrance in fade and offset, a row's exit. The same timing can drive
 different shapes, and a shape changes with its component, never with the motion tokens. One shape is fixed for every
-control: a press scales it down to 98 %, which is part of direction B's character.
+control: a press scales it down to 98 %, which is part of direction B's character. A list's row is the exception:
+it tints on a press and does not scale, since a full-width row shrinking would pull its edges off the column
+(spec/components/list-row, decisions/0001, Q6).
 
 ## Reduce Motion
 

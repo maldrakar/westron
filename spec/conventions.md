@@ -9,7 +9,9 @@ the options whose values are tokens or icons, `extension-on-system-control` ("Ex
 "Context a style reads" with `.category(_:)`. On 2026-11-19 (#86) `accessibility.hiddenLabel` and its initializer
 ("A label that is not drawn"), the form the owner's choice, the name pending the owner's confirmation. On
 2026-11-22 (#116), approved by the coordinating agent under the owner's delegation: a view's drawn text label, a
-constraint on a slot, and the role `heading` ("Own components", the table).
+constraint on a slot, and the role `heading` ("Own components", the table). On 2026-11-22 (#119), approved by the
+coordinating agent under the owner's delegation: an own view with slots, forms and states, an integer option, and marks
+(ListRow; "Own components").
 
 A component contract (`spec/components/<id>/<id>.spec.yaml`) is neutral: options, states, slots, constraints, token
 bindings, accessibility and a `platforms` block. This document is the one rule for how each of those concepts becomes
@@ -527,29 +529,66 @@ public struct Rule: View {
   modifier, or the view's type, conformance, initializer and body, missing, changed or doubled, and any other public
   member of the view's type or function named after the component is reported as API no contract gives. An option
   added to the contract fails the lint, and the matrix cell's build, until the code follows it.
-- **Not derived yet**, so generation and the lint fail on it, naming the part: states, an option named `size`, an
-  option whose values are tokens, icons on a modifier or a second icons option, a restriction of Apple or an Apple OS
-  (an own component has no generated `offered` tables a body could read), more than one slot for a modifier, and a
-  variant or slots for a view, other than the one slot `label`, an icon's spoken one or a drawn text label. The first
-  contract that needs one settles it here.
+- **A view with slots** (ListRow, #119). A view with two slots or more, and no option whose values are icons, takes
+  each slot as a generic `@ViewBuilder` closure named after it, in the contract's order, after the options: the first
+  slot, the content every instance has, is required; every other defaults to `{ EmptyView() }`, so that an instance
+  names only the slots it fills (SE-0347), and the view's body treats an `EmptyView` slot as absent. The generics are
+  the initializer's, `<Title: View, Subtitle: View, Leading: View, Trailing: View>`, not the type's, so the type stays
+  `ListRow`. One slot other than `label`, or slots beside an icons option, are not derived.
+- **Forms of an own view** (ListRow). A view with two slots or more may have `forms`, each an initializer of the
+  view, in the contract's order: a form whose intents (its own `accessibility`, else the contract's) include
+  `activate` takes `action: @escaping () -> Void` after the options and before the slots; a form without one takes
+  none. An own component's form names no `bases`: no system control stands under it. The generator writes the
+  package-internal `<Component>Form`, its cases, `takesAction` and the states each enters, for the catalog and the
+  tests. A modifier with forms is not derived, and `spec check` rejects an own component with forms whose Apple form is
+  not `view`.
+
+  ```swift
+  public struct ListRow: View {
+      public init<Title: View, Subtitle: View, Leading: View, Trailing: View>(       // pressable
+          level: Int = 0, guides: Bool = true, action: @escaping () -> Void,
+          @ViewBuilder title: () -> Title, @ViewBuilder subtitle: () -> Subtitle = { EmptyView() },
+          @ViewBuilder leading: () -> Leading = { EmptyView() }, @ViewBuilder trailing: () -> Trailing = { EmptyView() })
+      public init<Title: View, Subtitle: View, Leading: View, Trailing: View>(       // static: no action
+          level: Int = 0, guides: Bool = true, @ViewBuilder title: () -> Title, …)
+      public var body: some View
+  }
+  ```
+- **States of an own view** (ListRow). The view carries hover, focus, pressed and disabled itself, from the system
+  Button inside it, `onHover` and `.disabled(_:)` (`AppleComponents.Own.systemStates`); every other state is a shared
+  environment modifier on `View`, named after the state, `public func selected(_ isSelected: Bool) -> some View` and
+  `public func dropTarget(_ isDropTarget: Bool) -> some View`, in `WestronUI/States.swift`, which any component with
+  that state reads, as `.loading(_:)` is for a style. The generator writes the internal `<Component>State`, with
+  `isEntered` per OS from the `platforms` block: a restriction of an Apple OS on an own component may name its
+  `states` (ListRow's watchOS enters no hover, focus or dropTarget); one that restricts its options or names a
+  fallback is not derived. A modifier with states is not derived.
+- **An integer option** (ListRow's `level`). `type: integer` with a `default` and an optional `minimum`: on an own
+  component a parameter `<name>: Int = <default>`, which the component clamps to its minimum; no enum, and no axis of
+  the snapshot matrix, since its values are a quantity (a hand-written supplement draws the ones that matter). A
+  case, a constraint, a restriction or a system option cannot name it, and a style cannot have one (`spec check`,
+  generation).
+- **Marks** (ListRow's `insertion`). A mark is a look the product draws on the component at a place it names, which no
+  option, state or slot carries, such as where a drop would land: the contract's top-level `marks`, each with
+  `parameters` of the option types. On Apple it is a modifier on `View`, `<mark>Mark`, whose first parameter is the
+  first parameter's enum, optional and unlabeled, nil drawing none, and whose other parameters are labeled with their
+  defaults: `.insertionMark(_ edge: ListRowInsertionEdge?, level: Int = 0)`. The enum is generated,
+  `<Component><Mark><Parameter>`; the modifier is hand-written and the lint holds it, as the component's own. A mark
+  whose first parameter is not an enum is not derived.
+- **Not derived yet**, so generation and the lint fail on it, naming the part: states or forms on a modifier, an
+  option named `size`, an option whose values are tokens, icons on a modifier or a second icons option, a restriction
+  of Apple or an Apple OS that restricts options or names a fallback (an own component has no generated `offered`
+  tables a body could read), more than one slot for a modifier, a variant for a view, one slot other than `label`, and
+  slots beside an icons option. The first contract that needs one settles it here.
 - **The snapshot matrix** is generated as for a style: the options are the axes (Surface: variant × outlined, Rule: axis
   × purpose), its cell the hand-written `<Component>MatrixCell` with the real component. A contract with no states and
   an option whose values are icons runs the registry's names down the rows, six to a sheet, and its first other option
   across (Icon: glyph × scale, six sheets); a supplement over such a matrix may keep a few rows, on one sheet. A slot is
-  not an axis: a drawn label is a hand-written supplement (Rule's `labelled`).
-- **Other slots of a view**, when the conventions derive them, are `@ViewBuilder` closures, one per slot, named after
-  it, with initializers that take text and a `Westron.Icon` for the common case, as SwiftUI's `Label` does. An optional
-  slot is an initializer without it, not an optional closure:
-
-  ```swift
-  // Signatures only; EmptyState's contract decides its slots.
-  public struct EmptyState<Title: View, Actions: View>: View {
-      public init(@ViewBuilder title: () -> Title, @ViewBuilder actions: () -> Actions)
-  }
-  ```
+  not an axis: a drawn label is a hand-written supplement (Rule's `labelled`). An own view's forms are an axis, as a
+  style's are, and its cell calls the form's initializer; its states are the rows; an integer option is no axis
+  (ListRow: form × guides).
 - **States.** An interactive part of an own component is a system control inside it, such as a Banner's dismiss
-  `Button`, so its pressed, hover, focus and disabled states are the system's. A state the system lacks goes
-  through the environment, as above.
+  `Button` or a ListRow's action, so its pressed, hover, focus and disabled states are the system's. A state the
+  system lacks goes through the environment, as above.
 - **Accessibility.** An own component declares its role, label, value, states and actions from the contract's
   `accessibility` block (chapter 08), through the modifiers in the table. Role `none` adds nothing to a modifier's
   content (Surface). Role `heading` marks a view's drawn label as a heading, and a view drawn without one, which has
@@ -582,9 +621,9 @@ left open, and the last one what the size question left open.
 2. **Options of an own component.** Settled for a modifier and for a view without slots or a variant, with Surface
    and Rule (#29, "Own components"): the options are the modifier's arguments or the initializer's parameters. Settled
    under the owner's delegation of 2026-11-18, and waiting for the owner's confirmation. Settled for a view with the
-   one slot `label`, an icon's spoken label (Icon, #28) or drawn text (Rule, #116), as (a) below. Still open for a
-   view with other slots or a variant: (a) initializer parameters, `Badge("3", variant: .info)`: the report's
-   parity-first shape; (b) a style modifier on the component, `Badge("3").badgeStyle(.info)`, cascading through the
+   one slot `label`, an icon's spoken label (Icon, #28) or drawn text (Rule, #116), and for a view with several
+   slots (ListRow, #119), as (a) below. Still open for a view with a variant: (a) initializer parameters,
+   `Badge("3", variant: .info)`: the report's parity-first shape; (b) a style modifier on the component, `Badge("3").badgeStyle(.info)`, cascading through the
    environment: the same call shape as a system control, and a later system control could replace the own component
    without changing call sites.
 3. **A forbidden combination in code.** (a) Nothing beyond the validator, the catalog and the snapshot matrix.

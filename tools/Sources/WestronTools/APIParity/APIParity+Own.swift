@@ -3,8 +3,10 @@ extension APIParity {
     /// and either the modifier on `View` (`public func surface(_: SurfaceVariant, outlined: Bool = false) -> some
     /// View`) or the view type with its initializer and body (`public struct Rule: View`, `public init(axis: RuleAxis
     /// = .horizontal)`, `public var body: some View`). A contract the conventions derive no such API from is reported,
-    /// as generation reports it.
-    static func expectOwn(_ item: Contract, into expected: inout Expected) {
+    /// as generation reports it. Each mark adds its modifier on `View` and the enums of its enum parameters; the shared
+    /// modifiers of its states the caller expects with the styles' (`AppleComponents.Own.modifierStates`).
+    @discardableResult
+    static func expectOwn(_ item: Contract, into expected: inout Expected) -> AppleComponents.Own? {
         let api: AppleComponents.Own
         do {
             api = try AppleComponents.Own(item.contract, source: item.source)
@@ -13,11 +15,22 @@ extension APIParity {
                 Problem(
                     file: item.source, line: item.line(of: "form"),
                     "the lint cannot derive \(item.component)'s API: \(error.message); generate reports it too"))
-            return
+            return nil
         }
         for value in api.enums {
             expected.enums.append(
                 ExpectedEnum(contract: item, option: value.option, type: value.type, values: value.values))
+        }
+        for mark in api.marks {
+            for value in mark.enums {
+                expected.enums.append(
+                    ExpectedEnum(contract: item, option: value.option, type: value.type, values: value.values))
+            }
+            expected.functions.append(
+                ExpectedFunction(
+                    what: "\(item.component)'s mark \(mark.mark)", contracts: [item], name: mark.name,
+                    parameters: mark.parameters, types: Set(mark.enums.map(\.type)),
+                    line: (item.source, item.line(of: "marks"))))
         }
         switch api.form {
         case .modifier:
@@ -29,6 +42,7 @@ extension APIParity {
         case .view:
             expected.views.append(ExpectedView(contract: item, type: api.name, initializers: api.initializers))
         }
+        return api
     }
 
     /// Checks each own component's view: a public top-level struct that conforms to `View` alone, its public

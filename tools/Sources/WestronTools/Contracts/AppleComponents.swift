@@ -431,6 +431,11 @@ public struct AppleComponents: Generator {
                         "\(option.name) takes its values from the icon registry: the generator does not give a style "
                             + "such an option yet")
                 }
+                if case .integer = option.kind {
+                    throw problem(
+                        .root.key("options").key(option.name),
+                        "\(option.name) is an integer: the generator does not give a style such an option yet")
+                }
             }
             let optionNames = contract.options.map(\.name)
             for name in apple.systemOptions.keys.sorted() where !optionNames.contains(name) {
@@ -606,7 +611,7 @@ public struct AppleComponents: Generator {
                 switch option.kind {
                 case .bool(let value):
                     result.append((name, "\(option.name): Bool = \(value)", false))
-                case .tokenGroup, .icons:
+                case .tokenGroup, .icons, .integer:
                     continue  // API's initializer rejects it.
                 case .enumeration:
                     guard let item = enums.first(where: { $0.option.name == option.name }) else { continue }
@@ -657,7 +662,7 @@ public struct AppleComponents: Generator {
                     let summary =
                         option.description.map(Self.firstSentence) ?? "The contract's option `\(option.name)`."
                     items.append("- \(option.name): \(summary) By default `\(value)`.")
-                case .tokenGroup, .icons:
+                case .tokenGroup, .icons, .integer:
                     continue  // API's initializer rejects it.
                 case .enumeration:
                     guard let item else { continue }

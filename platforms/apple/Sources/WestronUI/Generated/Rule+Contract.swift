@@ -2,8 +2,8 @@
 // generate again (spec/conventions.md).
 //
 // Rule's API from its contract: the enums of its options. It is an own component, and the view `Rule` and its
-// `Rule.init(axis:purpose:)` are hand-written in WestronUI/Rule/; the API parity lint holds the signature to the
-// contract (spec/conventions.md, "Own components").
+// initializers are hand-written in WestronUI/; the API parity lint holds their signatures to the contract
+// (spec/conventions.md, "Own components").
 
 /// Rule's option `axis`, from its contract.
 ///

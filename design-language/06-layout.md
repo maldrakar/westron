@@ -46,7 +46,9 @@ B spends space generously, on the 8 px base. Each place has a role, and the role
   itself.
 - **The margins are for layout the product builds.** A `ScrollView`, a stack or a grid that the product lays out
   takes westron's page margin. The system's `List`, `Form`, toolbars and navigation bars keep their own insets, as a
-  system control keeps its own look (decisions/0003), so a westron screen next to a system one does not jump.
+  system control keeps its own look (decisions/0003), so a westron screen next to a system one does not jump. One
+  exception: a ListRow in a `List` draws its own padding and highlight, so the product sets the List's row insets to
+  zero for it (spec/components/list-row, decisions/0001, Q2).
 
 - **Groups show through space.** The gap between groups is twice the gap inside one, so a person sees the grouping
   before any line. Separators stay quiet (chapter 02), and a screen needs few of them (chapter 00, principle 4).
@@ -99,6 +101,10 @@ B spends space generously, on the 8 px base. Each place has a role, and the role
 - **Text scales, and containers make room.** Every role follows the person's text size (chapter 03), and so does the
   spacing that belongs to text: on Apple through `@ScaledMetric`, with a token as its base value. A row, a bar or a
   header grows with its text.
+- **Structure stops growing at xxxLarge; text grows on.** At the accessibility text sizes the room is the words'. A
+  component's horizontal structure, such as a row's indent per level, its side padding and the gaps beside its title,
+  scales up to xxxLarge and keeps that width above it, while the text, its line spacing and the vertical padding keep
+  scaling (spec/components/list-row, decisions/0001, D2; the same rule as a text field's glyphs in this phase).
 - **A minimum height, never a fixed one, wherever text sits.** A fixed height clips text at large sizes. SwiftUI's
   lists work the same way: `defaultMinListRowHeight` is a minimum. Some of the pilot's bars and headers have fixed
   heights today; the westron components that replace them have minimum heights.

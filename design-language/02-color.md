@@ -30,8 +30,10 @@ values, the ramps and the rules that solve them are in decisions/0012; the token
   it meets 3:1. A secondary button and a framed text field are found by their muted fill, and draw the outline only in
   high contrast, where the check's ring is `border.strong` too (chapter 04). In the standard themes their edges stay
   below 3:1, a deviation the owner accepted on 2026-11-20 (chapter 08). Two lines must be found at once and meet the
-  non-text target on every ground a list stands on: `border.focus`, the focus ring, and `border.insertion`, the line
-  that marks where a dragged item will land, in the same blue.
+  non-text target on every ground a list stands on: `border.focus`, the focus ring and a selected row's bar, and
+  `border.insertion`, the line that marks where a dragged item will land, in the same blue. `border.guide` draws the
+  guides of a tree, the palette's guides step: decorative in the standard themes, where the indent also shows the
+  nesting, and 3:1 in high contrast (spec/components/list-row, decisions/0001, Q7).
 
 ## One accent: cobalt
 
