@@ -172,6 +172,39 @@ struct ChipStyleTests {
         #expect(try Self.binding("container.checkMotion").token == Westron.Transition.fade.name)
     }
 
+    @Test(
+        "the press tints in motion.press; Reduce Motion drops the scale and the resize, and keeps every tint and fade")
+    func motion() {
+        let motion = ChipMotion(reduceMotion: false)
+        let reduced = ChipMotion(reduceMotion: true)
+        #expect(motion.scale(pressed: true) == ChipTokens.pressScale)
+        #expect(motion.scale(pressed: false) == 1)
+        #expect(reduced.scale(pressed: true) == 1)
+        #expect(reduced.scale(pressed: false) == 1)
+        for item in [motion, reduced] {
+            // The tint of a press is the press's motion (design-language/05: "its tint, and its scale").
+            #expect(item.press == .press)
+            #expect(item.hover == .fade)
+            #expect(item.check == .fade)
+        }
+        #expect(motion.resize == .fade)
+        #expect(reduced.resize == nil)
+    }
+
+    @Test("a checked chip shows the check, in every color and state; an unchecked one never")
+    func mark() {
+        for states in Self.stateCombinations {
+            for category in [nil] + Westron.Category.allCases.map(Optional.some) {
+                for highContrast in [false, true] {
+                    let tokens = ChipTokens(category: category, states: states, highContrast: highContrast)
+                    #expect(tokens.mark == ChipTokens.effective(states).contains(.checked))
+                    // The check is drawn in the icon's color, the words' color on a lit fill.
+                    if tokens.mark { #expect(tokens.icon == tokens.label) }
+                }
+            }
+        }
+    }
+
     @Test("the metrics are the contract's single bindings")
     func metrics() throws {
         #expect(try Self.binding("container.height").token == ChipMetrics.height.name)
@@ -201,8 +234,55 @@ struct ChipStyleTests {
         if CGFloat.size.control.s < .size.target.minimum {
             #expect(still.height < .size.target.minimum, "\(still)")
         }
-        // Across, every form is the chip's width.
+        // Across, a chip wider than the target is the chip's width in every form.
+        #expect(selectable.width > .size.target.minimum)
         #expect(abs(selectable.width - still.width) < 0.5 && abs(pressable.width - still.width) < 0.5)
+    }
+
+    @Test("a chip narrower than the target lays out a hit area at least size.target.minimum across, around its capsule")
+    func hitAreaAcross() {
+        let letter = "I"
+        let selectable = fittingSize(Toggle(letter, isOn: .constant(false)).toggleStyle(.chip))
+        let pressable = fittingSize(Button(letter) {}.buttonStyle(.chip))
+        let withIcon = fittingSize(Toggle(isOn: .constant(false)) { Label(letter, icon: .hash) }.toggleStyle(.chip))
+        let capsule =
+            fittingSize(Text(letter).textRole(ChipMetrics.labelFont)).width
+            + 2 * CGFloat(ChipMetrics.paddingHorizontal)
+        #expect(capsule < .size.target.minimum, "a one-letter capsule must be narrower than the target: \(capsule)")
+        for (form, size) in [("selectable", selectable), ("pressable", pressable), ("with an icon", withIcon)] {
+            #expect(size.width >= .size.target.minimum - 0.5, "\(form): \(size)")
+            #expect(size.height >= .size.target.minimum - 0.5, "\(form): \(size)")
+        }
+        // Laid out, so chips side by side never overlap: two of them in a row with no spacing are two hit areas wide.
+        let row = fittingSize(
+            HStack(spacing: 0) {
+                Toggle(letter, isOn: .constant(false)).toggleStyle(.chip)
+                Toggle(letter, isOn: .constant(true)).toggleStyle(.chip)
+            })
+        #expect(row.width >= 2 * .size.target.minimum - 0.5, "\(row)")
+    }
+
+    @Test("lit, a chip with an icon keeps its width; a chip whose label is only text grows by the check and the gap")
+    func markWidth() {
+        let name = "Work"
+        let unlit = fittingSize(Toggle(isOn: .constant(false)) { Label(name, icon: .hash) }.toggleStyle(.chip))
+        let lit = fittingSize(Toggle(isOn: .constant(true)) { Label(name, icon: .hash) }.toggleStyle(.chip))
+        #expect(
+            abs(lit.width - unlit.width) < 0.5, "a lit chip with an icon changed its width: \(lit) against \(unlit)")
+        #expect(abs(lit.height - unlit.height) < 0.5)
+        let textUnlit = fittingSize(Toggle(name, isOn: .constant(false)).toggleStyle(.chip))
+        let textLit = fittingSize(Toggle(name, isOn: .constant(true)).toggleStyle(.chip))
+        let check = fittingSize(
+            Image(Westron.Icon.check).textRole(ChipMetrics.iconFont).imageScale(ChipMetrics.iconScale)
+        ).width
+        let grown = check + CGFloat(ChipMetrics.gap)
+        #expect(
+            abs(textLit.width - textUnlit.width - grown) < 1,
+            "a lit text-only chip grew by \(textLit.width - textUnlit.width), not the check and the gap, \(grown)")
+        #expect(abs(textLit.height - textUnlit.height) < 0.5)
+        // A pressable chip never shows the check.
+        let pressable = fittingSize(Button(name) {}.buttonStyle(.chip))
+        #expect(abs(pressable.width - textUnlit.width) < 0.5)
     }
 
     @Test("a long label stays one line, truncated, in the width it is given")
@@ -245,13 +325,26 @@ struct ChipStyleTests {
     }
 
     #if os(iOS)
-        @Test("the chip grows with Dynamic Type")
+        @Test("the chip grows with Dynamic Type, with a Label or with a label that is only text, in every form")
         func growsWithDynamicType() {
-            let chip = { Label("Work", icon: .hash).labelStyle(.chip) }
-            let large = fittingSize(chip().dynamicTypeSize(.large))
-            let accessibility = fittingSize(chip().dynamicTypeSize(.accessibility3))
-            #expect(accessibility.height > large.height)
-            #expect(accessibility.width > large.width)
+            // The static chip is the drawn capsule. The two controls are their hit area, at least 44 pt high, which a
+            // chip of one line at accessibility3 still fits in: across they grow with the words, and in height they
+            // never shrink.
+            let chips: [(String, AnyView, isControl: Bool)] = [
+                ("static", AnyView(Label("Work", icon: .hash).labelStyle(.chip)), false),
+                ("selectable, text only", AnyView(Toggle("Work", isOn: .constant(true)).toggleStyle(.chip)), true),
+                ("pressable, text only", AnyView(Button("Work") {}.buttonStyle(.chip)), true),
+            ]
+            for (form, chip, isControl) in chips {
+                let large = fittingSize(chip.dynamicTypeSize(.large))
+                let accessibility = fittingSize(chip.dynamicTypeSize(.accessibility3))
+                if isControl {
+                    #expect(accessibility.height >= large.height, "\(form): \(accessibility) against \(large)")
+                } else {
+                    #expect(accessibility.height > large.height, "\(form): \(accessibility) against \(large)")
+                }
+                #expect(accessibility.width > large.width, "\(form): \(accessibility) against \(large)")
+            }
         }
     #endif
 
