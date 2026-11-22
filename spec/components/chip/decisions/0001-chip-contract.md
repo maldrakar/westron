@@ -1,12 +1,13 @@
 # 0001. The Chip contract: a tag, a filter, a value
 
-Date: 2026-11-22. Status: approved on 2026-11-22 by the coordinating agent under the owner's delegation for phase 4
-(decisions/0005, the first gate; decisions/0014, "Process"). There was no interview: the agent that wrote the draft
-answered the questions of `/new-component` from the sources, and each answer below names its source. Where the
-sources were silent, the answer was the agent's guess, listed under "Open questions" with a recommendation; the
-approver's answers are under "Approval", and what the implementation on Apple measured and decided under the same
-delegation, pending the owner's review at the second gate, under "Implementation on Apple". The proposals below are
-the draft's; where an answer changed one, "Approval" says so.
+Date: 2026-11-22. Status: approved on 2026-11-22, and revised the same day after the contract check and the
+accessibility audit ("Revision after the audits, 2026-11-22", at the end), both by the coordinating agent under the
+owner's delegation for phase 4 (decisions/0005, the first gate; decisions/0014, "Process"). There was no interview: the
+agent that wrote the draft answered the questions of `/new-component` from the sources, and each answer below names its
+source. Where the sources were silent, the answer was the agent's guess, listed under "Open questions" with a
+recommendation; the approver's answers are under "Approval", and what the implementation on Apple measured and decided
+under the same delegation, pending the owner's review at the second gate, under "Implementation on Apple". The proposals
+below are the draft's; where an answer changed one, "Approval" says so.
 
 ## Context
 
@@ -170,10 +171,10 @@ answers.
 | Q3 | Keep the pressable form: decisions/0014, the list the owner confirmed, names Chip "selectable (a filter) or pressable (a value)". Its pilot consumer arrives with the Task screen's pickers; until then the pilot draws its inert pills as static chips |
 | Q4 | (a): a chip lit in a list's color keeps its fill under the pointer and pressed; no new tokens |
 | Q5 | `color.category.<name>.fill` and `on-fill`, as design-language/02 gives a lit tag; the contrast of a lit chip's fill is measured below, and no token changes for it |
-| Q6 | As recommended, measured in the accessibility hierarchy, with the fallback as described: see "Implementation on Apple" |
+| Q6 | As recommended, measured in the accessibility hierarchy, with the fallback as described: see "Implementation on Apple". Reversed after the audits: the system Toggle as the representation ("Revision after the audits", B) |
 | Q7 | Accept `size.control.s` for the static form |
 | Q8 | Out of this contract |
-| Q9 | No check mark |
+| Q9 | No check mark. Reversed after the audits: a lit chip shows the check in the icon's place ("Revision after the audits", A) |
 | Q10 | `space.125` on both sides |
 | Q11 | A laid-out frame at least `size.target.minimum` high |
 | Tools, item 7 | Yes, here, since ListRow (#119) needs it too: a case that matches only when all the states it names hold, `state: { all: [checked, pressed] }`. The hover and pressed tints moved from the description into the bindings (P8, P11) |
@@ -184,7 +185,8 @@ them); P11 is answered by cases over several states, so the tints are bindings; 
 
 ### The contrast of a lit chip's fill (Q5)
 
-With no check mark (Q9), the fill is the only visible sign that a chip is on (the label's color changes with it).
+With no check mark (Q9), the fill is the only visible sign that a chip is on (the label's color changes with it); the
+revision after the audits (A, at the end) adds the mark.
 WCAG 2 contrast of the lit fill against the unlit fill, `color.background.muted`, and against the grounds a chip
 stands on, the canvas and a raised surface (`color.background.surface`), in the four themes, from the resolved token
 values (sRGB hex of `tokens/primitive/color.<theme>.tokens.json`, the semantic aliases of
@@ -277,3 +279,66 @@ of the snapshot matrix (the second gate).
   accessibility5). Its cause is measured: the contract draws a pressed chip at 0.98 of its size, and with the scale
   set to 1 the finding was gone; the text is whole in the screenshots. A real press draws the same scale while it
   lasts, when no audit runs. No lit chip and no list color was reported at the default size or in the other themes.
+
+## Revision after the audits, 2026-11-22
+
+After the code review, a check of the implementation against the contract and an accessibility audit found what is
+below. The coordinating agent approved each change under the owner's delegation (decisions/0014); the contract was
+changed first, then the code. No token changed and no token was added.
+
+### A. A lit chip shows a mark (Q9 reversed)
+
+Q9 left the fill the only sign on screen that a chip is on. The audit measured that this fails WCAG
+[1.4.1](https://www.w3.org/TR/WCAG22/#use-of-color) and [1.4.11](https://www.w3.org/TR/WCAG22/#non-text-contrast) in
+ten cases of a color and a theme, where a lit chip stands under 3:1 off an unlit one (the table under "The contrast of
+a lit chip's fill"): in light and light-hc, olive 1.59 and amber 1.64; in dark, the accent, blue and violet 2.76, red
+2.06, indigo 2.59 and pink 2.94. In every color it also falls short of design-language/08, "A checked control shows a
+mark". So a checked selectable chip draws the registry's `check` glyph in the icon's place, at the icon's size, in
+the words' color on the fill (`icon.color`'s checked case: `color.text.on-accent`, or the list's `on-fill`), decorative
+and hidden from assistive technology, which announces the state itself (B).
+
+- **A chip with an icon** swaps its icon for the check while it is on: the check is drawn over the icon's place, the
+  icon hidden, so the chip keeps its width and nothing beside it moves.
+- **A chip whose label is only text** has no icon to swap: it grows by the check and `container.gap` before its label
+  while it is on, as Material's filter chip does. The style learns in the same update whether the label it draws has
+  an icon, from the label's layout, as Button's loading indicator does (`IndicatorBeforeLabelLayout`).
+- **Motion.** The check comes in and goes with the fill as a fade, in `motion.fade`. A text-only chip's width changes
+  with them; with Reduce Motion the fades stay (design-language/05, "Color fades stay") and the width changes at once,
+  so that nothing slides ("Travel becomes a fade"): the check fades in, and leaves at once with its room.
+- **The fills do not change.** The lit fills keep the contrast measured above, now beside a mark; the owner may still
+  answer the fills at the second gate.
+- The contract format has no binding for a glyph: the description says that the icon becomes the check while the
+  chip is on, as it says the list's color; the check's color is `icon.color`, whose checked case already gives the
+  words' color.
+
+### B. The selectable chip is the system's toggle to assistive technology (Q6's fallback reversed)
+
+The fallback of Q6 represented the selectable chip as a system Button with the toggle trait removed and `.isSelected`
+while on. The product's Toggle around the style still gave that element the value 0 or 1, which nothing in a style
+can clear (above, "Implementation on Apple"), so VoiceOver would likely say "Home, 1, button": a button with a stray
+number. design-language/08 says "A system control keeps its own role and traits". So the representation is the
+system's own Toggle on the same value and label, in its automatic style, as Checkbox's is
+(`CheckboxVariantStyle.swift`): assistive technology meets the toggle's role and traits and its value, on or off, in
+the platform's words, and no button; `.isSelected` is not added, since the state would then be said twice. The
+contract's `accessibility` now gives the selectable form the role `toggleButton` and announces `checked` as the
+toggle's own checked value, on or off, instead of "selected"; "off, it is announced with no state" is gone, since the
+value is announced in either state. The words design-language/08 lists, "selected, unavailable, busy", are examples of
+announced states: the selectable chip's is the toggle's on or off, as a checkbox's is.
+
+### C. Smaller changes
+
+- **The press's tint** moves in `motion.press`, as Button's does and as design-language/05 gives a press "its tint,
+  and its scale"; hover and checking keep `motion.fade`.
+- **The hit area is at least `size.target.minimum` across** as well as high: a chip of one or two letters is narrower
+  than the target, so its laid-out frame is widened to the target, the drawn capsule keeping its size, centred. It is
+  laid out, so chips side by side move apart instead of overlapping: where a short chip's frame is wider than its
+  capsule, the gap between two capsules grows by the difference.
+- **Hover on macOS** starts and ends at the drawn capsule, as Button's does (`contentShape(.interaction, …)` on the
+  capsule), not at the corners of the hit area beyond it; the click is still taken in the whole hit area.
+- **The accessibility shape** is the drawn capsule, `contentShape(.accessibility, …)`, on every OS, and the focus
+  effect's shape the capsule on macOS and watchOS, as Button's are.
+- **A truncated label** is whole only to a screen reader, so the contract says that a product gives a chip the width
+  its label needs, in a tag bar that scrolls or a row that wraps, and that truncation is the last resort.
+- **The static form under `.disabled(true)`** is drawn as it is, undimmed: the form enters no state, disabled
+  included. Nothing else is decided for it.
+- **watchOS** gives its hit-area numbers, 44 pt high and across around the 32 pt chip, as iOS and macOS do.
