@@ -28,6 +28,9 @@
 /// - A contract with forms (`forms`) has the form as its first axis, `formAxis`, never the columns: each form is drawn
 ///   at rest and in each state it enters alone, on sheets of its own (`form-selectable`), and a form that enters no
 ///   state is drawn at rest only (spec/conventions.md, "Forms").
+/// - An integer option (ListRow's `level`) is a quantity, not a choice, and is no axis: the hand-written cell draws
+///   its sample at a value it names (ListRow's at level 1, so that `guides` shows), and what other values do is the
+///   catalog's supplements'.
 ///
 /// What the generator does not do (#72), so that the contract alone drives every generated combination and sheet: the
 /// catalog (`WestronCatalog/SnapshotMatrix/ComponentMatrix.swift`) captures the sheets at other text sizes too and
@@ -143,6 +146,8 @@ public struct SnapshotMatrix: Equatable, Sendable {
     /// The Apple OSes that differ from the contract, in `ComponentContract.appleOSes` order.
     public let platforms: [Platform]
     public let sheets: [Sheet]
+    /// Whether the forms are an own view's initializers rather than system controls (`own-component`).
+    public let ownForms: Bool
 
     /// `tokens` gives the values of an option whose values are tokens, `icons` the registry's names, in its order, for
     /// one whose values are icons; a contract without such an option needs neither.
@@ -154,6 +159,7 @@ public struct SnapshotMatrix: Equatable, Sendable {
         _ contract: ComponentContract, source: String, tokens: ContractTokens? = nil, icons: [String]? = nil
     ) throws(ContractProblem) {
         component = contract.id
+        ownForms = !contract.forms.isEmpty && contract.apple?.strategy == AppleComponents.ownStrategy
         let systemOptions = contract.apple?.systemOptions ?? [:]
         var axes: [Axis] = []
         // A contract with forms: the form first, each value drawn in the states that form enters.
@@ -167,6 +173,10 @@ public struct SnapshotMatrix: Equatable, Sendable {
         }
         for option in contract.options {
             switch option.kind {
+            case .integer:
+                // A quantity, not a choice: the cell names the value it draws, and the catalog's supplements show
+                // others (ListRow's nesting levels).
+                continue
             case .enumeration(let values, _):
                 axes.append(Axis(name: option.name, values: values, systemType: systemOptions[option.name]))
             case .bool:

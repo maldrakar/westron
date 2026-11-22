@@ -118,15 +118,24 @@ public struct ComponentMatrix: Sendable {
         /// The OSes it is drawn on, as `currentOS` names them, where a render on another is not worth reading or not
         /// the same twice (its note says why); nil draws it on every OS.
         let onlyOn: [String]?
+        /// Whether `rowsPerPicture` splits the sheet at every text size, also one that splits no generated sheet: for
+        /// a cell of several stacked components (ListRow's tree), too tall for a sheet's rows at any size.
+        let splitsAtEverySize: Bool
+        /// The most columns of one picture at every text size, for a cell that needs a sheet's whole width (ListRow
+        /// forced to accessibility5); nil: as many as the text size takes.
+        let columnsPerPicture: Int?
         let cell: @MainActor @Sendable (Combination) -> AnyView
 
         init<Content: View>(
             component: String, id: String, title: String, note: String, keeps: [String: String],
             rows: [String]? = nil, rowsPerPicture: Int? = nil, onlyOn: [String]? = nil,
+            splitsAtEverySize: Bool = false, columnsPerPicture: Int? = nil,
             @ViewBuilder cell: @escaping @MainActor @Sendable (Combination) -> Content
         ) {
             self.rowsPerPicture = rowsPerPicture
             self.onlyOn = onlyOn
+            self.splitsAtEverySize = splitsAtEverySize
+            self.columnsPerPicture = columnsPerPicture
             self.component = component
             self.id = id
             self.title = title
@@ -136,6 +145,11 @@ public struct ComponentMatrix: Sendable {
             self.cell = { AnyView(cell($0)) }
         }
     }
+
+    /// By component, the most rows of one picture at a text size that splits sheets, where its cells grow taller
+    /// than the size's own limit allows: a ListRow at accessibility5 on an iPhone wraps its words over several lines
+    /// beside its scaled indent and slots, about 230 pt a row, and a supplement's cell holds several rows.
+    static let rowsAtLimit: [String: Int] = ["list-row": 1]
 
     /// The text sizes the matrix is captured at (design-language/08-accessibility.md, "Text size"): the smallest, the
     /// default and the largest accessibility size, the one the accessibility audit uses. The names are the catalog's
@@ -374,10 +388,18 @@ public struct ComponentMatrix: Sendable {
     /// needs (SnapshotMatrixRenderTests, "squeezed"), and take fewer columns to a picture until they fit. The split is
     /// the catalog's, not the contract's: on one device the parts are the same on every run.
     public func pictures(of sheet: Sheet, at size: TextSize, columns: Int? = nil) -> [Sheet] {
-        let columnLimit = min(size.limit?.columns ?? sheet.columns.count, columns ?? sheet.columns.count)
+        let columnLimit = min(
+            size.limit?.columns ?? sheet.columns.count, columns ?? sheet.columns.count,
+            supplement?.columnsPerPicture ?? sheet.columns.count)
         let rows = rows(of: sheet)
-        // Rows are split only at a text size whose cells are too tall for a sheet's rows to fit the screen's height.
-        let rowLimit = size.limit.map { min($0.rows, supplement?.rowsPerPicture ?? $0.rows) } ?? max(rows.count, 1)
+        // Rows are split only at a text size whose cells are too tall for a sheet's rows to fit the screen's height,
+        // or at every size for a supplement whose cells are that tall at every size. A component whose cells grow
+        // taller than the text size's limit allows (`rowsAtLimit`) takes fewer.
+        let everySize = supplement?.splitsAtEverySize == true ? supplement?.rowsPerPicture : nil
+        let rowLimit =
+            size.limit.map {
+                min($0.rows, supplement?.rowsPerPicture ?? $0.rows, Self.rowsAtLimit[component] ?? $0.rows)
+            } ?? everySize ?? max(rows.count, 1)
         let parts = Self.groups(sheet.columns, ofAtMost: max(columnLimit, 1)).flatMap { columns in
             Self.chunks(rows, of: rowLimit).map { (columns: columns, rows: $0) }
         }

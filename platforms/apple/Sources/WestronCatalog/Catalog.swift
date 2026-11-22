@@ -20,6 +20,8 @@ public enum Catalog {
         .checkbox,
         .checkboxInList,
         .chip,
+        .listRow,
+        .listRowInList,
         .textField,
         .textFieldGlyphs,
         .textFieldBehavior,

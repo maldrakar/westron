@@ -46,6 +46,16 @@ struct ContractRules {
         Set((document["options"]?.members ?? []).filter { $0.value["type"] == .string("icons") }.map(\.key))
     }
 
+    /// The options of type `integer`, by name.
+    private var integerOptions: Set<String> {
+        Set((document["options"]?.members ?? []).filter { $0.value["type"] == .string("integer") }.map(\.key))
+    }
+
+    /// Why an option of type `integer` cannot be named at a place, for a message.
+    private func integerOptionNamed(_ option: String, in place: String) -> String {
+        "\(option) is an integer, a quantity and not a choice, and \(place) do not name such an option yet"
+    }
+
     /// Why an option of type `tokens` cannot be named at a place, for a message.
     private func tokenOptionNamed(_ option: String, _ group: String, in place: String) -> String {
         "\(option) takes its values from the tokens of \(group), and \(place) do not name such an option yet"
@@ -83,6 +93,52 @@ struct ContractRules {
         checkSystemOptions()
         checkAccessibility()
         checkForms()
+        checkMarks()
+    }
+
+    /// An integer option's default, or a mark's integer parameter's, is at least its minimum; a mark's enum parameter's
+    /// default is one of its values and its values do not repeat; a mark's name and its parameters' names are usable
+    /// in Swift, where the mark becomes `.<mark>Mark(_:…)`.
+    mutating func checkMarks() {
+        var integers: [(DocumentPath, JSON)] = (document["options"]?.members ?? []).map {
+            (DocumentPath.root.key("options").key($0.key), $0.value)
+        }
+        for mark in document["marks"]?.members ?? [] {
+            let path = DocumentPath.root.key("marks").key(mark.key)
+            if Self.unusableLabels.contains(mark.key) {
+                report(path, "\(mark.key) cannot name a mark: choose another name")
+            }
+            for parameter in mark.value["parameters"]?.members ?? [] {
+                let at = path.key("parameters").key(parameter.key)
+                integers.append((at, parameter.value))
+                if Self.unusableLabels.contains(parameter.key) {
+                    report(
+                        at, "\(parameter.key) cannot name a parameter: in Swift it is a keyword; choose another name")
+                }
+                guard parameter.value["type"] == .string("enum") else { continue }
+                let values = parameter.value["values"]?.elements?.compactMap(\.string) ?? []
+                var seen: Set<String> = []
+                for (index, value) in values.enumerated() {
+                    if !seen.insert(value).inserted { report(at.key("values").index(index), "repeats \"\(value)\"") }
+                    if let reason = Self.unusableCases[value] {
+                        report(
+                            at.key("values").index(index),
+                            "\"\(value)\" cannot be a value: \(reason); choose another name")
+                    }
+                }
+                if let fallback = parameter.value["default"]?.string, !values.contains(fallback) {
+                    report(
+                        at.key("default"),
+                        "\"\(fallback)\" is not one of the values of \(parameter.key): \(values.joined(separator: ", "))"
+                    )
+                }
+            }
+        }
+        for (path, entry) in integers where entry["type"] == .string("integer") {
+            guard let value = entry["default"]?.integer, let minimum = entry["minimum"]?.integer, value < minimum
+            else { continue }
+            report(path.key("default"), "\(value) is less than the minimum, \(minimum)")
+        }
     }
 
     /// A contract with forms (`forms`): each form enters states the contract declares, and every declared state is
@@ -127,6 +183,23 @@ struct ContractRules {
         for platform in platforms {
             let path = root.key("platforms").key(platform)
             guard let entry = value(at: path), entry["strategy"] != nil else { continue }
+            if entry["strategy"]?.string == AppleComponents.ownStrategy {
+                if entry["bases"] != nil {
+                    report(
+                        path.key("bases"),
+                        "an \(AppleComponents.ownStrategy) has no base control: its forms are its own initializers")
+                }
+                // An own view's forms are its initializers, with an action or without (AppleComponents.Own); a
+                // modifier has no initializer to carry a form.
+                if platform == "apple", entry["form"]?.string != AppleComponents.Own.Form.view.rawValue {
+                    report(
+                        path.key("form"),
+                        "the conventions derive forms on an \(AppleComponents.ownStrategy) only of form view, each "
+                            + "form an initializer (spec/conventions.md, \"Forms of an own view\"), not of form "
+                            + "\(entry["form"]?.string ?? "none")")
+                }
+                continue
+            }
             if entry["base"] != nil {
                 report(
                     path.key("base"),
@@ -144,10 +217,12 @@ struct ContractRules {
                     "\"\(member.key)\" is not one of the forms: \(names.joined(separator: ", "))")
             }
             if platform == "apple", let strategy = entry["strategy"]?.string, strategy != AppleComponents.strategy {
+                // An own component returned above, so any strategy here has no form to derive.
                 report(
                     path.key("strategy"),
-                    "the conventions derive forms on Apple only for a \(AppleComponents.strategy), each form a style "
-                        + "on its base (spec/conventions.md, \"Forms\"), not for an \(strategy)")
+                    "the conventions derive forms on Apple only for a \(AppleComponents.strategy), each form a "
+                        + "style on its base, or for an \(AppleComponents.ownStrategy) of form view, each form an "
+                        + "initializer (spec/conventions.md, \"Forms\"), not for an \(strategy)")
             }
         }
     }
@@ -574,6 +649,8 @@ struct ContractRules {
                 report(place, tokenOptionNamed(option, group, in: states ? "cases" : "constraints"))
             } else if iconOptions.contains(option) {
                 report(place, iconOptionNamed(option, in: states ? "cases" : "constraints"))
+            } else if integerOptions.contains(option) {
+                report(place, integerOptionNamed(option, in: states ? "cases" : "constraints"))
             } else {
                 report(place, unknownOption(option) + (states ? ", and the key state names states" : ""))
             }
@@ -795,6 +872,8 @@ struct ContractRules {
                         report(place, tokenOptionNamed(option, group, in: "platform restrictions"))
                     } else if iconOptions.contains(option) {
                         report(place, iconOptionNamed(option, in: "platform restrictions"))
+                    } else if integerOptions.contains(option) {
+                        report(place, integerOptionNamed(option, in: "platform restrictions"))
                     } else {
                         report(
                             place,
@@ -984,6 +1063,8 @@ struct ContractRules {
                         path.key(member.key),
                         "\(member.key) takes its values from westron's icon registry (\(IconRegistry.defaultFile)), "
                             + "not from a system type: remove it here")
+                } else if integerOptions.contains(member.key) {
+                    report(path.key(member.key), integerOptionNamed(member.key, in: "systemOptions"))
                 } else if !names.contains(member.key) {
                     report(path.key(member.key), unknownOption(member.key))
                 }

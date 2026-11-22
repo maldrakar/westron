@@ -204,8 +204,7 @@ struct OwnComponentTests {
     func notDerivedYet() {
         let notYet = "the conventions do not derive an own-component's API for it yet"
         #expect(
-            failure(ownYAML(extra: "states: [hover]"))?.contains("states: an own-component with states: \(notYet)")
-                == true)
+            failure(ownYAML(extra: "states: [hover]"))?.contains("states: a modifier with states: \(notYet)") == true)
         #expect(
             failure(ownYAML(options: "  size: { type: enum, values: [s, m], default: m }"))?.contains(
                 "options.size: a size option") == true)
@@ -236,7 +235,8 @@ struct OwnComponentTests {
                             watchos:
                               options: { variant: [raised] }
                               fallback: { variant: raised }
-                        """))?.contains("platforms.apple.watchos: an own-component that an OS restricts") == true)
+                        """))?.contains("platforms.apple.watchos: an own-component whose options an OS restricts")
+                == true)
         // A system option is the system's own environment modifier: no parameter and no enum (Icon's scale).
         #expect(
             failure(
@@ -248,11 +248,17 @@ struct OwnComponentTests {
                         """)) == nil)
         let viewWithVariant = viewYAML(options: "  variant: { type: enum, values: [quiet, loud] }")
         #expect(failure(viewWithVariant, id: "rule")?.contains("options.variant: a view with a variant") == true)
-        // The one slot label is derived (LabelledViewTests); any other slot is not.
-        let viewWithSlots = viewYAML().replacingOccurrences(of: "slots: []", with: "slots: [label, detail]")
-        #expect(failure(viewWithSlots, id: "rule")?.contains("slots: a view with slots") == true)
+        // The one slot label is derived (LabelledViewTests), and several slots (OwnViewSlotsTests); one other slot is
+        // not.
         let viewWithContent = viewYAML().replacingOccurrences(of: "slots: []", with: "slots: [content]")
-        #expect(failure(viewWithContent, id: "rule")?.contains("slots: a view with slots") == true)
+        #expect(
+            failure(viewWithContent, id: "rule")?.contains("slots: a view whose one slot is not label") == true)
+        let viewWithSlots = viewYAML().replacingOccurrences(of: "slots: []", with: "slots: [label, detail]")
+        #expect(failure(viewWithSlots, id: "rule") == nil)
+        // A modifier with forms is not derived; a view's forms need two slots or more.
+        #expect(
+            failure(ownYAML(extra: "forms: { a: { states: [] }, b: { states: [] } }"))?.contains(
+                "forms: a modifier with forms: \(notYet)") == true)
     }
 
     @Test("a name that would shadow SwiftUI's fails: the view's type or an option's enum")
@@ -483,7 +489,7 @@ struct OwnComponentTests {
             ],
             files: [("\(Self.root)/Surface/Surface.swift", Self.surfaceSwift)], sourceRoot: Self.root
         ).problems.map(\.description)
-        #expect(problems.contains { $0.contains("the lint cannot derive Surface's API: an own-component with states") })
+        #expect(problems.contains { $0.contains("the lint cannot derive Surface's API: a modifier with states") })
     }
 }
 

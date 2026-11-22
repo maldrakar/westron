@@ -66,3 +66,30 @@ private struct LoadingModifier: ViewModifier {
         #endif
     }
 }
+
+extension EnvironmentValues {
+    /// Whether the components in this subtree are selected, as `.selected(_:)` sets it.
+    @Entry var isSelected = false
+    /// Whether the components in this subtree are where a dragged item would be dropped onto, as `.dropTarget(_:)`
+    /// sets it.
+    @Entry var isDropTarget = false
+}
+
+extension View {
+    /// Puts the westron components in this view that have the state `selected` into it, or takes them out of it, as
+    /// `.disabled(_:)` does for `disabled`: `ListRow(action: open) { Text(list.title) }.selected(list == chosen)`.
+    /// Each component's contract says what selected does to it; a selected ListRow is highlighted and announced as
+    /// selected. The product passes its own selection, or a List's; westron keeps none.
+    public func selected(_ isSelected: Bool) -> some View {
+        environment(\.isSelected, isSelected)
+    }
+
+    /// Puts the westron components in this view that have the state `dropTarget` into it, or takes them out of it:
+    /// a dragged item would be dropped onto them, as a child. The product passes the `isTargeted` of its
+    /// `.dropDestination`: `ListRow { … }.dropTarget(isTargeted)`. Each component's contract says what it does; a
+    /// ListRow draws its accent-subtle highlight with a ring. It is not announced: a drag has another way, which is the
+    /// product's.
+    public func dropTarget(_ isDropTarget: Bool) -> some View {
+        environment(\.isDropTarget, isDropTarget)
+    }
+}

@@ -11,5 +11,5 @@ extension ComponentMatrix.Supplement {
             .textFieldGlyphsRightToLeft, .textFieldSearchPrompt,
             .ruleLabelled, .iconTileListColors, .iconTileBesideTitle, .iconTileEmptyScreen, .chipLitAccent,
             .chipLongLabel,
-        ] + chipListColors + chipTextOnly
+        ] + chipListColors + chipTextOnly + listRowAll
 }
