@@ -27,11 +27,11 @@ paths:
   `tools/westron spec check` rejects it; the names per control are in
   `tools/Sources/WestronTools/Contracts/SystemStyles.swift`.
 - What exists, before you draw your own (each per `spec/components/<id>/`): `.buttonStyle(_:size:iconOnly:)` with
-  `.loading(_:)`, `.textFieldStyle(.framed|.inline, size:)`, `.toggleStyle(.check)` (Checkbox), `.textRole(_:)`,
-  `Icon(_:)` and `Icon(_:label:)`, `.surface(.raised|.dragged|.sunken, outlined:)`, `Rule(axis:)`. A check beside a
-  separate title draws no label: `Toggle(isOn: $task.isDone, accessibilityLabel: task.title).toggleStyle(.check)`,
-  not `.labelsHidden()`, which a custom style sees only from iOS 18, macOS 15 and watchOS 11, so on iOS 17 the label
-  would be drawn (`spec/components/checkbox/decisions/0002`).
+  `.loading(_:)`, `.textFieldStyle(.framed|.inline, size:)`, `.toggleStyle(.check)` (Checkbox), `.toggleStyle(.chip)`,
+  `.buttonStyle(.chip)` and `.labelStyle(.chip)` (Chip), `.textRole(_:)`, `Icon(_:)` and `Icon(_:label:)`, `.surface(.raised|.dragged|.sunken, outlined:)`, `Rule(axis:purpose:)` and
+  `Rule("Label")`. A check beside a separate title draws no label: `Toggle(isOn: $task.isDone, accessibilityLabel:
+  task.title).toggleStyle(.check)`, not `.labelsHidden()`, which a custom style sees only from iOS 18, macOS 15 and
+  watchOS 11, so on iOS 17 the label would be drawn (`spec/components/checkbox/decisions/0002`).
 
 ## Values
 

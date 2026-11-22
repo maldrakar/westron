@@ -597,6 +597,13 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                     "orange", "red", "pink", "violet", "indigo",
                 ].contains(label ?? "")
             },
+            // Contrast on the disabled Chip samples, selectable and pressable, drawn whole at opacity.disabled by the
+            // contract: WCAG exempts an inactive control (design-language chapter 08). The system disables them
+            // (`.disabled(true)`), so only an element that is not enabled matches; the other states are audited as
+            // usual.
+            Suppression(.entry("chip"), type: .contrast, reason: "an inactive control", enabled: false) {
+                ["disabled", "disabled, on"].contains($0 ?? "")
+            },
             // No suppression for the checks with no drawn label beside separate titles (the live row here, the rows
             // of `checkbox-in-list`): written with `Toggle(isOn:accessibilityLabel:)`, their label is an `EmptyView`
             // carrying the name, and the audit reports neither contrast nor clipped text on them (measured on
@@ -604,6 +611,38 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             // the circle's square, and needed three suppressions here.
         ]
         #if os(iOS)
+            // "Text clipped", an audit of iOS alone, on the labelled rule whose name is longer than the column: the
+            // Rule contract draws a label on one line and truncates it at its end, and design-language/03 allows that
+            // when the whole text is still read, which it is: the element's label is the whole name
+            // (spec/components/rule, decisions/0002). Only this one label matches; it is `RuleLabelled.longName` in
+            // capitals, which this target cannot import.
+            suppressions += [
+                Suppression(.entry("rule"), type: .textClipped, reason: "a rule's label truncated by its contract") {
+                    $0 == "HOUSEHOLD ERRANDS, REPAIRS AND EVERYTHING FOR THE GARDEN"
+                },
+                // "Text clipped" on the chips with a long label in a narrow place, with an icon or text only, in
+                // every form: the Chip contract draws its label
+                // on one line and truncates it at its end (spec/components/chip, decisions/0001), and the element's
+                // label is the whole name. Only this one label matches; it is `ChipSample.long`, which this target
+                // cannot import.
+                Suppression(.entry("chip"), type: .textClipped, reason: "a chip's label truncated by its contract") {
+                    $0 == "A tag whose name runs much longer than its chip"
+                },
+                // "Text clipped" on the pressable chip the catalog holds pressed, in every configuration that runs the
+                // text clipped audit (the default settings and accessibility5): the contract draws a pressed chip at
+                // 0.98 of its size (`ChipTokens.pressScale`, design-language/05), and the audit reports the scaled
+                // text as clipped. Measured on iOS 26.3, 2026-11-22: with the scale set to 1 the finding is gone, and
+                // the text is whole in the page's screenshots at the default size and at accessibility5. A real press
+                // draws the same scale, only while it lasts, when no audit runs. Two samples on the page carry the
+                // label "pressed", both enabled: the pressable chip held pressed, which is reported, and the unlit
+                // selectable chip held pressed, which is not, since its text is behind its accessibility
+                // representation, the system toggle; the suppression matches both. The lit selectable sample is
+                // "pressed, on", and every other chip is audited as usual.
+                Suppression(
+                    .entry("chip"), type: .textClipped, reason: "a pressed chip drawn at 0.98 of its size",
+                    enabled: true
+                ) { $0 == "pressed" },
+            ]
             // The TextField focus pages focus a field for real, so the system keyboard is up while they are audited
             // (spec/components/text-field). The keyboard's own prediction cells, empty or carrying a suggestion
             // (`“groceries”`, typographic quotes included, on the CI runner, #96), have no description, and at the

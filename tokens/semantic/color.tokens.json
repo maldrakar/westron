@@ -150,7 +150,7 @@
       },
       "secondary": {
         "$value": "{color.neutral.11}",
-        "$description": "Text and glyphs that come second: captions, metadata, a row's details, timestamps.",
+        "$description": "Text and glyphs that come second: captions, metadata, a row's details, timestamps. On background.muted-hover and muted-pressed it is only a glyph, never text: the icon of an unlit chip under the pointer or pressed, decorative beside the chip's label (spec/components/chip, decisions/0001), so those pairs are non-text, 3:1.",
         "$extensions": {
           "dev.westron.contrast": [
             {
@@ -165,6 +165,10 @@
                 "color.background.selected",
                 "color.background.accent-subtle"
               ]
+            },
+            {
+              "kind": "non-text",
+              "on": ["color.background.muted-hover", "color.background.muted-pressed"]
             }
           ]
         }
@@ -317,6 +321,24 @@
                 "color.background.pressed",
                 "color.background.selected",
                 "color.background.accent-subtle"
+              ]
+            }
+          ]
+        }
+      },
+      "insertion": {
+        "$value": "{color.blue.8}",
+        "$description": "The line that marks where a dragged item would be dropped: an insertion rule. The focus ring's blue, a token of its own so that each can change without the other.",
+        "$extensions": {
+          "dev.westron.contrast": [
+            {
+              "kind": "non-text",
+              "on": [
+                "color.background.canvas",
+                "color.background.surface",
+                "color.background.sunken",
+                "color.background.hover",
+                "color.background.selected"
               ]
             }
           ]
