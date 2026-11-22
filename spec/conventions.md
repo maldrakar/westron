@@ -61,7 +61,7 @@ decisions/0003 rejected.
 | **Extension of a system view** (`extension-on-system-control`) | The base takes no style (SwiftUI has no `textStyle`), so westron adds a modifier in `extension View`, named after what it sets, and the same on the base where the base's own modifiers return it: `.textRole(.heading.large)` on any view, and `Text.textRole(_:) -> Text`. No westron type and no style. The base is one of `SystemStyles.withoutStyle`; a base with a style modifier takes a style instead, and `spec check` reports the other strategy (below) | The native element the product chooses, with westron's class | The stock widget with a style class (`GtkLabel`): in GTK terms a style on the system control, so the strategy there is `style-on-system-control` | A `TextStyle` from `WestronTheme` passed to the Material3 composable (`Text(style = …)`) |
 | **Constraints between options** | The contract states them (`when` / `require` / `severity`) and the validator checks the contract (#18). The catalog and the snapshot matrix (#24) leave out combinations a constraint forbids. What code does with a forbidden combination is Q3. A constraint on a slot (`when: { slots: [label] }`, severity `error`, one value for each option it requires), allowed only on an own view whose one slot is a drawn label, is kept by the API: the initializers that take the slot leave those options out (Rule: `Rule("Work")` takes no axis and no purpose, below, "Own components"); the matrix draws no slot, so it leaves nothing out for it | As SwiftUI: checked in the contract; runtime behavior with Q3 | As SwiftUI | As SwiftUI |
 | **Token bindings** | Written by hand in the style's or the component's body (decisions/0001), through WestronUI's accessors: `.background(.background.accent, in: …)`, `.radius.control`, `.textRole(.body.strong)`, `.animation(.press, value: …)`. A part's `shape: capsule` is SwiftUI's `Capsule()`, never a large radius (design-language/04). No raw values: the raw-values lint and the `spec-reviewer` subagent check them (decisions/0005) | CSS custom properties generated from the token paths (#39), read with `var(…)` in westron's CSS; `shape: capsule` is a `border-radius` of half the height or more | libadwaita's variables (`--accent-bg-color`, …) and westron's `style.css` variables, both generated; Rust constants for values outside CSS | `WestronTheme` values through `CompositionLocal`, and a Material `ColorScheme` mapped from the tokens (chapter 09) |
-| **Accessibility: role** | System control: it keeps its own role and traits (chapter 08). Own component: `.accessibilityElement(children:)` and `.accessibilityAddTraits` (`.isButton`, `.isHeader`, `.isSelected`, `.isToggle`). Role `none`: nothing on a container, whose children stay as they are (Surface). Role `heading`: `.accessibilityAddTraits(.isHeader)` on the drawn label, and an instance with no label, which has nothing to announce, `.accessibilityHidden(true)` (Rule) | The native element's implicit role; a custom element sets it through `ElementInternals.role`. Role `none`: `role="none"` on a container, `aria-hidden="true"` on a component with no content. Role `heading`: `role="heading"` with `aria-level`, the level decided in #40 | The stock widget's role; an own widget sets `gtk::AccessibleRole` on its class (`heading` for the role `heading`); how role `none` maps is decided in phase 7 | The Material composable's semantics; an own component sets `Modifier.semantics { role = … }`, and `semantics { heading() }` for the role `heading`; role `none` adds no semantics of its own, and how a component with no content is hidden is decided in phase 8 |
+| **Accessibility: role** | System control: it keeps its own role and traits (chapter 08). Own component: `.accessibilityElement(children:)` and `.accessibilityAddTraits` (`.isButton`, `.isHeader`, `.isSelected`, `.isToggle`). Role `none`: nothing on a container, whose children stay as they are (Surface). Role `heading`: `.accessibilityAddTraits(.isHeader)` on the drawn label, and an instance with no label, which has nothing to announce, `.accessibilityHidden(true)` (Rule). Role `disclosure`: what the system's own `DisclosureGroup` is on each OS, a disclosure triangle valued 1 or 0 on macOS and a button with no value on iOS, named by the label, as the representation of the style's own control (Disclosure) | The native element's implicit role; a custom element sets it through `ElementInternals.role`. Role `none`: `role="none"` on a container, `aria-hidden="true"` on a component with no content. Role `heading`: `role="heading"` with `aria-level`, the level decided in #40. Role `disclosure`: a native `<button>` with `aria-expanded` and `aria-controls` (Disclosure, provisional) | The stock widget's role; an own widget sets `gtk::AccessibleRole` on its class (`heading` for the role `heading`); how role `none` maps is decided in phase 7, and role `disclosure` (`GtkExpander` or `GtkTreeExpander`) with it | The Material composable's semantics; an own component sets `Modifier.semantics { role = … }`, and `semantics { heading() }` for the role `heading`; role `none` adds no semantics of its own, and how a component with no content is hidden is decided in phase 8, and so is role `disclosure` |
 | **Accessibility: intents** | `.accessibilityLabel`, `.accessibilityValue`, `.accessibilityAction(named:)`, `.accessibilityAdjustableAction`, `.accessibilityAction(.escape)` for dismiss | ARIA states and properties, and events | `update_property` and `update_state` (`gtk::AccessibleProperty`, `gtk::AccessibleState`); `GtkAccessible` documents no custom accessible actions, so how a named action reaches Orca is decided in phase 7 | `semantics { stateDescription, customActions, onClick(label = …) }` |
 | **Accessibility: a label that is not drawn** (`hiddenLabel`) | An initializer of the base control that takes no label view and requires the name: `Toggle(isOn: $done, accessibilityLabel: title)`, with a `StringProtocol` twin; its label is an `EmptyView` carrying the name, so nothing is drawn or laid out on any OS. Not `.labelsHidden()` alone, which a custom style sees only from iOS 18, macOS 15 and watchOS 11 (below, "A label that is not drawn") | `aria-label` on the native element, with no `<label>` (#40) | The accessible property `gtk::AccessibleProperty::Label` on the stock widget, with no child label (phase 7) | `Modifier.semantics { contentDescription = … }` on the composable, with no label content (phase 8) |
 | **Accessibility: keyboard intents** | System control: the system handles activation and focus. Own component: `.focusable()`, `.onKeyPress` (iOS 17, macOS 14; not on watchOS), `.keyboardShortcut` (not on watchOS); on macOS also `.onMoveCommand` and `.onExitCommand`. On watchOS the Digital Crown: `.digitalCrownRotation` | Native behavior; a custom element handles `keydown` and sets `tabindex` | Native behavior; an own widget adds a `gtk::ShortcutController` or `gtk::EventControllerKey`, and mnemonics | `Modifier.focusable()` and `Modifier.onKeyEvent` |
@@ -344,6 +344,40 @@ down the tree.
   the adapters' rule that it takes a `Westron.*` value, and added there where review sees it. A contract concept for
   context values, which would let the lint derive the modifier, waits for a second such value (Checkbox's
   decisions/0001, P15).
+
+### Context a component sets
+
+```swift
+LazyVStack(spacing: 0) {
+    ForEach(tree) { Branch(node: $0) }
+}
+.disclosureGroupStyle(.chevron)
+.disclosureAlignsLeaves()
+```
+
+The reverse case: a setting a component's style puts on a part of the tree, for other components there to read. The
+contract's top-level `context` block declares it, each a name, `type: bool` (the only type so far) and a description;
+Disclosure's `alignsLeaves` lines the leaves of a tree up with its branches (Disclosure's decisions/0001, "Leaf
+alignment").
+
+- **The modifier.** `public func <component><Name>(_ <name>: Bool = true) -> some View` on `View`,
+  `.disclosureAlignsLeaves()`, hand-written beside the style: what it sets is the platform's, an environment value a
+  reading component draws from, package-internal. Named after the component, as it is its setting, unlike
+  `.category(_:)`, which several components share.
+- **The parity lint** expects the modifier for every context setting of a contract that gives Apple API, with exactly
+  that signature, and reports it missing or different, as for a state's modifier.
+
+### A component an Apple OS lacks
+
+When SwiftUI has no base control on an OS, the contract says so in that OS's entry, `watchos: { status: unavailable,
+description }`, with nothing else in it; `SystemStyles.Base.unavailableOn` lists such OSes per base, and `spec check`
+requires the entry for each (Disclosure: `SwiftUI.DisclosureGroup`, no watchOS). At least one Apple OS stays, and
+only a `style-on-system-control` derives it so far. The generator puts the component's whole generated API under
+`#if !os(watchOS)`, its matrix under the same condition and the matrix registry appends it under it; the snapshot
+matrix has no platform entry for it; the hand-written style, catalog page and tests are wrapped by hand, and the
+catalog has no entry on that OS. The parity lint accepts a public declaration under `#if` only when the condition is
+exactly the contract's (`!os(watchOS)`); any other `#if` around public API stays a problem.
+`tools/apple/check.sh platforms` builds for watchOS, so a missed wrap fails there.
 
 ### Slots through the system control's label
 

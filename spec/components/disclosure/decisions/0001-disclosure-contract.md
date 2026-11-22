@@ -1,7 +1,8 @@
 # 0001. The Disclosure contract: the collapse chevron on the system's disclosure group
 
-Date: 2026-11-22. Status: proposed, for the coordinating agent's approval under the owner's delegation for phase 4
-(decisions/0014, "Process"; decisions/0005, the first gate). There was no interview: the agent that wrote the draft
+Date: 2026-11-22. Status: approved 2026-11-22 by the coordinating agent under the owner's delegation for phase 4
+(decisions/0014, "Process"; decisions/0005, the first gate), with option A of each open question ("Answers"); the
+implementation's choices and measurements follow ("Leaf alignment", "Measured"). There was no interview: the agent that wrote the draft
 answered the questions of `/new-component` from the documents and the pilot, and each answer names its source. Where
 they were silent, the answer is the agent's proposal; where a proposal changes the contract and has real
 alternatives, it is an open question below, with options and a recommendation, and the contract is written to the
@@ -247,52 +248,118 @@ content. Supplements, hand-written, "not a contract option": expanded and presse
 left layout, collapsed and expanded; a three-level tree of ListRows, once ListRow exists; a label that wraps at
 `accessibility5`, the chevron on its first line.
 
-## The Apple entry, once the tools know the base
+As implemented: the generated sheet (`Disclosure+Matrix.swift`, 1 × 6, `expanded` and `focus` unbound by any token),
+and five supplements in `DisclosurePages.swift`: expanded in each state; right to left, collapsed and expanded; the
+three-level tree of ListRows with its leaves lined up; the block header with its date and rows; the wrapping label at
+`accessibility5`.
 
-`platforms.apple` is `status: planned` in the draft only because `spec check` rejects an unknown base. With
-`SwiftUI.DisclosureGroup` in `SystemStyles.byBase` it becomes the entry below, whose description is the planned
-entry's text; the rest of the contract already passes with it (checked with the base replaced by one the tools know,
-2026-11-22):
+## Answers
 
-```yaml
-  apple:
-    strategy: style-on-system-control
-    base: SwiftUI.DisclosureGroup
-    description: >-
-      (the planned entry's description, less its first sentence)
-    ios:
-      description: >-
-        Hover only with a pointer, on iPad. The chevron's cell is at least 44 pt high and across.
-    macos:
-      keyboardIntents: [expand, collapse]
-      description: >-
-        The cell is at least 28 pt. With the chevron focused, Space toggles it and the Right and Left arrows expand
-        and collapse it, mirrored right to left (onMoveCommand).
-    watchos:
-      description: >-
-        SwiftUI has no DisclosureGroup or DisclosureGroupStyle on watchOS, so the component does not exist there.
-```
+Approved 2026-11-22, each with option A, by the coordinating agent under the owner's delegation:
 
-## What the tools need
+- **Q1, A.** Only the chevron's cell folds; the label keeps its own action.
+- **Q2, A.** With a ListRow label the cell is the row's last trailing item, through ListRow's package-internal
+  `listRowDisclosureCell`; the row tells the style it drew it through a preference (`ListRowTookDisclosureCell`). For
+  any other label the style lays the cell out after the label itself, at the header's trailing edge (B, as the
+  fallback); the contract says so.
+- **Q3, A.** Trailing only, no option.
+- **Q4, A.** The chevron is its own element, represented by what the system's own disclosure is on each OS
+  ("Measured"). The label's words are read twice in a row, once as the label and once as the chevron's name; kept.
+- **Q5, A.** No promise inside a `List`; one in-List sample is measured below.
+- **Motion.** `motion.move` for the turn, the reveal and what stands after the group; under Reduce Motion the chevron
+  snaps, the content fades, nothing slides.
+- **watchOS.** The component does not exist there.
 
-Found while drafting; not changed here.
+## Leaf alignment
 
-1. **The base.** `SystemStyles.byBase` has no `SwiftUI.DisclosureGroup`, so `spec check` reports "the validator does
-   not know the system styles of SwiftUI.DisclosureGroup" on a style on it. Its entry: modifier
-   `disclosureGroupStyle`, protocol `DisclosureGroupStyle`, styles `["automatic"]` (the only static style in Xcode
-   27.1's interface), states `expanded` (`configuration.isExpanded`) and `pressed`, `hover`, `focus`, `disabled`, which
-   the style follows through its Button, as the Toggle's entry lists `pressed`.
-2. **A component one Apple OS does not have.** An Apple OS can restrict options and states but cannot say the
-   component is absent. `disclosureGroupStyle(_:)` and `DisclosureGroupStyle` are unavailable on watchOS, so the
-   generated overload, `DisclosureState`, the matrix and the catalog entry must be behind `#if !os(watchOS)` (or
-   `@available(watchOS, unavailable)`), or `tools/apple/check.sh platforms` fails to build for watchOS. The schema
-   needs a way to say it, such as `watchos: { status: unavailable }`, and the generator and the API parity lint to
-   follow it.
-3. **The role `disclosure`** is a new abstract role; spec/conventions.md maps roles by example only. A row for it
-   (Apple: the system's; web: a `button` with `aria-expanded`; GTK and Compose with their phases) would record it.
-4. **A tie between two contracts** (Q2-A: ListRow keeps the chevron's place) has no field; both descriptions carry
-   it.
-5. **A binding by layout direction** (the turn mirrored right to left) has no key; the description carries it.
+The pilot's leaves keep the chevron's cell empty so that the counts stand in one column (the table above). The
+question was the smallest API a product needs for it, preferring no new ListRow symbol.
+
+**Chosen: a context the tree sets, `alignsLeaves`, on Apple `.disclosureAlignsLeaves(_ alignsLeaves: Bool = true)`.**
+The contract gains a top-level `context` block (spec/conventions.md, "Context a component sets"): a bool setting a
+component's style sets on its ancestors, generated as an expected `public func <component><Name>(_: Bool = true)`
+that the parity lint holds to the contract and the platform writes by hand. On Apple the modifier puts a hidden copy
+of the real cell in ListRow's package-internal `listRowLeafCell`; a ListRow with no `listRowDisclosureCell` draws it in
+the same place, so the widths match by construction at every text size (`ListRowTests.leafLinesUpWithBranch`, large,
+xxxLarge, accessibility2). It is off by default, so a block's rows under a block header keep their whole width.
+
+Rejected:
+
+- Lining up every row inside a group's content automatically: a block's rows would lose the cell's width for nothing,
+  and the top-level leaves of a tree, which are in no group's content, would not line up.
+- A ListRow option (`reservesChevron`): a ListRow symbol for Disclosure's concern, and each leaf would have to say it.
+- An allow marker on a hand-written public modifier: an API the contracts do not give, which the parity lint exists to
+  refuse.
+
+## Measured
+
+On the catalog's `disclosure` entry with `DisclosureBehaviorTests`, iOS 26 simulator (iPhone 17) and macOS 26,
+Xcode 27.1, 2026-11-22.
+
+What XCUITest reads:
+
+| Element | iOS | macOS |
+|---|---|---|
+| A ListRow label (`Projects, 5`) | Button `Projects, 5`, no value | DisclosureTriangle `Projects, 5`, value 1 |
+| Its cell | Button `Projects`, 44 × 44, after the row, value `Expanded` or `Collapsed` (westron's) | DisclosureTriangle `Projects`, 28 × 28, after the row, value 1 or 0 |
+| A text label (`rest`) | StaticText `rest` | DisclosureTriangle `rest`, value 0 or 1 |
+| Its cell | Button `rest`, 44 × 44, value `Expanded` or `Collapsed` | DisclosureTriangle `rest`, 28 × 28, value 0 or 1 |
+| A disabled group's cell | Button, not enabled | DisclosureTriangle, not enabled |
+| A button label (`Tomorrow`) | Button `Tomorrow` | DisclosureTriangle `Tomorrow`, value 0 |
+| The chevron's glyph | no element | no element |
+| The system's own `DisclosureGroup("E1")`, for comparison | Button `E1`, no value, the whole header | DisclosureTriangle `E1`, value 0 |
+
+- **The representation differs per OS.** The system's `DisclosureGroup` inside an `accessibilityRepresentation` keeps
+  its role on macOS but loses its button on iOS (read as Other holding a StaticText). So on macOS the cell is
+  represented by the system's `DisclosureGroup` in its automatic style, and on iOS by the system's Button on the same
+  label, which is what the system's own disclosure group is there: a button with no value XCUITest can read.
+- **The state on iOS (revised after the accessibility review, 2026-11-23).** The system's own disclosure group may
+  carry its state in an expanded status SwiftUI keeps private; whether VoiceOver speaks one for it was not measured
+  (no VoiceOver run here). Without one a VoiceOver user could not tell an open branch from a folded one, so the iOS
+  cell carries the state as its value, "Expanded" or "Collapsed", localized in WestronUI's string catalog, read after
+  its name as Button's "Loading" is: "Projects, Expanded, button". It is the state, not a stray value; macOS keeps the
+  system's 1 and 0. If the system's own turns out to say its state, VoiceOver on iOS reads the same thing in its words
+  and westron's in its own; a check with VoiceOver on a device is open.
+- **The cell's name and frame.** The group's label view drawn inside the cell's representation resolved, in a tree,
+  to the outermost group's label (every branch's cell read `Work, 9`), and a ListRow label set the element's frame
+  wider than the cell. So a ListRow names the cell by its title (`listRowDisclosureCellName`, package-internal), and
+  the representation is laid out in exactly the cell's frame; on macOS the label inside it is one element filling the
+  cell, as macOS gives the triangle its label's frame.
+- **The branch row and the expanded state.** On macOS the system itself gives the label of any `DisclosureGroup`
+  style the disclosure role and the group's value, so the row reads `Projects, 5`, disclosure triangle, expanded, and
+  so does a text or button label. On iOS the row stays a button with no value. Decided: the row adds nothing of its
+  own on either OS, since the cell right after it says the state and a value on both would be announced twice;
+  ListRow could carry one through the same hook if the owner wants it. On macOS VoiceOver's activation of the cell
+  goes through the cell's own toggle, in its motion. What VoiceOver does when it activates the macOS label (its row action or a
+  toggle) is not measured: XCUITest clicks by coordinates.
+- **Presses.** A press on the cell folds and unfolds the group and runs no label action; a press on the row or the
+  title runs its action and folds nothing; a press held on a row's cell begins no press of the row
+  (`ListRowBehaviorTests`); a press 2 pt inside the cell's corner, outside the drawn circle, folds (iOS and macOS).
+- **Hover on macOS** begins at the drawn circle: the pointer 1 pt inside the cell's corner leaves it at rest, at its
+  middle it is hovered, back at the corner at rest.
+- **Keyboard on macOS**: not measured; keyboard navigation is off on the machine, and the test skips.
+- **Nested groups.** SwiftUI hands a group's content the automatic style again: a branch inside a branch drew the
+  system's chevron beside westron's row until the style passed itself on to its content (iOS screenshot).
+- **In a `List` (Q5).** iOS: the List draws westron's look unchanged, each cell a Button 44 × 44 after its row. macOS:
+  each top-level group is one outline row of the List, with the List's own inset background and its own selection;
+  the nested groups, the chevrons, the guides and the leaves' column are westron's, the cells disclosure triangles as
+  outside one. Nothing here is promised.
+- **Reduce Motion.** A toggle changes the binding with no animation, so the group's height and what stands after it
+  jump; the content alone fades, in its own transition, `motion.fade`; the chevron snaps. Checked as values
+  (`DisclosureStyleTests`), not by a slowed capture.
+
+## Open
+
+- **The reduced fade's length.** Chapter 05 caps travel's reduced fade at 150 ms; `motion.fade`, the only fade token,
+  is 200 ms, and Checkbox's reduced form uses it too. A reduced form per motion is chapter 05's open question 1
+  (`dev.westron.reducedMotion`, decisions/0013); this is the first component whose contract would name the number, so
+  the owner decides whether the token comes now or the cap is read as `motion.fade`.
+- **Not measured here:** what VoiceOver speaks (no VoiceOver run, on iOS or macOS); the macOS keyboard (keyboard
+  navigation is off on the machine); what activating the macOS label runs under VoiceOver (XCUITest clicks by
+  coordinates).
+- **A risk the review named, not seen in a capture:** a branch could draw its cell twice for one frame before the
+  row's preference arrives. (The other, the press's motion carrying the chevron's turn, is closed: the press's
+  animation is scoped to the scale.)
 
 ## Pilot files read
 

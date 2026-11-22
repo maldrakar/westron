@@ -439,7 +439,7 @@ a11y() {
 # of its own (behavior_plan) is never retried, and the nightly CI run reports it
 # (.github/workflows/accessibility-audit.yml).
 behavior_tests=(ButtonBehaviorTests CheckboxBehaviorTests TextFieldBehaviorTests IconAccessibilityTests
-  IconTileAccessibilityTests ChipBehaviorTests ListRowBehaviorTests)
+  IconTileAccessibilityTests ChipBehaviorTests ListRowBehaviorTests DisclosureBehaviorTests)
 
 # WESTRON_BEHAVIOR_DEADLINE=<minutes> from the script's start (unset: none; CI sets it a few minutes before the job's
 # timeout, since a job the timeout kills uploads no logs, and a macOS UI test run has gone silent on CI for an hour,

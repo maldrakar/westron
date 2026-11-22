@@ -1,6 +1,30 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Collapsed" : {
+      "comment" : "A disclosure's state while its content is folded: its accessibility value.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collapsed"
+          }
+        }
+      }
+    },
+    "Expanded" : {
+      "comment" : "A disclosure's state while its content shows: its accessibility value.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expanded"
+          }
+        }
+      }
+    },
     "Level" : {
       "comment" : "The nesting level of a row in a tree, as more content.",
       "extractionState" : "manual",

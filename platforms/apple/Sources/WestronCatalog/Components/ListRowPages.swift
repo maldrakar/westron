@@ -3,8 +3,8 @@ import WestronUI
 
 // ListRow's catalog entries, from spec/components/list-row/list-row.spec.yaml: `list-row`, both forms in every state
 // each enters (the contract's `forms`), a tree of levels with guides, the insertion mark and a drop target, the
-// Disclosure chevron's cell with a stand-in, and a live sample; `list-row-in-list`, rows in a system List with swipe
-// actions, and the insertion mark in a List. The states come from the generated `ListRowState` through `ListRowCatalogState`, so the pages follow the
+// Disclosure chevron on a branch and a leaf's empty cell, and a live sample; `list-row-in-list`, rows in a system
+// List with swipe actions, and the insertion mark in a List. The states come from the generated `ListRowState` through `ListRowCatalogState`, so the pages follow the
 // contract.
 
 extension View {
@@ -32,12 +32,12 @@ extension CatalogEntry {
 enum ListRowCatalogID {
     /// The check at the start of the live task's row.
     static let check = "list-row.live.check"
+    /// The live branch's row, Projects; the identifier reaches the Disclosure chevron's cell inside it too.
+    static let branch = "list-row.live.branch"
     /// The text that says which live row is selected, how often a row's action ran, whether the task is done, how often
     /// the branch's chevron cell was pressed and how many presses a row's system Button began:
     /// "selected: inbox; actions: 0; done: no; cell: 0; presses: 0".
     static let summary = "list-row.live.summary"
-    /// The live branch's chevron cell, a stand-in.
-    static let cell = "list-row.live.cell"
     /// The check at the start of the first row in the List.
     static let listCheck = "list-row.list.check"
     /// The List page's summary: "actions: 0; done: no; deleted: none".
@@ -122,49 +122,82 @@ struct ListRowTree: View {
     }
 }
 
-/// The Disclosure chevron's cell, a stand-in until Disclosure exists (#120): a chevron in a frame
-/// size.target.minimum across, its own button.
-struct ListRowCellStandIn: View {
-    var action: () -> Void = {}
+/// A branch of a tree: the row as the label of a DisclosureGroup in westron's chevron style (#120), folding `content`,
+/// so that the row draws the chevron's cell as its last trailing item. watchOS has no DisclosureGroup: there the row
+/// and its content stand one above the other, with no chevron.
+struct ListRowBranch<Label: View, Content: View>: View {
+    @State var isExpanded = false
+    @ViewBuilder let label: Label
+    @ViewBuilder var content: Content
 
     var body: some View {
-        Button {
-            action()
-        } label: {
-            Icon(.chevron)
-                .frame(minWidth: .size.target.minimum, minHeight: .size.target.minimum)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(verbatim: "Collapse"))
+        #if os(watchOS)
+            VStack(spacing: 0) {
+                label
+                if isExpanded { content }
+            }
+        #else
+            DisclosureGroup(isExpanded: $isExpanded) {
+                content
+            } label: {
+                label
+            }
+            .disclosureGroupStyle(.chevron)
+        #endif
     }
 }
 
-/// A leaf and a branch of a tree, the branch with the chevron's stand-in, the leaf with an empty frame of the cell's
-/// width at the end of its trailing slot, so that the counts stand in one column.
+extension ListRowBranch where Content == EmptyView {
+    /// A collapsed branch whose lists the sample leaves out.
+    init(@ViewBuilder label: () -> Label) {
+        self.label = label()
+        content = EmptyView()
+    }
+}
+
+extension View {
+    /// Lines the leaves up with the branches, as `.disclosureAlignsLeaves()` does; watchOS has no Disclosure.
+    func listRowLeavesAligned() -> some View {
+        #if os(watchOS)
+            self
+        #else
+            disclosureAlignsLeaves()
+        #endif
+    }
+
+    /// Calls `action` each time a branch's chevron in this view folds or unfolds its branch; watchOS has none.
+    func listRowChevronToggles(_ action: @escaping @MainActor @Sendable () -> Void) -> some View {
+        #if os(watchOS)
+            self
+        #else
+            onDisclosureToggle { _ in action() }
+        #endif
+    }
+}
+
+/// A branch and a leaf of a tree, the branch collapsed: the branch's row ends with the chevron's cell, the leaf's with
+/// the empty cell `.disclosureAlignsLeaves()` keeps, so that the counts stand in one column.
 struct ListRowCellColumn: View {
     var body: some View {
         VStack(spacing: 0) {
-            ListRow(action: {}) {
-                Text(verbatim: "Work")
-            } leading: {
-                Icon(.briefcase)
-            } trailing: {
-                Text(verbatim: "4").textRole(.subheadline.regular).foregroundStyle(.text.secondary)
+            ListRowBranch {
+                ListRow(action: {}) {
+                    Text(verbatim: "Work")
+                } leading: {
+                    Icon(.briefcase)
+                } trailing: {
+                    Text(verbatim: "4").textRole(.subheadline.regular).foregroundStyle(.text.secondary)
+                }
             }
-            .listRowDisclosureCell { ListRowCellStandIn() }
             ListRow(action: {}) {
                 Text(verbatim: "Errands")
             } leading: {
                 Icon(.bag)
             } trailing: {
-                HStack(spacing: 0) {
-                    Text(verbatim: "7").textRole(.subheadline.regular).foregroundStyle(.text.secondary)
-                    // The leaf's empty cell: the chevron cell's width, after the trailing gap the row puts before it.
-                    ListRowEmptyCell()
-                }
+                Text(verbatim: "7").textRole(.subheadline.regular).foregroundStyle(.text.secondary)
             }
         }
+        .listRowLeavesAligned()
     }
 }
 
@@ -218,7 +251,7 @@ private struct ListRowPage: View {
             section("Drag and drop: the insertion mark and a drop target") {
                 ListRowDragSamples()
             }
-            section("The Disclosure chevron's cell, a stand-in, and a leaf's empty cell") {
+            section("A branch's chevron (Disclosure) and a leaf's empty cell") {
                 ListRowCellColumn()
             }
             section("A long title on one line, at level 4") {
@@ -257,22 +290,23 @@ private struct ListRowPage: View {
                             .accessibilityIdentifier(ListRowCatalogID.check)
                     }
                     .selected(chosen == "task")
-                    ListRow(action: { choose("projects") }) {
-                        Text(verbatim: "Projects")
-                    } leading: {
-                        Icon(.folder)
+                    // A branch, expanded: its chevron folds the static row under it.
+                    ListRowBranch(isExpanded: true) {
+                        ListRow(action: { choose("projects") }) {
+                            Text(verbatim: "Projects")
+                        } leading: {
+                            Icon(.folder)
+                        }
+                        .selected(chosen == "projects")
+                        .accessibilityIdentifier(ListRowCatalogID.branch)
+                    } content: {
+                        ListRow(level: 1) {
+                            Text(verbatim: "Buy washers")
+                        } leading: {
+                            Icon(.note)
+                        }
+                        .selected(true)
                     }
-                    .selected(chosen == "projects")
-                    .listRowDisclosureCell {
-                        ListRowCellStandIn { cellPresses += 1 }
-                            .accessibilityIdentifier(ListRowCatalogID.cell)
-                    }
-                    ListRow(level: 1) {
-                        Text(verbatim: "Buy washers")
-                    } leading: {
-                        Icon(.note)
-                    }
-                    .selected(true)
                     ListRow(action: { choose("archived") }) {
                         Text(verbatim: "Archived")
                     } leading: {
@@ -283,6 +317,7 @@ private struct ListRowPage: View {
                 .listRowPressObserver { pressed in
                     if pressed { presses += 1 }
                 }
+                .listRowChevronToggles { cellPresses += 1 }
                 Text(
                     verbatim: "selected: \(chosen); actions: \(actions); done: \(done ? "yes" : "no"); "
                         + "cell: \(cellPresses); presses: \(presses)"
@@ -461,7 +496,7 @@ extension ComponentMatrix.Supplement {
     static let listRowSlots = ComponentMatrix.Supplement(
         component: "list-row", id: "slots", title: "the slots",
         note: "Title alone; leading and title; title and second line; all four, and the Disclosure chevron's cell "
-            + "(a stand-in until #120) after the trailing slot.",
+            + "after the trailing slot, the row a collapsed branch.",
         keeps: ["form": "pressable"], rowsPerPicture: 2, splitsAtEverySize: true, columnsPerPicture: 1
     ) { combination in
         VStack(spacing: 0) {
@@ -476,8 +511,7 @@ extension ComponentMatrix.Supplement {
             } subtitle: {
                 Text(verbatim: "Under the title")
             }
-            ListRowSampleRow(level: 1, guides: guides(combination))
-                .listRowDisclosureCell { ListRowCellStandIn() }
+            ListRowBranch { ListRowSampleRow(level: 1, guides: guides(combination)) }
         }
         .listRowCatalogState(state(combination))
         .matrixCellTakesOfferedWidth()
@@ -523,13 +557,12 @@ extension ComponentMatrix.Supplement {
     static let listRowLargeText = ComponentMatrix.Supplement(
         component: "list-row", id: "accessibility5", title: "accessibility5: the trailing slot under the text",
         note: "At the accessibility text sizes the trailing slot moves under the title and the second line, from the "
-            + "title's leading edge; the chevron's cell (a stand-in) stays on the first line at the end. Drawn at "
+            + "title's leading edge; the chevron's cell stays on the first line at the end. Drawn at "
             + "accessibility5 whatever the sheet's text size, at level 0, one column a picture: the row needs an "
             + "iPhone's whole width.",
         keeps: ["form": "pressable"], rowsPerPicture: 1, splitsAtEverySize: true, columnsPerPicture: 1
     ) { combination in
-        ListRowSampleRow(level: 0, guides: guides(combination))
-            .listRowDisclosureCell { ListRowCellStandIn() }
+        ListRowBranch { ListRowSampleRow(level: 0, guides: guides(combination)) }
             .listRowCatalogState(state(combination))
             .dynamicTypeSize(.accessibility5)
             .matrixCellTakesOfferedWidth()
@@ -553,13 +586,12 @@ extension ComponentMatrix.Supplement {
     static let listRowRightToLeft = ComponentMatrix.Supplement(
         component: "list-row", id: "right-to-left", title: "right to left",
         note: "The row mirrors: the leading slot and the indent from the right, the guides under it, the trailing slot "
-            + "and the chevron's cell (a stand-in) at the left.",
+            + "and the chevron's cell at the left, pointing left while collapsed.",
         keeps: ["form": "pressable"], rowsPerPicture: 2, splitsAtEverySize: true, columnsPerPicture: 1
     ) { combination in
         VStack(spacing: 0) {
             ListRowSampleRow(level: 1, guides: guides(combination))
-            ListRowSampleRow(level: 2, guides: guides(combination))
-                .listRowDisclosureCell { ListRowCellStandIn() }
+            ListRowBranch { ListRowSampleRow(level: 2, guides: guides(combination)) }
         }
         .listRowCatalogState(state(combination))
         .environment(\.layoutDirection, .rightToLeft)

@@ -246,7 +246,12 @@ still drives every generated sheet and combination:
     truncated at level 4; `drag`, the insertion mark at a level, drawn above the next row's highlight, and a drop
     target; `right-to-left`, the slots, indent, guides and bar mirrored; and `accessibility5`, the trailing slot under
     the text at level 0. Every one is drawn at every text size of the sheet, accessibility5 included, where the row's
-    horizontal spacing stops at its xxxLarge width (spec/components/list-row, decisions/0001, D2).
+    horizontal spacing stops at its xxxLarge width (spec/components/list-row, decisions/0001, D2). The branches in
+    `slots`, `right-to-left` and `accessibility5` draw the real Disclosure chevron (#120).
+  - Disclosure, five, on iOS and macOS only (SwiftUI has no DisclosureGroup on watchOS): `expanded`, expanded in each
+    state; `right-to-left`, collapsed and expanded; `tree`, three levels of ListRows with `.disclosureAlignsLeaves()`;
+    `block-header`, a title with its date over two rows with checks; and `accessibility5`, a label that wraps at
+    accessibility5, the chevron on its first line.
 
   Like the matrix, supplements are not catalog entries, so the accessibility audit does not walk them.
 
@@ -383,11 +388,12 @@ checks again (a commit pushed by a workflow starts none).
 ### Behaviour UI tests
 
 `ButtonBehaviorTests`, `CheckboxBehaviorTests`, `TextFieldBehaviorTests`, `IconAccessibilityTests`,
-`IconTileAccessibilityTests`, `ChipBehaviorTests` and `ListRowBehaviorTests`, in `Catalog/CatalogUITests`, check on
+`IconTileAccessibilityTests`, `ChipBehaviorTests`, `ListRowBehaviorTests` and `DisclosureBehaviorTests`, in
+`Catalog/CatalogUITests`, check on
 the catalog's entries what a unit test cannot reach: presses, hit areas and hover, the accessibility hierarchy, the
 keyboard. Each class has branches of its own for iOS and macOS where the platforms differ. `tools/apple/check.sh
 behavior` runs them, like the audit: the build first, a step of its own, then one `xcodebuild test-without-building`
-for the classes named (all seven by default); it prints each failure with its message, each skip with its reason, the
+for the classes named (all eight by default); it prints each failure with its message, each skip with its reason, the
 test cases and the totals, and stops the simulator's test daemon afterwards. The log goes to
 `.build/logs/behavior-<platform>[-<classes>].log`, the result bundle to `.build/xcode/results/`.
 

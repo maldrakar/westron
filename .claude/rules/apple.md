@@ -31,7 +31,8 @@ paths:
   `.buttonStyle(.chip)` and `.labelStyle(.chip)` (Chip), `.textRole(_:)`, `Icon(_:)` and `Icon(_:label:)`,
   `IconTile(_:)` and `IconTile(_:label:)` (a list's tile in the `.category(_:)` of its context, neutral with none),
   `ListRow(level:guides:action:) { title } subtitle: leading: trailing:` with `.selected(_:)`, `.dropTarget(_:)` and
-  `.insertionMark(_:level:)` (ListRow), `.surface(.raised|.dragged|.sunken, outlined:)`, `Rule(axis:purpose:)` and
+  `.insertionMark(_:level:)` (ListRow), `.disclosureGroupStyle(.chevron)` with `.disclosureAlignsLeaves()` on a tree
+  (Disclosure; not on watchOS, where SwiftUI has no DisclosureGroup), `.surface(.raised|.dragged|.sunken, outlined:)`, `Rule(axis:purpose:)` and
   `Rule("Label")`. A check beside a separate title draws no label: `Toggle(isOn: $task.isDone, accessibilityLabel:
   task.title).toggleStyle(.check)`, not `.labelsHidden()`, which a custom style sees only from iOS 18, macOS 15 and
   watchOS 11, so on iOS 17 the label would be drawn (`spec/components/checkbox/decisions/0002`).

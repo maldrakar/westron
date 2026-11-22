@@ -60,11 +60,12 @@ description: >-
   chevron style (#120), the style hands the row its chevron's cell and the row draws it as the last item at its end,
   container.trailingGap after the trailing slot, inside the row's highlight, so that the row's hover, pressed and
   selected tints run under it; the cell takes its own press, folding the branch, which never runs the row's action,
-  and is its own element after the row's. A row that is no such label draws no cell. A leaf in a tree of branches,
-  whose trailing slot should stand in the branches' column, ends its trailing slot with an empty frame as wide as the
-  chevron's cell, size.target.minimum, and the container.trailingGap the row puts before the cell, scaled as the row
-  scales it; the row reserves nothing by itself, and how a product asks for that frame is decided with Disclosure
-  (#120; decisions/0001, "The Disclosure chevron's place"). Level and guides. A row stands at a level, 0 at the top of
+  and is its own element after the row's, named by the row's title. A row that is no such label draws no cell. A leaf
+  in a tree of branches, whose trailing slot should stand in the branches' column, draws the same cell empty and
+  hidden, at the same width and after the same container.trailingGap, when the product sets Disclosure's context
+  alignsLeaves on the tree (the Disclosure contract's `context`); without it the row reserves nothing (#120; the
+  Disclosure contract's decisions/0001, "Leaf alignment"; decisions/0001, "The Disclosure chevron's place"). Level
+  and guides. A row stands at a level, 0 at the top of
   a tree and one more for each level below; it is indented by container.indent for each level. A row at level n > 0
   draws n guides when guides is on: one vertical line per ancestor level, centred under where that level's leading
   slot is centred, as wide as the row's own leading slot, but never closer than half container.gap to the start of the
@@ -272,7 +273,9 @@ platforms:
       Button's is; the drawn row's accessibility shape is the highlight's, and the words' element's its own rectangle at
       the row's height. The chevron's cell reaches the row through the environment, package-internal: the Disclosure
       style sets it on its label, and the row reads it and clears it for its own slots, so a row inside a slot draws
-      none; no public API (decisions/0001, "The Disclosure chevron's place"). The row outside a List, in a product's
+      none, tells the style it drew it through a preference, and names it by its title; a leaf's hidden cell reaches
+      it the same way from Disclosure's .disclosureAlignsLeaves(); no public API of ListRow's (decisions/0001, "The
+      Disclosure chevron's place"). The row outside a List, in a product's
       ScrollView, LazyVStack or a sheet, is the pilot's case, and the only one where no system row exists. In a List the
       product hands the row's look to ListRow and keeps the List's behaviors: .listRowInsets(EdgeInsets()),
       .listRowBackground(Color.clear) and .listRowSeparator(.hidden) on the row, and no List selection binding, whose

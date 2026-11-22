@@ -57,6 +57,12 @@
       "propertyNames": { "$ref": "#/$defs/name" },
       "additionalProperties": { "$ref": "#/$defs/mark" }
     },
+    "context": {
+      "description": "Settings a product makes once on an ancestor for every instance below it, and for the components the contract says read them, by name, which no option of one instance can carry because they concern the instances together (Disclosure's alignsLeaves: every row of a tree keeps the chevron's cell, empty on a leaf, so trailing content stands in columns). Each is a bool, off where it is not set. On Apple it is the modifier `.<component><Name>(_: Bool = true)`, set through the environment and cascading (spec/conventions.md, \"Context a component sets\").",
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/name" },
+      "additionalProperties": { "$ref": "#/$defs/contextSetting" }
+    },
     "constraints": {
       "description": "Rules between options: when the options have the values in `when`, they must have the values in `require`. A rule on a slot names it in `when` under the key `slots` instead of options: when an instance fills that slot, the options must have the values in `require`, one value each, with severity error (Rule: a labelled rule is a horizontal separator).",
       "type": "array",
@@ -138,6 +144,16 @@
         "type": { "const": "integer" },
         "default": { "type": "integer" },
         "minimum": { "type": "integer" },
+        "description": { "$ref": "#/$defs/text" }
+      }
+    },
+    "contextSetting": {
+      "description": "One setting of the context: a bool, off where no ancestor sets it, and what it does.",
+      "type": "object",
+      "required": ["type", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "bool" },
         "description": { "$ref": "#/$defs/text" }
       }
     },
@@ -436,15 +452,27 @@
       "$ref": "#/$defs/text"
     },
     "appleTarget": {
-      "description": "What one Apple OS keeps of the contract, beyond what all of Apple keeps.",
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "options": { "$ref": "#/$defs/restrictedOptions" },
-        "fallback": { "$ref": "#/$defs/fallback" },
-        "states": { "$ref": "#/$defs/restrictedStates" },
-        "keyboardIntents": { "$ref": "#/$defs/platformKeyboardIntents" },
-        "description": { "$ref": "#/$defs/reason" }
+      "description": "What one Apple OS keeps of the contract, beyond what all of Apple keeps; or, with `status: unavailable`, that the component does not exist on that OS, since its system control does not (SwiftUI has no DisclosureGroup on watchOS): nothing of it is generated or compiled there, and the description says why. At least one Apple OS keeps it (spec check).",
+      "if": { "type": "object", "required": ["status"] },
+      "then": {
+        "type": "object",
+        "required": ["status", "description"],
+        "additionalProperties": false,
+        "properties": {
+          "status": { "const": "unavailable" },
+          "description": { "$ref": "#/$defs/reason" }
+        }
+      },
+      "else": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "options": { "$ref": "#/$defs/restrictedOptions" },
+          "fallback": { "$ref": "#/$defs/fallback" },
+          "states": { "$ref": "#/$defs/restrictedStates" },
+          "keyboardIntents": { "$ref": "#/$defs/platformKeyboardIntents" },
+          "description": { "$ref": "#/$defs/reason" }
+        }
       }
     },
     "planned": {

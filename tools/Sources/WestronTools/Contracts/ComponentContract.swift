@@ -68,13 +68,19 @@ public struct ComponentContract: Equatable, Sendable {
         public let systemOptions: [String: String]
         /// What all of Apple keeps.
         public let restriction: Restriction
-        /// What each OS keeps of Apple's, by `ios`, `macos`, `watchos`.
+        /// What each OS keeps of Apple's, by `ios`, `macos`, `watchos`; an OS where the component is unavailable has
+        /// none.
         public let targets: [String: Restriction]
+        /// The OSes where the component does not exist (`platforms.apple.<os>.status: unavailable`), in `appleOSes`
+        /// order: the system control is not there, so nothing of the component is compiled for them.
+        public let unavailable: [String]
 
         public init(
             strategy: String, base: String?, form: String? = nil, systemOptions: [String: String] = [:],
-            restriction: Restriction = Restriction(), targets: [String: Restriction] = [:], bases: [FormBase] = []
+            restriction: Restriction = Restriction(), targets: [String: Restriction] = [:], bases: [FormBase] = [],
+            unavailable: [String] = []
         ) {
+            self.unavailable = unavailable
             self.strategy = strategy
             self.base = base
             self.bases = bases
@@ -82,6 +88,17 @@ public struct ComponentContract: Equatable, Sendable {
             self.systemOptions = systemOptions
             self.restriction = restriction
             self.targets = targets
+        }
+
+        /// The OSes where the component exists, in `appleOSes` order.
+        public var availableOSes: [String] { ComponentContract.appleOSes.filter { !unavailable.contains($0) } }
+
+        /// The Swift condition every declaration of the component stands under, `!os(watchOS)`; nil where it exists
+        /// on every Apple OS.
+        public var availabilityCondition: String? {
+            guard !unavailable.isEmpty else { return nil }
+            return unavailable.compactMap { AppleComponents.osConditions[$0].map { "!" + $0 } }
+                .joined(separator: " && ")
         }
 
         /// The bases its styles go on, each with its form: the one `base`, with no form, or each form's base.
@@ -171,6 +188,9 @@ public struct ComponentContract: Equatable, Sendable {
 
     public static let appleOSes = ["ios", "macos", "watchos"]
 
+    /// The status of an Apple OS where the component does not exist: `platforms.apple.watchos.status: unavailable`.
+    public static let unavailableStatus = "unavailable"
+
     public let id: String
     public let status: String
     /// In the contract's order.
@@ -187,6 +207,8 @@ public struct ComponentContract: Equatable, Sendable {
     public let constraints: [Constraint]
     /// In the contract's order.
     public let marks: [Mark]
+    /// The names of its context settings, bools a product sets on an ancestor (`context`), in the contract's order.
+    public let context: [String]
     /// `accessibility.intents`: what a person does with the component.
     public let intents: [String]
     /// The states some case of a token binding names in its `when` (`state: pressed`), in the contract's order of
@@ -203,8 +225,9 @@ public struct ComponentContract: Equatable, Sendable {
         id: String, status: String, options: [Option], states: [String], apple: Apple?,
         constraints: [Constraint] = [], boundStates: [String]? = nil, slots: [String] = [],
         accessibilityLabel: String? = nil, hiddenLabel: Bool = false, forms: [Form] = [], marks: [Mark] = [],
-        intents: [String] = []
+        intents: [String] = [], context: [String] = []
     ) {
+        self.context = context
         self.forms = forms
         self.marks = marks
         self.intents = intents
@@ -251,8 +274,13 @@ public struct ComponentContract: Equatable, Sendable {
                 systemOptions[member.key] = api
             }
             var targets: [String: Restriction] = [:]
+            var unavailable: [String] = []
             for os in Self.appleOSes {
                 if let target = entry[os] {
+                    if target["status"]?.string == Self.unavailableStatus {
+                        unavailable.append(os)
+                        continue
+                    }
                     targets[os] = try Self.restriction(target, at: applePath.key(os), source: source)
                 }
             }
@@ -266,7 +294,8 @@ public struct ComponentContract: Equatable, Sendable {
             apple = Apple(
                 strategy: strategy, base: entry["base"]?.string, form: entry["form"]?.string,
                 systemOptions: systemOptions,
-                restriction: try Self.restriction(entry, at: applePath, source: source), targets: targets, bases: bases)
+                restriction: try Self.restriction(entry, at: applePath, source: source), targets: targets, bases: bases,
+                unavailable: unavailable)
         } else {
             apple = nil
         }
@@ -321,7 +350,7 @@ public struct ComponentContract: Equatable, Sendable {
             slots: document["slots"]?.elements?.compactMap(\.string) ?? [],
             accessibilityLabel: document["accessibility"]?["label"]?.string,
             hiddenLabel: document["accessibility"]?["hiddenLabel"] == .bool(true), forms: forms, marks: marks,
-            intents: intents)
+            intents: intents, context: (document["context"]?.members ?? []).map(\.key))
     }
 
     /// One option, or one parameter of a mark, which takes an option's shape.

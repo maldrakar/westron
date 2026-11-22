@@ -537,14 +537,21 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         /// Whether the element must reach below the top of the system keyboard, which must be up: an element the
         /// keyboard covers is measured on the keyboard's pixels.
         var underKeyboard = false
+        /// The element's type it must have, if any.
+        var elementType: XCUIElement.ElementType? = nil
+        /// The widest the element's frame may be, if that matters: a control's cell, not a row with the same name.
+        var maxWidth: CGFloat? = nil
         /// Tells the issue by its element's label; `nil` when the audit names no element.
         let label: @Sendable (String?) -> Bool
 
         init(
             _ scope: Scope, type: XCUIAccessibilityAuditType, reason: String, description: String? = nil,
             appearance: Configuration.Appearance? = nil, value: String? = nil, enabled: Bool? = nil,
-            detail: String? = nil, underKeyboard: Bool = false, label: @escaping @Sendable (String?) -> Bool
+            detail: String? = nil, underKeyboard: Bool = false, elementType: XCUIElement.ElementType? = nil,
+            maxWidth: CGFloat? = nil, label: @escaping @Sendable (String?) -> Bool
         ) {
+            self.elementType = elementType
+            self.maxWidth = maxWidth
             self.scope = scope
             self.type = type
             self.reason = reason
@@ -570,6 +577,8 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             if let value, issue.element?.value.map({ "\($0)" }) != value { return false }
             if let enabled, issue.element?.isEnabled != enabled { return false }
             if let detail, !issue.detailedDescription.contains(detail) { return false }
+            if let elementType, issue.element?.elementType != elementType { return false }
+            if let maxWidth, (issue.element?.frame.width ?? .infinity) > maxWidth { return false }
             if underKeyboard {
                 let keyboard = XCUIApplication().keyboards.firstMatch
                 guard keyboard.exists, let frame = issue.element?.frame, !frame.isEmpty,
@@ -750,6 +759,39 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                 Suppression(.entry("color-backgrounds"), type: .textClipped, reason: "an issue with no element") {
                     $0 == nil
                 }
+            ]
+            // The Disclosure chevron's cell (#120) on iOS: its accessibility representation is the system's Button on
+            // the group's label, named by the label's words or a ListRow's title, laid out in the cell's frame, which
+            // is what the system's own disclosure group is on iOS (spec/components/disclosure, decisions/0001,
+            // "Measured"). Those words are drawn beside the cell, in the label; in the cell's frame only the chevron
+            // is drawn. So the audit reports the button's text as clipped, and measures the chevron, a non-text glyph
+            // held to 3:1 by color.icon.tertiary's declared pairs on the canvas and the hover and pressed tints
+            // (`tools/westron tokens contrast`), as text held to 4.5:1. Only a button no wider than the cell (44 pt,
+            // 44.3 at accessibility5) with one of the pages' cell names matches: the rows and labels with the same
+            // words are a StaticText, or a Button as wide as the row, and are audited as usual.
+            for (entryID, names) in [
+                ("disclosure", ["rest", "hover", "focus", "pressed", "disabled", "Work", "Projects"]),
+                ("list-row", ["Work", "Projects"]),
+            ] {
+                suppressions += [
+                    Suppression(
+                        .entry(entryID), type: .contrast, reason: "the chevron's cell, a glyph named by its label",
+                        elementType: .button, maxWidth: 48
+                    ) { names.contains($0 ?? "") },
+                    Suppression(
+                        .entry(entryID), type: .textClipped,
+                        reason: "the chevron's cell, named by words drawn beside it",
+                        elementType: .button, maxWidth: 48
+                    ) { names.contains($0 ?? "") },
+                ]
+            }
+            // "Dynamic Type font sizes are partially unsupported" on a leaf's title, "Home", in the tree that the
+            // disclosure page puts in a system List: the Disclosure contract promises nothing inside a List
+            // (decisions/0001, Q5), and the same row outside the List, on the same page, passes.
+            suppressions += [
+                Suppression(
+                    .entry("disclosure"), type: .dynamicType, reason: "a row in a system List, which Q5 leaves out"
+                ) { $0 == "Home" }
             ]
         #endif
         return suppressions
