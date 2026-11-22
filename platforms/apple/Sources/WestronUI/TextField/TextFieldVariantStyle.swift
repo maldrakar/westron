@@ -379,7 +379,7 @@ private struct TextFieldBody: View {
                 }
             }
 
-            /// The width each glyph takes, its gap included: a glyph is drawn at its own size whatever it is offered.
+            /// The width each glyph takes, its gap included: a glyph keeps its own width whatever it is offered.
             var leadingWidth: CGFloat { leading?.sizeThatFits(.unspecified).width ?? .zero }
             var trailingWidth: CGFloat { trailing?.sizeThatFits(.unspecified).width ?? .zero }
 

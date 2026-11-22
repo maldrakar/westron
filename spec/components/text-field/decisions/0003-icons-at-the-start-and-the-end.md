@@ -531,7 +531,8 @@ a tolerance measured on one OS was no rule. The contract changed first:
   and its padding, half the rest, since the row is centred in that height; an inline field's first line is the box of
   a hidden line of its text role on its first baseline, within the row. A fitted glyph is placed in the room it is
   given, at its own width (`TextFieldGlyphFit`), and its drawing is scaled to that height by a `visualEffect`, which
-  changes no layout, so the anchors the tests read are what is drawn.
+  changes no layout. So the anchors the layout tests read are the glyph's frame, not its drawing: a fitted glyph's
+  frame is the room's height whether or not its drawing is scaled into it. The drawing is checked in pixels (below).
 - **An empty field of several lines.** Rendering the change on iOS showed what no sheet's review had: an empty field of
   several lines, showing its placeholder, gives a first baseline near its top on iOS, so its glyphs stood above the
   fill and the placeholder (in every `glyph-*` sheet of `lines: multiple`, at large and xSmall, since the references
@@ -540,10 +541,20 @@ a tolerance measured on one OS was no rule. The contract changed first:
   stand on the placeholder's baseline. macOS gave the right baseline already.
 - **Tests.** `TextFieldGlyphTests.aGlyphStaysInItsRoom` lays every glyph of the registry out at large, xxxLarge and
   accessibility5, in both variants at every size, filled and empty, on one line and on several, all of a case's
-  glyphs in one window: no glyph past the fill or the frame, none taller than its room, each at its own width, and
-  at its own height unless that is more than the room, then at the room's, all within one pixel of the window it is
-  laid out in. Its failure names the glyph, the case, the fill, a line's height, the glyph's own size and where it was
-  placed. With the fitting turned off it fails on macOS (the new window on inline, 1.5 pt below the frame).
+  glyphs in one window: no glyph past its room, a framed field's fill or an inline field's first line (a line of its
+  text role on the field's first baseline, so on several lines the first line's box, not the frame), each at its own
+  width, and at its own height unless that is more than the room, then at the room's, all within one pixel of the
+  window it is laid out in. Its failure names the glyph, the case, the fill, the room, a line's height, the glyph's
+  own size and where it was placed. With the fitting turned off it fails on macOS (the new window on inline, 1.5 pt
+  below the frame).
+  `aFittedGlyphIsDrawnWithinItsRoom` checks the drawing, which no anchor sees: `ImageRenderer` draws each glyph of
+  the registry on an empty inline field of one line, with a clear margin around it, at four pixels a point (macOS at
+  large, where the wrench's frame is 18 pt in a 16 pt field; iOS at xxxLarge, where some frames outgrow the line,
+  the wrench's among them). Its ink must lie within the field, to a pixel, and be the glyph's own ink, drawn alone,
+  scaled by the frame's height to its own about the frame's centre, to a pixel and a half. A symbol's frame holds
+  space above and below its ink, so the wrench drawn unscaled still inks within the field on macOS (0.25 to 15.5 pt
+  of 16): the first check alone would pass without the scaling. The second fails without it, once checked by removing
+  the scale: the wrench drawn 0.86 pt past its scaled ink at each edge.
   `emptyFieldOfSeveralLines` checks that an empty field of several lines sets its glyphs on a line's baseline at its
   top. Neither depends on a symbol's measured height: each derives the room from the field it lays out and the glyph's
   own size from the glyph laid out alone, on the OS it runs on.
