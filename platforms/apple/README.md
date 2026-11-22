@@ -360,11 +360,11 @@ checks again (a commit pushed by a workflow starts none).
 
 ### Behaviour UI tests
 
-`ButtonBehaviorTests`, `CheckboxBehaviorTests`, `TextFieldBehaviorTests` and `IconAccessibilityTests`, in
-`Catalog/CatalogUITests`, check on the catalog's entries what a unit test cannot reach: presses and hit areas, the
-accessibility hierarchy, the keyboard. Each class has branches of its own for iOS and macOS. `tools/apple/check.sh
-behavior` runs them, like the audit: the build first, a step of its own, then one `xcodebuild test-without-building`
-for the classes named (all four by default); it prints each failure with its message, each skip with its reason, the
+`ButtonBehaviorTests`, `CheckboxBehaviorTests`, `TextFieldBehaviorTests`, `IconAccessibilityTests` and
+`IconTileAccessibilityTests`, in `Catalog/CatalogUITests`, check on the catalog's entries what a unit test cannot
+reach: presses and hit areas, the accessibility hierarchy, the keyboard. Each class has branches of its own for iOS and
+macOS where the platforms differ. `tools/apple/check.sh behavior` runs them, like the audit: the build first, a step of its own, then one `xcodebuild test-without-building`
+for the classes named (all five by default); it prints each failure with its message, each skip with its reason, the
 test cases and the totals, and stops the simulator's test daemon afterwards. The log goes to
 `.build/logs/behavior-<platform>[-<classes>].log`, the result bundle to `.build/xcode/results/`.
 
