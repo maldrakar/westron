@@ -190,7 +190,15 @@ private struct ListRowBody: View {
         // Tells the Disclosure style whose label this row is that the row drew its chevron, so that the style draws no
         // second one after the label.
         .preference(key: ListRowTookDisclosureCell.self, value: disclosureCell != nil)
+        // And tells the style's header layout in the same pass, so that it keeps no place for a second cell.
+        .layoutValue(key: ListRowTakesDisclosureCell.self, value: disclosureCell != nil)
     }
+}
+
+/// The same as `ListRowTookDisclosureCell`, as a layout value: the Disclosure style's header reads it on its label's
+/// views while it lays them out, in the same pass. Package-internal.
+struct ListRowTakesDisclosureCell: LayoutValueKey {
+    static let defaultValue = false
 }
 
 /// Whether a ListRow drew the Disclosure chevron's cell it was handed (`listRowDisclosureCell`): the Disclosure style

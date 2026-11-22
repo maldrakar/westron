@@ -770,7 +770,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             // 44.3 at accessibility5) with one of the pages' cell names matches: the rows and labels with the same
             // words are a StaticText, or a Button as wide as the row, and are audited as usual.
             for (entryID, names) in [
-                ("disclosure", ["rest", "hover", "focus", "pressed", "disabled", "Work", "Projects"]),
+                ("disclosure", ["rest", "hover", "focus", "pressed", "disabled", "Work", "Projects", "Archive"]),
                 ("list-row", ["Work", "Projects"]),
             ] {
                 suppressions += [
@@ -785,13 +785,14 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                     ) { names.contains($0 ?? "") },
                 ]
             }
-            // "Dynamic Type font sizes are partially unsupported" on a leaf's title, "Home", in the tree that the
+            // "Dynamic Type font sizes are partially unsupported" on a leaf's title, "Someday", in the tree that the
             // disclosure page puts in a system List: the Disclosure contract promises nothing inside a List
-            // (decisions/0001, Q5), and the same row outside the List, on the same page, passes.
+            // (decisions/0001, Q5), and the same row outside the List, "Home" on the same page, passes. The List's
+            // tree names that leaf apart (`DisclosureNode.listTree`), so that nothing outside the List is suppressed.
             suppressions += [
                 Suppression(
                     .entry("disclosure"), type: .dynamicType, reason: "a row in a system List, which Q5 leaves out"
-                ) { $0 == "Home" }
+                ) { $0 == "Someday" }
             ]
         #endif
         return suppressions

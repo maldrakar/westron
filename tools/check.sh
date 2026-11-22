@@ -6,14 +6,16 @@
 #                             (raw-values), generate --check (generate), tokens check (tokens) and contrast
 #                             (contrast), icons check (icons), spec check (spec), the API parity lint (api-parity,
 #                             after spec check, since it reads the contracts), the test of the lock the Apple scripts
-#                             queue on (locks: tools/apple/lock-test.sh, plain bash, so CI keeps it alive on Linux)
+#                             queue on (locks: tools/apple/lock-test.sh, plain bash, so CI keeps it alive on Linux),
+#                             the test of the pull request audit's scope (audit-scope: tools/apple/audit-scope-test.sh,
+#                             plain bash over the catalog's sources)
 #   tools/check.sh STEP …     those steps only, still in that order: the Stop hook runs the ones the changes touch
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 
-all_steps="tools raw-values generate tokens contrast icons spec api-parity locks"
+all_steps="tools raw-values generate tokens contrast icons spec api-parity locks audit-scope"
 for step in "$@"; do
   if [[ " $all_steps " != *" $step "* ]]; then
     echo "tools/check.sh: no step \"$step\"; the steps: $all_steps" >&2
@@ -64,4 +66,8 @@ fi
 if selected locks; then
   echo "== locks: the Apple scripts' lock (tools/apple/lock-test.sh)"
   tools/apple/lock-test.sh
+fi
+if selected audit-scope; then
+  echo "== audit-scope: the pull request audit's entries (tools/apple/audit-scope-test.sh)"
+  tools/apple/audit-scope-test.sh
 fi

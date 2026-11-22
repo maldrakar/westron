@@ -12,7 +12,8 @@ description: >-
   the label is the product's and keeps whatever it does, such as a list's row that opens the list or a block's title
   that opens the block as a screen (decisions/0001, Q1). The chevron is the icon registry's chevron glyph in
   color.icon.tertiary, sized and weighted by the text role that reaches the style, at the platform's small symbol
-  scale, sitting on the label's first text baseline as a letter does (design-language/07, "Size relative to text"). It
+  scale: a role the label sets inside itself does not reach it, a ListRow label gives it the row's slot role, and a
+  product sizes it by a heading label by setting that role on the group rather than inside the label; sitting on the label's first text baseline as a letter does (design-language/07, "Size relative to text"). It
   points down while the group is expanded and to the trailing side while it is collapsed, right in a left-to-right
   layout and left in a right-to-left one, and it turns a quarter between them, away from the trailing side as the
   group opens: its direction is the cue of the state, never its color. Its cell stands after the label, at the
@@ -122,8 +123,9 @@ platforms:
       hidden from assistive technology. For assistive technology the Button is represented by what the system's own
       DisclosureGroup is on each OS (accessibilityRepresentation), laid out in the cell's frame and named by the label,
       or by the row's title when a ListRow draws the cell: on macOS the system's DisclosureGroup on the same binding in
-      its automatic style, a disclosure triangle whose value is 1 expanded and 0 collapsed, whose activation goes
-      through the cell's own toggle and motion; on iOS the system's Button on the label, as the system's
+      its automatic style, a disclosure triangle whose value is 1 expanded and 0 collapsed, one element with its label
+      merged in, whose press (AXPress) is the cell's own toggle, in its motion, as the system's press is lost when a
+      ListRow draws the cell again in its own representation (measured); on iOS the system's Button on the label, as the system's
       DisclosureGroup is a button with no value there and loses its button inside a representation, with
       accessibilityValue "Expanded" or "Collapsed" from WestronUI's string catalog (decisions/0001, "Measured"). On macOS the system also gives the label of any DisclosureGroup
       style the disclosure role and the group's value, so a ListRow label reads as a disclosure triangle; on iOS it

@@ -1,5 +1,9 @@
 import XCTest
 
+#if os(macOS)
+    import ApplicationServices
+#endif
+
 /// Disclosure's behaviour that a unit test cannot reach, on the catalog's `disclosure` entry: what assistive technology
 /// meets (the chevron's cell its own element, named by the label, a disclosure triangle with its expanded value on
 /// macOS and a button on iOS, as the system's own DisclosureGroup is on each), a press on the chevron that folds and
@@ -17,6 +21,8 @@ final class DisclosureBehaviorTests: XCTestCase {
         static let summary = "disclosure.live.summary"
         static let branchContent = "disclosure.live.branch-content"
         static let blockContent = "disclosure.live.block-content"
+        static let staticRow = "disclosure.live.static"
+        static let staticContent = "disclosure.live.static-content"
     }
 
     #if os(macOS)
@@ -253,6 +259,42 @@ final class DisclosureBehaviorTests: XCTestCase {
         #endif
     }
 
+    /// A branch whose row has no action: the row is no button, the cell is still its own element after it, named by the
+    /// row's title, and a press on it folds and unfolds the branch alone.
+    @MainActor
+    func testStaticBranchRow() throws {
+        launch()
+        let query = app.descendants(matching: .any).matching(identifier: ID.staticRow)
+        XCTAssertTrue(query.firstMatch.waitForExistence(timeout: 5), "no static branch")
+        for element in query.allElementsBoundByIndex { print(line("static branch", element)) }
+        let cells = query.allElementsBoundByIndex.filter {
+            [.button, .disclosureTriangle].contains($0.elementType) && !$0.frame.isEmpty && $0.frame.width <= target + 1
+        }
+        let cell = named(try XCTUnwrap(cells.min { $0.frame.width < $1.frame.width }, "the static row has no cell"))
+        print(line("static branch's cell", cell))
+        XCTAssertEqual(cell.label, "Archive", "the cell is not named by the row's title")
+        #if os(iOS)
+            XCTAssertEqual(cell.value as? String, "Collapsed")
+            XCTAssertEqual(
+                query.allElementsBoundByIndex.filter { $0.elementType == .button }.count, 1,
+                "the static row is a button, or its cell is not")
+        #endif
+        XCTAssertFalse(shown(ID.staticContent), "the collapsed static branch shows its content")
+        reveal(cell)
+        press(cell)
+        XCTAssertTrue(
+            reads("branch: expanded; block: collapsed; toggles: 1; actions: 0; opened: 0"),
+            "the press did not fold alone")
+        XCTAssertTrue(summary.hasSuffix("static: expanded"), "the static branch did not unfold: \(summary)")
+        XCTAssertTrue(shown(ID.staticContent), "the unfolded static branch shows no content")
+        #if os(macOS)
+            Thread.sleep(forTimeInterval: NSEvent.doubleClickInterval)
+        #endif
+        press(cell)
+        XCTAssertTrue(reads("branch: expanded; block: collapsed; toggles: 2; actions: 0; opened: 0"))
+        XCTAssertTrue(summary.hasSuffix("static: collapsed"), "the static branch did not fold: \(summary)")
+    }
+
     /// A press on the label runs the label's action and folds nothing: the row is chosen, the block's title opens the
     /// block, and both groups keep their state.
     @MainActor
@@ -320,6 +362,83 @@ final class DisclosureBehaviorTests: XCTestCase {
             throw XCTSkip("a pointer's hover is measured on macOS")
         #endif
     }
+
+    /// macOS: the system gives the label of a DisclosureGroup style the disclosure role and the group's value, so
+    /// VoiceOver meets the row as a disclosure triangle (`testAssistiveTechnologyMeetsTheDisclosure`). What its press
+    /// does, AXPress through the accessibility API as VoiceOver sends it, not a click: the label's action, and no
+    /// toggle (Q1); the chevron's cell, a toggle, and no label action. The test runner must be trusted for
+    /// accessibility (System Settings, Privacy & Security, Accessibility); when it is not, the test is skipped.
+    #if os(macOS)
+        @MainActor
+        func testPressByAssistiveTechnology() throws {
+            guard AXIsProcessTrusted() else {
+                throw XCTSkip("the test runner is not trusted for accessibility: AXPress cannot be sent")
+            }
+            launch()
+            let pid = try XCTUnwrap((app.value(forKey: "processID") as? NSNumber)?.int32Value, "no process id")
+            let root = AXUIElementCreateApplication(pid)
+            for (id, expected) in [
+                (ID.row, "branch: expanded; block: collapsed; toggles: 0; actions: 1; opened: 0"),
+                (ID.title, "branch: expanded; block: collapsed; toggles: 0; actions: 1; opened: 1"),
+            ] {
+                let label = try XCTUnwrap(
+                    axElements(root, identifier: id).max { width($0) < width($1) }, "no label \(id)")
+                print("disclosure: AXPress on the label \(id): \(axDescription(label))")
+                XCTAssertEqual(AXUIElementPerformAction(label, kAXPressAction as CFString), .success)
+                XCTAssertTrue(reads(expected), "AXPress on the label \(id) did not run its action alone")
+            }
+            let cell = try XCTUnwrap(
+                axElements(root, identifier: ID.row).filter { width($0) > 0 }.min { width($0) < width($1) }, "no cell")
+            print("disclosure: AXPress on the row's cell: \(axDescription(cell))")
+            XCTAssertEqual(AXUIElementPerformAction(cell, kAXPressAction as CFString), .success)
+            XCTAssertTrue(
+                reads("branch: collapsed; block: collapsed; toggles: 1; actions: 1; opened: 1"),
+                "AXPress on the cell did not fold the branch alone")
+        }
+
+        /// The elements under `root` whose identifier is `id`, by role a disclosure triangle or a button.
+        private func axElements(_ root: AXUIElement, identifier id: String) -> [AXUIElement] {
+            var found: [AXUIElement] = []
+            var queue = [root]
+            while !queue.isEmpty {
+                let element = queue.removeFirst()
+                let role = axString(element, kAXRoleAttribute)
+                if axString(element, "AXIdentifier") == id,
+                    [kAXDisclosureTriangleRole as String, kAXButtonRole as String].contains(role)
+                {
+                    found.append(element)
+                }
+                var children: CFTypeRef?
+                if AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children) == .success,
+                    let children = children as? [AXUIElement]
+                {
+                    queue.append(contentsOf: children)
+                }
+            }
+            return found
+        }
+
+        private func axString(_ element: AXUIElement, _ attribute: String) -> String? {
+            var value: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else { return nil }
+            return value as? String
+        }
+
+        private func width(_ element: AXUIElement) -> CGFloat {
+            var value: CFTypeRef?
+            var size = CGSize.zero
+            guard AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &value) == .success,
+                let value, CFGetTypeID(value) == AXValueGetTypeID()
+            else { return 0 }
+            AXValueGetValue(value as! AXValue, .cgSize, &size)
+            return size.width
+        }
+
+        private func axDescription(_ element: AXUIElement) -> String {
+            "role \(axString(element, kAXRoleAttribute) ?? "?"), description \(axString(element, kAXDescriptionAttribute) ?? ""), "
+                + "title \(axString(element, kAXTitleAttribute) ?? ""), width \(width(element))"
+        }
+    #endif
 
     /// macOS, with the system's keyboard navigation on: Tab reaches the chevron's cell, Space toggles it, and Left and
     /// Right collapse and expand it, as an outline's disclosure triangle. With it off, as on a Mac by default, the

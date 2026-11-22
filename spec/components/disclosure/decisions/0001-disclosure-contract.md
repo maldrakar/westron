@@ -93,7 +93,7 @@ availability):
 | P3 | **No variants for a tree branch and a block header** | In the pilot they differ in the label (a row with a tile and a count; a title with a date), the weight (semibold and regular, which follows the label's role here), the motion (two motions for one change, which westron makes one) and the words read aloud (which the role and the value replace, P13). The control is the same |
 | P4 | **The glyph and its direction**: the registry's `chevron` (pointing down) while expanded; turned a quarter to point at the trailing side while collapsed, right in a left-to-right layout and left in a right-to-left one, so the turn is mirrored | The pilot's directions; the system's disclosure points the way of reading. One glyph turned, not `chevron` and `chevronLeft` swapped, so that the change is a turn |
 | P5 | **Color `color.icon.tertiary`**, and the pair on `color.background.pressed` declared | The token's own use. It declared non-text contrast on the canvas, surface, sunken, hover and selected grounds; the pressed tint under the chevron (P7) was missing, so it is added to the token's `dev.westron.contrast` here: by the palette's rule step 8 meets 3 on every step 5, and `background.pressed` is step 5 (`tools/westron tokens contrast --all`: 3.01 light, 3.03 dark, 4.53 light-hc, 4.57 dark-hc). No new token |
-| P6 | **Size and weight from the label's text role**, at the platform's small symbol scale, on the label's first text baseline | design-language/07; the pilot's 13 pt beside a 17 pt body is about the small scale. Sitting on the baseline keeps it on the title's line when the label wraps at large text sizes. No size option |
+| P6 | **Size and weight from the text role that reaches the style** (not a role the label sets inside itself; in a ListRow label the row's slot role), at the platform's small symbol scale, on the label's first text baseline. A product that wants the chevron sized by a heading label sets that role on the group, `.textRole(.heading.small)` outside the label, so that it reaches both | design-language/07; the pilot's 13 pt beside a 17 pt body is about the small scale. Sitting on the baseline keeps it on the title's line when the label wraps at large text sizes. No size option |
 | P7 | **The cell**: a laid-out frame at least `size.target.minimum` high and across, the glyph centred; under the pointer a circle of `size.control.s` (`indicator.shape: capsule` on a square), growing with the glyph, in `background.hover`, pressed in `background.pressed`, the chevron scaling to 98 % | Button's tertiary tints; a press scales every control (design-language/05). The circle is the drawn control, the frame its hit area, as Chip's capsule and frame. Over a ListRow under the pointer the hover circle is the row's own tint and does not show; the pressed circle does |
 | P8 | **States**: `expanded` (the configuration's value), `hover`, `focus`, `pressed`, `disabled`; collapsed is no state, as unchecked is none of Checkbox's | Checkbox's P4. Hover only with a pointer; `pressed`, `hover` and `focus` are the chevron's Button's |
 | P9 | **Motion**: a toggle by the chevron or the keyboard runs in `motion.move`, one transaction for the chevron's turn, the content's reveal and what stands after the group; the content grows from the header's bottom edge and fades in; folding reverses it. The tint moves in `motion.fade`, the press in `motion.press` | `motion.move` is "a section folding". One motion keeps the chevron and the rows in step; `motion.toggle` (a small thing changing place) for the turn alone was considered, and would end before the rows settle. A change the product makes to the binding moves as its own transaction says, since the style cannot tell it from a change of data |
@@ -305,6 +305,8 @@ What XCUITest reads:
 | A text label (`rest`) | StaticText `rest` | DisclosureTriangle `rest`, value 0 or 1 |
 | Its cell | Button `rest`, 44 × 44, value `Expanded` or `Collapsed` | DisclosureTriangle `rest`, 28 × 28, value 0 or 1 |
 | A disabled group's cell | Button, not enabled | DisclosureTriangle, not enabled |
+| A static ListRow label (`Archive, 1`, no action) | no button | DisclosureTriangle `Archive, 1`, no actions |
+| Its cell | Button `Archive`, value `Collapsed`, the row's only button; folds alone | DisclosureTriangle `Archive`; folds alone |
 | A button label (`Tomorrow`) | Button `Tomorrow` | DisclosureTriangle `Tomorrow`, value 0 |
 | The chevron's glyph | no element | no element |
 | The system's own `DisclosureGroup("E1")`, for comparison | Button `E1`, no value, the whole header | DisclosureTriangle `E1`, value 0 |
@@ -329,9 +331,23 @@ What XCUITest reads:
   style the disclosure role and the group's value, so the row reads `Projects, 5`, disclosure triangle, expanded, and
   so does a text or button label. On iOS the row stays a button with no value. Decided: the row adds nothing of its
   own on either OS, since the cell right after it says the state and a value on both would be announced twice;
-  ListRow could carry one through the same hook if the owner wants it. On macOS VoiceOver's activation of the cell
-  goes through the cell's own toggle, in its motion. What VoiceOver does when it activates the macOS label (its row action or a
-  toggle) is not measured: XCUITest clicks by coordinates.
+  ListRow could carry one through the same hook if the owner wants it.
+- **AXPress on macOS** (2026-11-23), sent through the accessibility API as VoiceOver sends it, by a script that holds
+  the screen lock, on the catalog's live samples (the XCUITest `testPressByAssistiveTechnology` does the same where its
+  runner is trusted for accessibility; on this Mac it is not, and it skips):
+  - the row's label, a disclosure triangle `Projects, 5` with AXPress: runs the row's action, folds nothing (Q1 holds
+    for VoiceOver);
+  - the block's title, a disclosure triangle `Tomorrow` with AXPress: opens the block, folds nothing;
+  - a static row's label (`Archive, 1`, no action): a disclosure triangle with no actions; AXPress does nothing;
+  - the cell after the title: one disclosure triangle `Tomorrow`, with AXPress;
+  - the cell inside a ListRow, at first: an unnamed disclosure triangle around a named one, `Projects`, neither with
+    AXPress, and AXPress on it folded nothing. The cell is drawn again inside the row's own representation, and the
+    system disclosure nested in it loses its press, as it loses its button on iOS. Fixed: the representation is one
+    element, its label merged in, with the cell's toggle as its action. Measured after: one disclosure triangle
+    `Projects`, value 1, with AXPress, which folds the branch (value 0) and runs no row action. The iOS cell, a Button
+    drawn again in the row's representation in the same way, has the same explicit action; VoiceOver's activation on
+    iOS is not measured.
+  On macOS VoiceOver's activation of the cell goes through the cell's own toggle, in its motion.
 - **Presses.** A press on the cell folds and unfolds the group and runs no label action; a press on the row or the
   title runs its action and folds nothing; a press held on a row's cell begins no press of the row
   (`ListRowBehaviorTests`); a press 2 pt inside the cell's corner, outside the drawn circle, folds (iOS and macOS).
@@ -355,11 +371,21 @@ What XCUITest reads:
   (`dev.westron.reducedMotion`, decisions/0013); this is the first component whose contract would name the number, so
   the owner decides whether the token comes now or the cap is read as `motion.fade`.
 - **Not measured here:** what VoiceOver speaks (no VoiceOver run, on iOS or macOS); the macOS keyboard (keyboard
-  navigation is off on the machine); what activating the macOS label runs under VoiceOver (XCUITest clicks by
-  coordinates).
-- **A risk the review named, not seen in a capture:** a branch could draw its cell twice for one frame before the
-  row's preference arrives. (The other, the press's motion carrying the chevron's turn, is closed: the press's
-  animation is scoped to the scale.)
+  navigation is off on the machine); VoiceOver's activation on iOS.
+
+## Closed after the review (2026-11-23)
+
+- **A second cell for one update.** The style learned that a ListRow label took the cell from the row's preference
+  one update late, so a branch appearing as its parent unfolded drew three cells for two groups in its first update
+  (`DisclosureStyleTests.noSecondCellOnFirstAppearance`, measured `[1, 3, 2]` on macOS). Now the cell after a label is
+  drawn from the row's preference in the same update (`overlayPreferenceValue`), and the header's layout keeps the
+  cell's width after any label but a ListRow that says, through a layout value read in the same pass, that it took
+  the cell. A product's modifier on the row can hide that layout value (`onGeometryChange` does, measured); the
+  header then falls back on the preference an update late, so the first update leaves an empty place where the cell
+  would stand, never a second chevron. The test counts the cells drawn in every update and finds at most two.
+- **The press's motion and the chevron's turn.** The press's animation is scoped to the scale.
+- **The glyph's text role** (P6): the role that reaches the style, not a role set inside the label; a product sizes the
+  chevron by a heading label by setting the role on the group.
 
 ## Pilot files read
 

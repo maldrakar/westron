@@ -214,5 +214,131 @@
             let leaf = try #require(frames["leaf"])
             #expect(abs(leaf.maxX - (320 - CGFloat(ListRowMetrics.paddingHorizontal))) < 0.5, "\(leaf)")
         }
+
+        /// A branch that appears as its parent unfolds, the way a tree's branches do in a lazy stack: in no update, not
+        /// even its first, does the style draw a second cell beside the branch's row (the cells drawn, counted in every
+        /// update), and the row keeps its width from its first update (where its trailing slot ends, recorded in every
+        /// update). With a product's modifier on the row that hides the row's layout value (`onGeometryChange`), still
+        /// no second cell: the row may be narrower for its first update, an empty place where the cell would stand.
+        @Test(
+            "a branch appearing in an unfolding parent never draws a second cell beside its row, not for one update",
+            arguments: [false, true])
+        func noSecondCellOnFirstAppearance(rowHidesLayoutValue: Bool) throws {
+            let record = Record()
+            let expanded = ExpandedBox()
+            let host = Host(
+                rootView: UnfoldingParent(expanded: expanded, record: record, rowHidesLayoutValue: rowHidesLayoutValue))
+            host.layout()
+            #expect(record.slotEnds.isEmpty, "the collapsed parent lays out its content")
+            expanded.value = true
+            for _ in 0..<5 { host.layout() }
+            #expect(!record.slotEnds.isEmpty, "the unfolded parent shows no branch")
+            // The parent's cell after its text label, and the branch's in its row.
+            #expect(record.cells.last == 2, "the cells drawn over the updates: \(record.cells)")
+            #expect(record.cells.allSatisfy { $0 <= 2 }, "a second cell in some update: \(record.cells)")
+            if !rowHidesLayoutValue {
+                let first = try #require(record.slotEnds.first)
+                #expect(
+                    record.slotEnds.allSatisfy { abs($0 - first) < 0.5 },
+                    "the row's trailing slot over the updates: \(record.slotEnds)")
+            }
+        }
+
+        /// What the branch's updates showed, in order.
+        final class Record: @unchecked Sendable {
+            /// Where the row's trailing slot ends.
+            var slotEnds: [CGFloat] = []
+            /// How many chevron cells the tree draws.
+            var cells: [Int] = []
+        }
+
+        /// The parent's expansion, which the test flips between updates.
+        @Observable final class ExpandedBox: @unchecked Sendable {
+            var value = false
+        }
+
+        struct UnfoldingParent: View {
+            let expanded: ExpandedBox
+            let record: Record
+            let rowHidesLayoutValue: Bool
+
+            var body: some View {
+                VStack(spacing: 0) {
+                    DisclosureGroup(isExpanded: .constant(expanded.value)) {
+                        DisclosureGroup(isExpanded: .constant(true)) {
+                            Text("Garden")
+                        } label: {
+                            let row = ListRow(action: {}) {
+                                Text("Projects")
+                            } trailing: {
+                                Color.clear.frame(width: 1, height: 1)
+                                    .onGeometryChange(for: CGFloat.self) {
+                                        $0.frame(in: .global).maxX
+                                    } action: {
+                                        record.slotEnds.append($0)
+                                    }
+                            }
+                            if rowHidesLayoutValue {
+                                row.onGeometryChange(for: CGFloat.self) {
+                                    $0.size.width
+                                } action: { _ in
+                                }
+                            } else {
+                                row
+                            }
+                        }
+                    } label: {
+                        Text("Work")
+                    }
+                    Spacer(minLength: 0)
+                }
+                .disclosureGroupStyle(.chevron)
+                .frame(width: 320, height: 320, alignment: .topLeading)
+                .onPreferenceChange(DisclosureCellsDrawn.self) { count in
+                    record.cells.append(count)
+                }
+            }
+        }
+
+        /// A window that hosts a view and lays it out on demand, one update at a time.
+        @MainActor final class Host {
+            #if canImport(AppKit)
+                let window: NSWindow
+            #else
+                let window: UIWindow
+            #endif
+
+            init(rootView: some View) {
+                #if canImport(AppKit)
+                    window = NSWindow(
+                        contentRect: NSRect(x: 0, y: 0, width: 400, height: 400), styleMask: [.titled],
+                        backing: .buffered, defer: false)
+                    window.contentView = NSHostingView(rootView: rootView)
+                    window.orderFront(nil)
+                #else
+                    window = UIWindow(frame: CGRect(x: 0, y: 0, width: 400, height: 400))
+                    window.rootViewController = UIHostingController(rootView: rootView)
+                    window.isHidden = false
+                #endif
+            }
+
+            /// One pass of layout and the run loop's turn after it.
+            func layout() {
+                #if canImport(AppKit)
+                    window.contentView?.layoutSubtreeIfNeeded()
+                #else
+                    window.layoutIfNeeded()
+                #endif
+                RunLoop.main.run(until: Date().addingTimeInterval(0.02))
+            }
+
+            deinit {
+                #if canImport(AppKit)
+                    MainActor.assumeIsolated { window.orderOut(nil) }
+                #else
+                    MainActor.assumeIsolated { window.isHidden = true }
+                #endif
+            }
+        }
     }
 #endif

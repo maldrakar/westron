@@ -35,8 +35,8 @@
         let configuration: DisclosureGroupStyleConfiguration
         let style: DisclosureVariantStyle
 
-        /// Whether the label is a ListRow that drew the cell at its end; until it says so, the style draws it after the
-        /// label.
+        /// The row's preference as of the last update: what the header's layout falls back on when a product's modifier
+        /// hides the row's layout value.
         @State private var labelTookCell = false
 
         @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -46,13 +46,24 @@
                 configuration.label
             }
             VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .firstTextBaseline, spacing: 0) {
+                // Whether a ListRow label took the cell is known in the same update that draws the label, so that a
+                // branch never shows a second cell beside its row, not for one frame: the cell is drawn after any
+                // other label from the row's preference, read in that update (`overlayPreferenceValue`), and the
+                // header's layout keeps the cell's width there, measured on a hidden copy of the cell, unless the
+                // row's layout value says it took the cell. A product's modifier on the row that hides the layout
+                // value (`onGeometryChange` does) leaves the place empty for the first update instead.
+                DisclosureHeaderLayout(labelTookCell: labelTookCell) {
                     configuration.label
                         .environment(\.listRowDisclosureCell, AnyView(cell))
-                        .onPreferenceChange(ListRowTookDisclosureCell.self) { took in
-                            labelTookCell = took
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    DisclosureLeafCell()
+                }
+                .onPreferenceChange(ListRowTookDisclosureCell.self) { took in
+                    labelTookCell = took
+                }
+                .overlayPreferenceValue(
+                    ListRowTookDisclosureCell.self,
+                    alignment: Alignment(horizontal: .trailing, vertical: .firstTextBaseline)
+                ) { labelTookCell in
                     if !labelTookCell {
                         cell
                     }
@@ -91,6 +102,7 @@
                     expanded: isExpanded.wrappedValue, turns: DisclosureMotion(reduceMotion: reduceMotion).turns)
             }
             .buttonStyle(DisclosureCellLook())
+            .preference(key: DisclosureCellsDrawn.self, value: 1)
             #if os(macOS)
                 // An outline's disclosure triangle: Right expands and Left collapses, mirrored right to left.
                 .onMoveCommand { direction in
@@ -120,6 +132,12 @@
                             .accessibilityElement(children: .combine)
                         }
                         .disclosureGroupStyle(.automatic)
+                        // Inside a ListRow, the cell is drawn again in the row's own representation, where the system
+                        // disclosure splits into an unnamed triangle around a named one and loses its press (measured
+                        // with AXPress on macOS 26): the group is one element, its label merged in, and the press is
+                        // the cell's own action.
+                        .accessibilityElement(children: .combine)
+                        .accessibilityAction { toggle(to: !isExpanded.wrappedValue) }
                     #else
                         // On iOS the system's DisclosureGroup is a button named by its label (measured with XCUITest on
                         // iOS 26), and inside a representation it loses the button, so the cell is the system's button
@@ -131,6 +149,9 @@
                             name
                         }
                         .buttonStyle(.automatic)
+                        // As on macOS, where a press inside a ListRow's representation was lost (not measured on iOS,
+                        // where VoiceOver's activation could not be sent): the press is the cell's own action.
+                        .accessibilityAction { toggle(to: !isExpanded.wrappedValue) }
                         .accessibilityValue(
                             isExpanded.wrappedValue
                                 ? Text(
@@ -173,6 +194,79 @@
             for subview in subviews {
                 subview.place(at: bounds.origin, proposal: ProposedViewSize(bounds.size))
             }
+        }
+    }
+
+    /// The header: the label's views in a row on their first text baseline, as an `HStack` with no spacing lays them,
+    /// and last a hidden copy of the cell, whose width the header keeps at its trailing end unless a label view is a
+    /// ListRow that took the cell: `ListRowTakesDisclosureCell`, read in the same layout pass, or `labelTookCell`, the
+    /// row's preference an update later, for a row whose layout value a product's modifier hides (`onGeometryChange`
+    /// does, measured). The real cell is drawn over that place (`DisclosureBody`). The header's first text baseline is
+    /// the line they share.
+    private struct DisclosureHeaderLayout: Layout {
+        let labelTookCell: Bool
+
+        struct Cache {
+            var sizes: [CGSize] = []
+            var baselines: [CGFloat] = []
+            var baseline: CGFloat = 0
+            var height: CGFloat = 0
+        }
+
+        func makeCache(subviews: Subviews) -> Cache { Cache() }
+
+        /// The sizes of the label's views and of the cell at `width`, the cell's kept only when no label view took it.
+        private func measure(_ width: CGFloat?, _ subviews: Subviews, _ cache: inout Cache) -> CGFloat {
+            guard let cellView = subviews.last else { return 0 }
+            let labelViews = subviews.dropLast()
+            let taken = labelTookCell || labelViews.contains { $0[ListRowTakesDisclosureCell.self] }
+            let cellSize = taken ? .zero : cellView.sizeThatFits(.unspecified)
+            var remaining = width.map { max($0 - cellSize.width, 0) }
+            var sizes: [CGSize] = []
+            var baselines: [CGFloat] = []
+            for view in labelViews {
+                let proposal = ProposedViewSize(width: remaining, height: nil)
+                let size = view.sizeThatFits(proposal)
+                sizes.append(size)
+                baselines.append(view.dimensions(in: proposal)[VerticalAlignment.firstTextBaseline])
+                remaining = remaining.map { max($0 - size.width, 0) }
+            }
+            sizes.append(cellSize)
+            baselines.append(taken ? 0 : cellView.dimensions(in: .unspecified)[VerticalAlignment.firstTextBaseline])
+            let baseline = baselines.max() ?? 0
+            cache.sizes = sizes
+            cache.baselines = baselines
+            cache.baseline = baseline
+            cache.height = zip(sizes, baselines).map { baseline - $1 + $0.height }.max() ?? 0
+            return sizes.reduce(0) { $0 + $1.width }
+        }
+
+        func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) -> CGSize {
+            let width = measure(proposal.width, subviews, &cache)
+            return CGSize(width: proposal.width ?? width, height: cache.height)
+        }
+
+        func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) {
+            _ = measure(bounds.width, subviews, &cache)
+            var x = bounds.minX
+            for (index, view) in subviews.enumerated() {
+                let size = cache.sizes[index]
+                // The cell stands at the trailing end, the label's views from the leading one.
+                if index == subviews.count - 1 { x = bounds.maxX - size.width }
+                view.place(
+                    at: CGPoint(x: x, y: bounds.minY + cache.baseline - cache.baselines[index]),
+                    proposal: ProposedViewSize(size))
+                x += size.width
+            }
+        }
+
+        func explicitAlignment(
+            of guide: VerticalAlignment, in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews,
+            cache: inout Cache
+        ) -> CGFloat? {
+            guard guide == .firstTextBaseline else { return nil }
+            _ = measure(bounds.width, subviews, &cache)
+            return bounds.minY + cache.baseline
         }
     }
 
@@ -356,6 +450,16 @@
             .hidden()
             .allowsHitTesting(false)
             .accessibilityHidden(true)
+            .transformPreference(DisclosureCellsDrawn.self) { $0 = 0 }
+        }
+    }
+
+    /// How many chevron cells a view draws, the hidden copies left out: what the unit tests read to catch a second
+    /// cell beside a ListRow label in any update (DisclosureStyleTests). Package-internal.
+    struct DisclosureCellsDrawn: PreferenceKey {
+        static let defaultValue = 0
+        static func reduce(value: inout Int, nextValue: () -> Int) {
+            value += nextValue()
         }
     }
 #endif

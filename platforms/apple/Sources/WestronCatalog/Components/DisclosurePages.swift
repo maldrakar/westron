@@ -20,8 +20,13 @@
         static let row = "disclosure.live.row"
         /// The live block header's title, a button that opens the block.
         static let title = "disclosure.live.title"
-        /// The readout: "branch: expanded; block: collapsed; toggles: 0; actions: 0; opened: 0; hover: no".
+        /// The readout: "branch: expanded; block: collapsed; toggles: 0; actions: 0; opened: 0; hover: no; static:
+        /// collapsed".
         static let summary = "disclosure.live.summary"
+        /// The live static branch's row, a ListRow with no action.
+        static let staticRow = "disclosure.live.static"
+        /// The text inside the live static branch, shown while it is expanded.
+        static let staticContent = "disclosure.live.static-content"
         /// The text inside the live branch, shown while it is expanded.
         static let branchContent = "disclosure.live.branch-content"
         /// The text inside the live block, shown while it is expanded.
@@ -52,6 +57,11 @@
                 ]),
             DisclosureNode(title: "Home", icon: .tray, count: 12),
         ]
+
+        /// The tree in a system List: the same, but for its top-level leaf, named apart, so that the audit can tell the
+        /// List's row from the tree's outside it (CatalogAccessibilityAuditTests, the suppression for Q5).
+        static let listTree: [DisclosureNode] =
+            tree.dropLast() + [DisclosureNode(title: "Someday", icon: .tray, count: 12)]
     }
 
     /// A branch of the tree, recursive: a DisclosureGroup whose label is the list's row, or the row alone for a leaf, as
@@ -174,6 +184,7 @@
         @State private var actions = 0
         @State private var opened = 0
         @State private var hovered = false
+        @State private var staticExpanded = false
         @State private var listFolded: Set<String> = []
 
         var body: some View {
@@ -263,6 +274,26 @@
                         .buttonStyle(.plain)
                         .accessibilityIdentifier(DisclosureCatalogID.title)
                     }
+                    // A static branch: a row with no action, whose cell is still its own element and folds it.
+                    DisclosureGroup(isExpanded: $staticExpanded) {
+                        ListRow(level: 1) {
+                            Text(verbatim: "Old receipts")
+                        } leading: {
+                            Icon(.note)
+                        }
+                        .accessibilityIdentifier(DisclosureCatalogID.staticContent)
+                    } label: {
+                        ListRow {
+                            Text(verbatim: "Archive")
+                        } leading: {
+                            Icon(.folder)
+                        } trailing: {
+                            Text(verbatim: "1")
+                                .textRole(.subheadline.regular)
+                                .foregroundStyle(.text.secondary)
+                        }
+                        .accessibilityIdentifier(DisclosureCatalogID.staticRow)
+                    }
                 }
                 .disclosureGroupStyle(.chevron)
                 .onDisclosureToggle { _ in toggles += 1 }
@@ -270,7 +301,8 @@
                 Text(
                     verbatim: "branch: \(branchExpanded ? "expanded" : "collapsed"); "
                         + "block: \(blockExpanded ? "expanded" : "collapsed"); toggles: \(toggles); "
-                        + "actions: \(actions); opened: \(opened); hover: \(hovered ? "yes" : "no")"
+                        + "actions: \(actions); opened: \(opened); hover: \(hovered ? "yes" : "no"); "
+                        + "static: \(staticExpanded ? "expanded" : "collapsed")"
                 )
                 .textRole(.footnote.regular)
                 .foregroundStyle(.text.secondary)
@@ -282,7 +314,7 @@
         /// decision records what each OS draws.
         private var inList: some View {
             List {
-                ForEach(DisclosureNode.tree) { node in
+                ForEach(DisclosureNode.listTree) { node in
                     DisclosureBranch(node: node, folded: $listFolded)
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(Color.clear)

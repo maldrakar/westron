@@ -473,7 +473,10 @@ generated `<Name>+Contract.swift` or `<Name>+Matrix.swift`, its catalog page `Co
 contract `spec/components/<id>/`, and gives the entries that page declares; a Foundations page that shares nothing
 with other files gives its own entries. Everything else gives nothing: shared paths (tokens, the shared files of
 WestronUI, the catalog's host, the audit test, the scripts) touch every entry and wait for the nightly run, or for a
-run by hand on the branch. The audit is skipped when there is nothing to audit, and on a push to `main`.
+run by hand on the branch. The audit is skipped when there is nothing to audit, and on a push to `main`. The script
+reads the registry, `Catalog.entries` in `Catalog.swift`, from its array literals and its `append(.<name>)` lines (an
+entry some OS lacks); a registry it reads nothing from fails the job, and `tools/check.sh audit-scope`
+(`tools/apple/audit-scope-test.sh`) checks that it reads every entry the catalog declares.
 
 ```sh
 git diff --name-only main...HEAD | tools/apple/audit-scope.sh   # the entries a pull request from this branch audits:
