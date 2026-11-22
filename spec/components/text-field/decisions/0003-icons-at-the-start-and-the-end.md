@@ -488,12 +488,19 @@ Applied on 2026-11-22 (#115) after the review of the second revision, contract t
 - **The cap, platform-neutral.** The contract names the cap as the largest text size that is not an accessibility
   size, the sizes a platform sets apart above its standard ones for large text, with Apple's mapping (xxxLarge, and
   accessibility1 to 5); a platform without such sizes caps nothing.
-- **A glyph taller than its line.** Measured over the whole registry in `body.regular` at medium scale, at large and at
-  xxxLarge (`TextFieldGlyphTests`, `aGlyphTallerThanItsLine`): on macOS, beside a line of 16 pt, the trash is 16.5 pt
-  and the wrench 18, the rest no taller than the line. The field does not grow for such a glyph: the row is the
-  field's height on both variants, at every size, on one line and on several, and on framed the glyph stays inside the
-  field, in its padding. On inline, which has no padding, it reaches past the field's frame by what it exceeds. The
-  contract says so rather than that no glyph is taller.
+- **A glyph taller than its line.** The review asked the contract to say that a glyph is never taller than the
+  field's first line. Measured over the whole registry in `body.regular` at medium scale, at large and at xxxLarge
+  (`TextFieldGlyphTests`, `aGlyphTallerThanItsLine`), that is not so: on macOS, beside a line of 16 pt, the trash is
+  16.5 pt and the wrench 18; on iOS, beside 20.3 pt at large, the trash is 20.7 and the wrench 22.7, and beside 27.7
+  at xxxLarge, the sun, the trash, the wrench (31.3) and the new window are taller, and the week, the logbook and the
+  microphone as tall. The test lays every glyph within a point of its line's height, and the tallest, on both variants
+  at every size, on one line and on several: the field never grows for it, the row is the field's height. On framed
+  the glyph stays inside the field, in its padding, except at `s` on one line, which has no vertical padding and at
+  xxxLarge on iOS is no taller than its line (29.3 pt): there the wrench reaches 1 pt above the fill and the week and
+  the new window 1.3 pt below it, standing on the baseline with their own descent. On inline, which has no padding, a
+  glyph reaches past the field's frame. The contract says this rather than that no glyph is taller; the style does
+  not clip or shift a glyph, which would change every glyph's place for a point at one size. Whether `s` should keep
+  room for its glyphs is a question for the owner, not answered here.
 - **A search field's prompt in the references.** A supplement, `search-prompt`, draws the contract's search recipe
   empty, its prompt in `text.placeholder`, on iOS only (`onlyOn`), since macOS ignores a prompt's color: the
   references now hold the prompt's color, which until now only the catalog page showed.

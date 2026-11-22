@@ -48,16 +48,17 @@ description: >-
   nor the room the field leaves it. So it grows with the person's text size up to the largest text size that is not
   one of the accessibility sizes, the sizes a platform sets apart above its standard ones for large text (on Apple
   that size is xxxLarge, and the accessibility sizes are accessibility1 to 5; a platform without such sizes caps
-  nothing); at the
-  accessibility sizes the glyph, its gap and the room the field leaves it stay as they are at that size while the
-  text grows on, since inside a field the width is what the person types into and the glyph is decoration (a named
-  exception to design-language/07, decisions/0003, revision of 2026-11-22; the field's padding still grows with the
-  text). There, where a glyph is smaller than its text, it is centred on the first line instead of standing on its
+  nothing); at the accessibility sizes the glyph, its gap and the room the field leaves it stay as they are at that
+  size while the text grows on, since inside a field the width is what the person types into and the glyph is
+  decoration (a named exception to design-language/07, decisions/0003, revision of 2026-11-22; the field's padding
+  still grows with the text). There, where a glyph is smaller than its text, it is centred on the first line instead of standing on its
   baseline, which would set it low like a subscript; at the other sizes it stands on the baseline. A glyph is about
-  as tall as a line of its text, and a few symbols are a little taller (on macOS, beside a 16 pt line of
-  body.regular, the trash is 16.5 pt and the wrench 18): the field does not grow for such a glyph, which stays on the
-  baseline and reaches past its line by what it exceeds, into a framed field's padding, inside its fill, and on
-  inline, which has no padding, past the field's frame by as much. It draws in
+  as tall as a line of its text; standing on the baseline some symbols reach a little above or below the line, and
+  a few are taller than it (beside a line of body.regular the wrench is 18 pt to the line's 16 on macOS, and 31.3 to
+  27.7 on iOS at xxxLarge). The field does not grow for a glyph: the row is the field's height. On framed the glyph
+  reaches into the field's padding, inside its fill, except at s on one line, where at the larger text sizes the
+  field is no taller than its line and such a glyph reaches past the fill's edge by up to a point and a half (1.3 pt
+  measured, on iOS at xxxLarge); on inline, which has no padding, it reaches past the field's frame. It draws in
   color.text.secondary in every state, with the placeholder shown or text entered, focused or not; disabled dims it
   with the rest of the field. A search field is no component of its own (decisions/0014): it is a framed field with
   the magnifier at its start. There is no error state, hint or message in

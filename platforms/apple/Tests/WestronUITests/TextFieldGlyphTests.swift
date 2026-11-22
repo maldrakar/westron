@@ -241,7 +241,7 @@ struct TextFieldGlyphTests {
     }
 
     @Test(
-        "a glyph taller than its line grows no field, and on framed stays inside the field, up to xxxLarge",
+        "a glyph as tall as its line or taller grows no field, and stays inside a framed one but at s on one line",
         arguments: [DynamicTypeSize.large, .xxxLarge])
     func aGlyphTallerThanItsLine(size: DynamicTypeSize) throws {
         // framed's text role, body.regular, which `field` gives inline's context too; each glyph at its fixed scale.
@@ -252,13 +252,13 @@ struct TextFieldGlyphTests {
                 Self.layOut(Icon(icon).imageScale(.medium).textRole(.body.regular).dynamicTypeSize(size)).size.height
             )
         }
-        // The glyphs taller than a line (on macOS the trash and the wrench), and the tallest, whether it is or not.
+        // The glyphs within a point of a line's height or taller (on macOS at large the trash and the wrench are
+        // taller, on iOS at xxxLarge seven are as tall or taller), and the tallest, whether it is or not.
         let tallest = try #require(heights.max { $0.1 < $1.1 })
-        let taller = heights.filter { $0.1 > line.size.height }.map(\.0)
-        print(
-            "TextFieldGlyphTests at \(size): a line \(line.size.height) pt; taller: \(heights.filter { $0.1 > line.size.height })"
-        )
-        for icon in Set(taller + [tallest.0]).sorted(by: { $0.rawValue < $1.rawValue }) {
+        let tall = heights.filter { $0.1 > line.size.height - 1 }
+        print("TextFieldGlyphTests at \(size): a line \(line.size.height) pt; as tall or taller: \(tall)")
+        var reachPastAFramedField: CGFloat = .zero
+        for icon in Set(tall.map(\.0) + [tallest.0]).sorted(by: { $0.rawValue < $1.rawValue }) {
             for variant in [TextFieldVariant.framed, .inline] {
                 for fieldSize in TextFieldSize.allCases {
                     for axis in [Axis.horizontal, .vertical] {
@@ -274,17 +274,27 @@ struct TextFieldGlyphTests {
                         #expect(
                             abs(laidOut.size.height - bare.size.height) < Self.tolerance, "\(name): \(laidOut.size)")
                         guard variant == .framed else { continue }
-                        // On framed, the glyph reaches into the field's padding, inside its fill.
                         for part in [TextFieldGlyphAnchors.Part.leading, .trailing] {
                             let frame = try #require(laidOut.parts[part])
-                            #expect(
-                                frame.minY >= -Self.tolerance && frame.maxY <= laidOut.size.height + Self.tolerance,
-                                "\(name): \(frame) in \(laidOut.size)")
+                            let reach = max(.zero, -frame.minY, frame.maxY - laidOut.size.height)
+                            if fieldSize == .s && axis == .horizontal {
+                                // At s on one line the field is no taller than its line at the larger text sizes (on
+                                // iOS at xxxLarge), and such a glyph reaches past its fill, by at most a point and a
+                                // half (the contract's description).
+                                reachPastAFramedField = max(reachPastAFramedField, reach)
+                                #expect(reach <= 1.5, "\(name): \(frame) in \(laidOut.size)")
+                            } else {
+                                // Elsewhere on framed it reaches into the field's padding, inside its fill.
+                                #expect(reach <= Self.tolerance, "\(name): \(frame) in \(laidOut.size)")
+                            }
                         }
                     }
                 }
             }
         }
+        print(
+            "TextFieldGlyphTests at \(size): the farthest a glyph reaches past a framed field at s: \(reachPastAFramedField)"
+        )
     }
 
     @Test("the generated overload takes the glyphs, each optional, after the variant and the size")
