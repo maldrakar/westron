@@ -21,9 +21,12 @@ first style on the system's text field and the first that draws its own focus ri
 decision. Checkbox ([`checkbox/`](checkbox/checkbox.spec.yaml), #31), approved on 2026-11-18 under the owner's
 delegation, is the first whose control has a value that is on or off and the first that takes a value from its
 context (the list's color). Rule's revision of 2026-11-22 (#116, approved by the coordinating agent under the owner's
-delegation) is the first with a drawn text label on a view, a constraint on a slot and the role `heading`. Chip
-([`chip/`](chip/chip.spec.yaml), #117), approved on 2026-11-22 by the coordinating agent under the owner's delegation,
-is the first in several forms, each on its own system control, and the first with a case over several states at once.
+delegation) is the first with a drawn text label on a view, a constraint on a slot and the role `heading`. IconTile
+([`icon-tile/`](icon-tile/icon-tile.spec.yaml), #118), approved on 2026-11-22 by the coordinating agent under the
+owner's delegation (decisions/0014), is an own view with Icon's shape whose nil list color is its own default, a
+neutral tile, and whose fill of a list's color is solid, as the owner chose. Chip ([`chip/`](chip/chip.spec.yaml),
+#117), approved on 2026-11-22 by the coordinating agent under the owner's delegation, is the first in several forms,
+each on its own system control, and the first with a case over several states at once.
 
 ## Format
 

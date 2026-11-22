@@ -213,7 +213,9 @@ still drives every generated sheet and combination:
   listed again by hand. Each sheet and its section of the review page are marked "Not a contract option". Over a
   matrix whose rows are icons, a supplement keeps a few of them (`rows`), on one sheet. Where its cell is taller than
   a generated one, `rowsPerPicture` caps the rows of one picture at a text size that splits sheets
-  (`accessibility5`). There are nineteen (`SnapshotMatrix/Supplements.swift`, `Supplement.all`):
+  (`accessibility5`). A supplement whose render on one OS is not worth reading, or not the same twice, names the
+  OSes it is drawn on (`onlyOn`), and its note says why. There are twenty-two (`SnapshotMatrix/Supplements.swift`,
+  `Supplement.all`):
   - Button, `label-without-icon`: its generated cells have an icon and a label or are icon-only, so a label without an
     icon, which while loading has the indicator before the label and widens the button (P13), is shown on the sheets
     with iconOnly false: every variant, size and role, at rest and in each state, 108 combinations on 6 sheets.
@@ -226,7 +228,12 @@ still drives every generated sheet and combination:
   - Text field, at size m: `card-notes`, a card's title and multiline notes (two rows to a picture at
     `accessibility5`); `secure-field`, the style on `SecureField`; `on-surface` and `on-sunken`, a field on those
     grounds.
-  - Rule, `labelled`: the separator with a label.
+  - Rule, `labelled`, on the sheet with purpose separator: a short label, a long one truncated and a rule with none,
+    each above a row; a vertical rule takes no label.
+  - IconTile, over the glyph folder or tray: `list-colors`, neutral and the twelve list colors; `beside-title`, a tile
+    beside titles in four roles, growing to `accessibility5`; and `empty-screen`, on iOS only, the tile in the
+    system's `ContentUnavailableView` (macOS draws no icon there and places its words differently from one render to
+    the next).
   - Chip, on the selectable form: `lit`, a chip lit in the accent in each state, which under the pointer and pressed
     holds two states at once; `list-colors-1` to `list-colors-4`, the twelve list colors lit, three to a sheet; on
     each control, `text-only-selectable` and `text-only-pressable`, a label that is only text, short and truncated; and
@@ -366,13 +373,14 @@ checks again (a commit pushed by a workflow starts none).
 
 ### Behaviour UI tests
 
-`ButtonBehaviorTests`, `CheckboxBehaviorTests`, `ChipBehaviorTests`, `TextFieldBehaviorTests` and
-`IconAccessibilityTests`, in `Catalog/CatalogUITests`, check on the catalog's entries what a unit test cannot reach:
-presses, hit areas and hover, the accessibility hierarchy, the keyboard. Each class has branches of its own for iOS
-and macOS. `tools/apple/check.sh behavior` runs them, like the audit: the build first, a step of its own, then one
-`xcodebuild test-without-building` for the classes named (all five by default); it prints each failure with its message, each skip with its reason, the
-test cases and the totals, and stops the simulator's test daemon afterwards. The log goes to
-`.build/logs/behavior-<platform>[-<classes>].log`, the result bundle to `.build/xcode/results/`.
+`ButtonBehaviorTests`, `CheckboxBehaviorTests`, `TextFieldBehaviorTests`, `IconAccessibilityTests`,
+`IconTileAccessibilityTests` and `ChipBehaviorTests`, in `Catalog/CatalogUITests`, check on the catalog's entries what
+a unit test cannot reach: presses, hit areas and hover, the accessibility hierarchy, the keyboard. Each class has
+branches of its own for iOS and macOS where the platforms differ. `tools/apple/check.sh behavior` runs them, like the
+audit: the build first, a step of its own, then one `xcodebuild test-without-building` for the classes named (all six
+by default); it prints each failure with its message, each skip with its reason, the test cases and the totals, and
+stops the simulator's test daemon afterwards. The log goes to `.build/logs/behavior-<platform>[-<classes>].log`, the
+result bundle to `.build/xcode/results/`.
 
 A run whose log gains no line for `WESTRON_BEHAVIOR_STALL_LIMIT` seconds (default 300; xcodebuild's own `[MT]`
 messages do not count) has stopped making progress: the script stops it, says so in its output and the log, and

@@ -5,5 +5,15 @@
 
 extension ComponentMatrix {
     /// Every component's snapshot matrix, in the order of the contracts' ids.
-    public static let all: [ComponentMatrix] = [.button, .checkbox, .chip, .icon, .rule, .surface, .text, .textField]
+    public static let all: [ComponentMatrix] = [
+        .button,
+        .checkbox,
+        .chip,
+        .icon,
+        .iconTile,
+        .rule,
+        .surface,
+        .text,
+        .textField,
+    ]
 }

@@ -29,6 +29,7 @@ paths:
 - What exists, before you draw your own (each per `spec/components/<id>/`): `.buttonStyle(_:size:iconOnly:)` with
   `.loading(_:)`, `.textFieldStyle(.framed|.inline, size:)`, `.toggleStyle(.check)` (Checkbox), `.toggleStyle(.chip)`,
   `.buttonStyle(.chip)` and `.labelStyle(.chip)` (Chip), `.textRole(_:)`, `Icon(_:)` and `Icon(_:label:)`,
+  `IconTile(_:)` and `IconTile(_:label:)` (a list's tile in the `.category(_:)` of its context, neutral with none),
   `.surface(.raised|.dragged|.sunken, outlined:)`, `Rule(axis:purpose:)` and `Rule("Label")`.
   A check beside a separate title draws no label: `Toggle(isOn: $task.isDone, accessibilityLabel:
   task.title).toggleStyle(.check)`, not `.labelsHidden()`, which a custom style sees only from iOS 18, macOS 15 and
