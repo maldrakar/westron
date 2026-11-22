@@ -277,6 +277,7 @@ extension Westron.Color {
                 ["color.background.surface"],
                 ["color.background.sunken"],
                 ["color.background.hover"],
+                ["color.background.pressed"],
                 ["color.background.selected"],
             ])
     }
