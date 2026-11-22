@@ -498,9 +498,8 @@ Applied on 2026-11-22 (#115) after the review of the second revision, contract t
   the glyph stays inside the field, in its padding, except at `s` on one line, which has no vertical padding and at
   xxxLarge on iOS is no taller than its line (29.3 pt): there the wrench reaches 1 pt above the fill and the week and
   the new window 1.3 pt below it, standing on the baseline with their own descent. On inline, which has no padding, a
-  glyph reaches past the field's frame. The contract says this rather than that no glyph is taller; the style does
-  not clip or shift a glyph, which would change every glyph's place for a point at one size. Whether `s` should keep
-  room for its glyphs is a question for the owner, not answered here.
+  glyph reaches past the field's frame. The contract said this rather than that no glyph is taller; the style did
+  not clip or shift a glyph. Superseded the same day: below, "A glyph fitted to its room".
 - **A search field's prompt in the references.** A supplement, `search-prompt`, draws the contract's search recipe
   empty, its prompt in `text.placeholder`, on iOS only (`onlyOn`), since macOS ignores a prompt's color: the
   references now hold the prompt's color, which until now only the catalog page showed.
@@ -511,3 +510,48 @@ Applied on 2026-11-22 (#115) after the review of the second revision, contract t
   holds. The runs with it, 1500 attempts each: the fields with a glyph kept their lines, sizes and glyph rows with
   fonts made anew 42 times; a field that stays on screen at 2x (74), at 1x left to right (103) and right to left (45);
   without the hold, 100 times off their lines.
+
+## A glyph fitted to its room
+
+Decided on 2026-11-22 (#115) by the coordinating agent under the owner's delegation of the phase's contracts, after
+the pull request's CI: on the runner's iOS 27 simulator a tall glyph reached further past the fill of a framed field
+at `s` on one line than the 1.5 pt the test allowed from iOS 26.3 (the new window 1.67 pt below it, the week 1.67), so
+a tolerance measured on one OS was no rule. The contract changed first:
+
+- **A glyph never draws past its room, and the field never grows for one.** On `framed` the room is the field's fill;
+  on `inline`, which has no fill, the field's first line. A glyph that would draw past it is fitted to it: scaled down,
+  its proportions kept, to the room's height if it is taller, centred where it would have stood, and moved inside the
+  room. It keeps its own width, so the text keeps its place. A glyph within its room, to half a pixel, stands where it
+  would and at its own size. The coordinator's decision named scaling a glyph taller than its room; a glyph no taller
+  than its room that would still reach past it, standing on the baseline with its own descent (the new window on
+  inline on macOS, 1.5 pt below the line; the week at `s` on iOS 27), is moved inside it, the least that keeps the
+  rule.
+- **On Apple.** `TextFieldGlyphRow` works out the room in the same layout pass that places the glyph: the fill reaches
+  past the row, the system field, by the field's vertical padding and, where the minimum height is more than the row
+  and its padding, half the rest, since the row is centred in that height; an inline field's first line is the box of
+  a hidden line of its text role on its first baseline, within the row. A fitted glyph is placed in the room it is
+  given, at its own width (`TextFieldGlyphFit`), and its drawing is scaled to that height by a `visualEffect`, which
+  changes no layout, so the anchors the tests read are what is drawn.
+- **An empty field of several lines.** Rendering the change on iOS showed what no sheet's review had: an empty field of
+  several lines, showing its placeholder, gives a first baseline near its top on iOS, so its glyphs stood above the
+  fill and the placeholder (in every `glyph-*` sheet of `lines: multiple`, at large and xSmall, since the references
+  were recorded); fitted to the room, an inline field's glyph came out a speck. The field's first line is at its top,
+  so the row now takes the lower of the field's first baseline and a line's baseline at the field's top: the glyphs
+  stand on the placeholder's baseline. macOS gave the right baseline already.
+- **Tests.** `TextFieldGlyphTests.aGlyphStaysInItsRoom` lays every glyph of the registry out at large, xxxLarge and
+  accessibility5, in both variants at every size, filled and empty, on one line and on several, all of a case's
+  glyphs in one window: no glyph past the fill or the frame, none taller than its room, each at its own width, and
+  at its own height unless that is more than the room, then at the room's, all within one pixel of the window it is
+  laid out in. Its failure names the glyph, the case, the fill, a line's height, the glyph's own size and where it was
+  placed. With the fitting turned off it fails on macOS (the new window on inline, 1.5 pt below the frame).
+  `emptyFieldOfSeveralLines` checks that an empty field of several lines sets its glyphs on a line's baseline at its
+  top. Neither depends on a symbol's measured height: each derives the room from the field it lays out and the glyph's
+  own size from the glyph laid out alone, on the OS it runs on.
+- **Pixels.** macOS: a render of every component's matrix before and after is the same, file for file. iOS 26.3: a
+  render of TextField's sheets differs in 49 of 323: in 45, every `glyph-leading`, `glyph-trailing` and `glyphs-both`
+  sheet of `lines: multiple` in the four themes and at xSmall, the empty fields' glyphs move down onto the
+  placeholder's baseline, the filled fields' glyphs unchanged; in 4, `glyphs-both`, size `l`, one line, in the four
+  themes, the magnifier of the filled framed field moves a pixel up. That glyph fits its room; the `visualEffect`
+  that would scale a fitted glyph draws it at its own size on another pixel where it stands between pixels (a render
+  without the effect left those 4 sheets the same). No sheet draws a glyph that needs fitting: the magnifier and the
+  number sign fit at every size the sheets draw.

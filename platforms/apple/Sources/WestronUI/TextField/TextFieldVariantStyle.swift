@@ -264,7 +264,9 @@ private struct TextFieldBody: View {
     /// from its token, as the padding does, on the curve of `framed`'s text style, body's, which is `inline`'s too: a
     /// text field style cannot read its context's text style. Both stop growing at
     /// `TextFieldGlyph.largestTextSize`, while the field's text grows on (decisions/0003, "Revision: the glyphs stop at
-    /// xxxLarge"); past it, at the accessibility sizes, a glyph is centred on the first line (`TextFieldGlyphRow`).
+    /// xxxLarge"); past it, at the accessibility sizes, a glyph is centred on the first line (`TextFieldGlyphRow`). A
+    /// glyph never draws past a framed field's fill, nor past an inline field's first line: one that would is fitted
+    /// to that room (`TextFieldGlyphRoom`; decisions/0003, "A glyph fitted to its room").
     ///
     /// The system field is the row's first view whether there are glyphs or not, so adding or removing one keeps the
     /// same field, its focus and its editing (TextFieldGlyphIdentityTests); with no glyph the row lays the field out as
@@ -293,7 +295,13 @@ private struct TextFieldBody: View {
             #else
                 let centred = !glyphs.isEmpty && dynamicTypeSize > TextFieldGlyph.largestTextSize
             #endif
-            TextFieldGlyphRow(centredOnTheFirstLine: centred, displayScale: max(displayScale, 1)) {
+            let room: TextFieldGlyphRoom =
+                metrics.height == nil
+                ? .firstLine
+                : .fill(
+                    verticalPadding: metrics.paddingVertical.map(CGFloat.init) ?? .zero,
+                    minimumHeight: metrics.height.map(CGFloat.init) ?? .zero)
+            TextFieldGlyphRow(centredOnTheFirstLine: centred, room: room, displayScale: max(displayScale, 1)) {
                 content
                     .anchorPreference(key: TextFieldGlyphAnchors.self, value: .bounds) {
                         glyphs.isEmpty ? [:] : [.field: $0]
@@ -304,8 +312,9 @@ private struct TextFieldBody: View {
                 if let trailing = glyphs.trailing {
                     glyph(trailing, part: .trailing)
                 }
-                if centred {
-                    // A line of the field's text role at the text's size, never drawn: the box a glyph is centred on.
+                if !glyphs.isEmpty {
+                    // A line of the field's text role at the text's size, never drawn: the lowest first baseline the
+                    // field can have, the box a glyph is centred on, and on inline the room a glyph is fitted to.
                     Text(verbatim: "A")
                         .modifier(TextFieldGlyphRole(font: tokens.glyphFont))
                         .fixedSize()
@@ -323,11 +332,24 @@ private struct TextFieldBody: View {
         }
     }
 
+    /// Where a glyph may draw, the room it is fitted to (decisions/0003, "A glyph fitted to its room"), in the row's
+    /// height: on `framed` the field's fill, which reaches past the row, the system field, by the field's vertical
+    /// padding and, where the field's minimum height is more than the row and its padding, half the rest, since the
+    /// row is centred in that height (`TextFieldSurface`); on `inline`, which has no fill, the field's first line, the
+    /// box of a line of its text role on its first baseline, within the row.
+    enum TextFieldGlyphRoom: Equatable {
+        case fill(verticalPadding: CGFloat, minimumHeight: CGFloat)
+        case firstLine
+    }
+
     /// The field and its glyphs in a row: the field is offered the row's width less each glyph's, and the row is the
     /// field's height, which a glyph does not change even where it reaches higher than the field's first line. A glyph
     /// stands on the field's first baseline; at the accessibility sizes, where it is smaller than its text, it is
     /// centred on the field's first line instead, the box of a line of the field's text role (decisions/0003, second
-    /// revision). The row's baselines are the field's. SwiftUI mirrors the places right to left.
+    /// revision). A glyph that would then draw past its room (`TextFieldGlyphRoom`) is fitted to it: scaled down, its
+    /// proportions kept, to the room's height if it is taller, centred where it stood, and moved inside the room; a
+    /// glyph within its room, to half a pixel, is placed as it stood. The row's baselines are the field's. SwiftUI
+    /// mirrors the places right to left.
     private struct TextFieldGlyphRow: Layout {
         /// What a view of the row is: the field, a glyph, or the line a glyph is centred on.
         enum Role: LayoutValueKey {
@@ -336,6 +358,7 @@ private struct TextFieldBody: View {
         }
 
         let centredOnTheFirstLine: Bool
+        let room: TextFieldGlyphRoom
         /// The screen's pixels to a point, which a centred glyph is placed on.
         let displayScale: CGFloat
 
@@ -382,15 +405,23 @@ private struct TextFieldBody: View {
             field.place(
                 at: CGPoint(x: bounds.minX + parts.leadingWidth, y: bounds.minY), anchor: .topLeading,
                 proposal: fieldProposal)
-            let baseline = field.dimensions(in: fieldProposal)[.firstTextBaseline]
-            // The middle of the field's first line, where a glyph is centred at the accessibility sizes.
-            let lineMiddle = parts.line.map { line -> CGFloat in
+            // The field's first baseline, never above that of a line of its text role at its top: on iOS an empty
+            // field of several lines, showing its prompt, gives one near its top, which set its glyphs above its fill
+            // and its prompt (decisions/0003, "A glyph fitted to its room").
+            let fieldBaseline = field.dimensions(in: fieldProposal)[.firstTextBaseline]
+            let baseline = max(
+                fieldBaseline, parts.line?.dimensions(in: .unspecified)[.firstTextBaseline] ?? fieldBaseline)
+            // The box of the field's first line, in the row: where a glyph is centred at the accessibility sizes, and
+            // on inline its room.
+            let lineBox = parts.line.map { line -> (top: CGFloat, height: CGFloat) in
                 let dimensions = line.dimensions(in: .unspecified)
-                return baseline - dimensions[.firstTextBaseline] + dimensions.height / 2
+                return (baseline - dimensions[.firstTextBaseline], dimensions.height)
             }
+            let lineMiddle = lineBox.map { $0.top + $0.height / 2 }
             if let line = parts.line {
                 line.place(at: bounds.origin, anchor: .topLeading, proposal: .unspecified)
             }
+            let room = glyphRoom(in: bounds, firstLine: lineBox)
             for (glyph, x, anchor) in [
                 (parts.leading, bounds.minX, UnitPoint.topLeading),
                 (parts.trailing, bounds.maxX, UnitPoint.topTrailing),
@@ -405,7 +436,32 @@ private struct TextFieldBody: View {
                     } else {
                         bounds.minY + baseline - dimensions[.firstTextBaseline]
                     }
-                glyph.place(at: CGPoint(x: x, y: y), anchor: anchor, proposal: .unspecified)
+                // Within its room, to half a pixel, the glyph stands where it stood, at its own size.
+                let halfAPixel = 1 / (2 * displayScale)
+                if y >= room.minY - halfAPixel && y + dimensions.height <= room.maxY + halfAPixel {
+                    glyph.place(at: CGPoint(x: x, y: y), anchor: anchor, proposal: .unspecified)
+                    continue
+                }
+                // Past it, fitted: no taller than the room, centred where it stood, then moved inside the room. Its
+                // width stays its own, so the field's text keeps its place (`TextFieldGlyphFit` scales the drawing).
+                let height = min(dimensions.height, room.height)
+                let top = min(max(y + (dimensions.height - height) / 2, room.minY), room.maxY - height)
+                glyph.place(
+                    at: CGPoint(x: x, y: top), anchor: anchor, proposal: ProposedViewSize(width: nil, height: height))
+            }
+        }
+
+        /// The room a glyph may draw in (`TextFieldGlyphRoom`), in the row's coordinates.
+        private func glyphRoom(in bounds: CGRect, firstLine: (top: CGFloat, height: CGFloat)?) -> CGRect {
+            switch room {
+            case .fill(let verticalPadding, let minimumHeight):
+                let beyond = verticalPadding + max(.zero, (minimumHeight - bounds.height - 2 * verticalPadding) / 2)
+                return bounds.insetBy(dx: .zero, dy: -beyond)
+            case .firstLine:
+                guard let firstLine else { return bounds }
+                let line = CGRect(
+                    x: bounds.minX, y: bounds.minY + firstLine.top, width: bounds.width, height: firstLine.height)
+                return line.intersection(bounds)
             }
         }
 
@@ -444,17 +500,61 @@ private struct TextFieldBody: View {
             _gap = ScaledMetric(wrappedValue: CGFloat(metrics.gap), relativeTo: textStyle)
         }
 
+        /// The coordinate space of the room `TextFieldGlyphFit` gives the glyph, which the glyph's drawing reads.
+        nonisolated static let fitSpace = "westron.textField.glyphFit"
+
         var body: some View {
-            Icon(icon)
-                // The text's own scale, fixed: a context's `.imageScale(_:)` changes neither the glyph nor the room the
-                // field leaves it, as Button and Chip fix their icons' (the contract's description).
-                .imageScale(.medium)
-                .modifier(TextFieldGlyphRole(font: tokens.glyphFont))
-                .foregroundStyle(tokens.glyphColor)
-                .fixedSize()
-                .anchorPreference(key: TextFieldGlyphAnchors.self, value: .bounds) { [part: $0] }
-                // Between the glyph and the text: after the glyph at the start, before the one at the end.
-                .padding(part == .trailing ? .leading : .trailing, gap)
+            TextFieldGlyphFit {
+                Icon(icon)
+                    // The text's own scale, fixed: a context's `.imageScale(_:)` changes neither the glyph nor the room
+                    // the field leaves it, as Button and Chip fix their icons' (the contract's description).
+                    .imageScale(.medium)
+                    .modifier(TextFieldGlyphRole(font: tokens.glyphFont))
+                    .foregroundStyle(tokens.glyphColor)
+                    .fixedSize()
+                    // Drawn at its own size, or, in a room the row fitted it to that is lower, scaled down to it,
+                    // centred in it, its proportions kept: a scale of the drawing alone, which the layout has placed.
+                    .visualEffect { content, proxy in
+                        let room = proxy.bounds(of: .named(TextFieldGlyph.fitSpace))?.height ?? proxy.size.height
+                        return content.scaleEffect(
+                            proxy.size.height > room && proxy.size.height > .zero ? room / proxy.size.height : 1)
+                    }
+            }
+            .coordinateSpace(.named(Self.fitSpace))
+            .anchorPreference(key: TextFieldGlyphAnchors.self, value: .bounds) { [part: $0] }
+            // Between the glyph and the text: after the glyph at the start, before the one at the end.
+            .padding(part == .trailing ? .leading : .trailing, gap)
+        }
+    }
+
+    /// The room of one glyph: its own size, or, offered a lower height by the row (`TextFieldGlyphRow`), that height at
+    /// the glyph's own width, the glyph centred in it. Its baselines are the glyph's where it is placed.
+    private struct TextFieldGlyphFit: Layout {
+        func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+            guard let glyph = subviews.first else { return .zero }
+            let size = glyph.sizeThatFits(.unspecified)
+            guard let height = proposal.height, height < size.height else { return size }
+            return CGSize(width: size.width, height: height)
+        }
+
+        func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+            guard let glyph = subviews.first else { return }
+            // By its top leading corner, which at the glyph's own size is the room's: placed by its centre, a glyph
+            // between pixels was rounded to another pixel than at its corner.
+            let size = glyph.sizeThatFits(.unspecified)
+            let top = bounds.height < size.height ? bounds.midY - size.height / 2 : bounds.minY
+            glyph.place(at: CGPoint(x: bounds.minX, y: top), anchor: .topLeading, proposal: .unspecified)
+        }
+
+        func explicitAlignment(
+            of guide: VerticalAlignment, in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews,
+            cache: inout ()
+        ) -> CGFloat? {
+            guard guide == .firstTextBaseline || guide == .lastTextBaseline, let glyph = subviews.first else {
+                return nil
+            }
+            let dimensions = glyph.dimensions(in: .unspecified)
+            return bounds.midY - dimensions.height / 2 + dimensions[guide]
         }
     }
 

@@ -10,7 +10,8 @@
 # more after the accessibility audit: a glyph names the field's purpose, never an action, a search field's prompt is
 # in color.text.placeholder, and at the accessibility sizes a glyph is centred on the first line (decisions/0003,
 # "Second revision: what a glyph draws, and where"), and its review's findings: the glyph's image scale fixed, how
-# the row lays the glyphs out, the gap on inline, mirroring, the cap's mapping and a glyph taller than its line.
+# the row lays the glyphs out, the gap on inline, mirroring, the cap's mapping and a glyph taller than its line; then,
+# after CI on iOS 27, a glyph fitted to its room (decisions/0003, "A glyph fitted to its room").
 id: text-field
 status: approved
 description: >-
@@ -51,14 +52,16 @@ description: >-
   nothing); at the accessibility sizes the glyph, its gap and the room the field leaves it stay as they are at that
   size while the text grows on, since inside a field the width is what the person types into and the glyph is
   decoration (a named exception to design-language/07, decisions/0003, revision of 2026-11-22; the field's padding
-  still grows with the text). There, where a glyph is smaller than its text, it is centred on the first line instead of standing on its
-  baseline, which would set it low like a subscript; at the other sizes it stands on the baseline. A glyph is about
-  as tall as a line of its text; standing on the baseline some symbols reach a little above or below the line, and
-  a few are taller than it (beside a line of body.regular the wrench is 18 pt to the line's 16 on macOS, and 31.3 to
-  27.7 on iOS at xxxLarge). The field does not grow for a glyph: the row is the field's height. On framed the glyph
-  reaches into the field's padding, inside its fill, except at s on one line, where at the larger text sizes the
-  field is no taller than its line and such a glyph reaches past the fill's edge by up to a point and a half (1.3 pt
-  measured, on iOS at xxxLarge); on inline, which has no padding, it reaches past the field's frame. It draws in
+  still grows with the text). There, where a glyph is smaller than its text, it is centred on the first line
+  instead of standing on its baseline, which would set it low like a subscript; at the other sizes it stands on the
+  baseline; an empty field of several lines, showing its placeholder, has its first line at its top, and its glyphs
+  stand on that line's baseline. A glyph never draws past its room, and the field never grows for one: on framed the
+  room is the field's fill, on inline, which has no fill, the field's first line. A glyph is about as tall as a line
+  of its text, but standing on the baseline some symbols reach a little above or below the line and a few are
+  taller than it (the wrench), and at s on one line, at the larger text sizes, a field is no taller than its line.
+  A glyph that would draw past its room is fitted to it: scaled down, its proportions kept, to the room's height if
+  it is taller, centred where it would have stood, and moved inside the room; it keeps its own width, so the text
+  keeps its place. A glyph within its room, to half a pixel, stands where it would and at its own size. It draws in
   color.text.secondary in every state, with the placeholder shown or text entered, focused or not; disabled dims it
   with the rest of the field. A search field is no component of its own (decisions/0014): it is a framed field with
   the magnifier at its start. There is no error state, hint or message in
@@ -241,7 +244,12 @@ platforms:
       context's .imageScale(_:) does not reach it. Each glyph stands beside the system field in one layout, which
       offers the field the row's width less each glyph and its gap, sizes the row by the field alone and stands each
       glyph on the field's first text baseline, inside the fill, the high-contrast outline, the focus ring and the
-      area that focuses the field on a tap or a click. The gap scales with Dynamic Type relative to the field's text
+      area that focuses the field on a tap or a click. The row fits a glyph to its room in the same layout pass: the
+      fill reaches past the row, the system field, by the field's vertical padding and, where the minimum height is
+      more, half the rest, and an inline field's first line is the box of a line of its text role on its first
+      baseline; a fitted glyph is placed in the room it is given at its own width, and its drawing is scaled to that
+      room by a visual effect, which changes no layout. On iOS an empty field of several lines gives a first baseline
+      near its top; the row takes the lower of it and a line's baseline at the field's top. The gap scales with Dynamic Type relative to the field's text
       style: framed's body.regular, and on inline body's too, not the context's, since a TextFieldStyle cannot read
       the text style of its context (SwiftUI's font in the environment is opaque, and .textRole(_:) sets no value a
       style reads); so an inline field in heading.small or footnote.regular has the gap a body field has at the same

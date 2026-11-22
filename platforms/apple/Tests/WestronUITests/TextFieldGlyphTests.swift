@@ -18,6 +18,8 @@ struct TextFieldGlyphTests {
         var size: CGSize = .zero
         var baseline: CGFloat = .zero
         var parts: [TextFieldGlyphAnchors.Part: CGRect] = [:]
+        /// The window's pixels to a point (`layOutAll`).
+        var displayScale: CGFloat = 1
     }
 
     /// Lays `field` out in a window, offered a width of 300.
@@ -241,60 +243,106 @@ struct TextFieldGlyphTests {
     }
 
     @Test(
-        "a glyph as tall as its line or taller grows no field, and stays inside a framed one but at s on one line",
-        arguments: [DynamicTypeSize.large, .xxxLarge])
-    func aGlyphTallerThanItsLine(size: DynamicTypeSize) throws {
-        // framed's text role, body.regular, which `field` gives inline's context too; each glyph at its fixed scale.
+        "a glyph never draws past a framed field's fill nor an inline field's first line; one that fits keeps its size",
+        arguments: [DynamicTypeSize.large, .xxxLarge, .accessibility5])
+    func aGlyphStaysInItsRoom(size: DynamicTypeSize) throws {
+        // Every glyph of the registry at the size it is drawn at, at most xxxLarge, on its own.
+        let glyphSize = min(size, TextFieldGlyph.largestTextSize)
+        let natural = Self.layOutAll(
+            Westron.Icon.allCases.map {
+                AnyView(Icon($0).imageScale(.medium).textRole(.body.regular).dynamicTypeSize(glyphSize))
+            })
+        // A line of the fields' text role, body.regular, framed's and inline's context here, at the text's size.
         let line = Self.layOut(Text(verbatim: "A").textRole(.body.regular).dynamicTypeSize(size))
-        let heights = Westron.Icon.allCases.map { icon in
-            (
-                icon,
-                Self.layOut(Icon(icon).imageScale(.medium).textRole(.body.regular).dynamicTypeSize(size)).size.height
-            )
-        }
-        // The glyphs within a point of a line's height or taller (on macOS at large the trash and the wrench are
-        // taller, on iOS at xxxLarge seven are as tall or taller), and the tallest, whether it is or not.
-        let tallest = try #require(heights.max { $0.1 < $1.1 })
-        let tall = heights.filter { $0.1 > line.size.height - 1 }
-        print("TextFieldGlyphTests at \(size): a line \(line.size.height) pt; as tall or taller: \(tall)")
-        var reachPastAFramedField: CGFloat = .zero
-        for icon in Set(tall.map(\.0) + [tallest.0]).sorted(by: { $0.rawValue < $1.rawValue }) {
-            for variant in [TextFieldVariant.framed, .inline] {
-                for fieldSize in TextFieldSize.allCases {
-                    for axis in [Axis.horizontal, .vertical] {
-                        let text = axis == .vertical ? "Milk\nApples" : "Groceries"
-                        let bare = Self.layOut(
-                            Self.field(variant, size: fieldSize, axis: axis, text: text, leading: nil)
-                                .dynamicTypeSize(size))
-                        let laidOut = Self.layOut(
-                            Self.field(variant, size: fieldSize, axis: axis, text: text, leading: icon, trailing: icon)
-                                .dynamicTypeSize(size))
-                        let name = "\(icon) on \(variant) \(fieldSize) \(axis) at \(size)"
-                        // The row is the field's height: the glyph adds none.
+        for variant in [TextFieldVariant.framed, .inline] {
+            for fieldSize in TextFieldSize.allCases {
+                // Filled, and empty with the field's placeholder, on one line and on several.
+                for (axis, text) in [
+                    (Axis.horizontal, "Groceries"), (.horizontal, ""), (.vertical, "Milk\nApples"), (.vertical, ""),
+                ] {
+                    // The field's minimum height and vertical padding, which do not scale with the text.
+                    let metrics = TextFieldMetrics(variant: variant, size: fieldSize, axis: axis)
+                    let padding = metrics.paddingVertical.map(CGFloat.init) ?? .zero
+                    let minimumHeight = metrics.height.map(CGFloat.init) ?? .zero
+                    let fields = Self.layOutAll(
+                        Westron.Icon.allCases.map {
+                            AnyView(
+                                Self.field(variant, size: fieldSize, axis: axis, text: text, leading: $0, trailing: $0)
+                                    .dynamicTypeSize(size))
+                        })
+                    for (index, icon) in Westron.Icon.allCases.enumerated() {
+                        let field = fields[index]
+                        let glyph = natural[index].size
+                        // The fill of a framed field is the field's frame; an inline field's room is its first line.
+                        let fill = CGRect(origin: .zero, size: field.size)
+                        let roomHeight = variant == .framed ? fill.height : min(fill.height, line.size.height)
+                        // Within a pixel's rounding, the pixel of the window the field is laid out in.
+                        let pixel = 1 / field.displayScale
+                        let name =
+                            "\(icon) on \(variant) \(fieldSize) \(axis) \(text.isEmpty ? "empty" : "filled") at \(size): "
+                            + "the fill \(fill), a line "
+                            + "\(line.size.height) pt, the glyph's own size \(glyph)"
+                        // The row is the system field's height: a glyph adds none. (A field beside two glyphs may wrap
+                        // to more lines than one without, at the accessibility sizes: that is its text, not a glyph.)
+                        let system = try #require(field.parts[.field], "\(name): no field")
                         #expect(
-                            abs(laidOut.size.height - bare.size.height) < Self.tolerance, "\(name): \(laidOut.size)")
-                        guard variant == .framed else { continue }
+                            abs(field.size.height - max(minimumHeight, system.height + 2 * padding)) < Self.tolerance,
+                            "\(name): \(field.size), the system field \(system)")
                         for part in [TextFieldGlyphAnchors.Part.leading, .trailing] {
-                            let frame = try #require(laidOut.parts[part])
-                            let reach = max(.zero, -frame.minY, frame.maxY - laidOut.size.height)
-                            if fieldSize == .s && axis == .horizontal {
-                                // At s on one line the field is no taller than its line at the larger text sizes (on
-                                // iOS at xxxLarge), and such a glyph reaches past its fill, by at most a point and a
-                                // half (the contract's description).
-                                reachPastAFramedField = max(reachPastAFramedField, reach)
-                                #expect(reach <= 1.5, "\(name): \(frame) in \(laidOut.size)")
-                            } else {
-                                // Elsewhere on framed it reaches into the field's padding, inside its fill.
-                                #expect(reach <= Self.tolerance, "\(name): \(frame) in \(laidOut.size)")
-                            }
+                            let frame = try #require(field.parts[part], "\(name): no \(part) glyph")
+                            // Never past the fill, nor past the frame of an inline field, nor taller than its room.
+                            #expect(
+                                frame.minY >= fill.minY - pixel && frame.maxY <= fill.maxY + pixel
+                                    && frame.height <= roomHeight + pixel,
+                                "\(name): the \(part) glyph at \(frame)")
+                            // Its width is its own, so the field's text keeps its place; it is drawn at its own height
+                            // unless that is more than the room, and then at the room's.
+                            #expect(abs(frame.width - glyph.width) <= pixel, "\(name): the \(part) glyph at \(frame)")
+                            let fitted = glyph.height > roomHeight + pixel
+                            #expect(
+                                abs(frame.height - (fitted ? roomHeight : glyph.height)) <= pixel,
+                                "\(name): the \(part) glyph at \(frame), fitted: \(fitted)")
                         }
                     }
                 }
             }
         }
-        print(
-            "TextFieldGlyphTests at \(size): the farthest a glyph reaches past a framed field at s: \(reachPastAFramedField)"
-        )
+    }
+
+    @Test(
+        "an empty field of several lines sets its glyphs on its placeholder's first baseline",
+        arguments: [TextFieldVariant.framed, .inline])
+    func emptyFieldOfSeveralLines(variant: TextFieldVariant) throws {
+        // On iOS such a field gives a first baseline near its top, which set its glyphs above its fill and its
+        // placeholder; its first line is at its top, so its baseline is a line's of its text role there.
+        let line = Self.layOut(Text(verbatim: "A").textRole(.body.regular))
+        let magnifier = Self.layOut(Icon(.magnifier).textRole(.body.regular))
+        let hash = Self.layOut(Icon(.hash).textRole(.body.regular))
+        let laidOut = Self.layOut(Self.field(variant, axis: .vertical, text: "", trailing: .hash))
+        let field = try #require(laidOut.parts[.field])
+        for (part, glyph) in [(TextFieldGlyphAnchors.Part.leading, magnifier), (.trailing, hash)] {
+            let frame = try #require(laidOut.parts[part])
+            #expect(
+                abs(frame.minY + glyph.baseline - (field.minY + line.baseline)) <= Self.pixel,
+                "\(part): \(frame), the field \(field), a line's baseline \(line.baseline)")
+        }
+    }
+
+    /// Lays each view out in one window, each offered a width of 300, and returns its size, its glyphs and its field.
+    static func layOutAll(_ views: [AnyView]) -> [Laidout] {
+        let box = ManyBox(count: views.count)
+        TextFieldStyleTests.show(
+            ZStack(alignment: .topLeading) {
+                ForEach(views.indices, id: \.self) { index in
+                    views[index]
+                        .fixedSize(horizontal: false, vertical: true)
+                        .overlayPreferenceValue(TextFieldGlyphAnchors.self) { anchors in
+                            Recorder(box: box, index: index, anchors: anchors)
+                        }
+                }
+            }
+            .frame(width: 300, alignment: .topLeading))
+        return box.values
     }
 
     @Test("the generated overload takes the glyphs, each optional, after the variant and the size")
@@ -324,6 +372,33 @@ struct TextFieldGlyphTests {
         #expect(TextFieldMetrics(variant: .framed, size: .s, axis: .vertical).gap == .space75)
         #expect(TextFieldMetrics(variant: .framed, size: .m, axis: .horizontal).gap == .space100)
         #expect(TextFieldMetrics(variant: .inline, size: .s, axis: .horizontal).gap == .space100)
+    }
+}
+
+/// What each view of `layOutAll` laid out.
+@MainActor
+private final class ManyBox {
+    var values: [TextFieldGlyphTests.Laidout]
+
+    init(count: Int) {
+        values = Array(repeating: TextFieldGlyphTests.Laidout(), count: count)
+    }
+}
+
+/// Writes one view's size, its glyphs' and its field's bounds and its window's display scale into a `ManyBox`.
+private struct Recorder: View {
+    let box: ManyBox
+    let index: Int
+    let anchors: [TextFieldGlyphAnchors.Part: Anchor<CGRect>]
+    @Environment(\.displayScale) private var displayScale
+
+    var body: some View {
+        GeometryReader { proxy in
+            let _ = (box.values[index].size = proxy.size)
+            let _ = (box.values[index].parts = anchors.mapValues { proxy[$0] })
+            let _ = (box.values[index].displayScale = max(displayScale, 1))
+            Color.clear
+        }
     }
 }
 
