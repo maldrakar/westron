@@ -78,6 +78,10 @@ A system control keeps focus, keyboard support, VoiceOver traits, Liquid Glass a
 imports SwiftUI. So westron has no wrapper types and no prefix (decisions/0003). The product writes the system
 control, and westron adds one modifier.
 
+What the system presents takes no westron component and no style: a menu and a context menu, an alert or a
+confirmation dialog, a sheet, swipe actions, the empty state's `ContentUnavailableView`. The product writes them, and
+westron styles what is inside them with its existing styles (decisions/0014, chapter 09).
+
 ### Generated enums, a generated signature, a hand-written style
 
 `tools/westron generate` (the `components-apple` generator, #20) generates, from every contract that is approved or
