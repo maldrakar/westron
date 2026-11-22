@@ -3,9 +3,7 @@ import WestronUI
 
 // IconTile's catalog entry, from spec/components/icon-tile/icon-tile.spec.yaml: the real `IconTile` at the system's three
 // scales, beside titles in several text roles, in the twelve list colors and neutral, decorative against labeled, and
-// alone in an empty screen's `ContentUnavailableView`. The list colors are drawn twice: with the contract's fill and
-// with the quiet alternative open with the owner (the contract's decisions/0001, question 3), so that the two are
-// compared in one picture; the second row goes once the owner chooses.
+// alone in an empty screen's `ContentUnavailableView`.
 
 extension CatalogEntry {
     static let iconTile = CatalogEntry(id: "icon-tile", title: "IconTile", section: .components) {
@@ -28,15 +26,11 @@ enum IconTileSampleColors {
         ("heading.medium", .heading.medium),
         ("heading.large", .heading.large),
     ]
-
-    static let fillCaption = "fill: the contract's"
-    static let quietCaption = "quiet: open with the owner"
 }
 
-/// A tile in each color of `IconTileSampleColors`, with the fill `fill`.
+/// A tile in each color of `IconTileSampleColors`.
 struct IconTileColorLines: View {
     let icon: Westron.Icon
-    let fill: IconTileFill
 
     var body: some View {
         IconTileWrap(perLine: IconTileSampleColors.perLine) {
@@ -45,7 +39,6 @@ struct IconTileColorLines: View {
                     .category(IconTileSampleColors.all[index])
             }
         }
-        .iconTileFill(fill)
     }
 }
 
@@ -98,27 +91,6 @@ struct IconTileWrap: Layout {
         }
         if !current.isEmpty { lines.append(current) }
         return lines
-    }
-}
-
-/// The contract's fill and, under it, the quiet alternative, each with its caption.
-struct IconTileFillComparison: View {
-    let icon: Westron.Icon
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: .space75) {
-            caption(IconTileSampleColors.fillCaption)
-            IconTileColorLines(icon: icon, fill: .solid)
-            caption(IconTileSampleColors.quietCaption)
-            IconTileColorLines(icon: icon, fill: .quiet)
-        }
-    }
-
-    private func caption(_ text: String) -> some View {
-        Text(text)
-            .textRole(.caption.medium)
-            .foregroundStyle(.text.secondary)
-            .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -190,12 +162,11 @@ extension ComponentMatrix.Supplement {
     static let iconTileListColors = ComponentMatrix.Supplement(
         component: "icon-tile", id: "list-colors", title: "list colors and none",
         note: "The color is not a contract option: the tile takes it from .category(_:). Each cell: neutral, then the "
-            + "twelve list colors, in body.regular, with the contract's fill and, under it, the quiet alternative "
-            + "open with the owner (decisions/0001, question 3). Growth stops at accessibility1.",
+            + "twelve list colors, in body.regular. Growth stops at accessibility1.",
         keeps: [:], rows: ["folder"], rowsPerPicture: 1
     ) {
         let (glyph, scale, _) = IconTileMatrixValues($0).fields
-        IconTileFillComparison(icon: glyph)
+        IconTileColorLines(icon: glyph)
             .imageScale(Image.Scale(contract: scale))
             .textRole(.body.regular)
             .dynamicTypeSize(...DynamicTypeSize.accessibility1)
@@ -237,7 +208,7 @@ extension ComponentMatrix.Supplement {
     }
 }
 
-/// The scales, the roles, the list colors with the open alternative, decorative against labeled, and an empty screen.
+/// The scales, the roles, the list colors, decorative against labeled, and an empty screen.
 private struct IconTilePage: View {
     private static let glyphs: [Westron.Icon] = [.tray, .sun, .folder, .briefcase, .book, .flag]
 
@@ -273,7 +244,7 @@ private struct IconTilePage: View {
                     .category(.green)
                 }
                 section("list colors: neutral, then the twelve") {
-                    IconTileFillComparison(icon: .folder)
+                    IconTileColorLines(icon: .folder)
                         .textRole(.body.regular)
                 }
                 section("decorative and labeled") {

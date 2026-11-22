@@ -22,7 +22,7 @@ decision. Checkbox ([`checkbox/`](checkbox/checkbox.spec.yaml), #31), approved o
 delegation, is the first whose control has a value that is on or off and the first that takes a value from its
 context (the list's color). IconTile ([`icon-tile/`](icon-tile/icon-tile.spec.yaml), #118), approved on 2026-11-22 by
 the coordinating agent under the owner's delegation (decisions/0014), is an own view with Icon's shape whose nil list
-color is its own default, a neutral tile, and whose fill of a list's color is open with the owner.
+color is its own default, a neutral tile, and whose fill of a list's color is solid, as the owner chose.
 
 ## Format
 

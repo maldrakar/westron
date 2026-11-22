@@ -4,19 +4,8 @@
 
 import SwiftUI
 
-/// The fill of a tile in a list's color. The contract's is `solid`; `quiet` is the alternative open with the owner
-/// (decisions/0001 of the contract, question 3), which only the catalog draws, beside the contract's, for the owner to
-/// compare (`IconTileCatalogSupport.swift`).
-package enum IconTileFill: Sendable {
-    /// `color.category.<name>.fill` with the glyph in `on-fill`: the contract's, design-language/02.
-    case solid
-    /// `color.category.<name>.background` with the glyph in `icon`: the open alternative.
-    case quiet
-}
-
 /// The two colors a tile draws with, for one list color: the contract's bindings with no list color, its description
-/// with one. The colors of a list's tile are chosen here alone, so the owner's answer to question 3 is a change of the
-/// two lines of `solid` or `quiet` below, nothing else.
+/// with one, the solid fill the owner chose (decisions/0001 of the contract, question 3).
 struct IconTileColors: Equatable, Sendable {
     /// `tile.background`.
     var tile: Westron.Color
@@ -24,21 +13,16 @@ struct IconTileColors: Equatable, Sendable {
     var glyph: Westron.Color
 
     /// The colors of a tile in the list color `category` of its context; nil: the neutral tile, the contract's
-    /// bindings, `color.background.muted` and `color.text.secondary`, never the accent.
-    init(category: Westron.Category?, fill: IconTileFill = .solid) {
+    /// bindings, `color.background.muted` and `color.text.secondary`, never the accent; with one, the color's `fill`
+    /// with the glyph in its `on-fill` (design-language/02).
+    init(category: Westron.Category?) {
         guard let category else {
             tile = .background.muted
             glyph = .text.secondary
             return
         }
-        switch fill {
-        case .solid:
-            tile = category.fill
-            glyph = category.onFill
-        case .quiet:
-            tile = category.background
-            glyph = category.icon
-        }
+        tile = category.fill
+        glyph = category.onFill
     }
 }
 

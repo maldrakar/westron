@@ -1,7 +1,8 @@
 # 0001. The IconTile contract
 
 Date: 2026-11-22. Status: approved on 2026-11-22 by the coordinating agent under the owner's delegation of the first
-gate in phase 4 (decisions/0014, "Process"), with question 3, the fill of a list's color, open with the owner. There was
+gate in phase 4 (decisions/0014, "Process"), with question 3, the fill of a list's color, left to the owner, who chose
+the solid fill on 2026-11-22 ("The owner's answer"). There was
 no interview: the agent answered the questions of `/new-component` from the owner's decision, the documents and the
 pilot, and gave the source of each answer; the answers no source gave were the open questions below, which the
 approver answered ("The approval").
@@ -65,7 +66,7 @@ corner is 0.27 to 0.29 of its side; sides of 30 and 26 in a phone row, 22 and 18
   "a tag or a badge without a color". The conventions let a contract choose its nil ("nil being the contract's
   default"); the doc comment of `.category(_:)` now names both defaults.
 
-### C. The fill of a list's color: solid, with the quiet pair open with the owner
+### C. The fill of a list's color: solid, the owner's choice
 
 - Considered: (a) quiet: `color.category.<name>.background` with the glyph in `color.category.<name>.icon`; (b) solid:
   `color.category.<name>.fill` with the glyph in `on-fill`; (c) both, as an option.
@@ -75,15 +76,13 @@ corner is 0.27 to 0.29 of its side; sides of 30 and 26 in a phone row, 22 and 18
 - The agent recommended (a): the pilot's role, a calm column of twelve hues (principle 3; direction B's soft look,
   decisions/0013), the solid list color left to the checked check, and a neutral twin that exists where a neutral solid
   pair does not.
-- **Implemented: (b), pending the owner (question 3).** design-language/02 and the usage notes of every
+- **Chosen: (b), by the owner on 2026-11-22 (question 3).** design-language/02 and the usage notes of every
   `color.category.<name>.control` token say "tags, tiles and statuses keep `fill`", an accepted chapter of the look, so
-  the approver did not settle the fill against it and asked the owner. Until they answer, a list's tile is solid; the
-  neutral tile stays `background.muted` and `text.secondary` either way. The two mappings sit in one place,
-  `IconTileColors` in `WestronUI/IconTile/IconTileTokens.swift`, so the owner's answer is a two-line change there and in
-  the contract's description. The catalog's supplementary sheet "list colors and none" draws, under the contract's
-  row, a second row captioned "quiet: open with the owner" from the same tokens, through a `package` environment value
-  no product sees (`IconTileCatalogSupport.swift`), so the owner compares both in one picture; it goes once they choose.
-  (c) has no pilot use (rule 6).
+  the approver did not settle the fill against it and asked the owner. The implementation took (b) meanwhile, and the
+  catalog drew the quiet pair in a second row of the supplementary sheet "list colors and none", through a `package`
+  environment value no product saw, so the owner could compare both in one picture. The owner approved the solid fill
+  as implemented, and the quiet alternative was dropped with that row and its environment value. The neutral tile
+  stays `background.muted` and `text.secondary`. (c) has no pilot use (rule 6).
 - A rounded square, not a circle, so a solid tile is not read as a checked disc. No line in any theme: the glyph carries
   the meaning, its pair holds in high contrast on the same ground, and a tile's edge is not information (WCAG 1.4.11
   asks it of the glyph). Surface's high-contrast line answers a shadow, which a tile does not have.
@@ -153,12 +152,11 @@ view existed, `tools/westron lint api-parity` reported exactly the missing `publ
 - The in-process render on macOS (`CARenderer`) draws no icon of `ContentUnavailableView`, not even a plain `Icon`, so
   the supplement "an empty screen" is read on iOS; the catalog entry's screenshot shows it on the Mac.
 
-## Open with the owner
+## The owner's answer
 
-3. **Quiet or solid?** The contract and the code take solid, as design-language/02 says; the catalog shows the quiet
-   pair beside it. If the owner chooses quiet: the two lines of `IconTileColors`, the contract's description,
-   design-language/02 and the usage notes of `color.category.<name>.control` change, and the catalog's second row and
-   `IconTileCatalogSupport.swift` go.
+3. **Quiet or solid?** Solid, as implemented and as design-language/02 says (the owner, 2026-11-22). The quiet
+   alternative, `background` with the glyph in `icon`, is dropped: the catalog no longer draws it, and `WestronUI` has
+   no fill but the contract's.
 
 ## Consequences
 

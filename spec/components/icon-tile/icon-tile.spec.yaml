@@ -1,8 +1,8 @@
 # westron's IconTile contract (#118), approved on 2026-11-22 by the coordinating agent under the owner's delegation of
 # that day (decisions/0014, "Process"): decisions/0001-icon-tile-contract.md records the owner's decision to keep the
 # tile a component, what the documents already decide, what the agent answered from the sources with no interview,
-# and the approver's answers. The fill of a list's color is open with the owner (question 3): until they answer, the
-# tile takes the solid fill that design-language/02 names, and the quiet pair is recorded as the alternative.
+# and the approver's answers. The fill of a list's color, question 3, the owner settled on 2026-11-22: the solid fill
+# that design-language/02 names.
 id: icon-tile
 status: approved
 description: >-
@@ -12,9 +12,8 @@ description: >-
   color.category.<name>.fill and its glyph color.category.<name>.on-fill, for each of the twelve list colors, the
   glyph meeting the text contrast on the fill, 4.5:1 and 7:1 in high contrast (the declared pairs of decisions/0012);
   tags, tiles and statuses keep fill, which is not held to the non-text contrast on the ground, since the glyph and
-  the list's name carry the meaning (design-language/02). The alternative open with the owner is a quiet ground,
-  color.category.<name>.background with the glyph in color.category.<name>.icon, whose declared non-text pair meets
-  3:1, and 4.5:1 in high contrast (decisions/0001, question 3). With no list color in its context the tile is
+  the list's name carry the meaning (design-language/02; the owner's choice, decisions/0001, question 3). With no list
+  color in its context the tile is
   neutral, color.background.muted with its glyph in color.text.secondary, the colors of a tag or a badge without a
   color; it never takes the accent, which marks the primary action and the selection, not a thing a person named
   (design-language/00, principle 3). The bindings below are the neutral tile's, since the list's color is the

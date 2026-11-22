@@ -28,7 +28,6 @@ public struct IconTile: View {
     let label: Text?
 
     @Environment(\.category) private var category
-    @Environment(\.iconTileFill) private var fill
 
     /// A decorative tile, hidden from assistive technology: `IconTile(.tray)`.
     ///
@@ -54,7 +53,7 @@ public struct IconTile: View {
     }
 
     public var body: some View {
-        let colors = IconTileColors(category: category, fill: fill)
+        let colors = IconTileColors(category: category)
         IconTileLayout {
             // The line of the context's text, which sizes the tile and gives it its baseline.
             Text(verbatim: "X")
