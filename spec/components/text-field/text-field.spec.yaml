@@ -193,14 +193,22 @@ platforms:
         lines held by its line limit (one line under lineLimit(1...4)), comes out a point or more taller or shorter
         than its lines; shorter cuts off the bottom of its text. SwiftUI holds the system field to that height whatever
         it is offered, and the font object it measures is its own, which no public API returns. From macOS 26 the style
-        holds the field to its own lines, as the description asks: it measures its font's line itself (AppKit's
-        default line height of the font Font.resolve(in:) gives), gives a field of one line exactly that height with
-        the system field at its top, and where SwiftUI has laid the field out at another height it gives the field the
-        same font with leading(.standard) added, which draws the same pixels and which SwiftUI resolves and measures
-        anew, up to eight times. A field laid out at its own lines is unchanged, in layout and in pixels. Not covered:
-        macOS 14 and 15, which have no API to resolve a font, and a field with no font in its context, which the
-        system draws in its control size's font. Measured with Xcode 27.1 on macOS 26.7.1 (TextFieldLineTests);
-        the owner decided on 2026-11-22 that westron works around the defect (#113).
+        holds a field of one line to its line, and a field of several lines to a whole number of its lines: it
+        measures its font's line itself (AppKit's default line height of the font Font.resolve(in:) gives), gives a
+        field of one line exactly that height with the system field at its top, and where SwiftUI has laid the field
+        out at another height it gives the field the same font with leading(.standard) added once more, which draws
+        the same pixels and which SwiftUI resolves and measures anew, and offers it a width less by a part of a pixel,
+        so that SwiftUI sizes it anew; up to eight times in a row, and again each time the field has been back at its
+        lines, so a field on screen for long is held each time. A field laid out at its own lines is unchanged, in
+        layout and in pixels, and editing in a field it holds keeps its text, its selection and an input method's
+        marked text. Not covered: a field of several lines held at another font's height that is a whole number of
+        its own lines, which the style takes for a field of that many lines (a framed body.regular field holding one
+        line under lineLimit(1...4) laid out 32 pt high, two of its lines, in 1 to 26 of 750 layouts while plain
+        fields in largeTitle and in Helvetica at 6 pt came and went); macOS 14 and 15, which have no API to
+        resolve a font; a field whose axis the style cannot read, which it leaves as SwiftUI lays it out; and a field
+        with no font in its context, which the system draws in its control size's font. Measured with Xcode 27.1 on
+        macOS 26.7.1 (TextFieldLineTests); the owner decided on 2026-11-22 that westron works around the defect
+        (#113).
     watchos:
       options: { size: [m] }
       fallback: { size: m }
