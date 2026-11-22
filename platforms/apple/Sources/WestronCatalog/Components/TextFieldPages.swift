@@ -2,8 +2,9 @@ import SwiftUI
 import WestronUI
 
 // TextField's catalog entries, from spec/components/text-field/text-field.spec.yaml: `text-field` (variants × sizes at
-// rest on one line, empty with a placeholder and with text, then multiple lines and every state at size m), and three
-// live pages with real fields:
+// rest on one line, empty with a placeholder and with text, then multiple lines and every state at size m),
+// `text-field-glyphs` (a search field and the glyphs at the start and the end, #115), and three live pages with real
+// fields:
 // `text-field-behavior` (nothing focused; the UI tests tap and click around the fields), `text-field-focus-framed` and
 // `text-field-focus-inline` (the field focused for real, to show westron's ring and no system ring). The variants,
 // sizes and states come from the generated enums, so the pages follow the contract.
@@ -11,6 +12,12 @@ import WestronUI
 extension CatalogEntry {
     static let textField = CatalogEntry(id: "text-field", title: "TextField", section: .components) {
         TextFieldMatrixPage()
+    }
+
+    static let textFieldGlyphs = CatalogEntry(
+        id: "text-field-glyphs", title: "TextField: glyphs", section: .components
+    ) {
+        TextFieldGlyphsPage()
     }
 
     static let textFieldBehavior = CatalogEntry(
@@ -256,10 +263,11 @@ extension ComponentMatrix.Supplement {
                 + "icons is no axis of the generated matrix, which draws every field without a glyph: these sheets "
                 + "draw the generated cells again with \(which). A glyph stands at the field's padding and "
                 + "container.gap from the text, on the first line's baseline, in text.secondary in every state, at "
-                + "the text's size.",
+                + "the text's size up to xxxLarge; at the accessibility sizes the glyph and its gap stay as at "
+                + "xxxLarge while the text grows on.",
             keeps: [:],
-            // At the largest text size the glyphs take width from the text, which wraps more: a column of three
-            // multiline cells is taller than an iPhone's screen, so a picture holds one row.
+            // At the largest text size the glyphs still take some width from the text, which wraps more: a column of
+            // three multiline cells is taller than an iPhone's screen, so a picture holds one row.
             rowsPerPicture: 1
         ) { combination in
             TextFieldMatrixCell(TextFieldMatrixValues(combination), leadingIcon: leading, trailingIcon: trailing)
@@ -473,9 +481,9 @@ private struct TextFieldMatrixPage: View {
         TokenPage(
             title: "TextField",
             summary: "Each size on one line, empty with its placeholder, then with text; multiple lines; each state "
-                + "with text; a search field and glyphs at the start and the end. framed is a capsule on one line and "
-                + "a rounded rectangle on several. inline takes the context's role and color (here body.regular, "
-                + "text.primary). Focus is forced here."
+                + "with text. framed is a capsule on one line and a rounded rectangle on several. inline takes the "
+                + "context's role and color (here body.regular, text.primary). Focus is forced here. The glyphs at "
+                + "the start and the end are on TextField: glyphs."
         ) {
             SectionRow {
                 ForEach(TextFieldSize.allCases, id: \.self) { size in
@@ -505,6 +513,24 @@ private struct TextFieldMatrixPage: View {
                     }
                 }
             }
+        }
+    }
+}
+
+/// The glyphs at a field's start and its end (the contract's `leadingIcon` and `trailingIcon`, #115): a search field,
+/// then each variant with a glyph at the start, at the end, and both on several lines. A page of its own, not a section
+/// of `text-field`: on the iPhone's screenful that held both, six multi-line fields at once, the accessibility audit's
+/// contrast analysis did not complete in time ("Audit failed to complete in time", -56) in any theme, with glyphs or
+/// without them, where four take it 0.3 s (the contract's decisions/0003, "Revision: the glyphs stop at xxxLarge").
+private struct TextFieldGlyphsPage: View {
+    var body: some View {
+        TokenPage(
+            title: "TextField: glyphs",
+            summary: "A search field, framed at size m with the magnifier at its start and the microphone at its end, "
+                + "named and given the search field's trait by the product; then each variant with a glyph at the "
+                + "start, at the end, and both on several lines. A glyph is decoration, in text.secondary, at the "
+                + "text's size up to xxxLarge."
+        ) {
             SectionRow {
                 section("a search field, size m") {
                     TextFieldSearchSample(size: .m)
@@ -523,14 +549,16 @@ private struct TextFieldMatrixPage: View {
             }
         }
     }
+}
 
-    private func section(_ title: String, @ViewBuilder content: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: .space50) {
-            Text(title)
-                .textRole(.subheadline.strong)
-                .foregroundStyle(.text.primary)
-            content()
-        }
+/// A titled section of a TextField page.
+@MainActor
+private func section(_ title: String, @ViewBuilder content: () -> some View) -> some View {
+    VStack(alignment: .leading, spacing: .space50) {
+        Text(title)
+            .textRole(.subheadline.strong)
+            .foregroundStyle(.text.primary)
+        content()
     }
 }
 

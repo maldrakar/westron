@@ -121,6 +121,52 @@ struct TextFieldGlyphTests {
     /// The most a place rounded to the pixel may be off: half a point, a pixel at 2x, a little more than one at 3x.
     static let pixel: CGFloat = 0.5
 
+    @Test(
+        "the glyphs and their gaps stop growing at xxxLarge, and the field's text grows on",
+        arguments: [TextFieldVariant.framed, .inline], [Axis.horizontal, .vertical])
+    func glyphsStopAtTheLargestTextSize(variant: TextFieldVariant, axis: Axis) throws {
+        let text = axis == .vertical ? "Milk\nApples" : "Groceries"
+        func layOut(_ size: DynamicTypeSize) throws -> (leading: CGRect, trailing: CGRect, field: CGRect) {
+            let laidOut = Self.layOut(
+                Self.field(variant, axis: axis, text: text, trailing: .microphone).dynamicTypeSize(size))
+            return (
+                try #require(laidOut.parts[.leading]), try #require(laidOut.parts[.trailing]),
+                try #require(laidOut.parts[.field])
+            )
+        }
+        #expect(TextFieldGlyph.largestTextSize == .xxxLarge)
+        let large = try layOut(.large)
+        let largest = try layOut(.xxxLarge)
+        // The room each glyph takes beside the text: its own width and the gap.
+        func rooms(_ parts: (leading: CGRect, trailing: CGRect, field: CGRect)) -> (CGFloat, CGFloat) {
+            (parts.field.minX - parts.leading.minX, parts.trailing.maxX - parts.field.maxX)
+        }
+        for size in [DynamicTypeSize.accessibility1, .accessibility3, .accessibility5] {
+            let parts = try layOut(size)
+            // The glyphs are drawn as at xxxLarge, and the field leaves them the same room.
+            for (glyph, atLargest) in [(parts.leading, largest.leading), (parts.trailing, largest.trailing)] {
+                #expect(abs(glyph.width - atLargest.width) < Self.tolerance, "\(size): \(glyph) for \(atLargest)")
+                #expect(abs(glyph.height - atLargest.height) < Self.tolerance, "\(size): \(glyph) for \(atLargest)")
+            }
+            let (leadingRoom, trailingRoom) = rooms(parts)
+            let (leadingAtLargest, trailingAtLargest) = rooms(largest)
+            #expect(abs(leadingRoom - leadingAtLargest) < Self.tolerance, "\(size): \(leadingRoom)")
+            #expect(abs(trailingRoom - trailingAtLargest) < Self.tolerance, "\(size): \(trailingRoom)")
+            #if os(iOS)
+                // The field's text grows on past xxxLarge: its lines are higher.
+                #expect(parts.field.height > largest.field.height + 1, "\(size): \(parts.field) for \(largest.field)")
+            #endif
+        }
+        #if os(iOS)
+            // Up to xxxLarge the glyph grows with the text, as an icon beside text does.
+            #expect(largest.leading.height > large.leading.height + 1, "\(largest.leading) for \(large.leading)")
+            #expect(rooms(largest).0 > rooms(large).0 + 1, "\(rooms(largest)) for \(rooms(large))")
+        #else
+            // macOS has no Dynamic Type: the glyph is the same at every text size.
+            #expect(abs(largest.leading.height - large.leading.height) < Self.tolerance)
+        #endif
+    }
+
     @Test("the generated overload takes the glyphs, each optional, after the variant and the size")
     func generatedSignature() {
         let both = TextField("Search", text: .constant(""))

@@ -24,8 +24,9 @@
 //   framed fields at s and m, on one line and on several, a SecureField and inline fields, and
 //   `aLongLivedFieldWithAGlyphKeepsItsLines…` at 2x, and at 1x left to right and right to left; besides their lines
 //   and frames, each glyph and the field beside it must keep their place, which they keep only if the field's first
-//   baseline reaches the glyph row through the hold's frame (`RecordingGlyphs`); `unchangedAtItsOwnLines` lays the
-//   same fields out too.
+//   baseline reaches the glyph row through the hold's frame (`RecordingGlyphs`); `anEditedFieldWithAGlyphKeepsItsEditing`
+//   edits the long-lived fields with their glyphs as `anEditedFieldKeepsItsEditing` edits them without; and
+//   `unchangedAtItsOwnLines` lays the same fields out too.
 // Every field must come out at its own lines, the height AppKit gives for its cell at its width, and at the size it has
 // before any font is freed.
 //
@@ -144,6 +145,23 @@
                 print(LineChurn.marker + report.joined(separator: "\n" + LineChurn.marker))
                 for warning in warnings { print(LineEditing.warningMarker + warning) }
             }
+            Self.expectEditingKept(result)
+        }
+
+        @Test("with a glyph at its end, a field being edited keeps its text, its selection and its marked text (#115)")
+        func anEditedFieldWithAGlyphKeepsItsEditing() async throws {
+            guard #available(macOS 26, *) else { return }
+            let result = try await #require(processExitsWith: .success, observing: [\.standardOutputContent]) {
+                let (report, warnings) = await MainActor.run { LineEditing.run(glyphs: true) }
+                print(LineChurn.marker + report.joined(separator: "\n" + LineChurn.marker))
+                for warning in warnings { print(LineEditing.warningMarker + warning) }
+            }
+            Self.expectEditingKept(result)
+        }
+
+        /// That the editing child passed and logged no runtime warning of SwiftUI's but its canary's.
+        @available(macOS 26, *)
+        static func expectEditingKept(_ result: ExitTest.Result) {
             LineChurn.expectPassed(result)
             // SwiftUI's runtime warnings in the child's own log, where the child's canary shows they are seen.
             let warnings = String(decoding: result.standardOutputContent, as: UTF8.self).split(separator: "\n")
@@ -648,8 +666,9 @@
             }
         }
 
-        /// The report, and every runtime warning of SwiftUI's this process logged meanwhile.
-        static func run() -> (report: [String], warnings: [String]) {
+        /// The report, and every runtime warning of SwiftUI's this process logged meanwhile. `glyphs`: the fields each
+        /// with a glyph at their end (#115).
+        static func run(glyphs: Bool = false) -> (report: [String], warnings: [String]) {
             let unfixed = ProcessInfo.processInfo.environment["WESTRON_FIELD_LINE_UNFIXED"] == "1"
             TextFieldLineWorkaround.isEnabled = !unfixed
             // SwiftUI logs its runtime warnings; this process reads its own log at the end.
@@ -663,7 +682,7 @@
                 contentRect: CGRect(x: -20000, y: -20000, width: 400, height: 200), styleMask: [.borderless],
                 backing: .buffered, defer: false)
             window.isReleasedWhenClosed = false
-            let hosting = NSHostingView(rootView: AnyView(LongLivedField(model: model, size: size)))
+            let hosting = NSHostingView(rootView: AnyView(LongLivedField(model: model, size: size, glyphs: glyphs)))
             hosting.sizingOptions = []
             hosting.frame = CGRect(x: 0, y: 0, width: 400, height: 200)
             window.contentView = hosting
@@ -793,7 +812,8 @@
                 }
             }
             var report = LineChurn.report(
-                "text fields being edited", attempts: attempt, since: began, freed: freed, wrong: wrong,
+                glyphs ? "text fields with a glyph being edited" : "text fields being edited", attempts: attempt,
+                since: began, freed: freed, wrong: wrong,
                 unfixed: unfixed)
             report.insert(
                 "the window key: \(key); fonts made anew while a field was edited: \(remadeEditing), of the field edited "

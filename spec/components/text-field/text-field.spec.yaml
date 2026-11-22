@@ -5,7 +5,8 @@
 # rectangle on several, and the option lines (decisions/0002-the-look-of-2026-11-20.md). Revised on 2026-11-22
 # (#115): a glyph at the field's start and at its end, the options leadingIcon and trailingIcon, so that a search field
 # is this field, approved that day by the coordinating agent under the owner's delegation of the phase's contracts
-# (decisions/0014; decisions/0003-icons-at-the-start-and-the-end.md).
+# (decisions/0014; decisions/0003-icons-at-the-start-and-the-end.md). Revised again that day, before the merge: the
+# glyphs and their gap stop growing at xxxLarge (decisions/0003, "Revision: the glyphs stop at xxxLarge").
 id: text-field
 status: approved
 description: >-
@@ -33,7 +34,11 @@ description: >-
   horizontal padding from the field's edge and container.gap from the text, beside the first line of a field of
   several lines, on that line's baseline, as a letter of it would; start and end follow the layout direction, so
   right to left the leading glyph is at the right. It takes its size from the field's text, framed's body.regular or
-  inline's context, at the text's own scale, so it grows with the person's text size, and it draws in
+  inline's context, at the text's own scale, so it grows with the person's text size up to the largest size that is
+  not an accessibility size (xxxLarge on Apple); at the accessibility sizes the glyph, its gap and the room the field
+  leaves it stay as they are there while the text grows on, since inside a field the width is what the person types
+  into and the glyph is decoration (a named exception to design-language/07, decisions/0003, revision of 2026-11-22;
+  the field's padding still grows with the text). It draws in
   color.text.secondary in every state, with the placeholder shown or text entered, focused or not; disabled dims it
   with the rest of the field. A search field is no component of its own (decisions/0014): it is a framed field with
   the magnifier at its start, and a glyph at its end where the product has one. There is no error state, hint or message in
@@ -212,7 +217,10 @@ platforms:
       has no public way to read the label's parts. Like the variant and the size they reach every field the modifier
       is set on, in a container too. The style draws each glyph as Icon draws a decorative one, hidden from
       assistive technology, in a row with the system field aligned on its first text baseline, inside the fill, the
-      high-contrast outline, the focus ring and the area that focuses the field on a tap or a click. A search field
+      high-contrast outline, the focus ring and the area that focuses the field on a tap or a click. Each glyph and
+      its gap are drawn at the context's Dynamic Type size held to xxxLarge (.dynamicTypeSize(...xxxLarge) on them,
+      not on the field), and the field leaves them the room they take there; macOS has no Dynamic Type, so nothing
+      changes there. A search field
       on Apple is this field where the product places its search itself, in a bar or a pane of its own, named and
       given the system's trait for a search field by the product: TextField("Search", text: $query, prompt:
       Text("Search")).textFieldStyle(.framed, leadingIcon: .magnifier).accessibilityLabel("Search")

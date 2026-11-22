@@ -20,6 +20,7 @@ public enum Catalog {
         .checkboxInList,
         .chip,
         .textField,
+        .textFieldGlyphs,
         .textFieldBehavior,
         .textFieldFocusFramed,
         .textFieldFocusInline,

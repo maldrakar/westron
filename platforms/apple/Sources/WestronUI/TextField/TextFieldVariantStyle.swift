@@ -260,21 +260,21 @@ private struct TextFieldBody: View {
     /// from assistive technology: a search field's role is the product's to give (the trait `isSearchField`), and a
     /// microphone at the end is no button. It is drawn in `leadingIcon.color` in every state, disabled dimming it with
     /// the field, and in the field's text role, `framed`'s or on `inline` the context's, so that it scales with the
-    /// text. The gap scales with Dynamic Type from its token, as the padding does. With no glyph the field is as it was
-    /// before the glyphs: the same view and the same pixels.
+    /// text; the gap scales with Dynamic Type from its token, as the padding does. Both stop growing at
+    /// `TextFieldGlyph.largestTextSize`, while the field's text grows on (decisions/0003, "Revision: the glyphs stop at
+    /// xxxLarge"). With no glyph the field is as it was before the glyphs: the same view and the same pixels.
     private struct TextFieldGlyphs: ViewModifier {
         let glyphs: TextFieldGlyphNames
         let tokens: TextFieldTokens
-        @ScaledMetric private var gap: CGFloat
-        /// Each glyph's drawn width, which the field leaves room for beside its text.
+        let metrics: TextFieldMetrics
+        /// The room each glyph takes beside the field's text: its drawn width and the gap.
         @State private var leadingWidth: CGFloat = .zero
         @State private var trailingWidth: CGFloat = .zero
 
         init(glyphs: TextFieldGlyphNames, tokens: TextFieldTokens, metrics: TextFieldMetrics) {
             self.glyphs = glyphs
             self.tokens = tokens
-            let textStyle = Font.TextStyle((tokens.textFont ?? .body.regular).textStyle)
-            _gap = ScaledMetric(wrappedValue: CGFloat(metrics.gap), relativeTo: textStyle)
+            self.metrics = metrics
         }
 
         /// The glyphs are overlays on the field's own room, not siblings of it in a stack: a stack around the system
@@ -286,8 +286,8 @@ private struct TextFieldBody: View {
             } else {
                 content
                     .anchorPreference(key: TextFieldGlyphAnchors.self, value: .bounds) { [.field: $0] }
-                    .padding(.leading, glyphs.leading == nil ? .zero : leadingWidth + gap)
-                    .padding(.trailing, glyphs.trailing == nil ? .zero : trailingWidth + gap)
+                    .padding(.leading, glyphs.leading == nil ? .zero : leadingWidth)
+                    .padding(.trailing, glyphs.trailing == nil ? .zero : trailingWidth)
                     .overlay(alignment: .leadingFirstTextBaseline) {
                         if let leading = glyphs.leading {
                             glyph(leading, part: .leading, width: $leadingWidth)
@@ -304,16 +304,47 @@ private struct TextFieldBody: View {
         private func glyph(
             _ icon: Westron.Icon, part: TextFieldGlyphAnchors.Part, width: Binding<CGFloat>
         ) -> some View {
-            Icon(icon)
-                .modifier(TextFieldGlyphRole(font: tokens.glyphFont))
-                .foregroundStyle(tokens.glyphColor)
-                .fixedSize()
+            TextFieldGlyph(icon: icon, part: part, tokens: tokens, metrics: metrics)
                 .onGeometryChange(for: CGFloat.self) {
                     $0.size.width
                 } action: {
                     width.wrappedValue = $0
                 }
+                .dynamicTypeSize(...TextFieldGlyph.largestTextSize)
+        }
+    }
+
+    /// One glyph and its gap to the field's text, at the text size of its context up to `largestTextSize`, which
+    /// `TextFieldGlyphs` holds it to.
+    struct TextFieldGlyph: View {
+        /// The largest text size a glyph and its gap follow, the largest one that is not an accessibility size. Inside
+        /// a field the width is what the person types into and the glyph is decoration, so at accessibility1 to 5 the
+        /// glyph, its gap and the room the field leaves them stay as they are at xxxLarge while the field's text grows
+        /// on: a named exception to an icon scaling with the text beside it (design-language/07; decisions/0003,
+        /// "Revision: the glyphs stop at xxxLarge"). macOS has no Dynamic Type, so nothing changes there.
+        static let largestTextSize = DynamicTypeSize.xxxLarge
+
+        let icon: Westron.Icon
+        let part: TextFieldGlyphAnchors.Part
+        let tokens: TextFieldTokens
+        @ScaledMetric private var gap: CGFloat
+
+        init(icon: Westron.Icon, part: TextFieldGlyphAnchors.Part, tokens: TextFieldTokens, metrics: TextFieldMetrics) {
+            self.icon = icon
+            self.part = part
+            self.tokens = tokens
+            let textStyle = Font.TextStyle((tokens.textFont ?? .body.regular).textStyle)
+            _gap = ScaledMetric(wrappedValue: CGFloat(metrics.gap), relativeTo: textStyle)
+        }
+
+        var body: some View {
+            Icon(icon)
+                .modifier(TextFieldGlyphRole(font: tokens.glyphFont))
+                .foregroundStyle(tokens.glyphColor)
+                .fixedSize()
                 .anchorPreference(key: TextFieldGlyphAnchors.self, value: .bounds) { [part: $0] }
+                // Between the glyph and the text: after the glyph at the start, before the one at the end.
+                .padding(part == .trailing ? .leading : .trailing, gap)
         }
     }
 

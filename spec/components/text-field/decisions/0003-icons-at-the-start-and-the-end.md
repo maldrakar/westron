@@ -295,7 +295,8 @@ Approved on 2026-11-22 by the coordinating agent under the owner's delegation of
 6. **The glyph's inset and the gap** (point 5): the glyph at the field's horizontal padding; `container.gap` of
    `space.75` at `s` and `space.100` otherwise. **Approved.**
 7. **The glyph's color** (point 6): `color.text.secondary` in every state. **Approved.**
-8. **The glyph's size** (point 7): the text's own scale. **Approved.**
+8. **The glyph's size** (point 7): the text's own scale. **Approved**, and revised the same day: up to xxxLarge, not at
+   the accessibility sizes (below, "Revision: the glyphs stop at xxxLarge").
 9. **The search field's announcement** (point 8): the product adds the search-field trait. **Approved.**
 10. **The snapshot matrix** (tools, item 6). Proposed: each optional icons option an axis of two values, 144
     combinations on 24 sheets. **Not approved**: that would quadruple the field's references for a decoration. An
@@ -342,11 +343,57 @@ With Xcode 27.1, on macOS 26.7.1 and the iPhone 17 simulator of iOS 26.3, on 202
   accessibility5, where the glyphs and the padding leave the text too little room and "Search" and "Groceries" scroll
   in the field; and at the default size on the search field, with the detail "may be clipped at larger Dynamic Type
   sizes", which it does not report with the magnifier alone (measured with the trait removed and with text entered: the
-  same; with the microphone removed: none). The catalog suppresses none of it: it is the approved scale's cost, for the
-  owner to weigh with the sheets at accessibility5, not a fault the catalog can fix.
+  same; with the microphone removed: none). The approver took it for a defect; the revision below removed it, with no
+  suppression.
 - **At the largest text size on a phone**, the glyphs scale with the text, as approved, and so does the padding: a
   framed field at `l` with both glyphs, alone across an iPhone 17 at accessibility5, leaves its text about a third of
   the field's width, and "Milk" and "Apples" break inside the word (the supplement `glyphs-both`, size `l`, lines
-  `multiple`, accessibility5). A field of one line scrolls its text instead. This is how the approved scale draws, not
-  a defect of the implementation; whether a glyph should stop growing at the accessibility sizes, as some system
-  glyphs do, is a question for the owner's review of the sheets.
+  `multiple`, accessibility5). A field of one line scrolls its text instead. The approver took this for a defect, not
+  the scale's cost: below, "Revision: the glyphs stop at xxxLarge".
+
+## Revision: the glyphs stop at xxxLarge
+
+Decided on 2026-11-22 (#115) by the coordinating agent under the owner's delegation of the phase's contracts
+(decisions/0014), after the sheets at accessibility5: in `glyphs-both`, size `m`, one line, "Groceries" read "Gr…"
+between two glyphs as large as its letters. Answer 8 above, the text's own scale, stands up to the largest text size
+that is not an accessibility size, and no further:
+
+- **What changes.** A glyph and its gap grow with the person's text size up to xxxLarge. At accessibility1 to 5 the
+  glyph, its gap and the room the field leaves them are what they are at xxxLarge; the field's text grows on, and it
+  still stands on the first line's baseline. The field's own horizontal padding is not this revision's: it grows as it
+  did, as TextField's has since #30.
+- **Why.** The glyph is decoration, and inside a field the width is what the person types into: at the accessibility
+  sizes every point a glyph takes is a point less of what they read and write, and the field already tells what it is
+  by its label and its text. design-language/07 says an icon next to text takes that text's role and scales with it;
+  this is a named exception to that rule, recorded there in one sentence that points here.
+- **On Apple.** Each glyph and its gap are one view (`TextFieldGlyph`) under `.dynamicTypeSize(...xxxLarge)`, set on
+  them and not on the field, and the field reserves the width that view measures. macOS has no Dynamic Type, so
+  nothing changes there: a render of every component's matrix on macOS before the revision and after it is the same
+  file for file in TextField's sheets.
+- **Tests.** `TextFieldGlyphTests` lays a field out at large, xxxLarge and accessibility1, 3 and 5, on both variants
+  and both values of `lines`: at the accessibility sizes each glyph's size and the room beside the text equal
+  xxxLarge's within 0.05 pt, and on iOS the field's lines are higher than at xxxLarge, while up to xxxLarge the glyph
+  grows.
+- **What the text gets at accessibility5** (iPhone 17, the supplements `glyphs-both` and `glyph-leading`): a glyph and
+  its gap take about 36 pt beside the text, as at xxxLarge. A framed field at `l` on several lines
+  with both glyphs draws "Milk" and "Apples" whole, a word to a line. A framed field at `m` on one line, 366 pt
+  across, leaves its text about 180 pt with both glyphs, 216 with one, 249 with none: "Groceries", about 213 pt there,
+  reads "Groce…" with both and "Groceri…" with the magnifier alone, at rest, and scrolls while it is edited, as a field
+  without glyphs does with a longer word. Most of what the text loses there is the field's own horizontal padding,
+  about 59 pt a side at accessibility5, which this revision leaves as it is.
+- **The accessibility audit** on iOS, the five tests over `text-field`, `text-field-glyphs`, `text-field-behavior`,
+  `text-field-focus-framed` and `text-field-focus-inline`, passes with no "Text clipped" and no suppression added, at the
+  default size and at accessibility5.
+- **The glyphs' catalog page.** The glyph samples left the `text-field` entry for an entry of their own,
+  `text-field-glyphs`. On the iPhone's screenful that showed both "multiple lines" and the glyphs' samples, six
+  multi-line fields at once, the audit's contrast analysis did not complete ("Audit failed to complete in time", -56)
+  in any theme, twice in a row each time, after the simulator was restarted too. Measured on that screenful: four
+  multi-line fields are audited in 0.3 s; with one or two more it gives up at 15 s, whether they draw glyphs, draw
+  none, or hold another text, low on the screenful or in its middle. The cause, as with Button's `trash` (#23), is not found.
+- **Right to left on macOS.** A multi-line field puts its second line at the left, and a long single line shows its
+  end; the same fields drawn without glyphs do the same (the `glyphs-right-to-left` sheets rendered with no glyph), so
+  it is the system field's, not the glyphs'.
+- **Editing beside a glyph** (`TextFieldLineTests`, `anEditedFieldWithAGlyphKeepsItsEditing`, 1500 attempts): the two
+  long-lived fields with the microphone at their end, each edited in turn with text selected and then while an input
+  method composes, kept their text, selection, marked text and lines, with their own fonts made anew 40 and 13 times
+  while edited and no runtime warning of SwiftUI's but the canary's. Without the hold, 140 times off their lines.
