@@ -9,8 +9,9 @@ Phases 1 to 3 are done; phases are GitHub milestones, tasks are issues. Phase 3 
 six components (Text, Icon, Surface, Rule, TextField, Checkbox), and their snapshot matrices passed the second gate
 (decisions/0005). Phase 4 "Pilot components (Apple)" is in progress: a small core the pilot composes its screens from
 (decisions/0014), in order TextField's icon slots (#115) and Rule's label (#116), Chip (#117) and IconTile (#118),
-ListRow (#119) and Disclosure (#120), then glass (#121); one pull request per issue. Order matters more than speed: tokens (phase 1), then the contract schema, API generation, the parity lint, the snapshot matrix and the
-end-to-end Button slice on Apple (phase 2), before a second component (`reports/`, section "Work plan").
+ListRow (#119) and Disclosure (#120), then glass (#121); one pull request per issue. Order matters more than speed:
+tokens (phase 1), then the contract schema, API generation, the parity lint, the snapshot matrix and the end-to-end
+Button slice on Apple (phase 2), before a second component (`reports/`, section "Work plan").
 
 ## Where things are
 
@@ -45,8 +46,9 @@ tools/apple/check.sh catalog      # build the catalog app and the UI tests
 tools/apple/check.sh a11y         # accessibility audit of every catalog entry on the iOS simulator (macOS: a11y macos);
                                   # a11y ios <test>… runs some of its five tests, WESTRON_ENTRY=<id>,… some entries
                                   # WESTRON_ENTRY_SHARD=<i>/<n> then every n-th of those entries, from the i-th
-tools/apple/check.sh behavior     # the behaviour UI tests (Button, Checkbox, TextField, Icon) on the iOS simulator;
-                                  # behavior macos on the Mac, behavior ios <Class>… some classes; CI: nightly
+tools/apple/check.sh behavior     # the behaviour UI tests (Button, Checkbox, TextField, Icon, IconTile, Chip, ListRow)
+                                  # on the simulator; behavior macos on the Mac, behavior ios <Class>… some classes;
+                                  # CI: nightly
 tools/apple/check.sh format       # swift format lint; to fix: tools/apple/check.sh fix-format
 tools/apple/check.sh all          # everything at once but a11y and behavior (package-ios included: boots the simulator)
 

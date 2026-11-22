@@ -147,17 +147,24 @@ public struct AppleSnapshotMatrix: Generator {
                 + "The hand-written `\(cell)` draws each cell.")
         out += ["", "import WestronUI", ""]
 
+        let hasForms = matrix.axes.contains(where: \.isForm)
         let sizes =
             matrix.axes.map { "\($0.values.count) \($0.name)" }
-            + (matrix.states.isEmpty ? [] : ["\(matrix.states.count + 1) states"])
+            + (matrix.states.isEmpty || hasForms ? [] : ["\(matrix.states.count + 1) states"])
         let rows =
-            matrix.states.isEmpty
-            ? " at rest (the contract has no states" + (matrix.rowAxis.map { "; \($0) runs down the rows" } ?? "") + ")"
-            : " (rest and each state alone)"
+            hasForms
+            ? ", each form at rest and in each state it enters alone"
+            : matrix.states.isEmpty
+                ? " at rest (the contract has no states" + (matrix.rowAxis.map { "; \($0) runs down the rows" } ?? "")
+                    + ")"
+                : " (rest and each state alone)"
         var summary =
             "\(component)'s matrix: " + sizes.joined(separator: " × ") + rows + " = "
-            + "\(matrix.optionCombinations * (matrix.states.count + 1)) combinations"
-        if matrix.excluded.isEmpty {
+            + "\(hasForms ? matrix.combinations.count : matrix.optionCombinations * (matrix.states.count + 1)) "
+            + "combinations"
+        if hasForms, !matrix.excluded.isEmpty {
+            summary += ", less those of the option values constraints forbid"
+        } else if matrix.excluded.isEmpty {
             summary += ", none forbidden by a constraint"
         } else {
             summary +=
@@ -275,6 +282,14 @@ public struct AppleSnapshotMatrix: Generator {
                 type = accessor
             } else if axis.isBool {
                 type = "Bool"
+            } else if axis.isForm {
+                out += doc(
+                    [
+                        matrix.ownForms
+                            ? "The form: the initializer the cell calls (the contract's `forms`)."
+                            : "The form: the system control the cell styles (the contract's `forms`)."
+                    ], indent: 1)
+                type = "\(component)Form"
             } else {
                 type = "\(component)\(axis.name.prefix(1).uppercased() + axis.name.dropFirst())"
             }
@@ -307,6 +322,9 @@ public struct AppleSnapshotMatrix: Generator {
                 out += ["        \(name) = \(accessor)(rawValue: \(value))!"]
             } else if axis.accessor != nil {
                 out += ["        \(name) = Self.\(axis.name)Tokens[\(value)]!"]
+            } else if axis.isForm {
+                // The forms' type is generated with the component's API (`AppleComponents.API.formType`).
+                out += ["        \(name) = \(component)Form(rawValue: \(value))!"]
             } else if axis.isBool {
                 out += ["        \(name) = \(value) == \"true\""]
             } else {

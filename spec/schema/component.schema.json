@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "westron component contract",
-  "description": "One neutral contract per component, spec/components/<id>/<id>.spec.yaml, written in YAML (decisions/0004). Every platform implementation is generated from it and checked against it. `tools/westron spec check` validates a contract against this schema, then applies the rules a schema cannot express: the file name matches the id; no unquoted YAML 1.1 boolean word other than true and false; option values are unique and a default is one of them; no value or state is a word Swift cannot use as a case (init, self, none) and no option one it cannot use as an argument label (inout, var, let); no value is the name of a system style of the base control, which westron's overload would shadow (decisions/0003); the Apple strategy fits its base, a style on a control with a style modifier and an extension on one without; an option of type tokens names a group of tokens/ whose tokens are semantic, exist in every mode and are of one type, its default is one of them, and no constraint, case, binding by value, restriction or systemOptions names it; no constraint, case, restriction or systemOptions names an option of type icons; constraints, token bindings, platform restrictions and accessibility states name only options, values and states that exist; no option is named `state`; a binding by value gives every value of its option a token; every case of a binding is reachable, not covered by earlier cases alone or together, and so is its `token`, which cases that match every combination leave unused; a fallback maps each value a platform drops to a value it keeps, and on Apple every value reaches, through Apple's fallback and then the OS's, a value each OS offers; a platform's systemOptions name options that exist and are not restricted; every bound token exists in tokens/ and is not a primitive; a part's `shape` binds a shape, `capsule`, alone or as the token of each of its cases, and nothing else binds one; a component whose accessibility role is none has no intents, keyboard intents or announced states, and no required label; a hiddenLabel needs a required label, the slot label and, on Apple, a style on a base whose initializer with no label view the conventions derive. Lists of names are checked for repeats there too, with a message that names the repeat.",
+  "description": "One neutral contract per component, spec/components/<id>/<id>.spec.yaml, written in YAML (decisions/0004). Every platform implementation is generated from it and checked against it. `tools/westron spec check` validates a contract against this schema, then applies the rules a schema cannot express: the file name matches the id; no unquoted YAML 1.1 boolean word other than true and false; option values are unique and a default is one of them; no value, state or form is a word Swift cannot use as a case (init, self, none) and no option one it cannot use as an argument label (inout, var, let); no value is the name of a system style of the base control, which westron's overload would shadow (decisions/0003); the Apple strategy fits its base, a style on a control with a style modifier and an extension on one without; an option of type tokens names a group of tokens/ whose tokens are semantic, exist in every mode and are of one type, its default is one of them, and no constraint, case, binding by value, restriction or systemOptions names it; no constraint, case, restriction or systemOptions names an option of type icons; constraints, token bindings, platform restrictions and accessibility states name only options, values and states that exist; no option is named `state`; a binding by value gives every value of its option a token; every case of a binding is reachable, not covered by earlier cases alone or together, and so is its `token`, which cases that match every combination leave unused; a fallback maps each value a platform drops to a value it keeps, and on Apple every value reaches, through Apple's fallback and then the OS's, a value each OS offers; a platform's systemOptions name options that exist and are not restricted; every bound token exists in tokens/ and is not a primitive; a part's `shape` binds a shape, `capsule`, alone or as the token of each of its cases, and nothing else binds one; a component whose accessibility role is none has no intents, keyboard intents or announced states, and no required label; a hiddenLabel needs a required label, the slot label and, on Apple, a style on a base whose initializer with no label view the conventions derive; a case's `state: { all: [...] }` names two or more declared states, and a binding with such a case is checked by enumerating every set of the states its cases name; in a contract with `forms`, each form enters declared states, every declared state is entered by some form, each form's accessibility, the contract's with the form's fields in their place, follows the rules of accessibility, each platform with a strategy names in `bases` a base for every form and no other and names no `base`, and on Apple each form's base is checked as `base` is and the strategy is a style on system controls, or an own component of form view, which names no bases; `bases` belongs only to a contract with forms; an integer option's default is at least its minimum, and constraints, cases, restrictions and systemOptions name no integer option; a mark's enum parameter has unique values and a default among them, and its names are usable in Swift. Lists of names are checked for repeats there too, with a message that names the repeat.",
   "type": "object",
   "required": ["id", "status", "consumers", "accessibility", "platforms"],
   "additionalProperties": false,
@@ -44,8 +44,21 @@
       "type": "array",
       "items": { "$ref": "#/$defs/name" }
     },
+    "forms": {
+      "description": "The forms of a component that the product picks by the system control it writes, each the same look on its own base control (Chip: selectable on a toggle, pressable on a button, static on a label), by form name: the states it enters, a subset of `states`, and what it announces, where that differs from `accessibility`. A contract with forms names a base per form on each platform, `bases`, in place of `base`, except a platform where it is an own component: there each form is an initializer of its own view, a form a person acts on (its intents hold activate) taking the action (ListRow: with an action and without). Not to be confused with `platforms.apple.form`, the shape of an own component's API.",
+      "type": "object",
+      "minProperties": 2,
+      "propertyNames": { "$ref": "#/$defs/name" },
+      "additionalProperties": { "$ref": "#/$defs/componentForm" }
+    },
+    "marks": {
+      "description": "Marks drawn around an instance that are no state of it, by mark name, each with its parameters (ListRow's insertion: the edge and the level a dragged row would land at).",
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/name" },
+      "additionalProperties": { "$ref": "#/$defs/mark" }
+    },
     "constraints": {
-      "description": "Rules between options: when the options have the values in `when`, they must have the values in `require`.",
+      "description": "Rules between options: when the options have the values in `when`, they must have the values in `require`. A rule on a slot names it in `when` under the key `slots` instead of options: when an instance fills that slot, the options must have the values in `require`, one value each, with severity error (Rule: a labelled rule is a horizontal separator).",
       "type": "array",
       "items": { "$ref": "#/$defs/constraint" }
     },
@@ -91,7 +104,7 @@
       "type": "object",
       "required": ["type"],
       "properties": {
-        "type": { "enum": ["enum", "bool", "tokens", "icons"] }
+        "type": { "enum": ["enum", "bool", "tokens", "icons", "integer"] }
       },
       "allOf": [
         {
@@ -109,8 +122,39 @@
         {
           "if": { "properties": { "type": { "const": "icons" } } },
           "then": { "$ref": "#/$defs/iconOption" }
+        },
+        {
+          "if": { "properties": { "type": { "const": "integer" } } },
+          "then": { "$ref": "#/$defs/integerOption" }
         }
       ]
+    },
+    "integerOption": {
+      "description": "A whole number, such as a row's nesting level: a quantity, not a choice. `default` is required; `minimum`, when given, is the least value, and the default is at least it. The snapshot matrix draws its default and makes it no axis; constraints, cases, bindings by value, platform restrictions and systemOptions do not name such an option yet.",
+      "type": "object",
+      "required": ["type", "default"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "integer" },
+        "default": { "type": "integer" },
+        "minimum": { "type": "integer" },
+        "description": { "$ref": "#/$defs/text" }
+      }
+    },
+    "mark": {
+      "description": "Something drawn around an instance that is no state of it, set per instance with its parameters, such as where a dragged row would land. Its first parameter is an enum: where the mark stands, an instance with none drawing no mark; the others are enum, bool or integer parameters with defaults. On Apple it is the modifier `.<mark>Mark(_:…)` (spec/conventions.md, \"Marks\").",
+      "type": "object",
+      "required": ["parameters"],
+      "additionalProperties": false,
+      "properties": {
+        "parameters": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/$defs/name" },
+          "additionalProperties": { "$ref": "#/$defs/option" }
+        },
+        "description": { "$ref": "#/$defs/text" }
+      }
     },
     "enumOption": {
       "description": "One value of a closed list; `default`, when given, is one of `values`. An enum option without a default has to be named in every use: a call that leaves it out does not compile, as a SwiftUI variant (spec/conventions.md).",
@@ -177,19 +221,48 @@
       "type": "object",
       "minProperties": 1,
       "propertyNames": { "$ref": "#/$defs/name" },
-      "additionalProperties": {
-        "type": ["string", "boolean", "array"],
-        "pattern": "^[a-z][a-zA-Z0-9]*$",
-        "minItems": 1,
-        "items": { "$ref": "#/$defs/name" }
-      }
+      "additionalProperties": { "$ref": "#/$defs/optionValue" }
+    },
+    "optionValue": {
+      "description": "One value, a list of values, or true or false.",
+      "type": ["string", "boolean", "array"],
+      "pattern": "^[a-z][a-zA-Z0-9]*$",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/name" }
+    },
+    "caseConditions": {
+      "description": "A case's when: values by option name, and under `state` one state, a list of states (any of them), or every one of a list at once (`all`).",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/name" },
+      "properties": {
+        "state": {
+          "type": ["string", "boolean", "array", "object"],
+          "pattern": "^[a-z][a-zA-Z0-9]*$",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/name" },
+          "required": ["all"],
+          "additionalProperties": false,
+          "properties": {
+            "all": {
+              "type": "array",
+              "minItems": 2,
+              "items": { "$ref": "#/$defs/name" }
+            }
+          }
+        }
+      },
+      "additionalProperties": { "$ref": "#/$defs/optionValue" }
     },
     "constraint": {
       "type": "object",
       "required": ["when", "require", "severity"],
       "additionalProperties": false,
       "properties": {
-        "when": { "$ref": "#/$defs/optionValues" },
+        "when": {
+          "description": "Values by option name; or, under the key `slots`, the slots an instance fills, from `slots`, and no option.",
+          "$ref": "#/$defs/optionValues"
+        },
         "require": { "$ref": "#/$defs/optionValues" },
         "severity": {
           "description": "error: the combination is not allowed; warning: allowed, but advised against.",
@@ -230,8 +303,8 @@
       "additionalProperties": false,
       "properties": {
         "when": {
-          "description": "Values by option name, as in a constraint; the key `state` names one state or a list of states from `states`. A case matches when every key matches.",
-          "$ref": "#/$defs/optionValues"
+          "description": "Values by option name, as in a constraint; the key `state` names one state or a list of states from `states`, and matches when the component is in any of them, or `{all: [...]}`, two states or more, and matches when it is in every one of them at once. A case matches when every key matches.",
+          "$ref": "#/$defs/caseConditions"
         },
         "token": {
           "description": "A token path, or in the cases of a part's `shape` a shape, `capsule`; null: the part has no value in this case.",
@@ -276,6 +349,46 @@
         },
         "description": { "$ref": "#/$defs/text" }
       }
+    },
+    "componentForm": {
+      "description": "One form of a component (`forms`): the states it enters, and what it announces where that differs from the contract's `accessibility`.",
+      "type": "object",
+      "required": ["states"],
+      "additionalProperties": false,
+      "properties": {
+        "states": {
+          "description": "The states this form enters: a subset of `states`, empty for a form that enters none.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/name" }
+        },
+        "accessibility": { "$ref": "#/$defs/formAccessibility" },
+        "description": { "$ref": "#/$defs/text" }
+      }
+    },
+    "formAccessibility": {
+      "description": "What one form announces where it differs from the contract's `accessibility`: each field it names replaces the contract's field of that name for this form, and the rules of `accessibility` hold for the result.",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "role": { "$ref": "#/$defs/name" },
+        "intents": { "type": "array", "items": { "$ref": "#/$defs/name" } },
+        "keyboardIntents": { "type": "array", "items": { "$ref": "#/$defs/name" } },
+        "label": { "enum": ["required", "optional"] },
+        "states": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/name" },
+          "additionalProperties": { "$ref": "#/$defs/name" }
+        },
+        "description": { "$ref": "#/$defs/text" }
+      }
+    },
+    "bases": {
+      "description": "In a contract with forms, the base control of each form on this platform, by form name, in place of `base`: `selectable: SwiftUI.Toggle`.",
+      "type": "object",
+      "minProperties": 2,
+      "propertyNames": { "$ref": "#/$defs/name" },
+      "additionalProperties": { "$ref": "#/$defs/base" }
     },
     "restrictedOptions": {
       "description": "By enum option, the values a platform offers: a subset of the option's values. An option not named here is offered whole.",
@@ -354,13 +467,13 @@
       "pattern": "^[A-Za-z][A-Za-z0-9]*(\\.[A-Za-z][A-Za-z0-9]*)*$"
     },
     "baseRequirement": {
-      "description": "A style or an extension goes on a system control, so those strategies name its base; an own component has none.",
+      "description": "A style or an extension goes on a system control, so those strategies name its base, or, in a contract with forms, a base per form in `bases` (spec check rejects both, and `bases` in a contract without forms); an own component has none.",
       "if": {
         "properties": { "strategy": { "enum": ["style-on-system-control", "extension-on-system-control"] } },
         "required": ["strategy"]
       },
-      "then": { "required": ["base"] },
-      "else": { "properties": { "base": false } }
+      "then": { "if": { "required": ["bases"] }, "else": { "required": ["base"] } },
+      "else": { "properties": { "base": false, "bases": false } }
     },
     "appleForm": {
       "description": "The shape of an own component's API on Apple (spec/conventions.md, \"Own components\"): modifier, a modifier on View named after the component, for one that draws around the content it is given and lays nothing out (`.surface(.raised)`); view, a View type named after the component, for one that is a view of its own (`Rule()`).",
@@ -387,6 +500,7 @@
         "properties": {
           "strategy": { "$ref": "#/$defs/strategy" },
           "base": { "$ref": "#/$defs/base" },
+          "bases": { "$ref": "#/$defs/bases" },
           "systemOptions": { "$ref": "#/$defs/systemOptions" },
           "options": { "$ref": "#/$defs/restrictedOptions" },
           "fallback": { "$ref": "#/$defs/fallback" },
@@ -408,6 +522,7 @@
         "properties": {
           "strategy": { "$ref": "#/$defs/strategy" },
           "base": { "$ref": "#/$defs/base" },
+          "bases": { "$ref": "#/$defs/bases" },
           "form": { "$ref": "#/$defs/appleForm" },
           "systemOptions": { "$ref": "#/$defs/systemOptions" },
           "options": { "$ref": "#/$defs/restrictedOptions" },

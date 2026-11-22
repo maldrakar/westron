@@ -13,6 +13,9 @@ public struct ComponentContract: Equatable, Sendable {
             /// The names of the icon registry, `spec/icons/icons.yaml`, in its order: the values are in the registry,
             /// not in the contract. There is no default: every use names its glyph.
             case icons
+            /// A whole number, such as a nesting level, at least `minimum` when the contract gives one. It is a quantity,
+            /// not a choice: the matrix draws its default, and no constraint, case or restriction names it.
+            case integer(default: Int, minimum: Int?)
         }
 
         public let name: String
@@ -51,8 +54,12 @@ public struct ComponentContract: Equatable, Sendable {
     public struct Apple: Equatable, Sendable {
         /// `style-on-system-control`, `extension-on-system-control` or `own-component`.
         public let strategy: String
-        /// The system control or view, such as `SwiftUI.Button`; nil for an own component.
+        /// The system control or view, such as `SwiftUI.Button`; nil for an own component and for a contract with forms,
+        /// which names a base per form in `bases`.
         public let base: String?
+        /// In a contract with forms, the base of each form, in the order of `bases`: `(selectable, SwiftUI.Toggle)`.
+        /// Empty for a contract without forms.
+        public let bases: [FormBase]
         /// The shape of an own component's API, `modifier` or `view` (spec/conventions.md, "Own components"); nil for
         /// a style or an extension.
         public let form: String?
@@ -66,37 +73,95 @@ public struct ComponentContract: Equatable, Sendable {
 
         public init(
             strategy: String, base: String?, form: String? = nil, systemOptions: [String: String] = [:],
-            restriction: Restriction = Restriction(), targets: [String: Restriction] = [:]
+            restriction: Restriction = Restriction(), targets: [String: Restriction] = [:], bases: [FormBase] = []
         ) {
             self.strategy = strategy
             self.base = base
+            self.bases = bases
             self.form = form
             self.systemOptions = systemOptions
             self.restriction = restriction
             self.targets = targets
         }
+
+        /// The bases its styles go on, each with its form: the one `base`, with no form, or each form's base.
+        public var styledBases: [FormBase] {
+            if let base { return [FormBase(form: nil, base: base)] }
+            return bases
+        }
+    }
+
+    /// A base control on a platform, and the form it is the base of; nil in a contract without forms.
+    public struct FormBase: Equatable, Sendable {
+        public let form: String?
+        public let base: String
+
+        public init(form: String?, base: String) {
+            self.form = form
+            self.base = base
+        }
+    }
+
+    /// One form of a contract with forms (`forms`): the same look on its own base control, which the product picks by
+    /// the control it writes (Chip: selectable, pressable, static).
+    public struct Form: Equatable, Sendable {
+        public let name: String
+        /// The states it enters, in the contract's order of `states`.
+        public let states: [String]
+
+        /// Whether a person acts on this form (its accessibility intents, or the contract's, hold `activate`): an own
+        /// view's form that takes an action (spec/conventions.md, "Own components").
+        public let activates: Bool
+
+        public init(name: String, states: [String], activates: Bool = false) {
+            self.name = name
+            self.states = states
+            self.activates = activates
+        }
+    }
+
+    /// A mark drawn around an instance that is no state of it, set per instance with its parameters (ListRow's
+    /// `insertion`, where a dragged row would land): `.insertionMark(_:level:)` on Apple.
+    public struct Mark: Equatable, Sendable {
+        public let name: String
+        /// Its parameters, in the contract's order: the first, an enum, says where the mark stands, none drawing it.
+        public let parameters: [Option]
+        public let description: String?
+
+        public init(name: String, parameters: [Option], description: String? = nil) {
+            self.name = name
+            self.parameters = parameters
+            self.description = description
+        }
     }
 
     /// A rule between options: when the options have the values in `when`, they must have the values in `require`.
+    /// A rule on a slot names it under the key `slots` of `when` (`ContractRules.slotsKey`): when an instance fills
+    /// that slot, the options must have the values in `require` (Rule: a labelled rule is a horizontal separator).
     public struct Constraint: Equatable, Sendable {
         /// By option name, the values that match: an enum option's values, or `true` or `false` for a bool option.
         public let when: [String: [String]]
         public let require: [String: [String]]
         /// `error`: the combination is not allowed; `warning`: allowed, but advised against.
         public let severity: String
+        /// The slots `when` names, which an instance fills for the rule to apply; empty for a rule between options.
+        public let slots: [String]
 
-        public init(when: [String: [String]], require: [String: [String]], severity: String) {
+        public init(when: [String: [String]], require: [String: [String]], severity: String, slots: [String] = []) {
             self.when = when
             self.require = require
             self.severity = severity
+            self.slots = slots
         }
 
         /// Whether the constraint forbids what breaks it, rather than advising against it.
         public var forbids: Bool { severity == "error" }
 
         /// Whether a combination, by option name its value (`true` or `false` for a bool option), breaks the rule: it
-        /// matches every condition of `when` and misses one of `require`.
+        /// matches every condition of `when` and misses one of `require`. A combination of options fills no slot, so
+        /// it never breaks a rule on a slot.
         public func isBroken(by values: [String: String]) -> Bool {
+            guard slots.isEmpty else { return false }
             func matches(_ conditions: [String: [String]]) -> Bool {
                 conditions.allSatisfy { option, allowed in values[option].map(allowed.contains) ?? false }
             }
@@ -116,8 +181,14 @@ public struct ComponentContract: Equatable, Sendable {
     public let slots: [String]
     /// nil when Apple is planned.
     public let apple: Apple?
+    /// In the contract's order; empty for a contract without forms.
+    public let forms: [Form]
     /// In the contract's order.
     public let constraints: [Constraint]
+    /// In the contract's order.
+    public let marks: [Mark]
+    /// `accessibility.intents`: what a person does with the component.
+    public let intents: [String]
     /// The states some case of a token binding names in its `when` (`state: pressed`), in the contract's order of
     /// `states`. A state none names changes no token: it draws as rest, and only what the platform adds itself, such
     /// as the system's focus ring, tells it apart.
@@ -131,8 +202,12 @@ public struct ComponentContract: Equatable, Sendable {
     public init(
         id: String, status: String, options: [Option], states: [String], apple: Apple?,
         constraints: [Constraint] = [], boundStates: [String]? = nil, slots: [String] = [],
-        accessibilityLabel: String? = nil, hiddenLabel: Bool = false
+        accessibilityLabel: String? = nil, hiddenLabel: Bool = false, forms: [Form] = [], marks: [Mark] = [],
+        intents: [String] = []
     ) {
+        self.forms = forms
+        self.marks = marks
+        self.intents = intents
         self.accessibilityLabel = accessibilityLabel
         self.hiddenLabel = hiddenLabel
         self.id = id
@@ -160,35 +235,8 @@ public struct ComponentContract: Equatable, Sendable {
         guard let status = document["status"]?.string else { throw problem(root.key("status"), "missing") }
         var options: [Option] = []
         for member in document["options"]?.members ?? [] {
-            let path = root.key("options").key(member.key)
-            let description = member.value["description"]?.string
-            switch member.value["type"]?.string {
-            case "enum":
-                guard let values = member.value["values"]?.elements?.compactMap(\.string), !values.isEmpty else {
-                    throw problem(path.key("values"), "an enum option needs its values")
-                }
-                options.append(
-                    Option(
-                        name: member.key, kind: .enumeration(values: values, default: member.value["default"]?.string),
-                        description: description))
-            case "bool":
-                guard case .bool(let value) = member.value["default"] else {
-                    throw problem(path.key("default"), "a bool option needs true or false as its default")
-                }
-                options.append(Option(name: member.key, kind: .bool(default: value), description: description))
-            case "tokens":
-                guard let group = member.value["group"]?.string else {
-                    throw problem(path.key("group"), "an option of type tokens needs its token group")
-                }
-                options.append(
-                    Option(
-                        name: member.key, kind: .tokenGroup(group, default: member.value["default"]?.string),
-                        description: description))
-            case "icons":
-                options.append(Option(name: member.key, kind: .icons, description: description))
-            default:
-                throw problem(path.key("type"), "must be enum, bool, tokens or icons")
-            }
+            options.append(
+                try Self.option(member.key, member.value, at: root.key("options").key(member.key), source: source))
         }
         let states = document["states"]?.elements?.compactMap(\.string) ?? []
         let applePath = root.key("platforms").key("apple")
@@ -208,10 +256,17 @@ public struct ComponentContract: Equatable, Sendable {
                     targets[os] = try Self.restriction(target, at: applePath.key(os), source: source)
                 }
             }
+            var bases: [FormBase] = []
+            for member in entry["bases"]?.members ?? [] {
+                guard let base = member.value.string else {
+                    throw problem(applePath.key("bases").key(member.key), "name the base control")
+                }
+                bases.append(FormBase(form: member.key, base: base))
+            }
             apple = Apple(
                 strategy: strategy, base: entry["base"]?.string, form: entry["form"]?.string,
                 systemOptions: systemOptions,
-                restriction: try Self.restriction(entry, at: applePath, source: source), targets: targets)
+                restriction: try Self.restriction(entry, at: applePath, source: source), targets: targets, bases: bases)
         } else {
             apple = nil
         }
@@ -219,11 +274,13 @@ public struct ComponentContract: Equatable, Sendable {
         for (index, entry) in (document["constraints"]?.elements ?? []).enumerated() {
             let path = root.key("constraints").index(index)
             guard let severity = entry["severity"]?.string else { throw problem(path.key("severity"), "missing") }
+            var when = try Self.conditions(entry["when"], at: path.key("when"), source: source)
+            let slots = when.removeValue(forKey: ContractRules.slotsKey) ?? []
             constraints.append(
                 Constraint(
-                    when: try Self.conditions(entry["when"], at: path.key("when"), source: source),
+                    when: when,
                     require: try Self.conditions(entry["require"], at: path.key("require"), source: source),
-                    severity: severity))
+                    severity: severity, slots: slots))
         }
         var named: Set<String> = []
         for binding in document["tokens"]?.members ?? [] {
@@ -231,16 +288,81 @@ public struct ComponentContract: Equatable, Sendable {
                 switch entry["when"]?["state"] {
                 case .string(let state)?: named.insert(state)
                 case .array(let list)?: named.formUnion(list.compactMap(\.string))
+                case .object?: named.formUnion(entry["when"]?["state"]?["all"]?.elements?.compactMap(\.string) ?? [])
                 default: break
                 }
             }
+        }
+        let intents = document["accessibility"]?["intents"]?.elements?.compactMap(\.string) ?? []
+        var forms: [Form] = []
+        for member in document["forms"]?.members ?? [] {
+            let entered = Set(member.value["states"]?.elements?.compactMap(\.string) ?? [])
+            let formIntents = member.value["accessibility"]?["intents"]?.elements?.compactMap(\.string) ?? intents
+            forms.append(
+                Form(
+                    name: member.key, states: states.filter(entered.contains),
+                    activates: formIntents.contains("activate")))
+        }
+        var marks: [Mark] = []
+        for member in document["marks"]?.members ?? [] {
+            let path = root.key("marks").key(member.key)
+            var parameters: [Option] = []
+            for parameter in member.value["parameters"]?.members ?? [] {
+                parameters.append(
+                    try Self.option(
+                        parameter.key, parameter.value, at: path.key("parameters").key(parameter.key), source: source))
+            }
+            marks.append(
+                Mark(name: member.key, parameters: parameters, description: member.value["description"]?.string))
         }
         self.init(
             id: id, status: status, options: options, states: states, apple: apple, constraints: constraints,
             boundStates: states.filter(named.contains),
             slots: document["slots"]?.elements?.compactMap(\.string) ?? [],
             accessibilityLabel: document["accessibility"]?["label"]?.string,
-            hiddenLabel: document["accessibility"]?["hiddenLabel"] == .bool(true))
+            hiddenLabel: document["accessibility"]?["hiddenLabel"] == .bool(true), forms: forms, marks: marks,
+            intents: intents)
+    }
+
+    /// One option, or one parameter of a mark, which takes an option's shape.
+    private static func option(_ name: String, _ entry: JSON, at path: DocumentPath, source: String)
+        throws(ContractProblem) -> Option
+    {
+        func problem(_ path: DocumentPath, _ message: String) -> ContractProblem {
+            ContractProblem(source: source, path: path, message)
+        }
+        let description = entry["description"]?.string
+        switch entry["type"]?.string {
+        case "enum":
+            guard let values = entry["values"]?.elements?.compactMap(\.string), !values.isEmpty else {
+                throw problem(path.key("values"), "an enum option needs its values")
+            }
+            return Option(
+                name: name, kind: .enumeration(values: values, default: entry["default"]?.string),
+                description: description)
+        case "bool":
+            guard case .bool(let value) = entry["default"] else {
+                throw problem(path.key("default"), "a bool option needs true or false as its default")
+            }
+            return Option(name: name, kind: .bool(default: value), description: description)
+        case "tokens":
+            guard let group = entry["group"]?.string else {
+                throw problem(path.key("group"), "an option of type tokens needs its token group")
+            }
+            return Option(
+                name: name, kind: .tokenGroup(group, default: entry["default"]?.string), description: description)
+        case "icons":
+            return Option(name: name, kind: .icons, description: description)
+        case "integer":
+            guard let value = entry["default"]?.integer else {
+                throw problem(path.key("default"), "an integer option needs a whole number as its default")
+            }
+            return Option(
+                name: name, kind: .integer(default: value, minimum: entry["minimum"]?.integer),
+                description: description)
+        default:
+            throw problem(path.key("type"), "must be enum, bool, tokens, icons or integer")
+        }
     }
 
     /// A constraint's `when` or `require`: by option name, a value, a list of values, or `true` or `false`.

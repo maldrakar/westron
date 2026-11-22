@@ -175,13 +175,34 @@ public enum APIParity {
         /// The base control's entry in `SystemStyles`, nil when it has none.
         var base: SystemStyles.Base? { contract.apple?.base.flatMap { SystemStyles.byBase[$0] } }
 
-        /// `Button` for `SwiftUI.Button`.
-        var control: String? {
-            contract.apple?.base.map { String($0.split(separator: ".").last ?? Substring($0)) }
+        /// The entries of every base it is styled on: the one base, or each form's.
+        var bases: [SystemStyles.Base] {
+            contract.apple?.styledBases.compactMap { SystemStyles.byBase[$0.base] } ?? []
         }
 
-        /// Whether the base control carries the state itself.
-        func isSystemState(_ state: String) -> Bool { base?.states.contains(state) ?? false }
+        /// `Button` for `SwiftUI.Button`; for a contract with forms, each form's control.
+        var controls: [String] {
+            contract.apple?.styledBases.map { String($0.base.split(separator: ".").last ?? Substring($0.base)) } ?? []
+        }
+
+        /// The states a style on a base enters that the base does not carry itself, so a westron modifier sets them:
+        /// in a contract with forms, each form's states its own base lacks.
+        func modifierStates(on target: ComponentContract.FormBase) -> [String] {
+            let entered = target.form.flatMap { name in contract.forms.first { $0.name == name }?.states }
+            let carried = SystemStyles.byBase[target.base]?.states ?? []
+            return (entered ?? contract.states).filter { !carried.contains($0) }
+        }
+
+        /// Whether the base control carries the state itself, on every base that enters it; for an own view, whether
+        /// the view carries it (`AppleComponents.Own.systemStates`).
+        func isSystemState(_ state: String) -> Bool {
+            if contract.apple?.strategy == AppleComponents.ownStrategy {
+                return AppleComponents.Own.systemStates.contains(state)
+            }
+            guard let apple = contract.apple, !apple.styledBases.isEmpty else { return false }
+            return apple.styledBases.allSatisfy { !modifierStates(on: $0).contains(state) }
+                && apple.styledBases.contains { SystemStyles.byBase[$0.base]?.states.contains(state) ?? false }
+        }
 
         /// Why it has no API, when it has none.
         var noAPIReason: String {
@@ -284,10 +305,17 @@ public enum APIParity {
                         "the lint cannot derive \(item.component)'s API: \(error.message); spec check reports it too"))
             }
             if item.contract.apple?.strategy == AppleComponents.ownStrategy {
-                expectOwn(item, into: &expected)
+                // An own view's states it does not carry itself take the shared state modifiers, as a style's do.
+                for state in expectOwn(item, into: &expected)?.modifierStates ?? [] {
+                    if let index = stateOwners.firstIndex(where: { $0.state == state }) {
+                        stateOwners[index].contracts.append(item)
+                    } else {
+                        stateOwners.append((state, [item]))
+                    }
+                }
                 continue
             }
-            guard let apple = item.contract.apple, let baseName = apple.base else { continue }
+            guard let apple = item.contract.apple, !apple.styledBases.isEmpty else { continue }
             if apple.strategy == SystemStyles.extensionStrategy {
                 let api: AppleComponents.Extension
                 do {
@@ -317,12 +345,17 @@ public enum APIParity {
                 }
                 continue
             }
-            guard let base = item.base else {
-                expected.problems.append(
-                    Problem(
-                        file: item.source, line: item.line(of: "base"),
-                        "no style modifier and no system states are known for \(baseName) (SystemStyles.byBase), so "
-                            + "the lint cannot derive \(item.component)'s API; spec check reports it too"))
+            // One base, or one per form (spec/conventions.md, "Forms").
+            let unknown = apple.styledBases.filter { SystemStyles.byBase[$0.base] == nil }
+            guard unknown.isEmpty else {
+                for target in unknown {
+                    expected.problems.append(
+                        Problem(
+                            file: item.source, line: item.line(of: target.form == nil ? "base" : "bases"),
+                            "no style modifier and no system states are known for \(target.base) "
+                                + "(SystemStyles.byBase), so the lint cannot derive \(item.component)'s API; spec check "
+                                + "reports it too"))
+                }
                 continue
             }
             var first: [SwiftDeclarations.Parameter] = []
@@ -330,7 +363,7 @@ public enum APIParity {
             var types: Set<String> = []
             for option in item.contract.options where apple.systemOptions[option.name] == nil {
                 switch option.kind {
-                case .tokenGroup, .icons:
+                case .tokenGroup, .icons, .integer:
                     continue  // The generator gives a style no such option yet, and fails on it.
                 case .bool(let value):
                     rest.append(.init(label: option.name, type: "Bool", defaultValue: "\(value)"))
@@ -347,12 +380,20 @@ public enum APIParity {
                     }
                 }
             }
-            expected.functions.append(
-                ExpectedFunction(
-                    what: "\(item.component)'s style overload", contracts: [item], name: base.modifier,
-                    parameters: first + rest, types: types, line: (item.source, item.line(of: "base")),
-                    generated: true))
-            for state in item.contract.states where !base.states.contains(state) {
+            var modifierStates: [String] = []
+            for target in apple.styledBases {
+                guard let base = SystemStyles.byBase[target.base] else { continue }
+                let what = target.form.map { "\(item.component)'s style overload for its form \($0)" }
+                expected.functions.append(
+                    ExpectedFunction(
+                        what: what ?? "\(item.component)'s style overload", contracts: [item], name: base.modifier,
+                        parameters: first + rest, types: types,
+                        line: (item.source, item.line(of: target.form == nil ? "base" : "bases")), generated: true))
+                for state in item.modifierStates(on: target) where !modifierStates.contains(state) {
+                    modifierStates.append(state)
+                }
+            }
+            for state in item.contract.states where modifierStates.contains(state) {
                 if let index = stateOwners.firstIndex(where: { $0.state == state }) {
                     stateOwners[index].contracts.append(item)
                 } else {
@@ -569,7 +610,7 @@ public enum APIParity {
                 return because(contract, "\(d.qualifiedName) is a member of \(contract.component)'s API")
             }
             if d.inExtension, last.hasSuffix("Style"), last != "ShapeStyle", !localTypes.contains(d.container) {
-                let contract = components.first { item in item.control.map { last.hasSuffix($0 + "Style") } ?? false }
+                let contract = components.first { item in item.controls.contains { last.hasSuffix($0 + "Style") } }
                 return because(
                     contract,
                     "\(d.qualifiedName) extends the style protocol \(d.container), which adds a style to a system "
@@ -587,7 +628,7 @@ public enum APIParity {
                 if isStyleModifier(d.name) {
                     let match =
                         components.first { item in d.parameters.contains { p in startsWith(p.type, item.component) } }
-                        ?? components.first { $0.base?.modifier == d.name }
+                        ?? components.first { $0.bases.contains { $0.modifier == d.name } }
                     return because(match, "\(d.signature) is an overload of a style modifier")
                 }
                 if let contract = components.first(where: { startsWith(d.name, $0.lowerComponent) }) {

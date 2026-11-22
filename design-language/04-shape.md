@@ -53,14 +53,17 @@ This chapter says why. The values are in decisions/0013 and in `tokens/semantic/
 
 - **Four widths, each with a job.** `stroke.hairline` edges glass and a card on a fill. `stroke.thin` draws rules,
   dividers and tree guides in a sidebar. `stroke.regular` draws guides on a phone, a dashed outline and a small check's
-  ring. `stroke.thick` draws a focus ring, a drop indicator and a selection ring.
+  ring. `stroke.thick` draws a focus ring, a drop indicator and a selected row's bar.
 - **A thicker line means more attention.** The thick width marks what a person must find at once: where focus is,
   where a dragged item will land. Rules and guides stay thin, because space and alignment already show the grouping.
 - **A card needs no outline.** In the standard themes a card is set off from the canvas by its tone, and in light also
   by its shadow. A hairline edges it only where tone does not, such as a card on a fill.
-- **Color comes from the border tokens** (chapter 02). `color.border.default` draws separators and an unchecked
-  check's quiet ring, `border.strong` the outline of a control a person must find in high contrast, and `border.focus`
-  the focus ring. In the high-contrast themes lines gain contrast through their color, and their widths stay.
+- **Color comes from the border tokens** (chapter 02). `color.border.default` draws separators and an unchecked check's
+  quiet ring, `border.strong` the outline of a control a person must find in high contrast, `border.focus` the focus
+  ring and a selected row's bar, `border.insertion` an insertion rule, the line that marks where a dragged item will
+  land: the focus ring's blue, a token of its own so that each can change without the other (spec/components/rule,
+  #116), and `border.guide` a tree's guides (spec/components/list-row). In the high-contrast
+  themes lines gain contrast through their color, and their widths stay.
 - **A filled control needs no outline, except in high contrast.** A secondary button and a framed text field are set
   off by their muted fill. In the high-contrast themes the fill stays as quiet as in the standard ones, so they also
   draw `border.strong` at `stroke.thin`, as a raised surface draws its line there, and an unchecked check's ring turns

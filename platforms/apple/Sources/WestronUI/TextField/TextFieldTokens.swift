@@ -139,7 +139,12 @@ struct TextFieldMetrics: Equatable, Sendable {
 /// as in a SwiftUI that would store it otherwise, the field is drawn as a single line.
 enum TextFieldAxis {
     static func of(_ field: Any) -> Axis {
-        Mirror(reflecting: field).children.first { $0.label == "axis" }?.value as? Axis ?? .horizontal
+        read(field) ?? .horizontal
+    }
+
+    /// The axis reflection finds, or nil where it finds none.
+    static func read(_ field: Any) -> Axis? {
+        Mirror(reflecting: field).children.first { $0.label == "axis" }?.value as? Axis
     }
 }
 

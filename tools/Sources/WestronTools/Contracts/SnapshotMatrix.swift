@@ -22,6 +22,12 @@
 ///   rows instead (`rowAxis`): Icon's 36 glyphs at rest would otherwise make sheets of three glyphs each, twelve to a
 ///   scale. Its sheets hold one value of every other axis but the column axis, which is then the variant, else the
 ///   first other option that is not a bool.
+/// - A contract with forms (`forms`) has the form as its first axis, `formAxis`, never the columns: each form is drawn
+///   at rest and in each state it enters alone, on sheets of its own (`form-selectable`), and a form that enters no
+///   state is drawn at rest only (spec/conventions.md, "Forms").
+/// - An integer option (ListRow's `level`) is a quantity, not a choice, and is no axis: the hand-written cell draws
+///   its sample at a value it names (ListRow's at level 1, so that `guides` shows), and what other values do is the
+///   catalog's supplements'.
 ///
 /// What the generator does not do (#72), so that the contract alone drives every generated combination and sheet: the
 /// catalog (`WestronCatalog/SnapshotMatrix/ComponentMatrix.swift`) captures the sheets at other text sizes too and
@@ -44,10 +50,12 @@ public struct SnapshotMatrix: Equatable, Sendable {
         public let accessor: String?
         /// Whether its values are the icon registry's names, in the registry's order.
         public let isIcons: Bool
+        /// Whether it is the contract's forms (`forms`), not an option: the first axis of a contract with forms.
+        public let isForm: Bool
 
         init(
             name: String, values: [String], isBool: Bool = false, systemType: String? = nil, tokenGroup: String? = nil,
-            accessor: String? = nil, isIcons: Bool = false
+            accessor: String? = nil, isIcons: Bool = false, isForm: Bool = false
         ) {
             self.name = name
             self.values = values
@@ -56,6 +64,7 @@ public struct SnapshotMatrix: Equatable, Sendable {
             self.tokenGroup = tokenGroup
             self.accessor = accessor
             self.isIcons = isIcons
+            self.isForm = isForm
         }
     }
 
@@ -111,6 +120,9 @@ public struct SnapshotMatrix: Equatable, Sendable {
     public static let maxColumns = 3
     public static let maxRows = 6
 
+    /// The name of the axis of a contract with forms: its forms, each drawn in the states it enters.
+    public static let formAxis = "form"
+
     public let component: String
     public let axes: [Axis]
     /// The contract's states, in its order; the matrix adds rest before them.
@@ -131,6 +143,8 @@ public struct SnapshotMatrix: Equatable, Sendable {
     /// The Apple OSes that differ from the contract, in `ComponentContract.appleOSes` order.
     public let platforms: [Platform]
     public let sheets: [Sheet]
+    /// Whether the forms are an own view's initializers rather than system controls (`own-component`).
+    public let ownForms: Bool
 
     /// `tokens` gives the values of an option whose values are tokens, `icons` the registry's names, in its order, for
     /// one whose values are icons; a contract without such an option needs neither.
@@ -142,10 +156,24 @@ public struct SnapshotMatrix: Equatable, Sendable {
         _ contract: ComponentContract, source: String, tokens: ContractTokens? = nil, icons: [String]? = nil
     ) throws(ContractProblem) {
         component = contract.id
+        ownForms = !contract.forms.isEmpty && contract.apple?.strategy == AppleComponents.ownStrategy
         let systemOptions = contract.apple?.systemOptions ?? [:]
         var axes: [Axis] = []
+        // A contract with forms: the form first, each value drawn in the states that form enters.
+        if !contract.forms.isEmpty {
+            if contract.options.contains(where: { $0.name == Self.formAxis }) {
+                throw ContractProblem(
+                    source: source, path: .root.key("options").key(Self.formAxis),
+                    "the matrix of a contract with forms has an axis \(Self.formAxis), the forms: rename the option")
+            }
+            axes.append(Axis(name: Self.formAxis, values: contract.forms.map(\.name), isForm: true))
+        }
         for option in contract.options {
             switch option.kind {
+            case .integer:
+                // A quantity, not a choice: the cell names the value it draws, and the catalog's supplements show
+                // others (ListRow's nesting levels).
+                continue
             case .enumeration(let values, _):
                 axes.append(Axis(name: option.name, values: values, systemType: systemOptions[option.name]))
             case .bool:
@@ -207,15 +235,23 @@ public struct SnapshotMatrix: Equatable, Sendable {
         self.excluded = excluded
         advisedAgainst = advised
         let rows: [String?] = [nil] + contract.states
-        combinations = allowed.flatMap { tuple in rows.map { Combination(tuple, state: $0) } }
+        // By form, the rows it is drawn in: rest and the states it enters.
+        let formRows = Dictionary(
+            uniqueKeysWithValues: contract.forms.map { form in (form.name, [nil] + form.states.map(Optional.some)) })
+        let formIndex = axes.firstIndex(where: \.isForm)
+        func rowsOf(_ tuple: [String]) -> [String?] {
+            formIndex.flatMap { formRows[tuple[$0]] } ?? rows
+        }
+        combinations = allowed.flatMap { tuple in rowsOf(tuple).map { Combination(tuple, state: $0) } }
 
         var platforms: [Platform] = []
         if let apple = contract.apple {
             let applePath = DocumentPath.root.key("platforms").key("apple")
             for os in ComponentContract.appleOSes {
                 var drawn: [(option: String, map: [(value: String, drawn: String)])] = []
-                // A token or icons option has no platform restriction: spec check rejects one that names it.
-                for axis in axes where !axis.isBool && axis.systemType == nil && axis.accessor == nil {
+                // A token or icons option has no platform restriction: spec check rejects one that names it; the
+                // forms are not an option.
+                for axis in axes where !axis.isBool && axis.systemType == nil && axis.accessor == nil && !axis.isForm {
                     var map: [(value: String, drawn: String)] = []
                     for value in axis.values {
                         let target = try AppleComponents.API.drawn(
@@ -237,8 +273,10 @@ public struct SnapshotMatrix: Equatable, Sendable {
         let rowIndex = contract.states.isEmpty ? axes.firstIndex(where: \.isIcons) : nil
         rowAxis = rowIndex.map { axes[$0].name }
         let others = axes.indices.filter { $0 != rowIndex }
+        // The forms are never the columns: each form has a sheet of its own, in its own states.
         let columnIndex =
-            others.first { axes[$0].name == "variant" } ?? others.first { !axes[$0].isBool } ?? others.first
+            others.first { axes[$0].name == "variant" && !axes[$0].isForm }
+            ?? others.first { !axes[$0].isBool && !axes[$0].isForm } ?? others.first { !axes[$0].isForm }
         columnAxis = columnIndex.map { axes[$0].name }
         let fixedAxes = others.filter { $0 != columnIndex }
         var fixedTuples: [[String]] = [[]]
@@ -246,11 +284,14 @@ public struct SnapshotMatrix: Equatable, Sendable {
             fixedTuples = fixedTuples.flatMap { tuple in axes[index].values.map { tuple + [$0] } }
         }
         let columnChunks = Self.chunks(columnIndex.map { axes[$0].values } ?? [""], of: Self.maxColumns)
-        let rowValues: [String?] = rowIndex.map { axes[$0].values.map { Optional($0) } } ?? rows
-        let rowChunks = Self.chunks(rowValues, of: Self.maxRows)
         let allowedSet = Set(allowed)
         var sheets: [Sheet] = []
         for fixed in fixedTuples {
+            // The rows of this sheet: the row axis, or rest and the states, of its form where it has one.
+            let form = fixedAxes.firstIndex { axes[$0].isForm }.map { fixed[$0] }
+            let rowValues: [String?] =
+                rowIndex.map { axes[$0].values.map { Optional($0) } } ?? form.flatMap { formRows[$0] } ?? rows
+            let rowChunks = Self.chunks(rowValues, of: Self.maxRows)
             let base = zip(fixedAxes, fixed).map { "\(axes[$0.0].name)-\($0.1)" }
             for (columnNumber, columns) in columnChunks.enumerated() {
                 // A sheet with no allowed combination is left out.

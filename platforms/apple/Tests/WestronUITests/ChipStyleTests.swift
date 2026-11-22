@@ -1,0 +1,406 @@
+import Foundation
+import SwiftUI
+import Testing
+
+@testable import WestronUI
+
+/// Chip's styles against its contract, spec/components/chip/chip.spec.yaml: the tokens they draw in every combination
+/// of states, read from the contract's own bindings, cases that require several states at once included; the list
+/// color of the context; the high-contrast outline; the press; the metrics; the hit area of each form; and the label's
+/// one truncated line.
+@Suite("Chip style")
+@MainActor
+struct ChipStyleTests {
+    static let contractFile = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        .deletingLastPathComponent().deletingLastPathComponent()
+        .appendingPathComponent("spec/components/chip/chip.spec.yaml")
+
+    // MARK: - The contract's token bindings
+
+    /// A binding: its default token (nil when it has none) and its cases, each the states it names, whether it needs
+    /// all of them (`state: { all: [...] }`) or any, and its token.
+    struct Binding {
+        var token: String?
+        var cases: [(states: [String], all: Bool, token: String?)] = []
+
+        /// The token for a chip in `states`: the first case that matches, else the default.
+        func resolve(_ states: Set<ChipState>) -> String? {
+            let names = Set(states.map(\.rawValue))
+            for item in cases {
+                let matches =
+                    item.all ? item.states.allSatisfy(names.contains) : item.states.contains(where: names.contains)
+                if matches { return item.token }
+            }
+            return token
+        }
+    }
+
+    /// A binding of the contract's `tokens:` block: `  <name>: token`, or `  <name>:` with an optional `token:` line
+    /// and `cases:` of `- { when: { state: … }, token: … }`, each on one line; the state one name, a list, or
+    /// `{ all: [...] }`.
+    static func binding(_ name: String) throws -> Binding {
+        let lines = try String(contentsOf: contractFile, encoding: .utf8).split(
+            separator: "\n", omittingEmptySubsequences: false)
+        let block = try #require(lines.firstIndex(of: "tokens:"))
+        let start = try #require(
+            lines[block...].firstIndex { $0 == "  \(name):" || $0.hasPrefix("  \(name): ") }, "no binding \(name)")
+        if lines[start].hasPrefix("  \(name): ") {
+            return Binding(token: String(lines[start].dropFirst("  \(name): ".count)))
+        }
+        var binding = Binding()
+        for line in lines[(start + 1)...] {
+            let text = line.trimmingCharacters(in: .whitespaces)
+            guard line.hasPrefix("    ") else { break }
+            if text.hasPrefix("token:") {
+                binding.token = text.dropFirst("token:".count).trimmingCharacters(in: .whitespaces)
+            } else if text.hasPrefix("- {") {
+                let state = try #require(text.range(of: "state: "))
+                var rest = text[state.upperBound...]
+                let all = rest.hasPrefix("{ all: ")
+                if all { rest = rest.dropFirst("{ all: ".count) }
+                let states: [String]
+                if rest.hasPrefix("[") {
+                    let close = try #require(rest.firstIndex(of: "]"))
+                    states = rest.dropFirst()[..<close].split(separator: ",").map {
+                        $0.trimmingCharacters(in: .whitespaces)
+                    }
+                } else {
+                    states = [String(rest.prefix { $0 != " " && $0 != "}" })]
+                }
+                let token = try #require(text.range(of: "token: ", options: .backwards))
+                binding.cases.append(
+                    (states, all, text[token.upperBound...].dropLast(2).trimmingCharacters(in: .whitespaces)))
+            }
+        }
+        return binding
+    }
+
+    /// Every combination of the contract's states, the empty one (rest) included.
+    static let stateCombinations: [Set<ChipState>] = ChipState.allCases.reduce([[]]) { sets, state in
+        sets + sets.map { $0.union([state]) }
+    }
+
+    @Test("the contract's container.background has cases that require two states at once, and the parser reads them")
+    func allStatesCasesAreRead() throws {
+        let background = try Self.binding("container.background")
+        #expect(background.cases.count == 5)
+        #expect(background.cases[0].all && background.cases[0].states == ["checked", "pressed"])
+        #expect(background.cases[1].all && background.cases[1].states == ["checked", "hover"])
+        #expect(!background.cases[2].all)
+    }
+
+    @Test("every combination of states draws the tokens the contract's bindings give, in the accent")
+    func tokensMatchTheContract() throws {
+        let bindings: [(name: String, binding: Binding, drawn: (ChipTokens) -> String?)] = [
+            ("container.background", try Self.binding("container.background"), { $0.background.name }),
+            ("container.opacity", try Self.binding("container.opacity"), { $0.opacity?.name }),
+            ("label.color", try Self.binding("label.color"), { $0.label.name }),
+            ("icon.color", try Self.binding("icon.color"), { $0.icon.name }),
+        ]
+        #expect(Self.stateCombinations.count == 32)
+        for states in Self.stateCombinations {
+            let tokens = ChipTokens(category: nil, states: states, highContrast: false)
+            for item in bindings {
+                // A state the current OS never enters draws as if absent, and disabled excludes hover and pressed
+                // (the contract's description).
+                let expected = item.binding.resolve(ChipTokens.effective(states))
+                #expect(item.drawn(tokens) == expected, "\(item.name), states \(states.map(\.rawValue).sorted())")
+            }
+        }
+        // The tints of a lit chip, which only cases over two states can say.
+        #expect(
+            ChipTokens(category: nil, states: [.checked, .pressed, .hover], highContrast: false).background
+                == .background.accentPressed)
+        #expect(
+            ChipTokens(category: nil, states: [.checked, .hover], highContrast: false).background
+                == (ChipState.hover.isEntered ? .background.accentHover : .background.accent))
+    }
+
+    @Test("disabled excludes hover and pressed, and a state the OS never enters is dropped")
+    func effectiveStates() {
+        #expect(ChipTokens.effective([.disabled, .hover, .pressed, .checked]) == [.disabled, .checked])
+        #if os(watchOS)
+            #expect(ChipTokens.effective([.hover, .focus, .pressed]) == [.pressed])
+        #else
+            #expect(ChipTokens.effective([.hover, .focus, .pressed]) == [.hover, .focus, .pressed])
+        #endif
+    }
+
+    @Test("lit in a list's color: its fill and on-fill, the same under the pointer and pressed; unlit, as the accent's")
+    func listColor() {
+        for states in Self.stateCombinations {
+            let accent = ChipTokens(category: nil, states: states, highContrast: false)
+            for category in Westron.Category.allCases {
+                let tokens = ChipTokens(category: category, states: states, highContrast: false)
+                if states.contains(.checked) {
+                    #expect(tokens.background == category.fill, "\(category)")
+                    #expect(tokens.label == category.onFill && tokens.icon == category.onFill, "\(category)")
+                } else {
+                    #expect(tokens == accent, "\(category), \(states.map(\.rawValue).sorted())")
+                }
+                #expect(tokens.opacity == accent.opacity)
+            }
+        }
+    }
+
+    @Test("in high contrast every chip draws border.strong at stroke.thin, in every state and color")
+    func highContrastOutline() {
+        for states in Self.stateCombinations {
+            for category in [nil] + Westron.Category.allCases.map(Optional.some) {
+                let standard = ChipTokens(category: category, states: states, highContrast: false)
+                let high = ChipTokens(category: category, states: states, highContrast: true)
+                #expect(standard.borderColor == nil && standard.borderWidth == nil)
+                #expect(high.borderColor == .border.strong && high.borderWidth == .stroke.thin)
+                var outlineless = high
+                outlineless.borderColor = nil
+                outlineless.borderWidth = nil
+                #expect(outlineless == standard)
+            }
+        }
+    }
+
+    @Test("a press scales the chip to 98 % unless it is disabled; the motions are the contract's")
+    func press() throws {
+        #expect(ChipTokens.scalesDown(states: [.pressed]))
+        #expect(ChipTokens.scalesDown(states: [.pressed, .checked]))
+        #expect(!ChipTokens.scalesDown(states: [.pressed, .disabled]))
+        #expect(!ChipTokens.scalesDown(states: [.checked, .hover]))
+        #expect(ChipTokens.pressScale == 0.98)
+        #expect(try Self.binding("container.pressMotion").token == Westron.Transition.press.name)
+        #expect(try Self.binding("container.hoverMotion").token == Westron.Transition.fade.name)
+        #expect(try Self.binding("container.checkMotion").token == Westron.Transition.fade.name)
+    }
+
+    @Test(
+        "the press tints in motion.press; Reduce Motion drops the scale and the resize, and keeps every tint and fade")
+    func motion() {
+        let motion = ChipMotion(reduceMotion: false)
+        let reduced = ChipMotion(reduceMotion: true)
+        #expect(motion.scale(pressed: true) == ChipTokens.pressScale)
+        #expect(motion.scale(pressed: false) == 1)
+        #expect(reduced.scale(pressed: true) == 1)
+        #expect(reduced.scale(pressed: false) == 1)
+        for item in [motion, reduced] {
+            // The tint of a press is the press's motion (design-language/05: "its tint, and its scale").
+            #expect(item.press == .press)
+            #expect(item.hover == .fade)
+            #expect(item.check == .fade)
+        }
+        #expect(motion.resize == .fade)
+        #expect(reduced.resize == nil)
+    }
+
+    @Test("a checked chip shows the check, in every color and state; an unchecked one never")
+    func mark() {
+        for states in Self.stateCombinations {
+            for category in [nil] + Westron.Category.allCases.map(Optional.some) {
+                for highContrast in [false, true] {
+                    let tokens = ChipTokens(category: category, states: states, highContrast: highContrast)
+                    #expect(tokens.mark == ChipTokens.effective(states).contains(.checked))
+                    // The check is drawn in the icon's color, the words' color on a lit fill.
+                    if tokens.mark { #expect(tokens.icon == tokens.label) }
+                }
+            }
+        }
+    }
+
+    @Test("the metrics are the contract's single bindings")
+    func metrics() throws {
+        #expect(try Self.binding("container.height").token == ChipMetrics.height.name)
+        #expect(try Self.binding("container.paddingHorizontal").token == ChipMetrics.paddingHorizontal.name)
+        #expect(try Self.binding("container.gap").token == ChipMetrics.gap.name)
+        #expect(try Self.binding("label.font").token == ChipMetrics.labelFont.name)
+        #expect(try Self.binding("icon.font").token == ChipMetrics.iconFont.name)
+    }
+
+    // MARK: - Layout
+
+    @Test("the selectable and pressable forms lay out a hit area at least size.target.minimum high; static does not")
+    func hitArea() {
+        let label = { Label("Work", icon: .hash) }
+        let selectable = fittingSize(Toggle(isOn: .constant(false)) { label() }.toggleStyle(.chip))
+        let pressable = fittingSize(
+            Button {
+            } label: {
+                label()
+            }.buttonStyle(.chip))
+        let still = fittingSize(label().labelStyle(.chip))
+        #expect(selectable.height >= .size.target.minimum, "\(selectable)")
+        #expect(pressable.height >= .size.target.minimum, "\(pressable)")
+        #expect(abs(selectable.height - pressable.height) < 0.5)
+        // The static chip is the drawn capsule: at least size.control.s, and lower than the target where it is.
+        #expect(still.height >= .size.control.s - 0.5, "\(still)")
+        if CGFloat.size.control.s < .size.target.minimum {
+            #expect(still.height < .size.target.minimum, "\(still)")
+        }
+        // Across, a chip wider than the target is the chip's width in every form.
+        #expect(selectable.width > .size.target.minimum)
+        #expect(abs(selectable.width - still.width) < 0.5 && abs(pressable.width - still.width) < 0.5)
+    }
+
+    @Test("a chip narrower than the target lays out a hit area at least size.target.minimum across, around its capsule")
+    func hitAreaAcross() {
+        let letter = "I"
+        let selectable = fittingSize(Toggle(letter, isOn: .constant(false)).toggleStyle(.chip))
+        let pressable = fittingSize(Button(letter) {}.buttonStyle(.chip))
+        let withIcon = fittingSize(Toggle(isOn: .constant(false)) { Label(letter, icon: .hash) }.toggleStyle(.chip))
+        let capsule =
+            fittingSize(Text(letter).textRole(ChipMetrics.labelFont)).width
+            + 2 * CGFloat(ChipMetrics.paddingHorizontal)
+        #expect(capsule < .size.target.minimum, "a one-letter capsule must be narrower than the target: \(capsule)")
+        for (form, size) in [("selectable", selectable), ("pressable", pressable), ("with an icon", withIcon)] {
+            #expect(size.width >= .size.target.minimum - 0.5, "\(form): \(size)")
+            #expect(size.height >= .size.target.minimum - 0.5, "\(form): \(size)")
+        }
+        // Laid out, so chips side by side never overlap: two of them in a row with no spacing are two hit areas wide.
+        let row = fittingSize(
+            HStack(spacing: 0) {
+                Toggle(letter, isOn: .constant(false)).toggleStyle(.chip)
+                Toggle(letter, isOn: .constant(true)).toggleStyle(.chip)
+            })
+        #expect(row.width >= 2 * .size.target.minimum - 0.5, "\(row)")
+    }
+
+    @Test("lit, a chip with an icon keeps its width; a chip whose label is only text grows by the check and the gap")
+    func markWidth() {
+        let name = "Work"
+        let unlit = fittingSize(Toggle(isOn: .constant(false)) { Label(name, icon: .hash) }.toggleStyle(.chip))
+        let lit = fittingSize(Toggle(isOn: .constant(true)) { Label(name, icon: .hash) }.toggleStyle(.chip))
+        #expect(
+            abs(lit.width - unlit.width) < 0.5, "a lit chip with an icon changed its width: \(lit) against \(unlit)")
+        #expect(abs(lit.height - unlit.height) < 0.5)
+        let textUnlit = fittingSize(Toggle(name, isOn: .constant(false)).toggleStyle(.chip))
+        let textLit = fittingSize(Toggle(name, isOn: .constant(true)).toggleStyle(.chip))
+        let check = fittingSize(
+            Image(Westron.Icon.check).textRole(ChipMetrics.iconFont).imageScale(ChipMetrics.iconScale)
+        ).width
+        let grown = check + CGFloat(ChipMetrics.gap)
+        #expect(
+            abs(textLit.width - textUnlit.width - grown) < 1,
+            "a lit text-only chip grew by \(textLit.width - textUnlit.width), not the check and the gap, \(grown)")
+        #expect(abs(textLit.height - textUnlit.height) < 0.5)
+        // A pressable chip never shows the check.
+        let pressable = fittingSize(Button(name) {}.buttonStyle(.chip))
+        #expect(abs(pressable.width - textUnlit.width) < 0.5)
+    }
+
+    @Test("for every registry icon and text size, a lit chip keeps its width, and the check never reaches the label")
+    func markInEveryIconsPlace() {
+        let name = "Work"
+        // The check is centred over the icon at its own size (`ChipContent`): over a narrower icon it reaches past the
+        // icon's frame by half the difference on each side, toward the padding and toward the label.
+        var widest: (spill: CGFloat, gap: CGFloat, icon: Westron.Icon, size: DynamicTypeSize)?
+        for size in [DynamicTypeSize.large, .accessibility5] {
+            let glyph = { (icon: Westron.Icon) in
+                fittingSize(
+                    Image(icon).textRole(ChipMetrics.iconFont).imageScale(ChipMetrics.iconScale).dynamicTypeSize(size)
+                ).width
+            }
+            let check = glyph(.check)
+            let textOnly = fittingSize(Button(name) {}.buttonStyle(.chip).dynamicTypeSize(size)).width
+            for icon in Westron.Icon.allCases {
+                let chip = { (on: Bool) in
+                    fittingSize(
+                        Toggle(isOn: .constant(on)) { Label(name, icon: icon) }.toggleStyle(.chip).dynamicTypeSize(size)
+                    )
+                }
+                let unlit = chip(false)
+                let lit = chip(true)
+                #expect(abs(lit.width - unlit.width) < 0.5, "\(icon) at \(size): lit \(lit), unlit \(unlit)")
+                #expect(abs(lit.height - unlit.height) < 0.5, "\(icon) at \(size): lit \(lit), unlit \(unlit)")
+                // The gap as laid out at this size: the chip with the icon less the chip whose label is only text,
+                // less the icon. Both are wider than the hit area's minimum, so both are their capsule's width.
+                let width = glyph(icon)
+                let withIcon = fittingSize(
+                    Button {
+                    } label: {
+                        Label(name, icon: icon)
+                    }.buttonStyle(.chip).dynamicTypeSize(size)
+                ).width
+                let gap = withIcon - textOnly - width
+                #expect(gap >= CGFloat(ChipMetrics.gap) - 0.5, "\(icon) at \(size): gap \(gap)")
+                let spill = max(0, (check - width) / 2)
+                #expect(spill < gap, "\(icon) at \(size): the check spills \(spill) pt toward the label, gap \(gap)")
+                if spill > widest?.spill ?? -1 { widest = (spill, gap, icon, size) }
+            }
+        }
+        if let widest {
+            print(
+                "chip: the check spills at most \(widest.spill) pt past the icon on each side, over \(widest.icon) at "
+                    + "\(widest.size), of a gap of \(widest.gap) pt")
+        }
+    }
+
+    @Test("a long label stays one line, truncated, in the width it is given")
+    func truncation() {
+        let width: CGFloat = 120
+        let short = fittingSize(Label("Work", icon: .hash).labelStyle(.chip))
+        let long = fittingSize(
+            Label("A tag whose name runs much longer than its chip", icon: .hash).labelStyle(.chip),
+            in: CGSize(width: width, height: 1000))
+        #expect(long.width <= width + 0.5, "\(long)")
+        #expect(abs(long.height - short.height) < 0.5, "one line: \(long) against \(short)")
+    }
+
+    @Test(
+        "a label that is only text, the commonest call, is drawn in label.font on one line, truncated, in both controls"
+    )
+    func textOnlyLabel() {
+        let name = "Work"
+        let long = "A tag whose name runs much longer than its chip"
+        let width: CGFloat = 120
+        let given = CGSize(width: width, height: 1000)
+        let selectable = { (title: String) in AnyView(Toggle(title, isOn: .constant(false)).toggleStyle(.chip)) }
+        let pressable = { (title: String) in AnyView(Button(title) {}.buttonStyle(.chip)) }
+        // The words in label.font, and the padding on both sides: the width of the chip. In the system's body font,
+        // which a label style never reaching the text would leave, the words are wider.
+        let words = fittingSize(Text(name).textRole(ChipMetrics.labelFont)).width
+        let wordsInBody = fittingSize(Text(name).font(.body)).width
+        #expect(wordsInBody > words + 0.5, "the fonts must differ for this test to tell them apart")
+        let expected = words + 2 * CGFloat(ChipMetrics.paddingHorizontal)
+        // The same height as the chip whose label is a Label: the hit area's, around one line.
+        let withIcon = fittingSize(Toggle(isOn: .constant(false)) { Label(name, icon: .hash) }.toggleStyle(.chip))
+        for (form, chip) in [("selectable", selectable), ("pressable", pressable)] {
+            let short = fittingSize(chip(name))
+            #expect(abs(short.width - expected) < 1, "\(form): \(short.width) against \(expected) in label.font")
+            #expect(abs(short.height - withIcon.height) < 0.5, "\(form): \(short) against \(withIcon)")
+            let truncated = fittingSize(chip(long), in: given)
+            #expect(truncated.width <= width + 0.5, "\(form): \(truncated)")
+            #expect(abs(truncated.height - short.height) < 0.5, "\(form), one line: \(truncated) against \(short)")
+        }
+    }
+
+    #if os(iOS)
+        @Test("the chip grows with Dynamic Type, with a Label or with a label that is only text, in every form")
+        func growsWithDynamicType() {
+            // The static chip is the drawn capsule. The two controls are their hit area, at least 44 pt high, which a
+            // chip of one line at accessibility3 still fits in: across they grow with the words, and in height they
+            // never shrink.
+            let chips: [(String, AnyView, isControl: Bool)] = [
+                ("static", AnyView(Label("Work", icon: .hash).labelStyle(.chip)), false),
+                ("selectable, text only", AnyView(Toggle("Work", isOn: .constant(true)).toggleStyle(.chip)), true),
+                ("pressable, text only", AnyView(Button("Work") {}.buttonStyle(.chip)), true),
+            ]
+            for (form, chip, isControl) in chips {
+                let large = fittingSize(chip.dynamicTypeSize(.large))
+                let accessibility = fittingSize(chip.dynamicTypeSize(.accessibility3))
+                if isControl {
+                    #expect(accessibility.height >= large.height, "\(form): \(accessibility) against \(large)")
+                } else {
+                    #expect(accessibility.height > large.height, "\(form): \(accessibility) against \(large)")
+                }
+                #expect(accessibility.width > large.width, "\(form): \(accessibility) against \(large)")
+            }
+        }
+    #endif
+
+    @Test("the catalog names the contract's states, and which form enters each")
+    func catalogStates() {
+        #expect(ChipCatalogState.all.map(\.name) == ["checked", "hover", "focus", "pressed", "disabled"])
+        let checked = ChipCatalogState(named: "checked")
+        #expect(checked?.isEntered(by: .selectable) == true)
+        #expect(checked?.isEntered(by: .pressable) == false)
+        #expect(ChipCatalogState.all.allSatisfy { !$0.isEntered(by: .static) })
+    }
+}
