@@ -3,6 +3,9 @@
 # and the proposals approved on top of them, the ones the agent decided under the delegation marked as such. Revised on
 # 2026-11-20 (#85): the look the owner chose, a muted fill with no outline, a capsule on one line and a rounded
 # rectangle on several, and the option lines (decisions/0002-the-look-of-2026-11-20.md).
+# A revision is proposed for approval (#115): a glyph at the field's start and its end, so that a search field is this
+# field. decisions/0003-icons-at-the-start-and-the-end.md holds it in full; nothing below has changed yet, and the
+# revision moves here with the tools that generate it.
 id: text-field
 status: approved
 description: >-
