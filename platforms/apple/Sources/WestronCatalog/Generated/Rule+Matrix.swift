@@ -8,11 +8,14 @@
 import WestronUI
 
 extension ComponentMatrix {
-    /// Rule's matrix: 2 axis at rest (the contract has no states) = 2 combinations, none forbidden by a constraint, on
-    /// 1 sheet.
+    /// Rule's matrix: 2 axis × 2 purpose at rest (the contract has no states) = 4 combinations, none forbidden by a
+    /// constraint, on 2 sheets.
     static let rule = ComponentMatrix(
         component: "rule",
-        options: [Option("axis", values: ["horizontal", "vertical"])],
+        options: [
+            Option("axis", values: ["horizontal", "vertical"]),
+            Option("purpose", values: ["separator", "insertion"]),
+        ],
         states: [],
         unbound: [],
         columns: "axis",
@@ -20,16 +23,24 @@ extension ComponentMatrix {
         excluded: [],
         advisedAgainst: [],
         combinations: [
-            Combination(["horizontal"], state: nil),
-            Combination(["vertical"], state: nil),
+            Combination(["horizontal", "separator"], state: nil),
+            Combination(["horizontal", "insertion"], state: nil),
+            Combination(["vertical", "separator"], state: nil),
+            Combination(["vertical", "insertion"], state: nil),
         ],
         sheets: [
             Sheet(
-                "all",
-                fixed: [],
+                "purpose-separator",
+                fixed: ["separator"],
                 columns: ["horizontal", "vertical"],
                 rows: [nil]
-            )
+            ),
+            Sheet(
+                "purpose-insertion",
+                fixed: ["insertion"],
+                columns: ["horizontal", "vertical"],
+                rows: [nil]
+            ),
         ]
     ) { RuleMatrixCell(RuleMatrixValues($0)) }
 }
@@ -41,16 +52,18 @@ extension ComponentMatrix {
 /// tuple and fails the cell's build until it draws the option too.
 struct RuleMatrixValues {
     private let axis: RuleAxis
+    private let purpose: RulePurpose
     /// The state; nil at rest.
     private let state: String?
 
     /// Every value, in the contract's order of the options, then the state.
-    typealias Fields = (axis: RuleAxis, state: String?)
+    typealias Fields = (axis: RuleAxis, purpose: RulePurpose, state: String?)
 
-    var fields: Fields { (axis, state) }
+    var fields: Fields { (axis, purpose, state) }
 
     init(_ combination: ComponentMatrix.Combination) {
         self.axis = RuleAxis(rawValue: combination.values[0])!
+        self.purpose = RulePurpose(rawValue: combination.values[1])!
         self.state = combination.state
     }
 }

@@ -325,6 +325,22 @@ extension Westron.Color {
                 ["color.background.hover"],
                 ["color.background.selected"],
             ])
+
+        /// The line that marks where a dragged item would be dropped: an insertion rule. The focus ring's blue, a token
+        /// of its own so that each can change without the other.
+        public static let insertion = Westron.Color(
+            name: "color.border.insertion",
+            light: Westron.RGB(hex: 0x5283E1),
+            dark: Westron.RGB(hex: 0x4474D0),
+            lightHighContrast: Westron.RGB(hex: 0x3765C0),
+            darkHighContrast: Westron.RGB(hex: 0x6194F2),
+            backgrounds: [
+                ["color.background.canvas"],
+                ["color.background.surface"],
+                ["color.background.sunken"],
+                ["color.background.hover"],
+                ["color.background.selected"],
+            ])
     }
 
     /// The colors `color.status.*`.
@@ -812,6 +828,7 @@ extension Westron.Color {
         border.default,
         border.strong,
         border.focus,
+        border.insertion,
         status.danger.background,
         status.danger.border,
         status.danger.icon,

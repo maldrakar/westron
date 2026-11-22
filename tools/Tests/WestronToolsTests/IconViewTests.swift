@@ -140,7 +140,7 @@ struct IconViewTests {
                 "options.badge: a second option whose values are icons") == true)
         #expect(
             failure(replacing("slots: [label]", with: "slots: [label, detail]"))?.contains(
-                "slots: a view with slots other than an icon's spoken label") == true)
+                "slots: a view with slots other than the one slot label") == true)
     }
 
     @Test("the lint accepts the view, and reports a missing or changed initializer")
