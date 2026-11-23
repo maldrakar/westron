@@ -534,9 +534,6 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         var enabled: Bool? = nil
         /// Text the issue's `detailedDescription` must contain, if any, such as the class of a system view.
         var detail: String? = nil
-        /// The start of the element's accessibility identifier, if any: a sample the catalog marks as one of a kind,
-        /// such as a floating button on glass.
-        var identifierPrefix: String? = nil
         /// Whether the element must reach below the top of the system keyboard, which must be up: an element the
         /// keyboard covers is measured on the keyboard's pixels.
         var underKeyboard = false
@@ -546,7 +543,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         init(
             _ scope: Scope, type: XCUIAccessibilityAuditType, reason: String, description: String? = nil,
             appearance: Configuration.Appearance? = nil, value: String? = nil, enabled: Bool? = nil,
-            detail: String? = nil, identifierPrefix: String? = nil, underKeyboard: Bool = false,
+            detail: String? = nil, underKeyboard: Bool = false,
             label: @escaping @Sendable (String?) -> Bool
         ) {
             self.scope = scope
@@ -557,7 +554,6 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             self.value = value
             self.enabled = enabled
             self.detail = detail
-            self.identifierPrefix = identifierPrefix
             self.underKeyboard = underKeyboard
             self.label = label
         }
@@ -575,7 +571,6 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             if let value, issue.element?.value.map({ "\($0)" }) != value { return false }
             if let enabled, issue.element?.isEnabled != enabled { return false }
             if let detail, !issue.detailedDescription.contains(detail) { return false }
-            if let identifierPrefix, !(issue.element?.identifier.hasPrefix(identifierPrefix) ?? false) { return false }
             if underKeyboard {
                 let keyboard = XCUIApplication().keyboards.firstMatch
                 guard keyboard.exists, let frame = issue.element?.frame, !frame.isEmpty,
@@ -630,19 +625,22 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             }
         }
         suppressions += [
-            // Contrast on the floating secondary buttons that stand on the system's glass, over the entry's busy
-            // ground: the glass is the system's, and what shows through it is the product's content, so westron
-            // cannot promise its contrast and the contract says so (decisions/0015; Button's description). Only the
-            // samples the catalog marks as on glass match, by their identifier; the floating primary and the look
-            // before OS 26, whose pairs `tools/westron tokens contrast` checks, are audited as usual.
+            // Contrast on the enabled floating secondary buttons with a label that stand on the system's glass, over
+            // the entry's busy ground: the glass is the system's, and what shows through it is the product's
+            // content, so westron cannot promise its contrast and the contract says so (decisions/0015; Button's
+            // description). The audit names the button's text, which carries no identifier, so the samples are told
+            // by their words: on glass they say "Edit" and "Delete", before OS 26 "Rename" and "Remove"
+            // (ButtonFloatingID), which, with the floating primary, are audited as usual; their pairs are
+            // `tools/westron tokens contrast`'s.
             Suppression(
-                .entry("button-floating"), type: .contrast, reason: "contrast on the system's glass",
-                identifierPrefix: "button.floating.glass."
-            ) { _ in true },
-            // Contrast on the disabled floating samples before OS 26 and the disabled primary, drawn whole at
-            // opacity.disabled by the contract: WCAG exempts an inactive control (design-language chapter 08).
+                .entry("button-floating"), type: .contrast, reason: "contrast on the system's glass", enabled: true
+            ) {
+                ["Edit", "Delete"].contains($0 ?? "")
+            },
+            // Contrast on the disabled floating samples, drawn whole at opacity.disabled by the contract: WCAG exempts
+            // an inactive control (design-language chapter 08).
             Suppression(.entry("button-floating"), type: .contrast, reason: "an inactive control", enabled: false) {
-                ["Back", "Edit", "Delete", "Add"].contains($0 ?? "")
+                ["Back", "Edit", "Delete", "Rename", "Remove", "Add"].contains($0 ?? "")
             },
             // Contrast on the disabled Checkbox sample, drawn whole at opacity.disabled by the contract: WCAG exempts
             // an inactive control (design-language chapter 08). Only an element that is not enabled matches.
@@ -736,6 +734,16 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                     .entry("chip"), type: .textClipped, reason: "a pressed chip drawn at 0.98 of its size",
                     enabled: true
                 ) { $0 == "pressed" },
+                // "Text clipped" on the floating secondary samples before OS 26 that the catalog holds pressed, at
+                // the default settings and at accessibility5: the contract draws a pressed Button at 0.98 of its size
+                // (ButtonTokens.pressScale), and the audit measures the scaled text against its unscaled line; their
+                // frames are 0.98 of the unpressed samples' (112.4 of 114.7 points). On glass the press scale is the
+                // glass's own, so those samples are not drawn scaled. Only the enabled "Rename" and "Remove" match,
+                // which only the samples before OS 26 carry (ButtonFloatingID).
+                Suppression(
+                    .entry("button-floating"), type: .textClipped, reason: "a pressed button drawn at 0.98 of its size",
+                    enabled: true
+                ) { ["Rename", "Remove"].contains($0 ?? "") },
             ]
             // The TextField focus pages focus a field for real, so the system keyboard is up while they are audited
             // (spec/components/text-field). The keyboard's own prediction cells, empty or carrying a suggestion

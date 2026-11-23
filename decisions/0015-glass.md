@@ -734,15 +734,26 @@ which records the references, is on iOS 27.0 and macOS 27.0.1, so its pictures w
   one scaled down: the same as the catalog's override draws on iOS 26.3, so the override's references stand for the
   minimum OS versions.
 - **Disabled dims the glass.** The whole button at `opacity.disabled`, the glass with it, on both platforms (Q7 holds).
-- **Increase Contrast** (the system's setting, through `simctl ui … increase_contrast`, on a separate iPhone 17 Pro simulator, iOS 26.3): the
-  glass turns nearly opaque and light, with a faint edge; the label is the high-contrast theme's. westron draws no
+- **Increase Contrast** (the system's setting, through `simctl ui … increase_contrast`, on a separate iPhone 17 Pro
+  simulator, iOS 26.3): the glass turns nearly opaque and light, with a faint edge; the label is the high-contrast theme's. westron draws no
   outline on it (Q8 holds). The matrix's high-contrast captures show the same glass.
 - **Hit area.** On macOS a floating button takes clicks in its drawn capsule and none past it, on glass and before OS 26,
-  every size (ButtonHitAreaTests); the behavior tests press the live floating buttons on both platforms.
+  every size (ButtonHitAreaTests). On iOS the behavior tests press the live floating buttons, find no press 4 points
+  below one, and see the disabled one refuse a press (`behavior ios ButtonBehaviorTests`: 12 run, 1 skipped, 0
+  failed). On macOS the same tests did not run: the Mac's screen was locked, so no app could be activated.
+- **The accessibility audit** (iOS, the five configurations, `button-floating` and the entries it touches) passes with
+  three suppressions of its own, each named in the log on every match: contrast on the enabled secondaries with a
+  label on glass, which westron cannot promise over content it does not draw (the floating primary and the
+  secondaries before OS 26 are audited as usual, and pass); contrast on the disabled samples (an inactive control);
+  and "Text clipped" on the samples before OS 26 held pressed, whose frame is 0.98 of the unpressed one's, as the
+  Chip's pressed sample is. The audit reports a button's text, which carries no identifier, so the samples on glass
+  and before OS 26 carry different words to be told apart.
 - **Not measured.** Reduce Transparency: set through the simulator's accessibility defaults, the glass looked
   unchanged, and nothing confirmed that the setting reached the app, so its effect is unknown. Reduce Motion: a still
   cannot show the glass's response to a press; westron's own press scale, which it drops, is not drawn on glass. The
-  glass's response to a real touch and pointer, which forced states cannot show. watchOS at run time.
+  glass's response to a real touch and pointer, which forced states cannot show. watchOS at run time. On macOS, with
+  the screen locked: the behavior tests, the accessibility audit, the catalog's screenshot and the system's focus ring
+  over glass.
 
 ## Consequences
 

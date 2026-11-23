@@ -643,8 +643,10 @@ private struct ButtonBehaviorPage: View {
 // (`drawingButtonsWithoutGlass()`). The generated sheets draw floating buttons on the plain canvas, where glass shows
 // little; these draw them over content, where it is used.
 
-/// Accessibility identifiers of the floating samples. The ones that stand on the system's glass start with
-/// `glassPrefix`: the accessibility audit matches them by it (CatalogAccessibilityAuditTests).
+/// Accessibility identifiers of the floating samples; the ones that stand on the system's glass start with
+/// `glassPrefix`. The accessibility audit reports contrast on a button's text, which carries no identifier, so the
+/// samples with a label are told apart by their words: "Edit" and "Delete" on glass, which the audit's suppression of
+/// contrast on glass names (CatalogAccessibilityAuditTests), "Rename" and "Remove" before OS 26.
 enum ButtonFloatingID {
     /// The start of the identifier of every sample that stands on glass.
     static let glassPrefix = "button.floating.glass."
@@ -822,10 +824,13 @@ private struct ButtonFloatingPage: View {
                     FlowLayout(spacing: .space200) {
                         sample("Back", icon: .chevronLeft, variant: .secondary, iconOnly: true)
                             .accessibilityIdentifier(prefix + row.name + ".back")
-                        sample("Edit", icon: .pen, variant: .secondary)
+                        // Other words before OS 26, so that the audit tells them from the samples on glass.
+                        sample(withoutGlass ? "Rename" : "Edit", icon: .pen, variant: .secondary)
                             .accessibilityIdentifier(prefix + row.name + ".edit")
-                        sample("Delete", icon: .trash, variant: .secondary, role: .destructive)
-                            .accessibilityIdentifier(prefix + row.name + ".delete")
+                        sample(
+                            withoutGlass ? "Remove" : "Delete", icon: .trash, variant: .secondary, role: .destructive
+                        )
+                        .accessibilityIdentifier(prefix + row.name + ".delete")
                         sample("Add", icon: .plus, variant: .primary, iconOnly: true)
                             .accessibilityIdentifier("button.floating.primary." + row.name + ".add")
                     }
