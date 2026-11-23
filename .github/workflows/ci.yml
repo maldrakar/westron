@@ -18,11 +18,11 @@ jobs:
   # the snapshot matrix is rendered in-process and checked against references in `snapshots`, which replaced the job
   # "Catalog screenshots" and the on-demand snapshot-matrix.yml. Per run now, estimated from the times in the job
   # comments:
-  #   a pull request: apple (about 25 min) and snapshots (about 25), and when it changes a component, an audit of that
+  #   a pull request: apple (about 25 min) and snapshots (about 30), and when it changes a component, an audit of that
   #     component's entries (10.4 min and 5.6 min an entry: Button's five about 38 min, Rule's one about 16): 2–3 Mac
   #     jobs, up to about 1.5 runner-hours (one more job for each further 5 entries when it changes several
   #     components), as long as its slowest job when the runners are free;
-  #   a push to main: apple and snapshots, about 50 runner-minutes.
+  #   a push to main: apple and snapshots, about 55 runner-minutes.
   tools:
     name: Tools (Swift on Linux)
     runs-on: ubuntu-24.04
@@ -204,21 +204,27 @@ jobs:
     # Timeout. On this runner: macOS, the test build 68 s and the render 176 s for 196 images (run 44835019906); iOS,
     # the catalog build 432–739 s and the render 203 s for 388 images once the main thread is freed between draws (run
     # 44841056509; 472 s in run 44835019906, with its blank retries). The job took 23 min in run 44835019906. The
-    # renders have step timeouts of their own, 15 and 30 min, about twice the slowest seen (iOS: 739 + 203 s, 16 min),
-    # so a hung step still leaves time for the uploads; the job's 50 min cover the rest. Cost: one Mac job of about
-    # 20–25 min on every pull request and push to main.
+    # matrix grows with every component: on 2026-11-23 (#120, Disclosure) the macOS render took build 117 s and render
+    # 771 s for 636 images and passed the old 15 min step timeout (runs 45205617566, 45215357472), and iOS took build
+    # 340–370 s and render 350–420 s for 824–943 images. The render costs about 1 s an image on macOS on the runner
+    # (0.9–1.06 s measured) and about 0.4 s on iOS, plus a build of up to 2 min on macOS and up to 12 on iOS: when
+    # the slowest step's build and images come within about two thirds of its timeout, raise it. The renders have step
+    # timeouts of their own, 40 min for macOS (about 2200 images after its build) and 45 for iOS, so a hung step leaves
+    # time for the uploads; the job's 100 min are the two (85) plus 15 for the checkout, the LFS pull, the check and
+    # the uploads, so a step's own timeout fires before the job's. Cost: one Mac job of about 30 min on every pull
+    # request and push to main.
     runs-on: xcode-27
-    timeout-minutes: 50
+    timeout-minutes: 100
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     steps:
       - uses: actions/checkout@v7
       - name: Render (macOS)
-        timeout-minutes: 15
+        timeout-minutes: 40
         run: tools/apple/snapshot-matrix.sh macos
       - name: Render (iOS)
         if: ${{ !cancelled() }}
-        timeout-minutes: 30
+        timeout-minutes: 45
         run: tools/apple/snapshot-matrix.sh ios
       - name: Reference object ids
         if: ${{ !cancelled() }}

@@ -110,7 +110,8 @@ fail or stall each other, as a macOS UI test captures whatever window is on top 
 alone, the simulator (by its UDID) or, on macOS, the Mac's screen, after their build and until they exit (`package-ios`
 until its tests end, so that `all` goes on without it; `tools/apple/lock.sh`). A run that finds it held prints once whom
 it waits for (pid, command and folder, since when) and waits, at most `WESTRON_LOCK_TIMEOUT` seconds (default 5400, 90
-minutes: above the longest CI job, 55, with room for a longer local audit), then fails saying who still holds it. With
+minutes: above the longest CI limit on work that takes the lock, the pull request audit's 55 (the iOS render's step
+has 45), with room for a longer local audit), then fails saying who still holds it. With
 nobody else running it waits for nothing. A lock whose process died is taken over at once: one killed with SIGKILL, or
 stopped by Ctrl-C while bash 3.2 waited for a foreground command, which ends it without its EXIT trap. A script under
 one that holds the lock goes on. The macOS render of the snapshot matrix draws in a window that is never ordered in, so
@@ -388,7 +389,10 @@ no references, or references from another runner image, pass on a pull request w
 recording, and fail a push to `main`. Every run
 uploads `snapshot-matrix`, the full page of both platforms. A look that changes on purpose is recorded with the label
 `record-snapshots` on the pull request; the workflow commits the references to its branch and comments how to run the
-checks again (a commit pushed by a workflow starts none).
+checks again (a commit pushed by a workflow starts none). In both workflows the macOS render has a step timeout of 40
+minutes and the iOS one 45, and the jobs 100 (`snapshots`) and 105 (the recording); the render costs about 1 s an image
+on macOS on the runner (636 images in 771 s after a 117 s build, 2026-11-23) and about 0.4 s on iOS, so raise a step's
+timeout when its build and images come within about two thirds of it (the arithmetic is in `ci.yml`'s comment).
 
 ### Behaviour UI tests
 
