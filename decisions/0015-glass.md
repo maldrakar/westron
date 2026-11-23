@@ -713,6 +713,37 @@ Edited with the implementation, 2026-11-23:
 - decisions/0014: the "Glass buttons" and "Bottom bar" rows, if Q9 and Q10 go as recommended.
 - AGENTS.md: this decision in the list once it is accepted.
 
+## Implementation: what was measured
+
+On Apple, 2026-11-23, Xcode 27.1 on macOS 26.7.1, the iPhone 17 simulator on iOS 26.3 unless said. The CI runner,
+which records the references, is on iOS 27.0 and macOS 27.0.1, so its pictures will differ from these in detail.
+
+- **Glass renders in both of the matrix's paths.** iOS's `drawHierarchy` draws the system's glass as on screen; macOS's
+  `CARenderer`, in a window never ordered in, draws it too, as a blurred and lightened ground with its edge. Rendered
+  three times on each platform: macOS 208 of 208 pictures identical byte for byte, every time; iOS 463 to 466 of 468
+  identical, the others differing in at most 4 pixels, of which at most one pixel in a picture by 2 levels, always on
+  a generated `floating-true` sheet in `dark-hc`, where the glass stands on the plain canvas. The two supplements over
+  the busy ground were identical in all three iOS renders. So the references hold glass on both platforms; on iOS a
+  single pixel of a `dark-hc` floating sheet may now and then pass the check's tolerance of one level (seen in two of
+  three pairs of renders), which the CI job `snapshots` would report as a change.
+- **Buttons that do not float are unchanged.** The new code rendered with the contract before `floating` (its
+  generated files and the catalog's matrix cell of then) against the render before the change: macOS 72 of 72
+  pictures identical, iOS 152 of 152, at a tolerance of 0.
+- **Before OS 26, for real.** The `button-floating` entry on an iPhone 15 simulator on iOS 17.5 draws every floating
+  secondary on `background.surface` with `shadow.overlay`, its forced hover and pressed in the row tints, the pressed
+  one scaled down: the same as the catalog's override draws on iOS 26.3, so the override's references stand for the
+  minimum OS versions.
+- **Disabled dims the glass.** The whole button at `opacity.disabled`, the glass with it, on both platforms (Q7 holds).
+- **Increase Contrast** (the system's setting, through `simctl ui … increase_contrast`, on a separate iPhone 17 Pro simulator, iOS 26.3): the
+  glass turns nearly opaque and light, with a faint edge; the label is the high-contrast theme's. westron draws no
+  outline on it (Q8 holds). The matrix's high-contrast captures show the same glass.
+- **Hit area.** On macOS a floating button takes clicks in its drawn capsule and none past it, on glass and before OS 26,
+  every size (ButtonHitAreaTests); the behavior tests press the live floating buttons on both platforms.
+- **Not measured.** Reduce Transparency: set through the simulator's accessibility defaults, the glass looked
+  unchanged, and nothing confirmed that the setting reached the app, so its effect is unknown. Reduce Motion: a still
+  cannot show the glass's response to a press; westron's own press scale, which it drops, is not drawn on glass. The
+  glass's response to a real touch and pointer, which forced states cannot show. watchOS at run time.
+
 ## Consequences
 
 - westron gains one option on Button, no component, no token, no variant value; Surface keeps its rule.

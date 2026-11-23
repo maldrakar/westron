@@ -205,7 +205,8 @@ struct APIParityTests {
     func realContractChangedDefault() throws {
         let found = try realRepository {
             $0.replacingOccurrences(
-                of: "iconOnly:\n    type: bool\n    default: false", with: "iconOnly:\n    type: bool\n    default: true")
+                of: "iconOnly:\n    type: bool\n    default: false",
+                with: "iconOnly:\n    type: bool\n    default: true")
         }
         #expect(found.count == 1)
         #expect(

@@ -15,11 +15,12 @@ struct ComponentMatrixTests {
         #expect(options.appearance == .dark)
     }
 
-    @Test("Button's matrix: 216 combinations, every one in exactly one cell of its 12 sheets")
+    /// 432 combinations less the 72 of a floating tertiary, which the contract's constraint excludes (decisions/0015).
+    @Test("Button's matrix: 360 combinations, every one in exactly one cell of its 24 sheets")
     func button() throws {
         let matrix = try #require(ComponentMatrix.all.first { $0.component == "button" })
-        #expect(matrix.drawnCombinations.count == 216)
-        #expect(matrix.sheets.count == 12)
+        #expect(matrix.drawnCombinations.count == 360)
+        #expect(matrix.sheets.count == 24)
         #expect(matrix.sheets.map(matrix.drawnCount(in:)).reduce(0, +) == matrix.drawnCombinations.count)
         var seen: Set<ComponentMatrix.Combination> = []
         for sheet in matrix.sheets {
@@ -30,7 +31,10 @@ struct ComponentMatrixTests {
                     {
                         #expect(seen.insert(combination).inserted, "\(combination) on two cells")
                         #expect(fallbacks.isEmpty, "iOS and macOS offer every value")
-                        #expect(advised == nil, "Button has no constraints")
+                        #expect(advised == nil, "Button's one constraint is an error, not advice")
+                    } else {
+                        // The one cell that is not drawn: a floating tertiary.
+                        #expect(column == "tertiary" && sheet.id.hasSuffix("_floating-true"), "\(sheet.id), \(column)")
                     }
                 }
             }
@@ -205,14 +209,15 @@ struct ComponentMatrixTests {
 
     @Test("a sheet is found by its key; names follow component, sheet and capture")
     func keys() throws {
-        let found = try #require(ComponentMatrix.sheet(key: "button.size-l_role-destructive_iconOnly-true"))
-        #expect(found.matrix.title(of: found.sheet) == "size l · role destructive · iconOnly true")
+        let found = try #require(
+            ComponentMatrix.sheet(key: "button.size-l_role-destructive_iconOnly-true_floating-false"))
+        #expect(found.matrix.title(of: found.sheet) == "size l · role destructive · iconOnly true · floating false")
         #expect(
             found.matrix.fileName(of: found.sheet, capture: .init(theme: .darkHighContrast, textSize: .large))
-                == "button.size-l_role-destructive_iconOnly-true.dark-hc.png", "as before text sizes")
+                == "button.size-l_role-destructive_iconOnly-true_floating-false.dark-hc.png", "as before text sizes")
         #expect(
             found.matrix.fileName(of: found.sheet, capture: .init(theme: .light, textSize: .xSmall))
-                == "button.size-l_role-destructive_iconOnly-true.light.xSmall.png")
+                == "button.size-l_role-destructive_iconOnly-true_floating-false.light.xSmall.png")
         #expect(ComponentMatrix.sheet(key: "button.nothing") == nil)
         #expect(ComponentMatrix.Theme.allCases.map(\.rawValue) == ["light", "dark", "light-hc", "dark-hc"])
     }
@@ -254,7 +259,7 @@ struct ComponentMatrixTests {
         #else
             let sheet = try #require(matrix.sheets.first)
             let parts = matrix.pictures(of: sheet, at: .accessibility5)
-            #expect(parts.first?.id == "size-s_role-default_iconOnly-false_part-1-of-\(parts.count)")
+            #expect(parts.first?.id == "size-s_role-default_iconOnly-false_floating-false_part-1-of-\(parts.count)")
             #expect(parts.first.flatMap(matrix.partTitle(of:))?.hasPrefix("part 1 of \(parts.count): primary;") == true)
         #endif
     }
@@ -262,7 +267,7 @@ struct ComponentMatrixTests {
     @Test("a cap of columns to a picture splits a sheet whose cells do not fit side by side; each part is found by key")
     func columnCap() throws {
         let matrix = try #require(ComponentMatrix.all.first { $0.component == "button" })
-        let sheet = try #require(matrix.sheets.first { $0.id == "size-l_role-destructive_iconOnly-false" })
+        let sheet = try #require(matrix.sheets.first { $0.id == "size-l_role-destructive_iconOnly-false_floating-false" })
         #expect(matrix.pictures(of: sheet, at: .large, columns: 3).map(\.id) == [sheet.id], "a cap that fits all")
         let parts = matrix.pictures(of: sheet, at: .large, columns: 2)
         #expect(parts.map(\.id) == [1, 2].map { "\(sheet.id)_part-\($0)-of-2" })
@@ -304,21 +309,30 @@ struct ComponentMatrixTests {
         let matrix = try #require(ComponentMatrix.all.first { $0.component == "button" })
         #expect(matrix.supplement == nil)
         let supplements = matrix.supplements
-        #expect(supplements.map { $0.supplement?.id } == ["label-without-icon"])
+        #expect(
+            supplements.map { $0.supplement?.id } == ["label-without-icon", "floating-over-content", "floating-before-26"])
         let labels = try #require(supplements.first)
         #expect(labels.supplements.isEmpty)
-        // Variant × size × role × (rest + 5 states), iconOnly kept false: half of the generated matrix.
-        #expect(labels.drawnCombinations.count == 3 * 3 * 2 * 6)
+        // Variant × size × role × floating × (rest + 5 states), iconOnly kept false: half of the generated matrix.
+        #expect(labels.drawnCombinations.count == 3 * 3 * 2 * 2 * 6 - 36)
         #expect(labels.drawnCombinations.allSatisfy { $0.values[3] == "false" })
-        #expect(labels.sheets.count == 6)
-        #expect(labels.sheets.map(labels.drawnCount(in:)).reduce(0, +) == 108)
-        #expect(labels.sheets[0].id == "label-without-icon_size-s_role-default_iconOnly-false")
-        #expect(labels.title(of: labels.sheets[0]) == "label without an icon · size s · role default · iconOnly false")
+        #expect(labels.sheets.count == 12)
+        #expect(labels.sheets.map(labels.drawnCount(in:)).reduce(0, +) == 180)
+        #expect(labels.sheets[0].id == "label-without-icon_size-s_role-default_iconOnly-false_floating-false")
+        #expect(
+            labels.title(of: labels.sheets[0])
+                == "label without an icon · size s · role default · iconOnly false · floating false")
         let found = try #require(
-            ComponentMatrix.sheet(key: "button.label-without-icon_size-m_role-destructive_iconOnly-false"))
+            ComponentMatrix.sheet(key: "button.label-without-icon_size-m_role-destructive_iconOnly-false_floating-false"))
         #expect(found.matrix.supplement?.id == "label-without-icon")
+        // The floating ones (#121): the floating sheets of size m, primary and secondary, over the busy ground.
+        for floating in supplements.dropFirst() {
+            #expect(floating.drawnCombinations.count == 2 * 2 * 2 * 6)
+            #expect(floating.drawnCombinations.allSatisfy { $0.values[1] == "m" && $0.values[4] == "true" })
+            #expect(floating.sheets.count == 4)
+        }
         // The generated matrix is the contract's alone.
-        #expect(matrix.drawnCombinations.count == 216 && matrix.sheets.count == 12)
+        #expect(matrix.drawnCombinations.count == 360 && matrix.sheets.count == 24)
         #expect(!Catalog.entries.contains { $0.id.contains("label-without-icon") }, "not an audited catalog entry")
     }
 
@@ -330,7 +344,7 @@ struct ComponentMatrixTests {
         func macOSHasNoDynamicType() throws {
             let matrix = try #require(ComponentMatrix.all.first { $0.component == "button" })
             let combination = try #require(
-                matrix.drawnCombinations.first { $0.values == ["primary", "l", "destructive", "false"] })
+                matrix.drawnCombinations.first { $0.values == ["primary", "l", "destructive", "false", "false"] })
             let sizes = ComponentMatrix.TextSize.allCases.map { size in
                 let host = NSHostingView(
                     rootView: matrix.content(combination)

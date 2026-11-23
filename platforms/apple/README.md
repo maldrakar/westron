@@ -193,11 +193,11 @@ still drives every generated sheet and combination:
   it again, down to one column, and keeps that split for the other themes at that text size
   (`pictures(of:at:columns:)`, SnapshotMatrixRenderTests `columnsPerPicture`; the columns go as evenly as they can, so
   a part's name tells its columns and `-WestronMatrixSheet` finds it). The Button contract leaves a width below the
-  label's longest word unsupported: the product provides the room, so a sheet must too. On an iPhone 17 at `large` two
-  sheets need it, Button's `size-l_role-destructive_iconOnly-false` and its supplement's
-  `label-without-icon_size-l_role-destructive_iconOnly-false` (a button of size l with "Delete" and an icon, or with
-  the loading indicator, needs about 122 points of a column's 112), each two parts, primary and secondary, then
-  tertiary. Such a part's header says what it holds and why, and leaves the notes to the review page, as a supplement's
+  label's longest word unsupported: the product provides the room, so a sheet must too. On an iPhone 17 at `large`
+  four sheets need it, Button's `size-l_role-destructive_iconOnly-false` and its supplement's
+  `label-without-icon_size-l_role-destructive_iconOnly-false`, each with `_floating-false` and `_floating-true` (a
+  button of size l with "Delete" and an icon, or with the loading indicator, needs about 122 points of a column's 112),
+  each two parts, primary and secondary, then tertiary. Such a part's header says what it holds and why, and leaves the notes to the review page, as a supplement's
   sheet with its notes all but fills the screen. A squeeze that fewer columns to a picture cure does not fail the run:
   the sheet is split, which shows as pictures added and removed in `compare` and in CI's `snapshots` check against the
   references; the run fails only when a cell is still squeezed with one column to a picture. A cell that takes the
@@ -224,8 +224,9 @@ still drives every generated sheet and combination:
     on 12 sheets. `floating-over-content` and `floating-before-26` (#121, decisions/0015): the floating sheets of size
     m over a fixed busy ground of four list colors' stripes, on the system's glass and in the look before OS 26, which
     the catalog forces on a newer OS (`drawingButtonsWithoutGlass()`, `package` in WestronUI), three rows to a picture
-    at every text size. Glass renders in-process on both platforms, the same pixels on every render (measured three
-    times on each, 2026-11-23).
+    at every text size. Glass renders in-process on both platforms (three renders on each, 2026-11-23): the same
+    pixels every time on macOS and in these two supplements on iOS; on iOS a generated `floating-true` sheet in
+    `dark-hc`, glass on the plain canvas, differed now and then by one pixel at 2 levels (decisions/0015).
   - Icon, `beside-text`: three glyphs, each beside text in four roles (one row to a picture at `accessibility5`); and
     `color-roles`: six glyphs in the color roles of design-language/07 (three rows to a picture there).
   - Surface, `nesting`, on the sheet with outlined true: for raised and dragged, two outlined cards of the kind in a

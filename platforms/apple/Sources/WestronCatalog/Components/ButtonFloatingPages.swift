@@ -112,6 +112,7 @@ extension ComponentMatrix.Supplement {
 /// `GlassEffectContainer` as a product writes it, and the look before OS 26.
 private struct ButtonFloatingPage: View {
     @State private var accepted = 0
+    @FocusState private var isFocused: Bool
 
     /// A row of the states: the states it forces or sets.
     private struct Row: Hashable {
@@ -148,6 +149,19 @@ private struct ButtonFloatingPage: View {
                     }
                 }
             }
+            #if os(macOS)
+                section("Focus: the system's ring over glass") {
+                    // A button takes keyboard focus on a Mac only with the system's keyboard navigation on; the
+                    // catalog makes this one focusable and focuses it, to show the ring the system draws over glass.
+                    FloatingPanel {
+                        sample("Edit", icon: .pen, variant: .secondary)
+                            .accessibilityIdentifier(ButtonFloatingID.glassPrefix + "focused")
+                            .focusable()
+                            .focused($isFocused)
+                    }
+                    .onAppear { isFocused = true }
+                }
+            #endif
             section("States, on glass from OS 26") { states(withoutGlass: false) }
             section("A group: the system's GlassEffectContainer") {
                 FloatingPanel { group }
