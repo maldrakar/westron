@@ -289,8 +289,8 @@ platforms:
         of its own on iOS. A product reaches color.text.placeholder by
         coloring its prompt itself: prompt: Text("Untitled").foregroundStyle(.text.placeholder).
         A field's accessibility frame is the whole field westron draws, its padding and glyphs included, with a glyph
-        or without, and an inline field's is its text within a point (TextFieldAccessibilityFrameTests, iOS 26.3,
-        #135); macOS differs (the macos block).
+        or without, and an inline field's is the room it is laid out in, within a point across and up and down
+        (TextFieldAccessibilityFrameTests, iOS 26.3, #135); macOS differs (the macos block).
     macos:
       description: >-
         westron's focus ring replaces the system's, so focus is drawn in color.border.focus rather than in the accent
@@ -337,21 +337,27 @@ platforms:
         A framed field's accessibility frame on macOS is the system field's, not the field westron draws: AppKit
         reports the text area of the system field inside the style, a point wider than the text at each side, without
         westron's padding, the room above and below the line that the field's height adds, or a glyph and its gap,
-        for every framed field, with a glyph or without. So VoiceOver's cursor is narrower and lower than westron's
-        focus ring, centred inside it, and VoiceOver's pointer tracking over the padding or a glyph finds no element
-        there; a click there still focuses the field, through the style's hit area. On iOS the frame is the whole
-        drawn field (the ios block). An inline field, which has neither padding nor glyphs, agrees with its text
-        within a point across on both, and on macOS within two points up and down. This is the system's behaviour,
-        measured with Xcode 27.1 on macOS 26.7.1 on the catalog's text-field-behavior page
-        (TextFieldAccessibilityFrameTests, #135): a field at s 666 × 18 pt of the 696 × 24 drawn, at m 658 × 18 of
-        696 × 32, a search field with its magnifier starting 42.5 pt into the drawn field. No public API moves it: an
-        accessibility or an interaction content shape on the field or on its fill leaves the frame as AppKit gives
-        it, combining the field's children into one element loses the field's role, value and placeholder, containing
-        them takes the field out of the tree, and an accessibility representation exposes a hidden copy of the field
-        instead of the field; setting the frame on AppKit's field, found in SwiftUI's private view tree, works but
-        goes stale as the window moves or the page scrolls (decisions/0004). Recorded on 2026-11-23 under the owner's
-        delegation (decisions/0014). The test fails when macOS starts reporting the drawn field, and then this entry
-        goes.
+        for every framed field, with a glyph or without. So the frame is narrower and shorter than the drawn field
+        and westron's focus ring around it, 18 pt high against 24 or 32, centred in it up and down but not across
+        where a glyph stands at one side; from the frame, VoiceOver's cursor would be drawn that much smaller than the
+        ring, and VoiceOver's pointer tracking over the padding or a glyph would find no element there (inferred from
+        the frame, not checked with VoiceOver running); a click there still focuses the field, through the style's
+        hit area. On iOS the frame is the whole drawn field (the ios block). An inline field, which has neither
+        padding nor glyphs, has a frame as wide as the room it is laid out in within a point on both; on macOS the
+        card's title and notes report frames whose outer edges, the title's top and the notes' bottom, are within a
+        point of their lines (the notes' a point below its line), and which are 6 pt apart where their lines are 8 pt
+        apart: the frames together are 4 pt taller than the lines, and how the 2 pt between them divide between the
+        title and the notes is not known. This is the system's behaviour, measured with Xcode 27.1 on macOS 26.7.1 on
+        the catalog's text-field-behavior page (TextFieldAccessibilityFrameTests, #135): a field at s 666 × 18 pt of
+        the 696 × 24 drawn, at m 658 × 18 of 696 × 32, the frame of a search field starting 42.5 pt into the drawn
+        field, past the magnifier and its gap. None of the public APIs tried moves it: an accessibility or an
+        interaction content shape on the field or on its fill leaves the frame as AppKit gives it, combining the
+        field's children into one element loses the field's value and placeholder (and, set on the style, its role),
+        containing them takes the field out of the tree, and an accessibility representation exposes a hidden copy of
+        the field instead of the field. Setting the frame on AppKit's field, found in SwiftUI's private view tree,
+        works but goes stale as the window moves or the page scrolls (decisions/0004). Recorded on 2026-11-23 under
+        the owner's delegation (decisions/0014). The test fails when macOS starts reporting the drawn field, and then
+        this entry goes.
     watchos:
       options: { size: [m] }
       fallback: { size: m }

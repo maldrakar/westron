@@ -3,17 +3,17 @@ import XCTest
 /// The accessibility frame of TextField's live fields (#135), on the catalog's `text-field-behavior` entry, against the
 /// field westron draws. The contract's `platforms.apple` records the difference: on iOS a field's frame is the whole
 /// drawn field; on macOS a framed field's is the system field's, the text area, without westron's padding and glyphs,
-/// for every framed field, with a glyph or without; an inline field, which has neither, agrees with its text within a
-/// point across on both, and on macOS within two points up and down.
+/// for every framed field, with a glyph or without; an inline field, which has neither, agrees with the room it is
+/// laid out in within a point across on both, and on macOS its frames are within two points of its lines up and down.
 ///
 /// The drawn fields come from the page's own geometry, not from a marker, so that the tree under test is the one a
-/// product gets: the page (`TokenPage`) holds the fields in one column at its padding from the entry's edges, the small
-/// field below the page's summary, each field and the card of the inline fields apart by `space.200`, the card's fields
-/// at `space.card` inside it and apart by `space.100`. A framed field is as wide as the column and as tall as its size's
-/// `size.control` (the contract's `size`); an inline field is as wide as the card's inside. The card's height is the
-/// one thing taken from the fields themselves: it ends at the notes' frame plus the card's padding, so the framed
-/// fields below the card are placed from the notes' bottom edge, which the frames of those fields then confirm within
-/// a point on both platforms.
+/// product gets: the page (`TokenPage`) holds the fields in one column at its padding from the entry's edges, the
+/// small field below the page's summary, each field, the card of the inline fields and the row below the tag field
+/// apart by `space.200`, the card's fields at `space.card` inside it and apart by `space.100`. A framed field is as
+/// wide as the column and as tall as its size's `size.control` (the contract's `size`). The small field is placed
+/// down from the summary, and the three fields at m up from the Clear focus button in the row below them, so no
+/// field's own frame places another; the card is what lies between. On macOS these rectangles match the pixels of a
+/// screen capture (#135: the fields' fills at 359, 486, 534 and 582 pt, the card's at 399 to 470).
 final class TextFieldAccessibilityFrameTests: XCTestCase {
     /// Must match `TextFieldCatalogID` and `CatalogAccessibilityID.entry` in WestronCatalog.
     private enum ID {
@@ -25,6 +25,7 @@ final class TextFieldAccessibilityFrameTests: XCTestCase {
         static let search = "text-field.live.search"
         static let tag = "text-field.live.tag"
         static let focused = "text-field.live.focused"
+        static let clearFocus = "text-field.live.clear-focus"
     }
 
     /// The page's padding (`SampleMetrics.pagePadding`) and the framed heights of sizes s and m (`size.control`).
@@ -56,7 +57,10 @@ final class TextFieldAccessibilityFrameTests: XCTestCase {
     override func setUp() async throws {
         continueAfterFailure = true
         app = XCUIApplication()
-        app.launchArguments = ["-WestronEntry", "text-field-behavior", "-WestronAppearance", "light"]
+        // The default text size, whatever the simulator's: the heights below are the fields' at it.
+        app.launchArguments = [
+            "-WestronEntry", "text-field-behavior", "-WestronAppearance", "light", "-WestronDynamicType", "large",
+        ]
         app.launch()
         XCTAssertTrue(app.staticTexts[ID.focused].waitForExistence(timeout: 30), "the entry did not render")
     }
@@ -73,7 +77,7 @@ final class TextFieldAccessibilityFrameTests: XCTestCase {
         return field
     }
 
-    /// The drawn fields, from the page's geometry and the inline fields' own frames (see the class's comment).
+    /// The drawn fields and the card, from the page's geometry (see the class's comment).
     private struct Drawn {
         var small, card, secure, search, tag: CGRect
     }
@@ -93,13 +97,22 @@ final class TextFieldAccessibilityFrameTests: XCTestCase {
         ).firstMatch
         XCTAssertTrue(summary.exists, "no summary")
         let small = CGRect(x: left, y: summary.frame.maxY + pagePadding, width: width, height: heightS)
-        let notes = field(ID.notes).frame
-        let card = CGRect(
-            x: left, y: small.maxY + columnSpacing, width: width,
-            height: notes.maxY + cardPadding - (small.maxY + columnSpacing))
-        let secure = CGRect(x: left, y: card.maxY + columnSpacing, width: width, height: heightM)
-        let search = secure.offsetBy(dx: 0, dy: heightM + columnSpacing)
-        let tag = search.offsetBy(dx: 0, dy: heightM + columnSpacing)
+        // The row below the tag field: the Clear focus button, at size s the row's tallest, with the text that names
+        // the focused field centred on it. The button's frame is its drawn capsule (Button's contract).
+        let button = app.buttons[ID.clearFocus]
+        let focused = app.staticTexts[ID.focused]
+        XCTAssertTrue(button.exists, "no Clear focus button")
+        XCTAssertEqual(
+            button.frame.height, heightS, accuracy: tolerance, "the button is not at size s: \(button.frame)")
+        XCTAssertLessThan(focused.frame.height, button.frame.height, "the button is not the row's tallest")
+        XCTAssertEqual(
+            focused.frame.midY, button.frame.midY, accuracy: tolerance,
+            "the row is not as read: \(focused.frame), \(button.frame)")
+        let tag = CGRect(x: left, y: button.frame.minY - columnSpacing - heightM, width: width, height: heightM)
+        let search = tag.offsetBy(dx: 0, dy: -(heightM + columnSpacing))
+        let secure = search.offsetBy(dx: 0, dy: -(heightM + columnSpacing))
+        let cardTop = small.maxY + columnSpacing
+        let card = CGRect(x: left, y: cardTop, width: width, height: secure.minY - columnSpacing - cardTop)
         return Drawn(small: small, card: card, secure: secure, search: search, tag: tag)
     }
 
@@ -108,15 +121,15 @@ final class TextFieldAccessibilityFrameTests: XCTestCase {
             && abs(a.maxY - b.maxY) <= tolerance
     }
 
-    /// The inline fields agree with what they draw within a point on both platforms across, the card's inside, and at
-    /// the card's padding above the title. Between the title and the notes, `space.100` apart, the frames are as far
-    /// apart within a point on iOS; on macOS they are 2 pt closer (6 pt apart, measured on macOS 26.7.1 in #135), within
-    /// the two points up and down the contract's `platforms.apple.macos` records. (The notes' bottom edge holds the framed fields below in place, so it is checked by
-    /// `testFramedFieldsReportThePlatformsFrame`.)
+    /// The inline fields' frames against the room they are laid out in, the card's inside: across within a point on
+    /// both platforms, the title's top and the notes' bottom within a point of the inside's top and bottom. Between the
+    /// title and the notes, whose lines are `space.100` apart, the frames are as far apart within a point on iOS; on
+    /// macOS they are 2 pt closer, 6 pt apart (measured on macOS 26.7.1 in #135), as the contract's
+    /// `platforms.apple.macos` records.
     @MainActor
     func testInlineFieldsReportWhatTheyDraw() {
         let drawn = drawn()
-        let inside = drawn.card.insetBy(dx: cardPadding, dy: 0)
+        let inside = drawn.card.insetBy(dx: cardPadding, dy: cardPadding)
         let title = field(ID.title).frame
         let notes = field(ID.notes).frame
         for (name, frame) in [("title", title), ("notes", notes)] {
@@ -124,7 +137,8 @@ final class TextFieldAccessibilityFrameTests: XCTestCase {
             XCTAssertEqual(frame.maxX, inside.maxX, accuracy: tolerance, "\(name): \(frame), card's inside \(inside)")
             XCTAssertGreaterThan(frame.height, 10, "\(name): \(frame)")
         }
-        XCTAssertEqual(title.minY, drawn.card.minY + cardPadding, accuracy: tolerance, "title: \(title), \(drawn.card)")
+        XCTAssertEqual(title.minY, inside.minY, accuracy: tolerance, "title: \(title), card's inside \(inside)")
+        XCTAssertEqual(notes.maxY, inside.maxY, accuracy: tolerance, "notes: \(notes), card's inside \(inside)")
         #if os(macOS)
             let closer: CGFloat = 2
         #else
@@ -136,7 +150,7 @@ final class TextFieldAccessibilityFrameTests: XCTestCase {
 
     /// iOS: every framed field's frame is the drawn field, with a glyph or without.
     /// macOS: it is the system field's (the contract's `platforms.apple.macos`): inside the drawn field, vertically
-    /// centred in it and lower than it, and narrower by the padding at each side without a glyph, and by the padding,
+    /// centred in it and shorter than it, and narrower by the padding at each side without a glyph, and by the padding,
     /// the glyph and its gap at the glyph's side. The system's text area is a point wider than westron's (measured in
     /// #135), so a side without a glyph is inset by the padding within two points.
     @MainActor
@@ -175,7 +189,7 @@ final class TextFieldAccessibilityFrameTests: XCTestCase {
                         XCTAssertEqual(inset, padding, accuracy: 2, "a side without a glyph: \(message)")
                     }
                 }
-                XCTAssertLessThan(frame.height, rect.height - 2, "not lower than the drawn field: \(message)")
+                XCTAssertLessThan(frame.height, rect.height - 2, "not shorter than the drawn field: \(message)")
                 XCTAssertGreaterThan(frame.height, 10, "no text area: \(message)")
                 XCTAssertEqual(frame.midY, rect.midY, accuracy: tolerance, "not centred in the drawn field: \(message)")
             #endif

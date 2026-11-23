@@ -19,9 +19,10 @@
 #                                    (ButtonBehaviorTests CheckboxBehaviorTests TextFieldBehaviorTests
 #                                    TextFieldAccessibilityFrameTests IconAccessibilityTests
 #                                    IconTileAccessibilityTests ChipBehaviorTests ListRowBehaviorTests
-#                                    DisclosureBehaviorTests; default: all); a run that stops making progress (WESTRON_BEHAVIOR_STALL_LIMIT=<seconds>,
-#                                    default 300) or fails for infrastructure runs once more what has not passed,
-#                                    never a test XCTest reported a failure of its own for (#97);
+#                                    DisclosureBehaviorTests; default: all); a run that stops making progress
+#                                    (WESTRON_BEHAVIOR_STALL_LIMIT=<seconds>, default 300) or fails for
+#                                    infrastructure runs once more what has not passed, never a test XCTest reported
+#                                    a failure of its own for (#97);
 #                                    WESTRON_BEHAVIOR_DEADLINE=<minutes> stops it all
 #                                    at that time
 #   tools/apple/check.sh format      swift format lint without changes, tools/ included

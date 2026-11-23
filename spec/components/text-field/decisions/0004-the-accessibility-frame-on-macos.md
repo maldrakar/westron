@@ -29,13 +29,19 @@ x 516 to 1212, 696 pt wide.
 - The frame is the system field's, the text area of AppKit's field under the style, a point wider than westron's text
   at each side: inset by the padding less a point (15 pt at s, 19 at m) at a side without a glyph, and at a glyph's
   side by the padding, the glyph and its gap less a point (42.5 pt beside the magnifier, 41.5 beside the number sign).
-  It is 18 pt high, the line, centred in the drawn field.
+  It is 18 pt high, the line, so shorter than the drawn field (24 or 32 pt), and centred in it up and down; across it
+  is centred only where no glyph stands (the search field's insets are 42.5 and 19 pt).
+- The drawn rows (the fills at a pixel column of a 2x screen capture): the small field 359 to 383, the card 399 to 470,
+  the SecureField 486 to 518, the search field 534 to 566, the tag field 582 to 614.
 - So the flaw is not the glyphs': every framed field has it, with a glyph or without. No field has an image child on
   either platform: the glyphs stay hidden.
-- An inline field, which has no padding and no glyph, agrees with its text within a point across; down, the card's
-  title and notes, drawn `space.100` apart, report frames 6 pt apart, two points closer.
+- An inline field, which has no padding and no glyph, has a frame as wide as the room it is laid out in, the card's
+  inside, within a point. Down, the card's inside runs from 415 to 454; the title's frame is (531, 414, 666, 19), a
+  point above its top, the notes' (531, 439, 666, 16), a point below its bottom; and the two frames are 6 pt apart
+  where the lines are drawn `space.100`, 8 pt, apart. The frames together are 4 pt taller than the lines; how the 2 pt
+  between them divide between the title and the notes is not known.
 - iOS: every field's frame is the drawn field, the small one (16, 169.7, 370, 28), the fields at m (16, y, 370, 36),
-  and the inline fields within a point of their text.
+  and the inline fields' frames are their room in the card within a point across and up and down.
 
 ## The approaches tried on macOS, and why none is taken
 
@@ -60,13 +66,16 @@ x 516 to 1212, 696 pt wide.
 
 The contract records the difference as the system's behaviour, in `platforms.apple.macos`: a framed field's frame is
 the system field's, without westron's padding and glyphs, for every framed field; on iOS it is the whole drawn field;
-inline fields agree within a point across on both and on macOS within two points up and down. westron does not work
-around it.
+an inline field's frame is as wide as its room within a point on both, and on macOS within two points of its lines up
+and down. westron does not work around it.
 
 The catalog's `TextFieldAccessibilityFrameTests` holds both sides on the `text-field-behavior` page, against the drawn
-fields computed from the page's geometry (the page's padding, the fields' heights at their sizes, the column's
-spacing), with nothing added to the tree: on iOS that the frame is the drawn field; on macOS that it lies inside it,
-centred, lower, and inset by the padding, and at a glyph's side by the glyph and its gap. It fails if westron moves the
+fields computed from the page's geometry, with nothing added to the tree: the page's padding, the fields' heights at
+their sizes at the default text size (which the test sets), the column's spacing, the small field down from the
+page's summary and the three fields at m up from the Clear focus button in the row below them, so no field's own frame
+places another; on macOS the rectangles match the capture's pixels above. On iOS it holds that the frame is the drawn
+field; on macOS that it lies inside it, shorter, centred up and down, and inset by the padding, and at a glyph's side
+by the glyph and its gap. It fails if westron moves the
 frame further and if macOS starts reporting the drawn field; then the contract's entry goes. The test also holds that
 no glyph is an element on either platform, the fields' roles, labels, values and placeholders, and that typing into
 the search field changes its value. Taken out of the field (`.padding` around the tag field) or combined into one
@@ -75,6 +84,6 @@ and the test fails with the message to remove the entry.
 
 ## Not measured
 
-- What VoiceOver speaks and how its cursor and pointer tracking look: the frame is the tree's, read by XCUITest; a
-  person with VoiceOver on has not checked it.
+- What VoiceOver speaks and how its cursor and pointer tracking look: the frame is the tree's, read by XCUITest, and
+  the consequences the contract names are inferred from it; no one has checked them with VoiceOver running.
 - macOS 14 and 15, iOS 17 and 18: only macOS 26.7.1 and iOS 26.3 were run.
