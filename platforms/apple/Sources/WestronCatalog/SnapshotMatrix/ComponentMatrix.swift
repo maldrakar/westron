@@ -149,7 +149,7 @@ public struct ComponentMatrix: Sendable {
     /// By component, the most rows of one picture at a text size that splits sheets, where its cells grow taller
     /// than the size's own limit allows: a ListRow at accessibility5 on an iPhone wraps its words over several lines
     /// beside its scaled indent and slots, about 230 pt a row, and a supplement's cell holds several rows.
-    static let rowsAtLimit: [String: Int] = ["list-row": 1]
+    static let rowsAtLimit: [String: Int] = ["list-row": 1, "disclosure": 1]
 
     /// The text sizes the matrix is captured at (design-language/08-accessibility.md, "Text size"): the smallest, the
     /// default and the largest accessibility size, the one the accessibility audit uses. The names are the catalog's

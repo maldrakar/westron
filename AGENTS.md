@@ -46,7 +46,8 @@ tools/apple/check.sh catalog      # build the catalog app and the UI tests
 tools/apple/check.sh a11y         # accessibility audit of every catalog entry on the iOS simulator (macOS: a11y macos);
                                   # a11y ios <test>… runs some of its five tests, WESTRON_ENTRY=<id>,… some entries
                                   # WESTRON_ENTRY_SHARD=<i>/<n> then every n-th of those entries, from the i-th
-tools/apple/check.sh behavior     # the behaviour UI tests (Button, Checkbox, TextField, Icon, IconTile, Chip, ListRow)
+tools/apple/check.sh behavior     # the behaviour UI tests (Button, Checkbox, TextField, Icon, IconTile, Chip, ListRow,
+                                  # Disclosure)
                                   # on the simulator; behavior macos on the Mac, behavior ios <Class>… some classes;
                                   # CI: nightly
 tools/apple/check.sh format       # swift format lint; to fix: tools/apple/check.sh fix-format
@@ -69,6 +70,7 @@ git diff --name-only main...HEAD | tools/apple/audit-scope.sh  # the catalog ent
 
 tools/check.sh                    # build and test tools/, then the checks below (CI runs it on Linux)
 tools/check.sh spec api-parity    # some of its steps: tools raw-values generate tokens contrast icons spec api-parity
+                                  # locks audit-scope
 tools/westron lint raw-values     # no raw values in WestronUI
 tools/westron lint api-parity     # WestronUI's public API is exactly the component API the contracts give
 tools/westron generate            # regenerate code from the sources

@@ -10,7 +10,19 @@ enum AppleTokensSwift {
             + wrap(purpose, width: lineLength - 3).map { "// " + $0 }
     }
 
-    static let lineLength = 120
+    /// The longest line `swift format` keeps, less the indentation of the block the lines go in.
+    static var lineLength: Int { 120 - nesting }
+
+    /// The indentation, in spaces, that a generator adds to the lines it writes afterwards, as it does inside the `#if`
+    /// around a component that some Apple OS lacks (`ComponentContract.Apple.availabilityCondition`): the lines are
+    /// wrapped that much shorter.
+    @TaskLocal static var nesting = 0
+
+    /// `lines` inside `#if <condition>`, each indented one level as `swift format` indents a conditional block; a
+    /// blank line stays blank.
+    static func conditional(_ condition: String, _ lines: [String]) -> [String] {
+        ["#if \(condition)"] + lines.map { $0.isEmpty ? $0 : "    " + $0 } + ["#endif"]
+    }
     static let themeLabels = ["light", "dark", "lightHighContrast", "darkHighContrast"]
 
     // MARK: - WestronTokens

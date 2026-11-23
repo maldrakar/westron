@@ -145,6 +145,18 @@ public struct AppleComponents: Generator {
         id.split(separator: "-").map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined()
     }
 
+    /// The hand-written modifier of a context setting (spec/conventions.md, "Context a component sets"): the
+    /// component's name, then the setting's, `disclosureAlignsLeaves` for Disclosure's `alignsLeaves`. It takes one
+    /// unlabeled Bool, true by default: `.disclosureAlignsLeaves()`.
+    static func contextModifier(_ setting: String, of id: String) -> String {
+        let component = typeName(id)
+        return component.prefix(1).lowercased() + component.dropFirst() + setting.prefix(1).uppercased()
+            + setting.dropFirst()
+    }
+
+    /// The parameters of a context setting's modifier.
+    static let contextParameters = [SwiftDeclarations.Parameter(label: "_", type: "Bool", defaultValue: "true")]
+
     /// Whether the generator writes an API for a contract: approved or later, styled on an Apple system control, or, in
     /// a contract with forms, on one per form.
     public static func generates(_ contract: ComponentContract) -> Bool {
@@ -469,7 +481,7 @@ public struct AppleComponents: Generator {
                             + "it in platforms.apple.systemOptions (spec/conventions.md); otherwise rename the option")
                 }
                 var offered: [(os: String, map: [(value: String, drawn: String)])] = []
-                for os in ComponentContract.appleOSes {
+                for os in apple.availableOSes {
                     var map: [(value: String, drawn: String)] = []
                     for value in values {
                         let drawn = try Self.drawn(
@@ -497,7 +509,7 @@ public struct AppleComponents: Generator {
             }
             size = enums.first { $0.option.name == "size" }
             var skipped: [(os: String, states: [String])] = []
-            for os in ComponentContract.appleOSes {
+            for os in apple.availableOSes {
                 let entered = apple.targets[os]?.states ?? apple.restriction.states ?? contract.states
                 let missing = contract.states.filter { !entered.contains($0) }
                 if !missing.isEmpty { skipped.append((os, missing)) }
@@ -564,6 +576,26 @@ public struct AppleComponents: Generator {
                 AppleTokensSwift.wrap(origin, width: width).map { "// " + $0 } + ["//"]
                 + AppleTokensSwift.wrap(purpose, width: width).map { "// " + $0 }
             out += ["", "import SwiftUI"]
+            guard let condition = contract.apple?.availabilityCondition else {
+                return (out + declarations()).joined(separator: "\n") + "\n"
+            }
+            // An OS without the base control compiles none of the component (platforms.apple.<os>.status).
+            let missing = (contract.apple?.unavailable ?? []).compactMap { AppleComponents.osNames[$0] }
+            out +=
+                [""]
+                + AppleTokensSwift.wrap(
+                    "\(component) does not exist on \(missing.joined(separator: " and ")), whose SwiftUI has no "
+                        + "\(targets.map(\.control).joined(separator: " or ")) (the contract's `platforms` block).",
+                    width: width
+                ).map { "// " + $0 }
+            let body = AppleTokensSwift.$nesting.withValue(4) { Array(declarations().dropFirst()) }
+            out += AppleTokensSwift.conditional(condition, body)
+            return out.joined(separator: "\n") + "\n"
+        }
+
+        /// The declarations, each after a blank line.
+        private func declarations() -> [String] {
+            var out: [String] = []
             for item in enums {
                 out += [""] + enumDeclaration(item)
             }
@@ -582,7 +614,7 @@ public struct AppleComponents: Generator {
             if !contract.forms.isEmpty {
                 out += [""] + forms()
             }
-            return out.joined(separator: "\n") + "\n"
+            return out
         }
 
         private func doc(_ paragraphs: [String], indent: Int) -> [String] {

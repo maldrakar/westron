@@ -20,8 +20,14 @@
 #     pages, the audit test, tools/apple/, Package.swift, the workflows) touch every entry: the nightly full audit
 #     (.github/workflows/accessibility-audit.yml) covers them, and it can be run by hand on a branch.
 # The entry ids come from the sources: `static let <name> = CatalogEntry(id: "<id>", …)` in the pages, and the
-# registry's `.<name>,` lines. An entry its page declares but the registry leaves out is not audited by anyone, so it
-# is left out here too.
+# registry, `Catalog.entries` and the arrays it is built from in Catalog.swift, from its `static let entries` to its
+# first function: each `.<name>,` line of an array literal and each `append(.<name>)` (an entry some OS lacks, appended
+# under `#if`), in the order they stand. An entry its page declares but the registry leaves out is not audited by
+# anyone, so it is left out here too. A registry the script reads no entry from fails it, so that a change of the
+# registry's shape fails CI's job instead of auditing nothing (tools/apple/audit-scope-test.sh, tools/check.sh step
+# audit-scope).
+#
+#   tools/apple/audit-scope.sh --registry   prints the registry's entry names, one per line, as the script reads them
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -32,6 +38,24 @@ catalog=platforms/apple/Sources/WestronCatalog
 registry="$catalog/Catalog.swift"
 
 note() { echo "audit-scope: $*" >&2; }
+
+# The registry's entry names, in its order, one per line (see the rules above).
+registry_names() {
+  local names
+  names="$(sed -n '/static let entries: \[CatalogEntry\]/,/ func /p' "$registry" |
+    sed -nE 's/^ *\.([A-Za-z0-9_]+),?$/\1/p; s/^ *[A-Za-z0-9_]+\.append\(\.([A-Za-z0-9_]+)\)$/\1/p')"
+  if [ -z "$names" ]; then
+    echo "audit-scope: no entry read from the registry $registry: its shape changed; teach this script to read it" >&2
+    return 1
+  fi
+  echo "$names"
+}
+
+if [ "${1:-}" = --registry ]; then
+  registry_names
+  exit
+fi
+registered="$(registry_names)"
 
 # The entries <file> declares, "<name> <id>" per line.
 declared() {
@@ -114,9 +138,10 @@ if [ -n "$pages" ]; then
   while IFS= read -r name; do
     id="$(awk -v name="$name" '$1 == name { print $2 }' <<< "$wanted")"
     if [ -n "$id" ]; then ids+="${ids:+,}$id"; fi
-  done < <(sed -n '/static let entries: \[CatalogEntry\] = \[/,/^ *\]/p' "$registry" | sed -nE 's/^ *\.([A-Za-z0-9_]+),?$/\1/p')
+  done <<< "$registered"
   while IFS= read -r name; do
-    grep -qE "^ *\.$name,?$" "$registry" || note "the entry $name is not in the registry ($registry), so it is not audited"
+    grep -qxF "$name" <<< "$registered" ||
+      note "the entry $name is not in the registry ($registry), so it is not audited"
   done < <(cut -d" " -f1 <<< "$wanted")
 fi
 echo "$ids"

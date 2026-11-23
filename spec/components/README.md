@@ -26,7 +26,11 @@ delegation) is the first with a drawn text label on a view, a constraint on a sl
 owner's delegation (decisions/0014), is an own view with Icon's shape whose nil list color is its own default, a
 neutral tile, and whose fill of a list's color is solid, as the owner chose. Chip ([`chip/`](chip/chip.spec.yaml),
 #117), approved on 2026-11-22 by the coordinating agent under the owner's delegation, is the first in several forms,
-each on its own system control, and the first with a case over several states at once.
+each on its own system control, and the first with a case over several states at once. Disclosure
+([`disclosure/`](disclosure/disclosure.spec.yaml), #120), approved on 2026-11-22 by the coordinating agent under the
+owner's delegation, is the first component an Apple OS lacks (`watchos: { status: unavailable }`, as SwiftUI has no
+DisclosureGroup there), the first with the role `disclosure`, and the first that sets a context for other components
+(`context: alignsLeaves`, which ListRow reads).
 
 ## Format
 

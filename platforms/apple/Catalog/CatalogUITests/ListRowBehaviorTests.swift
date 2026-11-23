@@ -13,7 +13,7 @@ final class ListRowBehaviorTests: XCTestCase {
     /// Must match `ListRowCatalogID` in WestronCatalog.
     private enum ID {
         static let check = "list-row.live.check"
-        static let cell = "list-row.live.cell"
+        static let branch = "list-row.live.branch"
         static let summary = "list-row.live.summary"
         static let listCheck = "list-row.list.check"
         static let listSummary = "list-row.list.summary"
@@ -79,6 +79,26 @@ final class ListRowBehaviorTests: XCTestCase {
         let matches = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title))
         XCTAssertTrue(matches.firstMatch.waitForExistence(timeout: 5), "no row button \(title)")
         return matches.element(boundBy: matches.count - 1)
+    }
+
+    /// The live branch, Projects, and the Disclosure chevron's cell at its end (#120): the row's identifier reaches the
+    /// cell inside it. The cell is the narrower, a button on iOS and a disclosure triangle on macOS, where the row is
+    /// one too, as the system gives a DisclosureGroup style's label that role (`DisclosureBehaviorTests`).
+    @MainActor
+    private func branch() -> (row: XCUIElement, cell: XCUIElement) {
+        let query = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "identifier == %@ AND (elementType == %d OR elementType == %d)", ID.branch,
+                XCUIElement.ElementType.button.rawValue, XCUIElement.ElementType.disclosureTriangle.rawValue))
+        XCTAssertTrue(query.firstMatch.waitForExistence(timeout: 5), "no branch")
+        let elements = query.allElementsBoundByIndex.filter { !$0.frame.isEmpty }.sorted {
+            $0.frame.width < $1.frame.width
+        }
+        XCTAssertEqual(elements.count, 2, "the branch is not one row and one cell")
+        // On macOS the identifier lands on a group around the cell's disclosure triangle: the triangle inside it.
+        let cell = elements[0]
+        let inner = cell.descendants(matching: .disclosureTriangle).firstMatch
+        return (elements[elements.count - 1], cell.label.isEmpty && inner.exists ? inner : cell)
     }
 
     /// The elements whose label is `label`, of any type.
@@ -153,7 +173,7 @@ final class ListRowBehaviorTests: XCTestCase {
         hierarchy.name = "list-row-hierarchy"
         // The live rows' part of the hierarchy, in the log for the report.
         for text in app.debugDescription.split(separator: "\n")
-        where ["Inbox", "Today", "plumber", "Archived", "Tomorrow", "Projects", "Collapse", "washers"].contains(
+        where ["Inbox", "Today", "plumber", "Archived", "Tomorrow", "Projects", "washers"].contains(
             where: text.contains)
         {
             print("list-row: hierarchy: \(text.trimmingCharacters(in: .whitespaces))")
@@ -195,13 +215,12 @@ final class ListRowBehaviorTests: XCTestCase {
         // Of the live rows, the chosen one alone is announced as selected; the check is not.
         XCTAssertFalse(task.isSelected)
         XCTAssertFalse(archived.isSelected)
-        // The branch's chevron cell, a stand-in, is its own button after the row's.
-        let projects = row("Projects")
-        let cell = app.buttons[ID.cell]
+        // The branch's chevron cell, the real Disclosure's, is its own element after the row's, named by its title.
+        let (projects, cell) = branch()
         print(line("projects", projects))
         print(line("cell", cell))
         XCTAssertEqual(projects.label, "Projects")
-        XCTAssertEqual(cell.label, "Collapse")
+        XCTAssertEqual(cell.label, "Projects")
         XCTAssertGreaterThanOrEqual(cell.frame.minX, projects.frame.maxX - 0.5, "the cell is not after the row's words")
         // The static row: one element of its words, no button, announced as selected.
         // A text's string is its label on iOS and its value on macOS.
@@ -241,17 +260,15 @@ final class ListRowBehaviorTests: XCTestCase {
         XCTAssertEqual(state(), "selected: today; actions: 1; done: yes; cell: 0", "the disabled row ran its action")
     }
 
-    /// The chevron's cell, a stand-in, takes its own press: it never runs the row's action.
+    /// The chevron's cell takes its own press: it folds the branch and never runs the row's action.
     @MainActor
     func testChevronCellKeepsItsPress() {
         launch()
-        let cell = app.buttons[ID.cell]
-        XCTAssertTrue(cell.waitForExistence(timeout: 5))
-        reveal(cell)
-        press(cell)
+        reveal(branch().cell)
+        press(branch().cell)
         XCTAssertEqual(state(), "selected: inbox; actions: 0; done: no; cell: 1", "the cell's press ran the row")
         // The row beside it still runs its action.
-        press(row("Projects"))
+        press(branch().row)
         XCTAssertEqual(state(), "selected: projects; actions: 1; done: no; cell: 1")
     }
 
@@ -267,8 +284,8 @@ final class ListRowBehaviorTests: XCTestCase {
         print("list-row: presses after holding the check: \(presses() - before)")
         XCTAssertEqual(presses(), before, "a press on the check pressed the row")
         XCTAssertEqual(state(), "selected: inbox; actions: 0; done: yes; cell: 0")
-        let cell = app.buttons[ID.cell]
-        reveal(cell)
+        reveal(branch().cell)
+        let cell = branch().cell
         hold(cell)
         print("list-row: presses after holding the cell: \(presses() - before)")
         XCTAssertEqual(presses(), before, "a press on the chevron's cell pressed the row")

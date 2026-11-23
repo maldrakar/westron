@@ -10,8 +10,8 @@ import Testing
 /// the horizontal spacing that stops growing at xxxLarge; the guides, their place and their width; the slots on the
 /// title's first line; the trailing slot under the text at the accessibility sizes; right to left; the insertion mark,
 /// at the default size and at accessibility5; what is drawn over what, read from pixels: the ring over a guide, and a
-/// bottom mark over the next row's highlight; the level as more content; and the Disclosure chevron's cell, with a
-/// stand-in.
+/// bottom mark over the next row's highlight; the level as more content; and the Disclosure chevron's place, measured
+/// with a frame of the test's own, and a leaf lined up with its branch by the real Disclosure.
 @Suite("ListRow")
 @MainActor
 struct ListRowTests {
@@ -670,7 +670,7 @@ struct ListRowTests {
 
     // MARK: - The Disclosure chevron's cell
 
-    @Test("the chevron's cell, a stand-in, stands after the trailing slot by container.trailingGap, inside the row")
+    @Test("a view in the chevron's place stands after the trailing slot by container.trailingGap, inside the row")
     func disclosureCell() throws {
         let frames = Frames()
         TextFieldStyleTests.show(
@@ -698,30 +698,54 @@ struct ListRowTests {
         #expect(abs(end.maxX - (320 - CGFloat(ListRowMetrics.paddingHorizontal))) < 0.5, "\(end)")
     }
 
-    @Test("a leaf's empty cell puts its trailing slot in the branch's column")
-    func leafLinesUpWithBranch() throws {
-        let frames = Frames()
-        TextFieldStyleTests.show(
-            VStack(spacing: 0) {
-                ListRow(action: {}) {
-                    Text("Work")
-                } trailing: {
-                    Text("4").recordingFrame("branch", in: frames)
-                }
-                .listRowDisclosureCell { Color.clear.frame(width: .size.target.minimum, height: 20) }
-                ListRow(action: {}) {
-                    Text("Errands")
-                } trailing: {
-                    HStack(spacing: 0) {
-                        Text("7").recordingFrame("leaf", in: frames)
-                        ListRowEmptyCell()
+    // Disclosure does not exist on watchOS (its contract's platforms block).
+    #if !os(watchOS)
+        @Test(
+            "under .disclosureAlignsLeaves(), a leaf's empty cell puts its trailing slot in the branch's column, at every text size",
+            arguments: [DynamicTypeSize.large, .xxxLarge, .accessibility2])
+        func leafLinesUpWithBranch(size: DynamicTypeSize) throws {
+            let frames = Frames()
+            TextFieldStyleTests.show(
+                VStack(spacing: 0) {
+                    DisclosureGroup(isExpanded: .constant(false)) {
+                        EmptyView()
+                    } label: {
+                        ListRow(action: {}) {
+                            Text("Work")
+                        } trailing: {
+                            Color.clear.frame(width: 20, height: 20).recordingFrame("branch", in: frames)
+                        }
+                    }
+                    ListRow(action: {}) {
+                        Text("Errands")
+                    } trailing: {
+                        Color.clear.frame(width: 20, height: 20).recordingFrame("leaf", in: frames)
                     }
                 }
+                .disclosureGroupStyle(.chevron)
+                .disclosureAlignsLeaves()
+                .dynamicTypeSize(size)
+                .frame(width: 320))
+            let branch = try #require(frames["branch"])
+            let leaf = try #require(frames["leaf"])
+            #expect(abs(branch.maxX - leaf.maxX) < 0.5, "\(size): \(branch) \(leaf)")
+            // The cell is size.target.minimum across, after the capped trailing gap.
+            #expect(branch.maxX < 320 - CGFloat.size.target.minimum, "\(size): \(branch)")
+        }
+    #endif
+
+    @Test("without .disclosureAlignsLeaves(), a leaf reserves nothing")
+    func leafReservesNothingByDefault() throws {
+        let frames = Frames()
+        TextFieldStyleTests.show(
+            ListRow(action: {}) {
+                Text("Errands")
+            } trailing: {
+                Text("7").recordingFrame("leaf", in: frames)
             }
             .frame(width: 320))
-        let branch = try #require(frames["branch"])
         let leaf = try #require(frames["leaf"])
-        #expect(abs(branch.maxX - leaf.maxX) < 0.5, "\(branch) \(leaf)")
+        #expect(abs(leaf.maxX - (320 - CGFloat(ListRowMetrics.paddingHorizontal))) < 0.5, "\(leaf)")
     }
 
     @Test("the cell is the row's own: a row inside one of its slots draws none")

@@ -89,6 +89,7 @@ struct ContractRules {
         checkConstraints()
         checkTokens()
         checkPlatforms()
+        checkAvailability()
         checkAppleFallbacks()
         checkSystemOptions()
         checkAccessibility()
@@ -909,6 +910,44 @@ struct ContractRules {
                 } else if let wider, !wider.contains(name) {
                     report(path.key("states").index(index), "\"\(name)\" is not among the states Apple enters")
                 }
+            }
+        }
+    }
+
+    /// An Apple OS where the component is unavailable (`status: unavailable`): at least one OS keeps the component,
+    /// since a component no Apple OS has is planned, not unavailable; and an OS where SwiftUI has no base control
+    /// (`SystemStyles.Base.unavailableOn`) is one, so that nothing of the component is compiled where the control is
+    /// missing.
+    mutating func checkAvailability() {
+        let apple = DocumentPath.root.key("platforms").key("apple")
+        guard let entry = value(at: apple), entry["status"] == nil else { return }
+        let unavailable = ComponentContract.appleOSes.filter {
+            entry[$0]?["status"]?.string == ComponentContract.unavailableStatus
+        }
+        if unavailable.count == ComponentContract.appleOSes.count {
+            report(
+                apple.key(unavailable.last!).key("status"),
+                "the component is unavailable on every Apple OS: say `status: planned` for Apple instead")
+        }
+        if let os = unavailable.first, let strategy = entry["strategy"]?.string, strategy != AppleComponents.strategy {
+            report(
+                apple.key(os).key("status"),
+                "an Apple OS without the component is derived only for a \(AppleComponents.strategy), whose generated "
+                    + "API the generator puts under #if; for an \(strategy) it is not derived yet (spec/conventions.md)"
+            )
+        }
+        var bases: [(base: String, path: DocumentPath)] = []
+        if let base = entry["base"]?.string { bases.append((base, apple.key("base"))) }
+        for member in entry["bases"]?.members ?? [] {
+            if let base = member.value.string { bases.append((base, apple.key("bases").key(member.key))) }
+        }
+        for (base, path) in bases {
+            for os in SystemStyles.byBase[base]?.unavailableOn ?? [] where !unavailable.contains(os) {
+                report(
+                    path,
+                    "SwiftUI has no \(base) on \(AppleComponents.osNames[os] ?? os), so the component cannot exist "
+                        + "there: say so with platforms.apple.\(os).status: \(ComponentContract.unavailableStatus) and "
+                        + "a description")
             }
         }
     }

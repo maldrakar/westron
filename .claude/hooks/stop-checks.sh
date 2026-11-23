@@ -71,7 +71,7 @@ westron_ui='^platforms/apple/Sources/WestronUI/'
 # tools/apple/check.sh, so a change of that script runs all four; simulator.sh serves only its targets the hook does not
 # run (package-ios, a11y). Any other script in tools/apple/ (snapshot-matrix.sh, catalog-screenshot.sh,
 # audit-scope.sh) runs none of them, only the syntax check below; the lock and its test (lock.sh, lock-test.sh) also
-# run the step locks of tools/check.sh.
+# run the step locks of tools/check.sh, and audit-scope.sh and its test the step audit-scope.
 #
 # The snapshot matrix itself is not rendered here. It is cheap on macOS (about 15 s) and repeatable, but a local render
 # has nothing to be checked against: the references are the CI runner's (platforms/apple/Snapshots/), and `check`
@@ -89,8 +89,10 @@ catalog_inputs="$package_manifest|^platforms/apple/Catalog/|^platforms/apple/Sou
 # the token files, the resolver and the palette; the contracts, their schema and the icon registry; not the Markdown
 # beside them. The tools' own tests read the repository too (`repositoryRoot` in tools/Tests: the tokens, the
 # contracts and their schema, the icon registry, WestronUI's sources and the generated Swift, .xcode-version), so they
-# run for those as well. The step locks reads only the lock and its test, plain bash; a change of the tools or of the
-# toolchain selects it all the same, as it selects every step, and the hook then runs plain tools/check.sh.
+# run for those as well. The step locks reads only the lock and its test, plain bash; the step audit-scope reads the
+# script, its test and the sources it maps (the catalog, WestronUI's components, the contracts), plain bash too. A
+# change of the tools or of the toolchain selects them all the same, as it selects every step, and the hook then runs
+# plain tools/check.sh.
 tokens='^tokens/.*\.json$'
 spec='^spec/(components/[^/]+/[^/]+\.spec\.yaml$|schema/|icons/)'
 generated='^platforms/apple/Sources/(WestronTokens/Generated/|WestronUI/Generated/|WestronUI/Tokens\.xcassets/|WestronCatalog/Generated/)'
@@ -104,6 +106,7 @@ tools_steps=(
   "spec|$spec|$tokens"
   "api-parity|$westron_ui|$spec"
   "locks|^tools/apple/lock(-test)?\.sh$"
+  "audit-scope|^tools/apple/audit-scope(-test)?\.sh$|^platforms/apple/Sources/(WestronCatalog|WestronUI)/|^spec/components/"
 )
 
 checks=()

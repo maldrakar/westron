@@ -47,7 +47,12 @@ import Foundation
 ///   (`adapters`); in the generated token files (`generatedTokenFiles`), a new public top-level type;
 /// - any other public declaration: nothing else in `WestronUI` may be public without a contract;
 /// - any public declaration under `#if`: a component's public API is the same on every Apple OS, and the contract's
-///   `platforms.apple.<os>` entries act through the style's fallbacks, not through the API (spec/conventions.md).
+///   `platforms.apple.<os>` entries act through the style's fallbacks, not through the API (spec/conventions.md). The
+///   one exception is a component that does not exist on some Apple OS (`platforms.apple.<os>.status: unavailable`):
+///   the API its contract gives stands under exactly its `#if !os(watchOS)`, and nothing else does.
+///
+/// Each context setting of a contract that gives API (`context`, spec/conventions.md, "Context a component sets") adds
+/// its hand-written modifier on `View`: `public func disclosureAlignsLeaves(_: Bool = true) -> some View`.
 ///
 /// A declaration marked `// westron-api-parity: allow <reason>`, on its line or a comment line just above, is a
 /// deliberate exception to all but the first; expected API is always checked. The marker is this lint's own, so the
@@ -294,6 +299,15 @@ public enum APIParity {
         var expected = Expected()
         var stateOwners: [(state: String, contracts: [Contract])] = []
         for item in contracts where item.hasAPI {
+            // Each context setting's modifier, hand-written (spec/conventions.md, "Context a component sets").
+            for setting in item.contract.context {
+                expected.functions.append(
+                    ExpectedFunction(
+                        what: "\(item.component)'s context setting \(setting)", contracts: [item],
+                        name: AppleComponents.contextModifier(setting, of: item.contract.id),
+                        parameters: AppleComponents.contextParameters, types: [],
+                        line: (item.source, item.line(of: setting))))
+            }
             do {
                 if let api = try AppleComponents.HiddenLabel(item.contract, source: item.source) {
                     expected.hiddenLabels.append(ExpectedHiddenLabel(contract: item, api: api))
@@ -439,6 +453,14 @@ public enum APIParity {
         var problems = expected.problems
         /// Indexes of declarations that expected API accounts for, or that a problem already names.
         var accounted: Set<Int> = []
+        /// By index of a declaration that a contract's expected API accounts for, the condition it may stand under: the
+        /// contract's `#if !os(watchOS)` where its component does not exist on some Apple OS.
+        var allowedConditions: [Int: String] = [:]
+        func allowCondition(_ indexes: [Int], of contracts: [Contract]) {
+            let conditions = Set(contracts.map { $0.contract.apple?.availabilityCondition })
+            guard conditions.count == 1, let condition = conditions.first ?? nil else { return }
+            for index in indexes { allowedConditions[index] = "#if " + condition }
+        }
         var expectedCount = 0
         func problem(_ d: SwiftDeclarations.Declaration, _ message: String) {
             problems.append(Problem(file: d.file, line: d.line, message))
@@ -493,6 +515,7 @@ public enum APIParity {
                 declarations[$0].kind == .case && declarations[$0].container == item.type
             }
             accounted.formUnion(cases)
+            allowCondition([index] + cases, of: [item.contract])
             expectedCount += cases.count
             let names = cases.map { declarations[$0].name }
             if names != item.values {
@@ -537,6 +560,7 @@ public enum APIParity {
                 continue
             }
             accounted.insert(index)
+            allowCondition([index], of: item.contracts)
             expectedCount += 1
             let d = declarations[index]
             if !d.access.isPublic {
@@ -687,7 +711,7 @@ public enum APIParity {
                 d.kind == .extension ? !d.inheritance.isEmpty && isPublicType(d, in: declarations) : d.access.isPublic
             guard isPublic else { continue }
             if d.kind != .extension { publicCount += 1 }
-            if !d.conditions.isEmpty, !d.allowed {
+            if !d.conditions.isEmpty, !d.allowed, d.conditions != allowedConditions[index].map({ [$0] }) {
                 problem(
                     d,
                     "public API under \(d.conditions.joined(separator: ", ")): a component's public API is the same "
