@@ -268,11 +268,14 @@ final class ButtonBehaviorTests: XCTestCase {
 
     /// Must match `ButtonFloatingID` in WestronCatalog.
     private enum FloatingID {
-        static let back = "button.floating.glass.live.back"
-        static let more = "button.floating.glass.live.more"
+        static let back = "button.floating.live.back"
+        static let more = "button.floating.live.more"
         static let add = "button.floating.live.add"
-        static let disabled = "button.floating.glass.live.disabled"
+        static let disabled = "button.floating.live.disabled"
         static let count = "button.floating.live.count"
+        static func overList(_ size: String) -> String { "button.floating.over-list.\(size)" }
+        static let overListRow = "button.floating.over-list.row"
+        static let overListCount = "button.floating.over-list.count"
     }
 
     /// Relaunches the catalog on the `button-floating` entry.
@@ -344,6 +347,43 @@ final class ButtonBehaviorTests: XCTestCase {
             pressBelow(4)
             XCTAssertEqual(acceptedFloating, 1, "a tap 4 pt below the floating button, at the target's edge, missed it")
         #endif
+    }
+
+    /// A floating secondary of each size on glass over a list a product presses: where a press a few points outside
+    /// the drawn button goes, to the button or to the row beneath it (decisions/0015, the contract's
+    /// `platforms.apple.ios`). Each outcome is printed, `MEASURE over a list: …`.
+    @MainActor
+    func testFloatingButtonOverAPressableList() {
+        launchFloating()
+        let count = app.staticTexts[FloatingID.overListCount]
+        XCTAssertTrue(count.waitForExistence(timeout: 10), "no list under floating buttons")
+        func counts() -> (rows: Int, floating: Int) {
+            let numbers = text(FloatingID.overListCount).split(whereSeparator: { !$0.isNumber })
+            return (Int(numbers.first ?? "") ?? -1, Int(numbers.last ?? "") ?? -1)
+        }
+        var outcomes: [String: String] = [:]
+        for size in ["s", "m", "l"] {
+            let floating = button(FloatingID.overList(size))
+            for (side, offset) in [
+                ("inside", CGVector(dx: 0, dy: -2)), ("below", CGVector(dx: 0, dy: 4)),
+                ("beside", CGVector(dx: 4, dy: 0)),
+            ] {
+                #if os(macOS)
+                    Thread.sleep(forTimeInterval: NSEvent.doubleClickInterval)
+                #endif
+                let before = counts()
+                let edge = side == "beside" ? CGVector(dx: 1, dy: 0.5) : CGVector(dx: 0.5, dy: 1)
+                press(floating.coordinate(withNormalizedOffset: edge).withOffset(offset))
+                let after = counts()
+                let outcome =
+                    after.floating > before.floating ? "button" : after.rows > before.rows ? "row" : "nothing"
+                outcomes["\(size) \(side)"] = outcome
+                print("MEASURE over a list: size \(size), \(side) \(offset): \(outcome), frame \(floating.frame)")
+            }
+        }
+        for size in ["s", "m", "l"] {
+            XCTAssertEqual(outcomes["\(size) inside"], "button", "a press inside the floating \(size) missed it")
+        }
     }
 
     /// Two size s icon-only buttons 8 pt apart: a press inside a button's drawn frame reaches it, and on iOS a tap in

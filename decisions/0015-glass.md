@@ -206,11 +206,11 @@ the fill's role, which is what a variant says. Rejected.
 
 | | From iOS 26, macOS 26, watchOS 26 | Before |
 |---|---|---|
-| **secondary**, ground | The system's glass: `glassEffect(.regular.interactive(), in: Capsule())`, applied after every other modifier of the drawn button; no fill | `color.background.surface` |
+| **secondary**, ground | The system's glass: `glassEffect(.regular.interactive(), in: Capsule())`, applied after the content, the padding, the frame and the background, and inside the disabled opacity (as built); interactive only while the button takes presses; no fill | `color.background.surface` |
 | shadow | The glass's own; westron adds none | `shadow.overlay` |
 | hover, pressed | The interactive glass's own response; no tint, no scale | `color.background.hover`, `color.background.pressed`, in `motion.fade` and `motion.press`; the press scale of 98 %, which Reduce Motion drops |
 | high contrast | The glass's own adaptation to Increase Contrast (Q8) | secondary's outline: `color.border.strong` (`color.status.danger.border` with the destructive role) at `stroke.thin` |
-| label, icon, progress | Button's colors: `color.text.primary`, `color.status.danger.text` (Q5) | The same |
+| label, icon, progress | Button's colors: `color.text.primary` (Q5); `color.status.danger.text` as drafted, but a floating secondary does not take the destructive role (a constraint added at implementation: the danger words measured 2.79 to 4.18:1 on glass) | The same |
 | disabled | The whole button at `opacity.disabled` (Q7) | The same |
 | **primary** | Its opaque fill and tints as in a layout, its press scale, and `shadow.overlay` (Q4) | The same |
 | **tertiary** | Does not float (a constraint) | — |
@@ -256,7 +256,11 @@ audit and the catalog's screenshots measure the label over a light and a dark gr
   Measured at implementation over glass with Full Keyboard Access on iOS and keyboard navigation on macOS.
 - **Disabled and loading**: Button's rules; a disabled or loading floating button enters no hover or pressed. Glass
   that is `.interactive()` still answers a press on a disabled button unless the style makes it non-interactive there:
-  the style passes `interactive(isEnabled && !isLoading)` (to measure).
+  the style passes `interactive(isEnabled && !isLoading)`. As built: `ButtonTokens.glass(states:onGlass:)` is
+  interactive only when neither disabled nor loading is among the button's states (ButtonStyleTests, "glass is
+  interactive only while the button takes presses"); that a disabled one refuses a real press is
+  `ButtonBehaviorTests`'s. What a still cannot show: whether non-interactive glass still answers a touch by its look,
+  which the system draws as a motion and no forced state reaches.
 - **Motion**: no morphing in westron's API. `glassEffectID`, `glassEffectUnion`, `GlassEffectTransition` and
   `GlassEffectContainer` are the system's, and a product that groups or morphs floating buttons writes them itself
   from OS 26; chapter 05 leaves "Liquid Glass changing shape" to the system. Reduce Motion: the glass's own response is
@@ -278,9 +282,15 @@ which matters on iOS, where a control within about 16 pt shares the touch tolera
   24 sheets where there are 12).
 - **The ground.** The generated cells stand on the canvas, where glass shows almost nothing of itself. A
   hand-written supplement ("not a contract option", platforms/apple/README.md) draws the floating secondary and
-  primary over a deterministic ground of westron's own. As built: diagonal stripes in four list colors' fills
+  primary over a deterministic ground of westron's own. As built, after the review of 2026-11-23: the generated
+  `floating-true` cells draw the bindings, the look where there is no glass, on every OS, and each such sheet's header
+  says so, since glass on the plain canvas was not the same pixel for pixel from one iOS render to the next; the glass
+  is in two supplements alone, `floating-on-glass` over diagonal stripes in four list colors' fills
   (`color.category.{orange,blue,green,violet}.fill`), which follow the theme, drawn by a `Canvas` with no image and no
-  randomness, on the floating sheets of size `m`.
+  randomness, and `floating-on-glass-inverse` over a band of `text.primary`'s color (Q5's test). Each takes every
+  floating sheet of the default role, sizes s, m and l, with a label and icon-only, primary and secondary, at rest and
+  in each state. `floating` is named in no sheet's id or title at its default (`nameInMatrixAtDefault: false`, a
+  schema key added for it), so the sheets that do not float keep the names, titles and pixels they had before.
 - **Both eras.** The CI runner renders on iOS 27.0 and macOS 27.0.1 (`platforms/apple/Snapshots/*/environment.json`),
   so the `else` branch, everything before OS 26, would never be rendered. The style reads a `package`-level override
   in `WestronUI`, set only by the catalog's supplement, that draws the fallback on any OS (gap G4); it is not public, so

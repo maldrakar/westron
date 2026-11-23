@@ -625,22 +625,12 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             }
         }
         suppressions += [
-            // Contrast on the enabled floating secondary buttons with a label that stand on the system's glass, over
-            // the entry's busy ground: the glass is the system's, and what shows through it is the product's
-            // content, so westron cannot promise its contrast and the contract says so (decisions/0015; Button's
-            // description). The audit names the button's text, which carries no identifier, so the samples are told
-            // by their words: on glass they say "Edit" and "Delete", before OS 26 "Rename" and "Remove"
-            // (ButtonFloatingID), which, with the floating primary, are audited as usual; their pairs are
-            // `tools/westron tokens contrast`'s.
-            Suppression(
-                .entry("button-floating"), type: .contrast, reason: "contrast on the system's glass", enabled: true
-            ) {
-                ["Edit", "Delete"].contains($0 ?? "")
-            },
-            // Contrast on the disabled floating samples, drawn whole at opacity.disabled by the contract: WCAG exempts
-            // an inactive control (design-language chapter 08).
+            // Contrast on the disabled floating samples with a label, drawn whole at opacity.disabled by the contract:
+            // WCAG exempts an inactive control (design-language chapter 08). The audit reports a button's text, never
+            // an icon-only button, so only the words match: "Edit" on glass and "Disabled" before OS 26
+            // (ButtonFloatingID).
             Suppression(.entry("button-floating"), type: .contrast, reason: "an inactive control", enabled: false) {
-                ["Back", "Edit", "Delete", "Rename", "Remove", "Add"].contains($0 ?? "")
+                ["Edit", "Disabled"].contains($0 ?? "")
             },
             // Contrast on the disabled Checkbox sample, drawn whole at opacity.disabled by the contract: WCAG exempts
             // an inactive control (design-language chapter 08). Only an element that is not enabled matches.
@@ -734,16 +724,15 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                     .entry("chip"), type: .textClipped, reason: "a pressed chip drawn at 0.98 of its size",
                     enabled: true
                 ) { $0 == "pressed" },
-                // "Text clipped" on the floating secondary samples before OS 26 that the catalog holds pressed, at
-                // the default settings and at accessibility5: the contract draws a pressed Button at 0.98 of its size
-                // (ButtonTokens.pressScale), and the audit measures the scaled text against its unscaled line; their
-                // frames are 0.98 of the unpressed samples' (112.4 of 114.7 points). On glass the press scale is the
-                // glass's own, so those samples are not drawn scaled. Only the enabled "Rename" and "Remove" match,
-                // which only the samples before OS 26 carry (ButtonFloatingID).
+                // "Text clipped" on the floating secondary before OS 26 that the catalog holds pressed, at the default
+                // settings and at accessibility5: the contract draws a pressed Button at 0.98 of its size
+                // (ButtonTokens.pressScale), and the audit measures the scaled text against its unscaled line; its
+                // frame is 0.98 of the unpressed sample's (112.4 of 114.7 points). On glass the press is the glass's
+                // own, not drawn scaled. Only that sample says "Pressed" (ButtonFloatingID), as Chip's says "pressed".
                 Suppression(
                     .entry("button-floating"), type: .textClipped, reason: "a pressed button drawn at 0.98 of its size",
                     enabled: true
-                ) { ["Rename", "Remove"].contains($0 ?? "") },
+                ) { $0 == "Pressed" },
             ]
             // The TextField focus pages focus a field for real, so the system keyboard is up while they are audited
             // (spec/components/text-field). The keyboard's own prediction cells, empty or carrying a suggestion

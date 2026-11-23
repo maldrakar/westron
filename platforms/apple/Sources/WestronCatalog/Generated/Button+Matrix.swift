@@ -9,7 +9,7 @@ import WestronUI
 
 extension ComponentMatrix {
     /// Button's matrix: 3 variant × 3 size × 2 role × 2 iconOnly × 2 floating × 6 states (rest and each state alone) =
-    /// 432 combinations; constraints forbid 72 of them, so the matrix has 360, on 24 sheets.
+    /// 432 combinations; constraints forbid 108 of them, so the matrix has 324, on 24 sheets.
     static let button = ComponentMatrix(
         component: "button",
         options: [
@@ -17,13 +17,19 @@ extension ComponentMatrix {
             Option("size", values: ["s", "m", "l"]),
             Option("role", values: ["default", "destructive"], system: "SwiftUI.ButtonRole"),
             Option("iconOnly", values: ["false", "true"]),
-            Option("floating", values: ["false", "true"]),
+            Option("floating", values: ["false", "true"], unnamed: "false"),
         ],
         states: ["hover", "focus", "pressed", "disabled", "loading"],
         unbound: ["focus"],
         columns: "variant",
         platforms: [Platform("watchos", drawn: ["size": ["s": "m", "l": "m"]], notEntered: ["hover"])],
         excluded: [
+            Exclusion(["secondary", "s", "destructive", "false", "true"], constraint: 1),
+            Exclusion(["secondary", "s", "destructive", "true", "true"], constraint: 1),
+            Exclusion(["secondary", "m", "destructive", "false", "true"], constraint: 1),
+            Exclusion(["secondary", "m", "destructive", "true", "true"], constraint: 1),
+            Exclusion(["secondary", "l", "destructive", "false", "true"], constraint: 1),
+            Exclusion(["secondary", "l", "destructive", "true", "true"], constraint: 1),
             Exclusion(["tertiary", "s", "default", "false", "true"], constraint: 0),
             Exclusion(["tertiary", "s", "default", "true", "true"], constraint: 0),
             Exclusion(["tertiary", "s", "destructive", "false", "true"], constraint: 0),
@@ -213,24 +219,12 @@ extension ComponentMatrix {
             Combination(["secondary", "s", "destructive", "false", "false"], state: "pressed"),
             Combination(["secondary", "s", "destructive", "false", "false"], state: "disabled"),
             Combination(["secondary", "s", "destructive", "false", "false"], state: "loading"),
-            Combination(["secondary", "s", "destructive", "false", "true"], state: nil),
-            Combination(["secondary", "s", "destructive", "false", "true"], state: "hover"),
-            Combination(["secondary", "s", "destructive", "false", "true"], state: "focus"),
-            Combination(["secondary", "s", "destructive", "false", "true"], state: "pressed"),
-            Combination(["secondary", "s", "destructive", "false", "true"], state: "disabled"),
-            Combination(["secondary", "s", "destructive", "false", "true"], state: "loading"),
             Combination(["secondary", "s", "destructive", "true", "false"], state: nil),
             Combination(["secondary", "s", "destructive", "true", "false"], state: "hover"),
             Combination(["secondary", "s", "destructive", "true", "false"], state: "focus"),
             Combination(["secondary", "s", "destructive", "true", "false"], state: "pressed"),
             Combination(["secondary", "s", "destructive", "true", "false"], state: "disabled"),
             Combination(["secondary", "s", "destructive", "true", "false"], state: "loading"),
-            Combination(["secondary", "s", "destructive", "true", "true"], state: nil),
-            Combination(["secondary", "s", "destructive", "true", "true"], state: "hover"),
-            Combination(["secondary", "s", "destructive", "true", "true"], state: "focus"),
-            Combination(["secondary", "s", "destructive", "true", "true"], state: "pressed"),
-            Combination(["secondary", "s", "destructive", "true", "true"], state: "disabled"),
-            Combination(["secondary", "s", "destructive", "true", "true"], state: "loading"),
             Combination(["secondary", "m", "default", "false", "false"], state: nil),
             Combination(["secondary", "m", "default", "false", "false"], state: "hover"),
             Combination(["secondary", "m", "default", "false", "false"], state: "focus"),
@@ -261,24 +255,12 @@ extension ComponentMatrix {
             Combination(["secondary", "m", "destructive", "false", "false"], state: "pressed"),
             Combination(["secondary", "m", "destructive", "false", "false"], state: "disabled"),
             Combination(["secondary", "m", "destructive", "false", "false"], state: "loading"),
-            Combination(["secondary", "m", "destructive", "false", "true"], state: nil),
-            Combination(["secondary", "m", "destructive", "false", "true"], state: "hover"),
-            Combination(["secondary", "m", "destructive", "false", "true"], state: "focus"),
-            Combination(["secondary", "m", "destructive", "false", "true"], state: "pressed"),
-            Combination(["secondary", "m", "destructive", "false", "true"], state: "disabled"),
-            Combination(["secondary", "m", "destructive", "false", "true"], state: "loading"),
             Combination(["secondary", "m", "destructive", "true", "false"], state: nil),
             Combination(["secondary", "m", "destructive", "true", "false"], state: "hover"),
             Combination(["secondary", "m", "destructive", "true", "false"], state: "focus"),
             Combination(["secondary", "m", "destructive", "true", "false"], state: "pressed"),
             Combination(["secondary", "m", "destructive", "true", "false"], state: "disabled"),
             Combination(["secondary", "m", "destructive", "true", "false"], state: "loading"),
-            Combination(["secondary", "m", "destructive", "true", "true"], state: nil),
-            Combination(["secondary", "m", "destructive", "true", "true"], state: "hover"),
-            Combination(["secondary", "m", "destructive", "true", "true"], state: "focus"),
-            Combination(["secondary", "m", "destructive", "true", "true"], state: "pressed"),
-            Combination(["secondary", "m", "destructive", "true", "true"], state: "disabled"),
-            Combination(["secondary", "m", "destructive", "true", "true"], state: "loading"),
             Combination(["secondary", "l", "default", "false", "false"], state: nil),
             Combination(["secondary", "l", "default", "false", "false"], state: "hover"),
             Combination(["secondary", "l", "default", "false", "false"], state: "focus"),
@@ -309,24 +291,12 @@ extension ComponentMatrix {
             Combination(["secondary", "l", "destructive", "false", "false"], state: "pressed"),
             Combination(["secondary", "l", "destructive", "false", "false"], state: "disabled"),
             Combination(["secondary", "l", "destructive", "false", "false"], state: "loading"),
-            Combination(["secondary", "l", "destructive", "false", "true"], state: nil),
-            Combination(["secondary", "l", "destructive", "false", "true"], state: "hover"),
-            Combination(["secondary", "l", "destructive", "false", "true"], state: "focus"),
-            Combination(["secondary", "l", "destructive", "false", "true"], state: "pressed"),
-            Combination(["secondary", "l", "destructive", "false", "true"], state: "disabled"),
-            Combination(["secondary", "l", "destructive", "false", "true"], state: "loading"),
             Combination(["secondary", "l", "destructive", "true", "false"], state: nil),
             Combination(["secondary", "l", "destructive", "true", "false"], state: "hover"),
             Combination(["secondary", "l", "destructive", "true", "false"], state: "focus"),
             Combination(["secondary", "l", "destructive", "true", "false"], state: "pressed"),
             Combination(["secondary", "l", "destructive", "true", "false"], state: "disabled"),
             Combination(["secondary", "l", "destructive", "true", "false"], state: "loading"),
-            Combination(["secondary", "l", "destructive", "true", "true"], state: nil),
-            Combination(["secondary", "l", "destructive", "true", "true"], state: "hover"),
-            Combination(["secondary", "l", "destructive", "true", "true"], state: "focus"),
-            Combination(["secondary", "l", "destructive", "true", "true"], state: "pressed"),
-            Combination(["secondary", "l", "destructive", "true", "true"], state: "disabled"),
-            Combination(["secondary", "l", "destructive", "true", "true"], state: "loading"),
             Combination(["tertiary", "s", "default", "false", "false"], state: nil),
             Combination(["tertiary", "s", "default", "false", "false"], state: "hover"),
             Combination(["tertiary", "s", "default", "false", "false"], state: "focus"),
@@ -402,7 +372,7 @@ extension ComponentMatrix {
         ],
         sheets: [
             Sheet(
-                "size-s_role-default_iconOnly-false_floating-false",
+                "size-s_role-default_iconOnly-false",
                 fixed: ["s", "default", "false", "false"],
                 columns: ["primary", "secondary", "tertiary"],
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]
@@ -414,7 +384,7 @@ extension ComponentMatrix {
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]
             ),
             Sheet(
-                "size-s_role-default_iconOnly-true_floating-false",
+                "size-s_role-default_iconOnly-true",
                 fixed: ["s", "default", "true", "false"],
                 columns: ["primary", "secondary", "tertiary"],
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]
@@ -426,7 +396,7 @@ extension ComponentMatrix {
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]
             ),
             Sheet(
-                "size-s_role-destructive_iconOnly-false_floating-false",
+                "size-s_role-destructive_iconOnly-false",
                 fixed: ["s", "destructive", "false", "false"],
                 columns: ["primary", "secondary", "tertiary"],
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]
@@ -438,7 +408,7 @@ extension ComponentMatrix {
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]
             ),
             Sheet(
-                "size-s_role-destructive_iconOnly-true_floating-false",
+                "size-s_role-destructive_iconOnly-true",
                 fixed: ["s", "destructive", "true", "false"],
                 columns: ["primary", "secondary", "tertiary"],
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]
@@ -450,7 +420,7 @@ extension ComponentMatrix {
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]
             ),
             Sheet(
-                "size-m_role-default_iconOnly-false_floating-false",
+                "size-m_role-default_iconOnly-false",
                 fixed: ["m", "default", "false", "false"],
                 columns: ["primary", "secondary", "tertiary"],
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]
@@ -462,7 +432,7 @@ extension ComponentMatrix {
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]
             ),
             Sheet(
-                "size-m_role-default_iconOnly-true_floating-false",
+                "size-m_role-default_iconOnly-true",
                 fixed: ["m", "default", "true", "false"],
                 columns: ["primary", "secondary", "tertiary"],
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]
@@ -474,7 +444,7 @@ extension ComponentMatrix {
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]
             ),
             Sheet(
-                "size-m_role-destructive_iconOnly-false_floating-false",
+                "size-m_role-destructive_iconOnly-false",
                 fixed: ["m", "destructive", "false", "false"],
                 columns: ["primary", "secondary", "tertiary"],
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]
@@ -486,7 +456,7 @@ extension ComponentMatrix {
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]
             ),
             Sheet(
-                "size-m_role-destructive_iconOnly-true_floating-false",
+                "size-m_role-destructive_iconOnly-true",
                 fixed: ["m", "destructive", "true", "false"],
                 columns: ["primary", "secondary", "tertiary"],
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]
@@ -498,7 +468,7 @@ extension ComponentMatrix {
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]
             ),
             Sheet(
-                "size-l_role-default_iconOnly-false_floating-false",
+                "size-l_role-default_iconOnly-false",
                 fixed: ["l", "default", "false", "false"],
                 columns: ["primary", "secondary", "tertiary"],
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]
@@ -510,7 +480,7 @@ extension ComponentMatrix {
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]
             ),
             Sheet(
-                "size-l_role-default_iconOnly-true_floating-false",
+                "size-l_role-default_iconOnly-true",
                 fixed: ["l", "default", "true", "false"],
                 columns: ["primary", "secondary", "tertiary"],
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]
@@ -522,7 +492,7 @@ extension ComponentMatrix {
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]
             ),
             Sheet(
-                "size-l_role-destructive_iconOnly-false_floating-false",
+                "size-l_role-destructive_iconOnly-false",
                 fixed: ["l", "destructive", "false", "false"],
                 columns: ["primary", "secondary", "tertiary"],
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]
@@ -534,7 +504,7 @@ extension ComponentMatrix {
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]
             ),
             Sheet(
-                "size-l_role-destructive_iconOnly-true_floating-false",
+                "size-l_role-destructive_iconOnly-true",
                 fixed: ["l", "destructive", "true", "false"],
                 columns: ["primary", "secondary", "tertiary"],
                 rows: [nil, "hover", "focus", "pressed", "disabled", "loading"]

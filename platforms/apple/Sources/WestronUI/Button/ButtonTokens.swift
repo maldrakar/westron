@@ -29,13 +29,13 @@ struct ButtonTokens: Equatable, Sendable {
     /// The tokens of a button in `states`, which hold at once. A state the current OS never enters is ignored
     /// (`ButtonState.isEntered`). `destructive` is SwiftUI's `ButtonRole.destructive`; any other role draws as default.
     /// `highContrast`: one of the high-contrast themes, `colorSchemeContrast == .increased`. `floating`: the contract's
-    /// option, which tertiary does not take (`floats(_:floating:)`).
+    /// option, which tertiary and a destructive secondary do not take (`floats(_:destructive:floating:)`).
     init(
         variant: ButtonVariant, destructive: Bool, states: Set<ButtonState>, highContrast: Bool, floating: Bool = false
     ) {
         let states = states.filter(\.isEntered)
         let variant = variant.offered
-        let floating = Self.floats(variant, floating: floating)
+        let floating = Self.floats(variant, destructive: destructive, floating: floating)
         // The cases of container.background, in the contract's order: disabled and loading first, so that they
         // exclude hover and pressed and the resting fill holds.
         let excludesTint = !states.isDisjoint(with: [.disabled, .loading])
@@ -115,17 +115,33 @@ struct ButtonTokens: Equatable, Sendable {
         progress = ink
     }
 
-    /// Whether the button floats: the contract's `floating`, which tertiary does not take. The contract forbids a
-    /// floating tertiary with a constraint of severity error; a product that writes one anyway gets the tertiary
-    /// button of a layout, unchanged (ButtonStyleTests).
-    static func floats(_ variant: ButtonVariant, floating: Bool) -> Bool {
-        floating && variant.offered != .tertiary
+    /// Whether the button floats: the contract's `floating`, which tertiary, with no ground to float on, and a
+    /// destructive secondary, whose danger words read too faintly on glass, do not take. The contract forbids both with
+    /// constraints of severity error and names the fallback: a product that writes one anyway gets the same button
+    /// not floating, unchanged and with no warning, while spec/conventions.md's open question 3 is open
+    /// (ButtonStyleTests).
+    static func floats(_ variant: ButtonVariant, destructive: Bool, floating: Bool) -> Bool {
+        switch variant.offered {
+        case .primary: floating
+        case .secondary: floating && !destructive
+        case .tertiary: false
+        }
     }
 
     /// Whether the button stands on the system's glass: a floating secondary, where the OS has glass
     /// (`glassAvailable`, OS 26 and later unless the catalog forces the look before it).
-    static func standsOnGlass(_ variant: ButtonVariant, floating: Bool, glassAvailable: Bool) -> Bool {
-        glassAvailable && floats(variant, floating: floating) && variant.offered == .secondary
+    static func standsOnGlass(
+        _ variant: ButtonVariant, destructive: Bool, floating: Bool, glassAvailable: Bool
+    ) -> Bool {
+        glassAvailable && floats(variant, destructive: destructive, floating: floating)
+            && variant.offered == .secondary
+    }
+
+    /// The glass under a button that stands on it, nil for any other: interactive, answering a touch or the pointer,
+    /// only while the button takes presses, so not while disabled or loading (the contract's description).
+    static func glass(states: Set<ButtonState>, onGlass: Bool) -> ButtonGlass? {
+        guard onGlass else { return nil }
+        return ButtonGlass(isInteractive: states.filter(\.isEntered).isDisjoint(with: [.disabled, .loading]))
     }
 
     /// The tokens on glass: the glass is the ground, so no fill, no outline and no shadow of westron's; the label, the
@@ -140,10 +156,12 @@ struct ButtonTokens: Equatable, Sendable {
     }
 
     /// Whether a press scales the button down (`container.pressMotion`, chapter 05): pressed, and neither disabled nor
-    /// loading, which exclude pressed. Reduce Motion drops the scale; the style checks that.
-    static func scalesDown(states: Set<ButtonState>) -> Bool {
+    /// loading, which exclude pressed; never on glass, whose own response is the press (`onGlass`, decisions/0015), and
+    /// never under Reduce Motion.
+    static func scalesDown(states: Set<ButtonState>, onGlass: Bool = false, reduceMotion: Bool = false) -> Bool {
         let states = states.filter(\.isEntered)
-        return states.contains(.pressed) && states.isDisjoint(with: [.disabled, .loading])
+        return states.contains(.pressed) && states.isDisjoint(with: [.disabled, .loading]) && !onGlass
+            && !reduceMotion
     }
 
     /// The scale of a pressed button, 98 % (`motion.press`). Chapter 05 ("Shapes belong to components") puts a motion's

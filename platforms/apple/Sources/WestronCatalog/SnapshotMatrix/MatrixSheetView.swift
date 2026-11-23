@@ -107,6 +107,9 @@ struct MatrixSheetView: View {
                 if let supplement = matrix.supplement {
                     note(supplement.note)
                 }
+                if let sheetNote = matrix.sheetNote(of: sheet) {
+                    note(sheetNote)
+                }
                 if let note = matrix.unboundNote {
                     self.note(note)
                 }

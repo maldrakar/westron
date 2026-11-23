@@ -31,6 +31,10 @@
 /// - An integer option (ListRow's `level`) is a quantity, not a choice, and is no axis: the hand-written cell draws
 ///   its sample at a value it names (ListRow's at level 1, so that `guides` shows), and what other values do is the
 ///   catalog's supplements'.
+/// - A bool option with `nameInMatrixAtDefault: false` (Button's `floating`) is an axis like any other, but a sheet
+///   names it only at its other value (`Axis.unnamed`): a sheet at its default keeps the id and the catalog's title it
+///   had before the option was added, so its recorded reference stays the same file, and the sheets at the other value
+///   are new ones beside them.
 ///
 /// What the generator does not do (#72), so that the contract alone drives every generated combination and sheet: the
 /// catalog (`WestronCatalog/SnapshotMatrix/ComponentMatrix.swift`) captures the sheets at other text sizes too and
@@ -55,10 +59,13 @@ public struct SnapshotMatrix: Equatable, Sendable {
         public let isIcons: Bool
         /// Whether it is the contract's forms (`forms`), not an option: the first axis of a contract with forms.
         public let isForm: Bool
+        /// The value at which a sheet does not name the axis, in its id or its title: the default of a bool option
+        /// with `nameInMatrixAtDefault: false`; nil for every other axis, named at every value.
+        public let unnamed: String?
 
         init(
             name: String, values: [String], isBool: Bool = false, systemType: String? = nil, tokenGroup: String? = nil,
-            accessor: String? = nil, isIcons: Bool = false, isForm: Bool = false
+            accessor: String? = nil, isIcons: Bool = false, isForm: Bool = false, unnamed: String? = nil
         ) {
             self.name = name
             self.values = values
@@ -68,6 +75,7 @@ public struct SnapshotMatrix: Equatable, Sendable {
             self.accessor = accessor
             self.isIcons = isIcons
             self.isForm = isForm
+            self.unnamed = unnamed
         }
     }
 
@@ -179,11 +187,12 @@ public struct SnapshotMatrix: Equatable, Sendable {
                 continue
             case .enumeration(let values, _):
                 axes.append(Axis(name: option.name, values: values, systemType: systemOptions[option.name]))
-            case .bool:
+            case .bool(let value):
                 axes.append(
                     Axis(
                         name: option.name, values: ["false", "true"], isBool: true,
-                        systemType: systemOptions[option.name]))
+                        systemType: systemOptions[option.name],
+                        unnamed: option.namedInMatrixAtDefault ? nil : String(value)))
             case .icons(optional: true):
                 // An optional glyph is no axis: the matrix draws it absent, and hand-written supplements draw the
                 // glyphs (spec/conventions.md, "Option whose values are icons"). As an axis it would multiply every
@@ -300,7 +309,8 @@ public struct SnapshotMatrix: Equatable, Sendable {
             let rowValues: [String?] =
                 rowIndex.map { axes[$0].values.map { Optional($0) } } ?? form.flatMap { formRows[$0] } ?? rows
             let rowChunks = Self.chunks(rowValues, of: Self.maxRows)
-            let base = zip(fixedAxes, fixed).map { "\(axes[$0.0].name)-\($0.1)" }
+            // An axis at the value it is not named at (`Axis.unnamed`) is left out of the id.
+            let base = zip(fixedAxes, fixed).filter { axes[$0.0].unnamed != $0.1 }.map { "\(axes[$0.0].name)-\($0.1)" }
             for (columnNumber, columns) in columnChunks.enumerated() {
                 // A sheet with no allowed combination is left out.
                 for (rowNumber, rowChunk) in rowChunks.enumerated() {

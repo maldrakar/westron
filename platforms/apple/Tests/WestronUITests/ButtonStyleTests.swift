@@ -133,14 +133,17 @@ struct ButtonStyleTests {
         sets + sets.map { $0.union([state]) }
     }
 
-    /// The variants that float: the contract's constraint forbids a floating tertiary (`tertiaryDoesNotFloat`).
-    static let floatingVariants: [ButtonVariant] = [.primary, .secondary]
+    /// Whether the contract lets a button float: its constraints forbid a floating tertiary and a floating destructive
+    /// secondary (`forbiddenFloatingFallsBack`).
+    static func mayFloat(_ variant: ButtonVariant, destructive: Bool) -> Bool {
+        variant == .primary || (variant == .secondary && !destructive)
+    }
 
     @Test(
         "every variant × role × floating × combination of states draws the tokens the contract's cases give",
         arguments: ButtonVariant.allCases, [false, true])
     func tokensMatchTheContract(variant: ButtonVariant, destructive: Bool) throws {
-        for floating in Self.floatingVariants.contains(variant) ? [false, true] : [false] {
+        for floating in Self.mayFloat(variant, destructive: destructive) ? [false, true] : [false] {
             try tokensMatchTheContract(variant: variant, destructive: destructive, floating: floating)
         }
     }
@@ -218,6 +221,7 @@ struct ButtonStyleTests {
                         #expect(tokens.background == rest.background)
                     }
                     #expect(!ButtonTokens.scalesDown(states: [excluding, .pressed]))
+                    #expect(!ButtonTokens.scalesDown(states: [excluding, .pressed], onGlass: true))
                 }
                 // Loading does not dim; disabled does.
                 #expect(
@@ -232,6 +236,8 @@ struct ButtonStyleTests {
         #expect(ButtonTokens.scalesDown(states: [.pressed]))
         #expect(ButtonTokens.scalesDown(states: [.pressed, .hover, .focus]))
         #expect(!ButtonTokens.scalesDown(states: [.hover]))
+        // Reduce Motion drops the scale (chapter 05).
+        #expect(!ButtonTokens.scalesDown(states: [.pressed], reduceMotion: true))
     }
 
     @Test("the per-size bindings are the contract's: height, padding, gap, label and icon fonts; the capsule")
@@ -259,25 +265,31 @@ struct ButtonStyleTests {
 
     // MARK: - Floating (decisions/0015)
 
-    @Test("the contract forbids a floating tertiary; one written anyway draws the tertiary of a layout, unchanged")
-    func tertiaryDoesNotFloat() throws {
+    @Test(
+        "the contract forbids a floating tertiary and a floating destructive secondary; one written anyway draws the same button not floating"
+    )
+    func forbiddenFloatingFallsBack() throws {
         let contract = try Self.contract()
         #expect(contract.contains("- when: { floating: true }\n    require: { variant: [primary, secondary] }"))
-        #expect(!ButtonTokens.floats(.tertiary, floating: true))
-        #expect(!ButtonTokens.standsOnGlass(.tertiary, floating: true, glassAvailable: true))
-        for destructive in [false, true] {
+        #expect(contract.contains("- when: { floating: true, variant: secondary }\n    require: { role: [default] }"))
+        for (variant, destructive) in [(ButtonVariant.tertiary, false), (.tertiary, true), (.secondary, true)] {
+            #expect(!ButtonTokens.floats(variant, destructive: destructive, floating: true))
+            #expect(
+                !ButtonTokens.standsOnGlass(variant, destructive: destructive, floating: true, glassAvailable: true))
             for states in Self.stateCombinations {
                 for highContrast in [false, true] {
                     #expect(
                         ButtonTokens(
-                            variant: .tertiary, destructive: destructive, states: states, highContrast: highContrast,
+                            variant: variant, destructive: destructive, states: states, highContrast: highContrast,
                             floating: true)
                             == ButtonTokens(
-                                variant: .tertiary, destructive: destructive, states: states,
+                                variant: variant, destructive: destructive, states: states,
                                 highContrast: highContrast))
                 }
             }
         }
+        // A destructive primary floats, on its opaque fill.
+        #expect(ButtonTokens.floats(.primary, destructive: true, floating: true))
     }
 
     @Test("not floating, every variant draws what it drew before the option: no shadow, the same tokens")
@@ -296,39 +308,40 @@ struct ButtonStyleTests {
                                     highContrast: highContrast, floating: false))
                     }
                 }
-                #expect(!ButtonTokens.standsOnGlass(variant, floating: false, glassAvailable: true))
+                #expect(
+                    !ButtonTokens.standsOnGlass(
+                        variant, destructive: destructive, floating: false, glassAvailable: true))
             }
         }
     }
 
     @Test("before OS 26 a floating secondary stands on the surface, tinted as a row, outlined in high contrast")
     func floatingSecondaryWithoutGlass() {
-        for destructive in [false, true] {
-            func tokens(_ states: Set<ButtonState>, highContrast: Bool = false) -> ButtonTokens {
-                ButtonTokens(
-                    variant: .secondary, destructive: destructive, states: states, highContrast: highContrast,
-                    floating: true)
-            }
-            #expect(tokens([]).background == .background.surface)
-            #expect(tokens([.hover]).background == .background.hover)
-            #expect(tokens([.pressed]).background == .background.pressed)
-            #expect(tokens([.disabled, .pressed]).background == .background.surface)
-            #expect(tokens([.loading, .hover]).background == .background.surface)
-            #expect(tokens([]).shadow == .overlay)
-            #expect(tokens([]).label == (destructive ? .status.danger.text : .text.primary))
-            #expect(tokens([]).borderColor == nil)
-            #expect(
-                tokens([], highContrast: true).borderColor == (destructive ? .status.danger.border : .border.strong))
-            #expect(tokens([], highContrast: true).borderWidth == .stroke.thin)
-            #expect(tokens([.disabled]).opacity == .opacity.disabled)
+        func tokens(_ states: Set<ButtonState>, highContrast: Bool = false) -> ButtonTokens {
+            ButtonTokens(
+                variant: .secondary, destructive: false, states: states, highContrast: highContrast, floating: true)
         }
-        #expect(!ButtonTokens.standsOnGlass(.secondary, floating: true, glassAvailable: false))
+        #expect(tokens([]).background == .background.surface)
+        #expect(tokens([.hover]).background == .background.hover)
+        #expect(tokens([.pressed]).background == .background.pressed)
+        #expect(tokens([.disabled, .pressed]).background == .background.surface)
+        #expect(tokens([.loading, .hover]).background == .background.surface)
+        #expect(tokens([]).shadow == .overlay)
+        #expect(tokens([]).label == .text.primary)
+        #expect(tokens([]).borderColor == nil)
+        #expect(tokens([], highContrast: true).borderColor == .border.strong)
+        #expect(tokens([], highContrast: true).borderWidth == .stroke.thin)
+        #expect(tokens([.disabled]).opacity == .opacity.disabled)
+        #expect(
+            !ButtonTokens.standsOnGlass(.secondary, destructive: false, floating: true, glassAvailable: false))
+        // Pressed scales it down, as any button where there is no glass.
+        #expect(ButtonTokens.scalesDown(states: [.pressed], onGlass: false))
     }
 
     @Test("on glass a floating secondary draws no ground of westron's: no fill, outline or shadow; its ink stays")
     func floatingSecondaryOnGlass() {
-        #expect(ButtonTokens.standsOnGlass(.secondary, floating: true, glassAvailable: true))
-        for destructive in [false, true] {
+        #expect(ButtonTokens.standsOnGlass(.secondary, destructive: false, floating: true, glassAvailable: true))
+        for destructive in [false] {
             for states in Self.stateCombinations {
                 for highContrast in [false, true] {
                     let surface = ButtonTokens(
@@ -346,9 +359,30 @@ struct ButtonStyleTests {
         }
     }
 
+    @Test("on glass a press is the glass's: westron's press scale never applies, in any state")
+    func noPressScaleOnGlass() {
+        for states in Self.stateCombinations {
+            #expect(!ButtonTokens.scalesDown(states: states, onGlass: true))
+        }
+    }
+
+    @Test("the glass answers a touch or the pointer only while the button takes presses: not disabled, not loading")
+    func glassIsInteractiveOnlyWhileItTakesPresses() {
+        for states in Self.stateCombinations {
+            #expect(ButtonTokens.glass(states: states, onGlass: false) == nil)
+            let glass = ButtonTokens.glass(states: states, onGlass: true)
+            let takesPresses = states.filter(\.isEntered).isDisjoint(with: [.disabled, .loading])
+            #expect(glass == ButtonGlass(isInteractive: takesPresses), "\(states.map(\.rawValue).sorted())")
+        }
+    }
+
     @Test("a floating primary keeps its fills and casts shadow.overlay, with or without glass")
     func floatingPrimary() {
-        #expect(!ButtonTokens.standsOnGlass(.primary, floating: true, glassAvailable: true))
+        for destructive in [false, true] {
+            #expect(
+                !ButtonTokens.standsOnGlass(
+                    .primary, destructive: destructive, floating: true, glassAvailable: true))
+        }
         for destructive in [false, true] {
             for states in Self.stateCombinations {
                 let floating = ButtonTokens(

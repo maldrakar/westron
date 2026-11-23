@@ -180,7 +180,11 @@
       "properties": {
         "type": { "const": "bool" },
         "default": { "type": "boolean" },
-        "description": { "$ref": "#/$defs/text" }
+        "description": { "$ref": "#/$defs/text" },
+        "nameInMatrixAtDefault": {
+          "description": "Whether the snapshot matrix names the option in a sheet's id and title at its default. false for an option added to a contract whose sheets were reviewed without it: those sheets keep their ids, titles and pictures, and only the other value gets sheets of its own, with the option's name. Without it, true.",
+          "type": "boolean"
+        }
       }
     },
     "tokenOption": {

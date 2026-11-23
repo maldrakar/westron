@@ -1,8 +1,8 @@
 # westron's Surface contract (#29), approved on 2026-11-18 under the owner's delegation of that day:
 # decisions/0001-surface-contract.md records the owner's answers, what the documents already decide, and the proposals
 # approved on top of them; P5 and P12 still wait for the owner's confirmation. Its sentence on glass scoped on
-# 2026-11-23 (#121), proposed in decisions/0015-glass.md at the repository's root and waiting for its approval: a
-# surface still never takes glass, and the description now says where the glass under a group of controls comes from.
+# 2026-11-23 (#121), approved with decisions/0015-glass.md at the repository's root: a surface still never takes
+# glass, and the description now says where the glass under a group of controls comes from.
 id: surface
 status: approved
 description: >-

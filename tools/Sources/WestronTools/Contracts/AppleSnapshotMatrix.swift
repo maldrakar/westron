@@ -180,7 +180,9 @@ public struct AppleSnapshotMatrix: Generator {
         out += ["        component: \(literal(matrix.component)),"]
         let options = matrix.axes.map { axis in
             let system = axis.systemType.map { ", system: \(literal($0))" } ?? ""
-            return "Option(\(literal(axis.name)), values: \(list(axis.values.map(literal)))\(system))"
+            // Only an option a sheet does not name at its default says so, so every other matrix's file stays as it was.
+            let unnamed = axis.unnamed.map { ", unnamed: \(literal($0))" } ?? ""
+            return "Option(\(literal(axis.name)), values: \(list(axis.values.map(literal)))\(system)\(unnamed))"
         }
         if options.allSatisfy({ $0.count + 13 <= AppleTokensSwift.lineLength }) {
             out += argument("options", options, indent: 2)

@@ -26,7 +26,8 @@ struct ButtonVariantStyle: PrimitiveButtonStyle {
     /// nil: the size comes from `controlSize`.
     let size: ButtonSize?
     let iconOnly: Bool
-    /// Over content (the contract's `floating`); tertiary does not take it (`ButtonTokens.floats(_:floating:)`).
+    /// Over content (the contract's `floating`); tertiary and a destructive secondary do not take it
+    /// (`ButtonTokens.floats(_:destructive:floating:)`).
     var floating = false
 
     func makeBody(configuration: Configuration) -> some View {
@@ -114,21 +115,21 @@ private struct ButtonBody: View {
 
     var body: some View {
         let states = Set(ButtonState.allCases.filter(isIn))
+        let destructive = configuration.role == .destructive
         let onGlass = ButtonTokens.standsOnGlass(
-            variant, floating: floating, glassAvailable: ButtonGlass.isAvailable && !drawsWithoutGlass)
+            variant, destructive: destructive, floating: floating,
+            glassAvailable: ButtonGlass.isAvailable && !drawsWithoutGlass)
         let tokens = ButtonTokens(
-            variant: variant, destructive: configuration.role == .destructive, states: states,
-            highContrast: contrast == .increased, floating: floating)
+            variant: variant, destructive: destructive, states: states, highContrast: contrast == .increased,
+            floating: floating)
         let metrics = ButtonMetrics(ButtonSize.resolved(explicit: explicitSize, controlSize: controlSize))
         // On glass the press is the glass's own response, not westron's scale (decisions/0015).
-        let scalesDown = ButtonTokens.scalesDown(states: states) && !reduceMotion && !onGlass
+        let scalesDown = ButtonTokens.scalesDown(states: states, onGlass: onGlass, reduceMotion: reduceMotion)
 
         ButtonSurface(
             label: configuration.label, tokens: onGlass ? tokens.onGlass() : tokens, metrics: metrics,
             iconOnly: iconOnly, isLoading: states.contains(.loading), isHovered: states.contains(.hover),
-            isPressed: states.contains(.pressed),
-            // The glass answers a touch or a pointer only while the button takes presses.
-            glass: onGlass ? ButtonGlass(isInteractive: states.isDisjoint(with: [.disabled, .loading])) : nil
+            isPressed: states.contains(.pressed), glass: ButtonTokens.glass(states: states, onGlass: onGlass)
         )
         .scaleEffect(scalesDown ? ButtonTokens.pressScale : 1)
         .animation(.press, value: scalesDown)
@@ -204,7 +205,9 @@ private struct ButtonSurface<Label: View>: View {
             .animation(.fade, value: isHovered)
             .animation(.press, value: isPressed)
         }
-        // After what draws the button, as Apple asks of the glass.
+        // After the content, the padding, the frame and the background, as Apple asks of the glass, and inside the
+        // opacity below, so that a disabled button dims its glass too (the contract's description; measured by
+        // ButtonFloatingPixelTests, "a disabled floating secondary dims its glass with it").
         .modifier(ButtonGlassEffect(glass: glass, shape: shape))
         // The hit area (chapter 08: at least the platform's recommended target, except where the contract's platform
         // block says otherwise) is never grown past what is drawn, measured in CatalogUITests/ButtonBehaviorTests.swift

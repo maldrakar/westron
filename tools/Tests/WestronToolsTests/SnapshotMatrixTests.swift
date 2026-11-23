@@ -71,9 +71,43 @@ struct SnapshotMatrixTests {
         #expect(!contract.constraints[0].isBroken(by: ["variant": "primary", "size": "l", "iconOnly": "false"]))
     }
 
+    @Test(
+        "an option with nameInMatrixAtDefault false is an axis, named in a sheet's id only away from its default")
+    func optionUnnamedAtItsDefault() throws {
+        let yaml = matrixYAML().replacingOccurrences(
+            of: "  iconOnly: { type: bool, default: false }\n",
+            with: "  iconOnly: { type: bool, default: false }\n"
+                + "  floating: { type: bool, default: false, nameInMatrixAtDefault: false }\n")
+        #expect(yaml != matrixYAML())
+        let before = try matrix(matrixYAML())
+        let after = try matrix(yaml)
+        try #require(after.axes.count == 4)
+        #expect(after.axes.map(\.name) == ["variant", "size", "iconOnly", "floating"])
+        #expect(after.axes.map(\.unnamed) == [nil, nil, nil, "false"])
+        #expect(after.combinations.count == before.combinations.count * 2)
+        // The sheets that do not float are the sheets before the option, by id and content; each is followed by its
+        // floating twin, named.
+        let unnamed = after.sheets.filter { !$0.id.hasSuffix("_floating-true") }
+        #expect(unnamed.map(\.id) == before.sheets.map(\.id))
+        #expect(unnamed.map(\.columns) == before.sheets.map(\.columns))
+        #expect(unnamed.map(\.rows) == before.sheets.map(\.rows))
+        #expect(
+            after.sheets.map(\.id).filter { $0.hasSuffix("_floating-true") }
+                == before.sheets.map { $0.id + "_floating-true" })
+        // Without the key an option is named at every value, as every option before it.
+        let named = try matrix(yaml.replacingOccurrences(of: ", nameInMatrixAtDefault: false", with: ""))
+        #expect(named.axes[3].unnamed == nil)
+        #expect(named.sheets.allSatisfy { $0.id.hasSuffix("_floating-false") || $0.id.hasSuffix("_floating-true") })
+        let swift = try #require(
+            AppleSnapshotMatrix.files(for: [(ComponentContract(yaml: yaml, source: source), source)]).first
+        ).contents
+        #expect(swift.contains(#"Option("floating", values: ["false", "true"], unnamed: "false")"#))
+        #expect(swift.contains(#"Option("iconOnly", values: ["false", "true"])"#))
+    }
+
     /// 3 variants × 3 sizes × 2 roles × 2 iconOnly × 2 floating × (rest + 5 states) = 432, less the 72 of a floating
-    /// tertiary, which a constraint of severity error leaves out.
-    @Test("westron's Button: 360 combinations, on 24 sheets")
+    /// tertiary and the 36 of a floating destructive secondary, which constraints of severity error leave out.
+    @Test("westron's Button: 324 combinations, on 24 sheets")
     func button() throws {
         let matrix = try SnapshotMatrix(try buttonContract(), source: buttonSource)
         #expect(matrix.axes.map(\.name) == ["variant", "size", "role", "iconOnly", "floating"])
@@ -82,17 +116,24 @@ struct SnapshotMatrixTests {
         #expect(matrix.axes[3].isBool && matrix.axes[3].values == ["false", "true"])
         #expect(matrix.axes[4].isBool && matrix.axes[4].values == ["false", "true"])
         #expect(matrix.states == ["hover", "focus", "pressed", "disabled", "loading"])
-        // The one constraint, of severity error (decisions/0015): a tertiary does not float.
+        // Two constraints, of severity error (decisions/0015): a tertiary and a destructive secondary do not float.
         #expect(matrix.advisedAgainst.isEmpty)
-        #expect(matrix.excluded.count == 3 * 2 * 2, "tertiary × size × role × iconOnly, floating")
-        #expect(matrix.excluded.allSatisfy { $0.values[0] == "tertiary" && $0.values[4] == "true" })
-        #expect(matrix.combinations.count == 3 * 3 * 2 * 2 * 2 * 6 - 72)
-        #expect(Set(matrix.combinations).count == 360, "each combination once")
+        #expect(matrix.excluded.count == 3 * 2 * 2 + 3 * 2, "tertiary × size × role × iconOnly; secondary, destructive")
+        #expect(
+            matrix.excluded.allSatisfy {
+                $0.values[4] == "true"
+                    && ($0.values[0] == "tertiary" || ($0.values[0] == "secondary" && $0.values[2] == "destructive"))
+            })
+        #expect(matrix.combinations.count == 3 * 3 * 2 * 2 * 2 * 6 - 72 - 36)
+        #expect(Set(matrix.combinations).count == 324, "each combination once")
         #expect(matrix.combinations.first == .init(["primary", "s", "default", "false", "false"], state: nil))
         #expect(matrix.combinations[1] == .init(["primary", "s", "default", "false", "false"], state: "hover"))
         #expect(matrix.columnAxis == "variant")
         #expect(matrix.sheets.count == 24)
-        #expect(matrix.sheets[0].id == "size-s_role-default_iconOnly-false_floating-false")
+        // floating is named only where it is true (`nameInMatrixAtDefault: false`): the sheets of a button that does
+        // not float keep the ids they had before the option.
+        #expect(matrix.axes[4].unnamed == "false" && matrix.axes.prefix(4).allSatisfy { $0.unnamed == nil })
+        #expect(matrix.sheets[0].id == "size-s_role-default_iconOnly-false")
         #expect(matrix.sheets[1].id == "size-s_role-default_iconOnly-false_floating-true")
         #expect(matrix.sheets[0].columns == ["primary", "secondary", "tertiary"])
         #expect(matrix.sheets[0].rows == [nil, "hover", "focus", "pressed", "disabled", "loading"])
@@ -103,10 +144,10 @@ struct SnapshotMatrixTests {
         #expect(matrix.platforms[0].drawn.map(\.option) == ["size"])
         #expect(matrix.platforms[0].drawn[0].map.map { "\($0.value)→\($0.drawn)" } == ["s→m", "l→m"])
         #expect(matrix.platforms[0].notEntered == ["hover"])
-        #expect(matrix.combinations(on: "ios").count == 360)
-        #expect(matrix.combinations(on: "macos").count == 360)
+        #expect(matrix.combinations(on: "ios").count == 324)
+        #expect(matrix.combinations(on: "macos").count == 324)
         // A watch never enters hover: one state in six of each combination.
-        #expect(matrix.combinations(on: "watchos").count == 360 - 60)
+        #expect(matrix.combinations(on: "watchos").count == 324 - 54)
     }
 
     @Test("a constraint of severity error leaves its combinations out with every state; a warning only marks them")
@@ -244,7 +285,9 @@ struct SnapshotMatrixTests {
         #expect(
             swift.contains(
                 #"platforms: [Platform("watchos", drawn: ["size": ["s": "m", "l": "m"]], notEntered: ["hover"])],"#))
-        #expect(swift.components(separatedBy: "\n            Combination(").count - 1 == 360)
+        #expect(swift.components(separatedBy: "\n            Combination(").count - 1 == 324)
+        #expect(swift.contains(#"Option("floating", values: ["false", "true"], unnamed: "false"),"#))
+        #expect(swift.contains(#"Option("iconOnly", values: ["false", "true"]),"#), "named at every value")
         #expect(swift.components(separatedBy: "\n            Sheet(").count - 1 == 24)
         #expect(swift.contains("    ) { ButtonMatrixCell(ButtonMatrixValues($0)) }\n"))
         #expect(swift.contains("        unbound: [\"focus\"],\n"), "no token binding names focus")

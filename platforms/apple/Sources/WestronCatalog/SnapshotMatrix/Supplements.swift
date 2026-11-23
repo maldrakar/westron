@@ -10,6 +10,6 @@ extension ComponentMatrix.Supplement {
             .textFieldGlyphLeading, .textFieldGlyphTrailing, .textFieldGlyphsBoth, .textFieldGlyphsLongText,
             .textFieldGlyphsRightToLeft, .textFieldSearchPrompt,
             .ruleLabelled, .iconTileListColors, .iconTileBesideTitle, .iconTileEmptyScreen, .chipLitAccent,
-            .chipLongLabel, .buttonFloatingOverContent, .buttonFloatingBeforeGlass,
+            .chipLongLabel, .buttonFloatingOnGlass, .buttonFloatingOnGlassInverse,
         ] + chipListColors + chipTextOnly + listRowAll
 }
