@@ -1,6 +1,10 @@
 // Hand-written. Button's look and behavior from its contract, spec/components/button/button.spec.yaml, on SwiftUI's own
-// Button (decisions/0001, 0003). The generated `buttonStyle(_:size:iconOnly:)` (Generated/Button+Contract.swift)
+// Button (decisions/0001, 0003). The generated `buttonStyle(_:size:iconOnly:floating:)` (Generated/Button+Contract.swift)
 // applies it; the tokens it draws come from ButtonTokens.swift.
+//
+// A floating secondary stands on the system's glass from OS 26, `glassEffect(.regular.interactive(), in: Capsule())`,
+// with no fill, outline, shadow or press scale of westron's on it; before OS 26 on its opaque raised surface. A floating
+// primary keeps its fill and casts `shadow.overlay` on every OS (decisions/0015 at the repository's root).
 //
 // It is a `PrimitiveButtonStyle`, not a `ButtonStyle`, because only a primitive style decides whether an activation
 // runs the action: loading refuses presses (the contract), and a `ButtonStyle` cannot. Its body is a system `Button`
@@ -15,15 +19,20 @@
 
 import SwiftUI
 
-/// westron's Button style, which the generated `buttonStyle(_:size:iconOnly:)` applies (decisions/0001, 0003).
+/// westron's Button style, which the generated `buttonStyle(_:size:iconOnly:floating:)` applies (decisions/0001, 0003,
+/// 0015).
 struct ButtonVariantStyle: PrimitiveButtonStyle {
     let variant: ButtonVariant
     /// nil: the size comes from `controlSize`.
     let size: ButtonSize?
     let iconOnly: Bool
+    /// Over content (the contract's `floating`); tertiary and a destructive secondary do not take it
+    /// (`ButtonTokens.floats(_:destructive:floating:)`).
+    var floating = false
 
     func makeBody(configuration: Configuration) -> some View {
-        ButtonGate(configuration: configuration, variant: variant, explicitSize: size, iconOnly: iconOnly)
+        ButtonGate(
+            configuration: configuration, variant: variant, explicitSize: size, iconOnly: iconOnly, floating: floating)
     }
 }
 
@@ -33,6 +42,7 @@ private struct ButtonGate: View {
     let variant: ButtonVariant
     let explicitSize: ButtonSize?
     let iconOnly: Bool
+    let floating: Bool
 
     @Environment(\.isLoading) private var isLoading
 
@@ -45,7 +55,7 @@ private struct ButtonGate: View {
         } label: {
             configuration.label
         }
-        .buttonStyle(ButtonLook(variant: variant, explicitSize: explicitSize, iconOnly: iconOnly))
+        .buttonStyle(ButtonLook(variant: variant, explicitSize: explicitSize, iconOnly: iconOnly, floating: floating))
         // Apple has no busy trait: loading is the button's accessibility value, read after its label, "Save, Loading,
         // button". The value is cleared at rest. A value the product gives the button wins over it (see `.loading(_:)`).
         .accessibilityValue(
@@ -62,9 +72,12 @@ private struct ButtonLook: ButtonStyle {
     let variant: ButtonVariant
     let explicitSize: ButtonSize?
     let iconOnly: Bool
+    let floating: Bool
 
     func makeBody(configuration: Configuration) -> some View {
-        ButtonBody(configuration: configuration, variant: variant, explicitSize: explicitSize, iconOnly: iconOnly)
+        ButtonBody(
+            configuration: configuration, variant: variant, explicitSize: explicitSize, iconOnly: iconOnly,
+            floating: floating)
     }
 }
 
@@ -73,6 +86,7 @@ private struct ButtonBody: View {
     let variant: ButtonVariant
     let explicitSize: ButtonSize?
     let iconOnly: Bool
+    let floating: Bool
 
     @Environment(\.controlSize) private var controlSize
     @Environment(\.isEnabled) private var isEnabled
@@ -81,6 +95,7 @@ private struct ButtonBody: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.forcedButtonStates) private var forcedStates
+    @Environment(\.drawsButtonsWithoutGlass) private var drawsWithoutGlass
     @State private var isHovered = false
 
     /// Whether the button is in a state of its contract, read where the system or westron's modifier keeps it, or
@@ -100,16 +115,21 @@ private struct ButtonBody: View {
 
     var body: some View {
         let states = Set(ButtonState.allCases.filter(isIn))
+        let destructive = configuration.role == .destructive
+        let onGlass = ButtonTokens.standsOnGlass(
+            variant, destructive: destructive, floating: floating,
+            glassAvailable: ButtonGlass.isAvailable && !drawsWithoutGlass)
         let tokens = ButtonTokens(
-            variant: variant, destructive: configuration.role == .destructive, states: states,
-            highContrast: contrast == .increased)
+            variant: variant, destructive: destructive, states: states, highContrast: contrast == .increased,
+            floating: floating)
         let metrics = ButtonMetrics(ButtonSize.resolved(explicit: explicitSize, controlSize: controlSize))
-        let scalesDown = ButtonTokens.scalesDown(states: states) && !reduceMotion
+        // On glass the press is the glass's own response, not westron's scale (decisions/0015).
+        let scalesDown = ButtonTokens.scalesDown(states: states, onGlass: onGlass, reduceMotion: reduceMotion)
 
         ButtonSurface(
-            label: configuration.label, tokens: tokens, metrics: metrics, iconOnly: iconOnly,
-            isLoading: states.contains(.loading), isHovered: states.contains(.hover),
-            isPressed: states.contains(.pressed)
+            label: configuration.label, tokens: onGlass ? tokens.onGlass() : tokens, metrics: metrics,
+            iconOnly: iconOnly, isLoading: states.contains(.loading), isHovered: states.contains(.hover),
+            isPressed: states.contains(.pressed), glass: ButtonTokens.glass(states: states, onGlass: onGlass)
         )
         .scaleEffect(scalesDown ? ButtonTokens.pressScale : 1)
         .animation(.press, value: scalesDown)
@@ -138,12 +158,14 @@ private struct ButtonSurface<Label: View>: View {
     let isLoading: Bool
     let isHovered: Bool
     let isPressed: Bool
+    /// The system's glass under the button; nil: none.
+    let glass: ButtonGlass?
     @ScaledMetric private var padding: CGFloat
     @ScaledMetric private var gap: CGFloat
 
     init(
         label: Label, tokens: ButtonTokens, metrics: ButtonMetrics, iconOnly: Bool, isLoading: Bool,
-        isHovered: Bool, isPressed: Bool
+        isHovered: Bool, isPressed: Bool, glass: ButtonGlass?
     ) {
         self.label = label
         self.tokens = tokens
@@ -152,6 +174,7 @@ private struct ButtonSurface<Label: View>: View {
         self.isLoading = isLoading
         self.isHovered = isHovered
         self.isPressed = isPressed
+        self.glass = glass
         let textStyle = Font.TextStyle(metrics.labelFont.textStyle)
         _padding = ScaledMetric(wrappedValue: CGFloat(metrics.paddingHorizontal), relativeTo: textStyle)
         _gap = ScaledMetric(wrappedValue: CGFloat(metrics.gap), relativeTo: textStyle)
@@ -168,7 +191,12 @@ private struct ButtonSurface<Label: View>: View {
         .background {
             ZStack {
                 if let background = tokens.background {
-                    shape.fill(background)
+                    // A floating button's shadow follows its shape, not its glyphs.
+                    if let shadow = tokens.shadow {
+                        shape.fill(background).shadow(shadow)
+                    } else {
+                        shape.fill(background)
+                    }
                 }
                 if let borderColor = tokens.borderColor, let borderWidth = tokens.borderWidth {
                     shape.strokeBorder(borderColor, lineWidth: CGFloat(borderWidth))
@@ -177,6 +205,10 @@ private struct ButtonSurface<Label: View>: View {
             .animation(.fade, value: isHovered)
             .animation(.press, value: isPressed)
         }
+        // After the content, the padding, the frame and the background, as Apple asks of the glass, and inside the
+        // opacity below, so that a disabled button dims its glass too (the contract's description; measured by
+        // ButtonFloatingPixelTests, "a disabled floating secondary dims its glass with it").
+        .modifier(ButtonGlassEffect(glass: glass, shape: shape))
         // The hit area (chapter 08: at least the platform's recommended target, except where the contract's platform
         // block says otherwise) is never grown past what is drawn, measured in CatalogUITests/ButtonBehaviorTests.swift
         // (#23) and, on macOS, ButtonHitAreaTests:
@@ -209,6 +241,35 @@ private struct ButtonSurface<Label: View>: View {
             .contentShape(.focusEffect, shape)
         #endif
         .opacity(tokens.opacity.map(Double.init) ?? 1)
+    }
+}
+
+/// The system's glass under a floating secondary button (decisions/0015): regular, interactive while the button takes
+/// presses, with nothing of westron's on it.
+struct ButtonGlass: Equatable {
+    let isInteractive: Bool
+
+    /// Whether the OS draws glass: iOS, macOS and watchOS 26 and later.
+    static var isAvailable: Bool {
+        if #available(iOS 26, macOS 26, watchOS 26, *) { true } else { false }
+    }
+}
+
+/// Lays the system's glass under the content in `shape`, where there is a `glass` and the OS has it.
+private struct ButtonGlassEffect<GlassShape: Shape>: ViewModifier {
+    let glass: ButtonGlass?
+    let shape: GlassShape
+
+    func body(content: Content) -> some View {
+        if let glass {
+            if #available(iOS 26, macOS 26, watchOS 26, *) {
+                content.glassEffect(.regular.interactive(glass.isInteractive), in: shape)
+            } else {
+                content
+            }
+        } else {
+            content
+        }
     }
 }
 

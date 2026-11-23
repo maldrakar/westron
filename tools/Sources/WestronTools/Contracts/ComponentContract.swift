@@ -28,11 +28,16 @@ public struct ComponentContract: Equatable, Sendable {
         public let name: String
         public let kind: Kind
         public let description: String?
+        /// Whether the snapshot matrix names the option in a sheet's id and title at its default too; false for a bool
+        /// option added to a contract whose sheets were reviewed without it (`nameInMatrixAtDefault: false`), so that
+        /// those sheets keep their ids, titles and pictures and only its other value gets sheets with its name.
+        public let namedInMatrixAtDefault: Bool
 
-        public init(name: String, kind: Kind, description: String? = nil) {
+        public init(name: String, kind: Kind, description: String? = nil, namedInMatrixAtDefault: Bool = true) {
             self.name = name
             self.kind = kind
             self.description = description
+            self.namedInMatrixAtDefault = namedInMatrixAtDefault
         }
     }
 
@@ -380,7 +385,9 @@ public struct ComponentContract: Equatable, Sendable {
             guard case .bool(let value) = entry["default"] else {
                 throw problem(path.key("default"), "a bool option needs true or false as its default")
             }
-            return Option(name: name, kind: .bool(default: value), description: description)
+            return Option(
+                name: name, kind: .bool(default: value), description: description,
+                namedInMatrixAtDefault: entry["nameInMatrixAtDefault"] != .bool(false))
         case "tokens":
             guard let group = entry["group"]?.string else {
                 throw problem(path.key("group"), "an option of type tokens needs its token group")

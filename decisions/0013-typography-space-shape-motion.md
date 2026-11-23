@@ -3,7 +3,8 @@
 Date: 2026-11-15. Status: accepted. The owner chose direction B on the direction specimens. Its default density is
 comfortable. Revised 2026-11-16: control heights and the disabled opacity. Revised 2026-11-18: the roles of the
 spacing rhythm and where the page margin applies. Revised 2026-11-20: buttons are capsules, the iOS control heights,
-the minimum hit target; then filled fields, a capsule on one line, and the check's quiet ring.
+the minimum hit target; then filled fields, a capsule on one line, and the check's quiet ring. Revised 2026-11-23:
+the floating button's glass, the one exception to flat fills (decisions/0015).
 
 ## Context
 
@@ -198,7 +199,9 @@ The owner compared prototype renders of three button looks with Apple's own butt
 - **Buttons are capsules.** Every variant and size of a button is the platform's capsule, and an icon-only button a
   circle whose diameter is its height, never a large radius (as chapter 04 already asked of tags). A control westron
   draws as a button no longer takes `radius.control`; fields and the segmented control still do, and `radius.control`
-  stays 8. Fills are flat and opaque, in westron's colors, with no glass or material.
+  stays 8. Fills are flat and opaque, in westron's colors, with no glass or material. One narrow exception, the
+  owner's of 2026-11-23 (decisions/0015): a floating secondary button, which stands over content outside any bar,
+  stands on the system's glass from OS 26, and on an opaque raised surface before it.
 - **Secondary is filled, not outlined.** A neutral gray, `color.background.muted`, with its words in
   `color.text.primary` and no border. Its hover and pressed fills are darker steps of that gray. The destructive role
   keeps the gray and writes its words in `color.status.danger.text`. Asked on the same day how dark, the owner chose

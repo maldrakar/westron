@@ -114,8 +114,10 @@ public enum ButtonSize: String, CaseIterable, Sendable {
 }
 
 extension View {
-    public func buttonStyle(_ variant: ButtonVariant, size: ButtonSize? = nil, iconOnly: Bool = false) -> some View {
-        buttonStyle(ButtonVariantStyle(variant: variant, size: size, iconOnly: iconOnly))
+    public func buttonStyle(
+        _ variant: ButtonVariant, size: ButtonSize? = nil, iconOnly: Bool = false, floating: Bool = false
+    ) -> some View {
+        buttonStyle(ButtonVariantStyle(variant: variant, size: size, iconOnly: iconOnly, floating: floating))
     }
 }
 

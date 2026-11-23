@@ -1,5 +1,5 @@
 // Hand-written. CATALOG ONLY: what the westron catalog (WestronCatalog, in this package) needs to show Button's states
-// that a screenshot cannot produce: hover, pressed and focus.
+// that a screenshot cannot produce, hover, pressed and focus, and a floating button's look before OS 26 on a newer OS.
 // Everything here is `package`, visible to the targets of this Swift package and never to a product that imports
 // WestronUI: it is not public API, and the parity lint (#21) does not see it.
 
@@ -8,6 +8,8 @@ import SwiftUI
 extension EnvironmentValues {
     /// States the westron Button style draws in addition to the real ones. Catalog only: a product never sets it.
     @Entry var forcedButtonStates: Set<ButtonState> = []
+    /// Whether floating buttons draw the look of an OS without glass, before 26, on an OS that has it. Catalog only.
+    @Entry var drawsButtonsWithoutGlass = false
 }
 
 /// One of Button's states from its contract, as the catalog names it. Catalog only.
@@ -83,5 +85,12 @@ extension View {
     /// looks, for a screenshot, and changes nothing a button does.
     package func forcingButtonStates(_ states: Set<ButtonCatalogState>) -> some View {
         environment(\.forcedButtonStates, Set(states.map(\.state)))
+    }
+
+    /// Draws the floating westron buttons in this view as an OS before 26 does, on its opaque raised surface instead of
+    /// the system's glass (decisions/0015). Catalog only: the CI runner's OS has glass, so without it the matrix and
+    /// the tests would never draw the look of the minimum OS versions. On an OS without glass it changes nothing.
+    package func drawingButtonsWithoutGlass(_ without: Bool = true) -> some View {
+        environment(\.drawsButtonsWithoutGlass, without)
     }
 }

@@ -11,9 +11,12 @@ import WestronUI
 // is split into pages, each of which fits one screenshot on an iPhone 17 in portrait: `button` (variants × sizes ×
 // label, icon and label, icon-only), `button-destructive` (the same in the destructive role), `button-states` (every
 // state and the combinations the contract excludes), the same in the destructive role in two entries,
-// `button-states-destructive` (the enabled rows) and `button-states-destructive-disabled` (the disabled rows), and
-// `button-behavior` (live buttons that count accepted presses, close neighbors and focus). The variants, sizes and states come from the
-// generated enums, so the pages follow the contract.
+// `button-states-destructive` (the enabled rows) and `button-states-destructive-disabled` (the disabled rows),
+// `button-behavior` (live buttons that count accepted presses, close neighbors and focus), and floating buttons over
+// a busy ground, on glass and as before OS 26, in four entries at the end of this file: `button-floating` (live, over a
+// pressable list, a group), `button-floating-sizes` (every size, over the stripes and the inverse band),
+// `button-floating-states` (each state on glass) and `button-floating-before-26` (each state before OS 26, and
+// loading). The variants, sizes and states come from the generated enums, so the pages follow the contract.
 
 extension CatalogEntry {
     static let button = CatalogEntry(id: "button", title: "Button", section: .components) {
@@ -50,6 +53,39 @@ extension CatalogEntry {
         id: "button-behavior", title: "Button: presses, loading, neighbors", section: .components
     ) {
         ButtonBehaviorPage()
+    }
+
+    /// Floating buttons over content (#121) are four entries: at accessibility5 the accessibility audit could not
+    /// finish one page that held them all ("Audit failed to complete in time" on four of its screens, its text-only
+    /// first screen among them), and finishes each part. Together they hold every sample that page held. This one: the
+    /// live buttons, the buttons over a pressable list and a group in the system's `GlassEffectContainer`, which the
+    /// behavior tests press.
+    static let buttonFloating = CatalogEntry(
+        id: "button-floating", title: "Button: floating, over content", section: .components
+    ) {
+        ButtonFloatingPage(part: .live)
+    }
+
+    /// Floating buttons on glass at every size, over the stripes and over a band of the opposite tone, where the
+    /// contract records that the label can read below 4.5:1 (decisions/0015, Q5).
+    static let buttonFloatingSizes = CatalogEntry(
+        id: "button-floating-sizes", title: "Button: floating, sizes on glass", section: .components
+    ) {
+        ButtonFloatingPage(part: .sizes)
+    }
+
+    /// Floating buttons on glass in each state but loading.
+    static let buttonFloatingStates = CatalogEntry(
+        id: "button-floating-states", title: "Button: floating, states on glass", section: .components
+    ) {
+        ButtonFloatingPage(part: .states)
+    }
+
+    /// Floating buttons as before OS 26 in each state, and loading, on glass and before OS 26.
+    static let buttonFloatingBefore26 = CatalogEntry(
+        id: "button-floating-before-26", title: "Button: floating, before OS 26 and loading", section: .components
+    ) {
+        ButtonFloatingPage(part: .before26)
     }
 }
 
@@ -175,6 +211,7 @@ private struct SampleButton: View {
     let variant: ButtonVariant
     var size: ButtonSize? = nil
     let destructive: Bool
+    var floating = false
     var action: () -> Void = {}
 
     var body: some View {
@@ -183,17 +220,17 @@ private struct SampleButton: View {
             switch kind {
             case .label:
                 Button(sample.title, role: destructive ? .destructive : nil, action: action)
-                    .buttonStyle(variant, size: size)
+                    .buttonStyle(variant, size: size, floating: floating)
             case .iconAndLabel:
                 Button(role: destructive ? .destructive : nil, action: action) {
                     Label(sample.title, icon: sample.icon)
                 }
-                .buttonStyle(variant, size: size)
+                .buttonStyle(variant, size: size, floating: floating)
             case .iconOnly:
                 Button(role: destructive ? .destructive : nil, action: action) {
                     Label(sample.title, icon: sample.icon)
                 }
-                .buttonStyle(variant, size: size, iconOnly: true)
+                .buttonStyle(variant, size: size, iconOnly: true, floating: floating)
             }
         }
     }
@@ -203,27 +240,34 @@ private struct SampleButton: View {
 /// with the combination's variant, size, role and iconOnly, an icon and a label, in the combination's state. Hover,
 /// focus and pressed are forced, as on the `button-states` pages; disabled and loading are set with the real
 /// `.disabled(_:)` and `.loading(_:)`. With `withoutIcon`, for the supplementary sheets, the label has no icon.
+///
+/// A floating cell draws what the bindings say, the look where there is no glass, on every OS: the system's glass is
+/// not the same pixel for pixel from one render to the next, and the generated sheets are the contract's. The glass
+/// supplements draw it on glass (`onGlass`, decisions/0015).
 struct ButtonMatrixCell: View {
     let values: ButtonMatrixValues
     let withoutIcon: Bool
+    let onGlass: Bool
 
-    init(_ values: ButtonMatrixValues, withoutIcon: Bool = false) {
+    init(_ values: ButtonMatrixValues, withoutIcon: Bool = false, onGlass: Bool = false) {
         self.values = values
         self.withoutIcon = withoutIcon
+        self.onGlass = onGlass
     }
 
     var body: some View {
         // Every option at once: an option added to the contract changes `fields` and fails the build here.
-        let (variant, size, role, iconOnly, stateName) = values.fields
+        let (variant, size, role, iconOnly, floating, stateName) = values.fields
         let state = stateName.flatMap(ButtonCatalogState.init(named:))
         SampleButton(
             kind: iconOnly ? .iconOnly : withoutIcon ? .label : .iconAndLabel, variant: variant, size: size,
             // The style draws any role other than destructive as default (the contract's platforms.apple).
-            destructive: role == "destructive"
+            destructive: role == "destructive", floating: floating
         )
         .forcingButtonStates(state.map { $0.isForced ? [$0] : [] } ?? [])
         .disabled(state?.isDisabled ?? false)
         .loading(state?.isLoading ?? false)
+        .drawingButtonsWithoutGlass(!onGlass)
     }
 }
 
@@ -613,6 +657,412 @@ private struct ButtonBehaviorPage: View {
                     .onAppear { isFocused = true }
                 }
             #endif
+        }
+    }
+
+    private func section(_ title: String, @ViewBuilder content: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: .space100) {
+            Text(title)
+                .textRole(.subheadline.strong)
+                .foregroundStyle(.text.primary)
+            content()
+        }
+    }
+}
+
+// MARK: - Floating
+//
+// Button's floating look (#121, decisions/0015 at the repository's root). The generated sheets draw a floating button
+// as the bindings say, the look where there is no glass, on every OS (`ButtonMatrixCell`), so they are the same on
+// every run; the system's glass is only on these supplements and on the floating entries' pages, over content:
+// a busy ground of stripes, and an inverse band, dark in the light theme and light in the dark one (Q5's test, and on
+// the catalog page the contract's recorded limitation: a label on glass over content of the opposite tone).
+
+/// Accessibility identifiers and words of the floating samples. The accessibility audit reports a button's text, which
+/// carries no identifier, so the samples with a label are told apart by their words (CatalogAccessibilityAuditTests):
+/// "Edit" is a secondary on glass, over the stripes; "Open" a secondary on glass over the inverse band, the contract's
+/// recorded limitation (decisions/0015, Q5); a secondary
+/// before OS 26 says the name of the state it is in ("Rest", "Pressed", …); a primary says "New", or "Delete" with the
+/// destructive role.
+enum ButtonFloatingID {
+    /// The live buttons: a floating secondary "Back" and "More", icon-only, on glass; a floating primary "Add",
+    /// icon-only; a disabled floating secondary "Share", icon-only, on glass.
+    static let back = "button.floating.live.back"
+    static let more = "button.floating.live.more"
+    static let add = "button.floating.live.add"
+    static let disabled = "button.floating.live.disabled"
+    /// The text with the number of accepted presses: "Accepted presses: 3".
+    static let count = "button.floating.live.count"
+    /// Floating secondaries on glass over a pressable list, by size, `button.floating.over-list.m`.
+    static func overList(_ size: ButtonSize) -> String { "button.floating.over-list.\(size.rawValue)" }
+    /// The middle row of that list, under the floating buttons.
+    static let overListRow = "button.floating.over-list.row"
+    /// "Rows: 1, floating: 2", the presses each took.
+    static let overListCount = "button.floating.over-list.count"
+}
+
+/// What a floating sample stands over: a busy ground of stripes, or the inverse band of Q5's test.
+enum FloatingGroundKind: Sendable {
+    /// Diagonal stripes in four list colors' fills.
+    case stripes
+    /// `text.primary`'s color: dark in the light themes, light in the dark ones, the ground that makes glass turn
+    /// against its label: content of the tone opposite to the theme, where the contract records that the label can read
+    /// below 4.5:1 (decisions/0015, Q5).
+    case inverse
+}
+
+/// A fixed ground for floating buttons, which follows the theme. No images and no randomness, so a capture is the
+/// same each time. Decorative.
+struct FloatingGround: View {
+    var kind = FloatingGroundKind.stripes
+
+    var body: some View {
+        Group {
+            switch kind {
+            case .stripes: stripes
+            case .inverse: Rectangle().fill(.text.primary)
+            }
+        }
+        .accessibilityHidden(true)
+    }
+
+    private var stripes: some View {
+        Canvas { context, size in
+            let colors: [Westron.Color] = [
+                Westron.Category.orange.fill, Westron.Category.blue.fill, Westron.Category.green.fill,
+                Westron.Category.violet.fill,
+            ]
+            let width = CGFloat.space150
+            var x = -size.height
+            var index = 0
+            while x < size.width {
+                var stripe = Path()
+                stripe.move(to: CGPoint(x: x, y: size.height))
+                stripe.addLine(to: CGPoint(x: x + size.height, y: 0))
+                stripe.addLine(to: CGPoint(x: x + size.height + width, y: 0))
+                stripe.addLine(to: CGPoint(x: x + width, y: size.height))
+                stripe.closeSubpath()
+                context.fill(stripe, with: .color(Color(colors[index % colors.count])))
+                x += width
+                index += 1
+            }
+        }
+    }
+}
+
+/// Its content padded on a floating ground, in a card's corners.
+private struct FloatingPanel<Content: View>: View {
+    var ground = FloatingGroundKind.stripes
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        content
+            .padding(.space200)
+            .background { FloatingGround(kind: ground) }
+            .clipShape(RoundedRectangle(cornerRadius: .radius.card, style: .continuous))
+    }
+}
+
+/// One cell of Button's glass supplements: the matrix's cell on the system's glass, over a ground.
+struct ButtonFloatingCell: View {
+    let values: ButtonMatrixValues
+    let ground: FloatingGroundKind
+
+    var body: some View {
+        FloatingPanel(ground: ground) {
+            ButtonMatrixCell(values, onGlass: true)
+        }
+    }
+}
+
+extension ComponentMatrix.Supplement {
+    /// Floating buttons on the system's glass over the busy ground, every size, label and icon-only, at rest and in
+    /// each state (#121).
+    static let buttonFloatingOnGlass = ComponentMatrix.Supplement(
+        component: "button", id: "floating-on-glass", title: "floating, on glass over stripes",
+        note: "The OS's glass and what a floating button stands over are not contract options: the generated sheets "
+            + "draw the bindings, the look before OS 26, on every OS. Here a floating secondary stands on the "
+            + "system's glass, regular, with no fill, outline, shadow or press scale of westron's, over a fixed busy "
+            + "ground of four list colors' stripes; hover and pressed are the glass's own response to a pointer or a "
+            + "touch, which a forced state does not show. A floating primary keeps its fill and casts shadow.overlay "
+            + "(decisions/0015).",
+        keeps: ["floating": "true", "role": "default"], columns: ["primary", "secondary"], rowsPerPicture: 3,
+        splitsAtEverySize: true
+    ) { ButtonFloatingCell(values: ButtonMatrixValues($0), ground: .stripes) }
+
+    /// The same over the inverse band, Q5's test of the label's color on glass (#121).
+    static let buttonFloatingOnGlassInverse = ComponentMatrix.Supplement(
+        component: "button", id: "floating-on-glass-inverse", title: "floating, on glass over an inverse band",
+        note: "Q5's test (decisions/0015): the glass over a band of text.primary's color, dark in the light themes and "
+            + "light in the dark ones, where the glass turns against the label's color, which stays text.primary.",
+        keeps: ["floating": "true", "role": "default"], columns: ["primary", "secondary"], rowsPerPicture: 3,
+        splitsAtEverySize: true
+    ) { ButtonFloatingCell(values: ButtonMatrixValues($0), ground: .inverse) }
+}
+
+extension ComponentMatrix.SheetNote {
+    /// Button's generated floating sheets draw the bindings, the look where there is no glass, on every OS (#121).
+    static let buttonFloatingWithoutGlass = ComponentMatrix.SheetNote(
+        component: "button", option: "floating", value: "true",
+        text: "A floating button here is drawn as the bindings say, the look where there is no glass (before OS 26), "
+            + "on every OS: the system's glass is not the same pixel for pixel from one render to the next. The "
+            + "supplements \"floating, on glass\" show it on glass, over content (decisions/0015).")
+}
+
+/// Floating buttons over content, one part of them per catalog entry: live ones, over a pressable list, a group in
+/// the system's `GlassEffectContainer` as a product writes it; every size, over the stripes and the inverse band; each
+/// state on glass; each state as before OS 26, and loading.
+private struct ButtonFloatingPage: View {
+    /// What the page holds; each part is a catalog entry.
+    enum Part {
+        /// The live buttons, the buttons over a pressable list, a group in the system's container, and on macOS focus.
+        case live
+        /// Every size on glass, over the stripes and over a band of the opposite tone, the recorded limitation (Q5).
+        case sizes
+        /// Each state but loading, on glass.
+        case states
+        /// Each state but loading as before OS 26, then loading, on glass and before OS 26.
+        case before26
+    }
+
+    let part: Part
+    @State private var accepted = 0
+    @State private var rowPresses = 0
+    @State private var floatingPresses = 0
+    @FocusState private var isFocused: Bool
+
+    /// A row of the states: the states it forces or sets; loading has a section of its own, last, since its
+    /// indicator keeps the page moving while the audit waits for it to settle.
+    private struct Row: Hashable {
+        let name: String
+        let states: Set<ButtonCatalogState>
+
+        static var all: [Row] {
+            [Row(name: "rest", states: [])]
+                + ButtonCatalogState.all.filter { $0.isEntered && !$0.isLoading }.map {
+                    Row(name: $0.name, states: [$0])
+                }
+        }
+
+        /// The row's name as a button's word: "Rest", "Pressed".
+        var word: String { name.prefix(1).uppercased() + name.dropFirst() }
+    }
+
+    var body: some View {
+        switch part {
+        case .live:
+            TokenPage(
+                title: "Button · floating",
+                summary: "A floating button stands over content, outside any bar. Secondary: the system's glass from "
+                    + "OS 26, with nothing of westron's on it; before OS 26 an opaque raised surface. Primary: its "
+                    + "fill and shadow.overlay. Tertiary and a destructive secondary do not float."
+            ) { livePart }
+        case .sizes:
+            TokenPage(
+                title: "Button · floating, sizes",
+                summary: "Every size on the system's glass from OS 26, over stripes, then over content of the tone "
+                    + "opposite to the theme, where the contract promises no contrast for the label."
+            ) {
+                section("Sizes, on glass from OS 26") { sizes(ground: .stripes, secondary: "Edit") }
+                section("Over the opposite tone: a recorded limitation") {
+                    Text(
+                        "On glass the label keeps westron's colors, which follow the theme, while the glass follows "
+                            + "what lies beneath. Over a light ground in the dark theme it can read below 4.5:1 "
+                            + "(3.8:1 on iOS 26.3): the contract records this and promises no ratio. Over content "
+                            + "whose tone it does not control, a product uses a floating primary or keeps the content "
+                            + "in the theme's tone (decisions/0015, Q5)."
+                    )
+                    .textRole(.footnote.regular)
+                    .foregroundStyle(.text.secondary)
+                    sizes(ground: .inverse, secondary: "Open")
+                }
+            }
+        case .states:
+            TokenPage(
+                title: "Button · floating, states",
+                summary: "Each state on the system's glass from OS 26. Hover, pressed and focus are forced; the glass "
+                    + "answers a real touch or pointer itself."
+            ) {
+                section("States, on glass from OS 26") { states(withoutGlass: false) }
+            }
+        case .before26:
+            TokenPage(
+                title: "Button · floating, before OS 26",
+                summary: "Each state as before OS 26, an opaque raised surface, forced on this OS; then loading."
+            ) {
+                section("Before OS 26: forced on this OS") { states(withoutGlass: true) }
+                section("Loading") { loading }
+            }
+        }
+    }
+
+    /// The live buttons, the buttons over a pressable list, on macOS the focus ring, and a group.
+    @ViewBuilder private var livePart: some View {
+        section("Live") {
+            Text("Accepted presses: \(accepted)")
+                .textRole(.body.regular)
+                .foregroundStyle(.text.primary)
+                .accessibilityIdentifier(ButtonFloatingID.count)
+            FloatingPanel {
+                HStack(spacing: .space200) {
+                    live("Back", icon: .chevronLeft, variant: .secondary, id: ButtonFloatingID.back)
+                    live("More", icon: .ellipsis, variant: .secondary, id: ButtonFloatingID.more)
+                    live("Share", icon: .expand, variant: .secondary, id: ButtonFloatingID.disabled)
+                        .disabled(true)
+                    Spacer(minLength: 0)
+                    live("Add", icon: .plus, variant: .primary, id: ButtonFloatingID.add)
+                }
+            }
+        }
+        section("Over a pressable list: sizes s, m and l") { overList }
+        #if os(macOS)
+            section("Focus: the system's ring over glass") {
+                // A button takes keyboard focus on a Mac only with the system's keyboard navigation on; the
+                // catalog makes this one focusable and focuses it, to show the ring the system draws over glass.
+                FloatingPanel {
+                    sample("Edit", icon: .pen, variant: .secondary)
+                        .focusable()
+                        .focused($isFocused)
+                }
+                .onAppear { isFocused = true }
+            }
+        #endif
+        section("A group: the system's GlassEffectContainer") {
+            FloatingPanel { group }
+        }
+    }
+
+    /// A live floating button, icon-only, that counts accepted presses.
+    private func live(_ title: LocalizedStringKey, icon: Westron.Icon, variant: ButtonVariant, id: String)
+        -> some View
+    {
+        Button {
+            accepted += 1
+        } label: {
+            Label(title, icon: icon)
+        }
+        .buttonStyle(variant, iconOnly: true, floating: true)
+        .accessibilityIdentifier(id)
+    }
+
+    /// Three rows of a list a product presses, and over the middle one a floating secondary of each size on glass,
+    /// far enough apart that no button's touch tolerance reaches another (ButtonBehaviorTests taps around them).
+    private var overList: some View {
+        VStack(alignment: .leading, spacing: .space100) {
+            Text("Rows: \(rowPresses), floating: \(floatingPresses)")
+                .textRole(.body.regular)
+                .foregroundStyle(.text.primary)
+                .accessibilityIdentifier(ButtonFloatingID.overListCount)
+            VStack(spacing: 0) {
+                row("Groceries")
+                row("Work").accessibilityIdentifier(ButtonFloatingID.overListRow)
+                row("Home")
+            }
+            .overlay {
+                HStack(spacing: .space800) {
+                    ForEach(ButtonSize.allCases, id: \.self) { size in
+                        Button {
+                            floatingPresses += 1
+                        } label: {
+                            Label("Back", icon: .chevronLeft)
+                        }
+                        .buttonStyle(.secondary, size: size, iconOnly: true, floating: true)
+                        .accessibilityIdentifier(ButtonFloatingID.overList(size))
+                    }
+                }
+            }
+        }
+    }
+
+    /// A row of the list that counts its presses.
+    private func row(_ name: String) -> some View {
+        ListRow(action: { rowPresses += 1 }) {
+            Text(verbatim: name)
+        }
+    }
+
+    /// Every size in a panel: a secondary icon-only and with a label, a primary icon-only and with a label, and a
+    /// destructive primary.
+    private func sizes(ground: FloatingGroundKind, secondary: LocalizedStringKey) -> some View {
+        VStack(alignment: .leading, spacing: .space100) {
+            ForEach(ButtonSize.allCases, id: \.self) { size in
+                TokenDetail("size \(size.rawValue)")
+                FloatingPanel(ground: ground) {
+                    FlowLayout(spacing: .space200) {
+                        sample("Back", icon: .chevronLeft, variant: .secondary, size: size, iconOnly: true)
+                        sample(secondary, icon: .pen, variant: .secondary, size: size)
+                        sample("Add", icon: .plus, variant: .primary, size: size, iconOnly: true)
+                        if ground == .stripes {
+                            sample("New", icon: .plus, variant: .primary, size: size)
+                            sample("Delete", icon: .trash, variant: .primary, size: size, role: .destructive)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Every state but loading, at size m, each row a panel: a secondary icon-only and with a label, and a primary
+    /// icon-only. The secondary with a label says "Edit" on glass and the row's state before OS 26, so that the audit
+    /// tells the pressed one, scaled down there, from the rest (the primaries with a label are in `sizes`, at rest).
+    private func states(withoutGlass: Bool) -> some View {
+        VStack(alignment: .leading, spacing: .space100) {
+            ForEach(Row.all, id: \.self) { row in
+                TokenDetail(row.name)
+                FloatingPanel {
+                    FlowLayout(spacing: .space200) {
+                        sample("Back", icon: .chevronLeft, variant: .secondary, iconOnly: true)
+                        sample(withoutGlass ? LocalizedStringKey(row.word) : "Edit", icon: .pen, variant: .secondary)
+                        sample("Add", icon: .plus, variant: .primary, iconOnly: true)
+                    }
+                }
+                .forcingButtonStates(row.states.filter(\.isForced))
+                .disabled(row.states.contains(where: \.isDisabled))
+                .drawingButtonsWithoutGlass(withoutGlass)
+            }
+        }
+    }
+
+    /// Loading, on glass and before OS 26, last on the page: its indicators keep moving.
+    private var loading: some View {
+        VStack(alignment: .leading, spacing: .space100) {
+            ForEach([false, true], id: \.self) { withoutGlass in
+                TokenDetail(withoutGlass ? "before OS 26" : "on glass")
+                FloatingPanel {
+                    FlowLayout(spacing: .space200) {
+                        sample("Back", icon: .chevronLeft, variant: .secondary, iconOnly: true)
+                        sample(withoutGlass ? "Loading" : "Edit", icon: .pen, variant: .secondary)
+                        sample("New", icon: .plus, variant: .primary)
+                    }
+                }
+                .loading(true)
+                .drawingButtonsWithoutGlass(withoutGlass)
+            }
+        }
+    }
+
+    private func sample(
+        _ title: LocalizedStringKey, icon: Westron.Icon, variant: ButtonVariant, size: ButtonSize? = nil,
+        iconOnly: Bool = false, role: ButtonRole? = nil
+    ) -> some View {
+        Button(role: role) {
+        } label: {
+            Label(title, icon: icon)
+        }
+        .buttonStyle(variant, size: size, iconOnly: iconOnly, floating: true)
+    }
+
+    /// Two floating buttons that share one piece of glass, as a product writes them: the system's container, from OS
+    /// 26; before it, two buttons side by side.
+    @ViewBuilder private var group: some View {
+        let pair = HStack(spacing: .space100) {
+            sample("Back", icon: .chevronLeft, variant: .secondary, iconOnly: true)
+            sample("More", icon: .ellipsis, variant: .secondary, iconOnly: true)
+        }
+        if #available(iOS 26, macOS 26, watchOS 26, *) {
+            GlassEffectContainer(spacing: .space100) { pair }
+        } else {
+            pair
         }
     }
 

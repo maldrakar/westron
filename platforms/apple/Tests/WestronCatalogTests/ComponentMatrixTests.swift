@@ -15,11 +15,13 @@ struct ComponentMatrixTests {
         #expect(options.appearance == .dark)
     }
 
-    @Test("Button's matrix: 216 combinations, every one in exactly one cell of its 12 sheets")
+    /// 432 combinations less the 72 of a floating tertiary and the 36 of a floating destructive secondary, which the
+    /// contract's constraints exclude (decisions/0015).
+    @Test("Button's matrix: 324 combinations, every one in exactly one cell of its 24 sheets")
     func button() throws {
         let matrix = try #require(ComponentMatrix.all.first { $0.component == "button" })
-        #expect(matrix.drawnCombinations.count == 216)
-        #expect(matrix.sheets.count == 12)
+        #expect(matrix.drawnCombinations.count == 324)
+        #expect(matrix.sheets.count == 24)
         #expect(matrix.sheets.map(matrix.drawnCount(in:)).reduce(0, +) == matrix.drawnCombinations.count)
         var seen: Set<ComponentMatrix.Combination> = []
         for sheet in matrix.sheets {
@@ -30,7 +32,14 @@ struct ComponentMatrixTests {
                     {
                         #expect(seen.insert(combination).inserted, "\(combination) on two cells")
                         #expect(fallbacks.isEmpty, "iOS and macOS offer every value")
-                        #expect(advised == nil, "Button has no constraints")
+                        #expect(advised == nil, "Button's constraints are errors, not advice")
+                    } else {
+                        // The cells not drawn: a floating tertiary, and a floating destructive secondary.
+                        #expect(
+                            sheet.id.hasSuffix("_floating-true")
+                                && (column == "tertiary"
+                                    || (column == "secondary" && sheet.id.contains("role-destructive"))),
+                            "\(sheet.id), \(column)")
                     }
                 }
             }
@@ -207,6 +216,13 @@ struct ComponentMatrixTests {
     func keys() throws {
         let found = try #require(ComponentMatrix.sheet(key: "button.size-l_role-destructive_iconOnly-true"))
         #expect(found.matrix.title(of: found.sheet) == "size l · role destructive · iconOnly true")
+        // An option that a sheet names only where it is not the default (`nameInMatrixAtDefault: false`): the sheets
+        // of a button that does not float keep the names they had before `floating` (decisions/0015).
+        let floating = try #require(
+            ComponentMatrix.sheet(key: "button.size-l_role-destructive_iconOnly-true_floating-true"))
+        #expect(
+            floating.matrix.title(of: floating.sheet) == "size l · role destructive · iconOnly true · floating true")
+        #expect(ComponentMatrix.sheet(key: "button.size-l_role-destructive_iconOnly-true_floating-false") == nil)
         #expect(
             found.matrix.fileName(of: found.sheet, capture: .init(theme: .darkHighContrast, textSize: .large))
                 == "button.size-l_role-destructive_iconOnly-true.dark-hc.png", "as before text sizes")
@@ -304,21 +320,40 @@ struct ComponentMatrixTests {
         let matrix = try #require(ComponentMatrix.all.first { $0.component == "button" })
         #expect(matrix.supplement == nil)
         let supplements = matrix.supplements
-        #expect(supplements.map { $0.supplement?.id } == ["label-without-icon"])
+        #expect(
+            supplements.map { $0.supplement?.id } == [
+                "label-without-icon", "floating-on-glass", "floating-on-glass-inverse",
+            ])
         let labels = try #require(supplements.first)
         #expect(labels.supplements.isEmpty)
-        // Variant × size × role × (rest + 5 states), iconOnly kept false: half of the generated matrix.
-        #expect(labels.drawnCombinations.count == 3 * 3 * 2 * 6)
+        // Variant × size × role × floating × (rest + 5 states), iconOnly kept false: half of the generated matrix, less
+        // a floating tertiary and a floating destructive secondary.
+        #expect(labels.drawnCombinations.count == 3 * 3 * 2 * 2 * 6 - 3 * 2 * 6 - 3 * 6)
         #expect(labels.drawnCombinations.allSatisfy { $0.values[3] == "false" })
-        #expect(labels.sheets.count == 6)
-        #expect(labels.sheets.map(labels.drawnCount(in:)).reduce(0, +) == 108)
+        #expect(labels.sheets.count == 12)
+        #expect(labels.sheets.map(labels.drawnCount(in:)).reduce(0, +) == 162)
         #expect(labels.sheets[0].id == "label-without-icon_size-s_role-default_iconOnly-false")
         #expect(labels.title(of: labels.sheets[0]) == "label without an icon · size s · role default · iconOnly false")
         let found = try #require(
             ComponentMatrix.sheet(key: "button.label-without-icon_size-m_role-destructive_iconOnly-false"))
         #expect(found.matrix.supplement?.id == "label-without-icon")
+        // The glass ones (#121): every floating sheet of the default role, primary and secondary, over a ground.
+        for glass in supplements.dropFirst() {
+            #expect(glass.drawnCombinations.count == 2 * 3 * 2 * 6)
+            #expect(glass.drawnCombinations.allSatisfy { $0.values[2] == "default" && $0.values[4] == "true" })
+            #expect(glass.sheets.count == 6)
+            #expect(glass.sheets.allSatisfy { $0.id.hasSuffix("_floating-true") })
+            // Tertiary, which does not float, is not drawn again as a column of excluded cells.
+            #expect(glass.sheets.allSatisfy { $0.columns == ["primary", "secondary"] })
+            #expect(glass.sheets.allSatisfy { glass.sheetNote(of: $0) == nil }, "a supplement has its own note")
+        }
+        // The generated floating sheets say that they draw the look where there is no glass; the others say nothing.
+        for sheet in matrix.sheets {
+            let floats = sheet.id.hasSuffix("_floating-true")
+            #expect((matrix.sheetNote(of: sheet)?.contains("no glass") ?? false) == floats, "\(sheet.id)")
+        }
         // The generated matrix is the contract's alone.
-        #expect(matrix.drawnCombinations.count == 216 && matrix.sheets.count == 12)
+        #expect(matrix.drawnCombinations.count == 324 && matrix.sheets.count == 24)
         #expect(!Catalog.entries.contains { $0.id.contains("label-without-icon") }, "not an audited catalog entry")
     }
 
@@ -330,7 +365,7 @@ struct ComponentMatrixTests {
         func macOSHasNoDynamicType() throws {
             let matrix = try #require(ComponentMatrix.all.first { $0.component == "button" })
             let combination = try #require(
-                matrix.drawnCombinations.first { $0.values == ["primary", "l", "destructive", "false"] })
+                matrix.drawnCombinations.first { $0.values == ["primary", "l", "destructive", "false", "false"] })
             let sizes = ComponentMatrix.TextSize.allCases.map { size in
                 let host = NSHostingView(
                     rootView: matrix.content(combination)
