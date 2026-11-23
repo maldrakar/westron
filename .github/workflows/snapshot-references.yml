@@ -3,7 +3,8 @@ name: Snapshot references
 # Records the snapshot matrix's references on the CI runner (#92, decisions/0008, the note of 2026-11-21): renders
 # both platforms, writes platforms/apple/Snapshots/<platform>/ (`tools/apple/snapshot-matrix.sh record`: a reference
 # within one level of its new picture stays as it was, and a not-compared one, such as Button's glass on iOS, while its
-# size holds) and commits what changed to the branch, through Git LFS. Two ways to ask for it:
+# size holds; in another environment only the same pixels keep one) and commits what changed to the branch, through
+# Git LFS. Two ways to ask for it:
 #   - the label `record-snapshots` on a pull request from a branch of this repository (not a fork, whose token cannot
 #     push): it records on the pull request's branch as it is then, and removes the label when done;
 #   - `gh workflow run snapshot-references.yml --ref <branch>` (or "Run workflow" on the Actions tab). On main only on

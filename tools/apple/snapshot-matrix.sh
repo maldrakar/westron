@@ -51,7 +51,9 @@
 # Record: writes the render (--from, else a fresh full render) into the references and its environment beside them.
 # A reference within the tolerance of its new picture stays as it was, so a drift does not rewrite it; in another
 # environment only the same pixels keep one. A not-compared picture's reference stays as it was while its size holds,
-# whatever its pixels: it records that the picture exists, and recording does not rewrite it on every run. CI records them (.github/workflows/snapshot-references.yml): references
+# whatever its pixels, in the same environment: it records that the picture exists, and recording does not rewrite it
+# on every run; in another environment it too is kept only with the same pixels, so it never shows an older OS's look.
+# CI records them (.github/workflows/snapshot-references.yml): references
 # recorded elsewhere would not match the runner's renders.
 # On iOS the render queues for the simulator while another run on this Mac uses it: it says whom it waits for and
 # waits, at most WESTRON_LOCK_TIMEOUT seconds (default 5400; tools/apple/lock.sh). On macOS it needs no screen (its
@@ -360,7 +362,8 @@ case "${1:-}" in
       exit "$status"
     fi
 
-    # record: in another environment, or over no references, only the same pixels keep a reference.
+    # record: in another environment, or over no references, only the same pixels keep a reference, a not-compared
+    # picture's too (sync at tolerance 0).
     keep="$tolerance"
     if ! recorded "$platform" \
       || [ -n "$(environment_differences "$references/environment.json" "$render_dir/environment.json" scale)" ]; then

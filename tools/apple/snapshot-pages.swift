@@ -11,7 +11,9 @@
 // when one changed, was added or was removed. A picture that either directory's manifest (matrix.json) marks not
 // compared, a supplement's `notCompared` on the render's OS, is held to its presence and its size only: it is listed
 // and counted as not compared, with the reason, unless --strict compares it too; sync keeps its reference as it was
-// while the size holds. All exit 2 on bad input. The pages are self-contained: inline styles,
+// while the size holds, except at tolerance 0 (references recorded for another environment), where it is held to the
+// same pixels as any other. The marks are read leniently: a manifest they cannot be read from gives none, with a line
+// on stderr. All exit 2 on bad input. The pages are self-contained: inline styles,
 // relative image links, nothing from the network. Apple-only (ImageIO, CoreGraphics), so it lives in tools/apple/ and
 // not in the tools package, which builds on Linux (decisions/0009).
 
@@ -410,16 +412,31 @@ func pixelSize(_ url: URL) -> [Int]? {
     return [width, height]
 }
 
+/// The part of a manifest the not-compared marks need, so that a manifest without the other fields (an older render's)
+/// still gives its marks.
+struct Marks: Decodable {
+    struct Component: Decodable { var groups: [Group] }
+    struct Group: Decodable {
+        var notCompared: String?
+        var sheets: [Sheet]
+    }
+    struct Sheet: Decodable { var images: [String: [Image]] }
+    struct Image: Decodable { var file: String }
+    var components: [Component]
+}
+
 /// The pictures a directory's manifest marks not compared (`Group.notCompared`), each with the reason; empty without a
-/// manifest, as in a set of references.
+/// manifest, as in a set of references, and empty with a line on stderr when the manifest cannot be read.
 func notCompared(in directory: URL) -> [String: String] {
     let url = directory.appendingPathComponent("matrix.json")
     guard let data = try? Data(contentsOf: url) else { return [:] }
-    let manifest: Manifest
+    let manifest: Marks
     do {
-        manifest = try JSONDecoder().decode(Manifest.self, from: data)
+        manifest = try JSONDecoder().decode(Marks.self, from: data)
     } catch {
-        fail("\(url.path): \(error)")
+        FileHandle.standardError.write(
+            Data("snapshot-pages: no not-compared marks taken from \(url.path), which cannot be read: \(error)\n".utf8))
+        return [:]
     }
     var marks: [String: String] = [:]
     for group in manifest.components.flatMap(\.groups) {
@@ -676,8 +693,8 @@ func compare(_ before: URL, _ after: URL, out: URL, tolerance: Int, labels: (Str
             + "same size, which is all that is checked of them; they never fail. Each shows the \(html(afterLabel)) "
             + "picture first, then the \(html(beforeLabel)) one"
             + (beforeLabel == "reference"
-                ? ", which <code>record</code> keeps as first recorded while its size holds, so it may show an older "
-                    + "look." : ".")
+                ? ", which <code>record</code> keeps as first recorded in this environment while its size holds, so it "
+                    + "may show an older look." : ".")
             + " <code>--strict</code> compares them too.</p>\n"
     }
     for group in reasons {
@@ -730,7 +747,9 @@ func compare(_ before: URL, _ after: URL, out: URL, tolerance: Int, labels: (Str
 /// whose reference is not an image, an LFS pointer that was not pulled), keeps a reference within the tolerance as it
 /// is, so that a run-to-run drift of one level does not rewrite it, and deletes a reference the render no longer has.
 /// A picture the render's manifest marks not compared keeps its reference as it is while the size holds, whatever the
-/// pixels, so that recording does not rewrite it on every run: the reference marks that it exists.
+/// pixels, so that recording does not rewrite it on every run: the reference marks that it exists. At tolerance 0,
+/// which `snapshot-matrix.sh record` passes when the references come from another environment (or there are none), it
+/// is held to the same pixels as any other picture, so a kept reference never shows an older OS's look.
 func sync(_ render: URL, _ references: URL, tolerance: Int) -> Int32 {
     let names = pngs(in: render)
     if names.isEmpty { fail("no PNG in \(render.path)") }
@@ -746,7 +765,7 @@ func sync(_ render: URL, _ references: URL, tolerance: Int) -> Int32 {
         let target = references.appendingPathComponent(name)
         if !FileManager.default.fileExists(atPath: target.path) {
             added += 1
-        } else if marks[name] != nil {
+        } else if marks[name] != nil, tolerance > 0 {
             guard sizeVerdict(target, source) != nil else {
                 unchecked += 1
                 continue

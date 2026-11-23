@@ -14,7 +14,8 @@ check on the runner.
   `gh workflow run snapshot-references.yml --ref <branch>`, or add the label `record-snapshots` to a pull request. It
   renders both platforms, writes the references (`tools/apple/snapshot-matrix.sh record`; a reference within one
   level of its new picture stays as it was, and so does one of a picture that is not compared, such as Button's
-  glass on iOS, while its size holds) and commits them to the branch. CI does not start for that commit, since
+  glass on iOS, while its size holds; in another environment only the same pixels keep one) and commits them to the
+  branch. CI does not start for that commit, since
   a workflow pushed it: close and reopen the pull request, or push any commit, to run the checks again.
 - **Check:** the job `snapshots` in `ci.yml` renders both platforms on every pull request and push to `main` and runs
   `tools/apple/snapshot-matrix.sh check`; a difference fails it, and its artifact holds the report and the render.

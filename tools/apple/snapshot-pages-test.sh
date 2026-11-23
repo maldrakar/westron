@@ -9,8 +9,11 @@
 # Cases: a picture the render's manifest marks not compared (a supplement's `notCompared` on this OS) that differs
 # does not fail compare and is counted and listed with its reason; one whose size changed, that is missing, or that the
 # references do not hold still fails; an ordinary picture that differs still fails; --strict compares every picture; a
-# mark in either directory's manifest counts; sync keeps an existing not-compared reference of the same size as it
-# was, byte for byte, and replaces one whose size changed; index names the mark on the review page.
+# mark in either directory's manifest counts; the marks are read from a manifest that lacks the other fields, and one
+# they cannot be read from gives none, with a line on stderr, not exit 2; sync keeps an existing not-compared reference
+# of the same size as it was, byte for byte, in the same environment (tolerance 1), replaces it with the render's at
+# tolerance 0 (references recorded for another environment), and replaces one whose size changed; index names the mark
+# on the review page.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -133,17 +136,51 @@ expect 1 "^changed: $glass " "--strict compares it pixel by pixel" \
 expect 0 "1 not compared$" "a mark in the first directory's manifest counts too" \
   "$work/render" "$work/references" "$work/out"
 
-# sync: the not-compared reference of the same size stays as it was; a changed ordinary one is replaced.
+# The manifest of an older render, without the fields the marks do not need: the marks still count.
+variant older-manifest sh -c 'jq "del(.os, .device, .scale, .pinned, .captures)" matrix.json > m && mv m matrix.json'
+expect 0 "1 not compared$" "the marks are read from a manifest that lacks the other fields" \
+  "$work/references" "$work/older-manifest" "$work/out"
+
+# A manifest the marks cannot be read from: none are taken, so the glass compares as any picture, and compare says so.
+variant unreadable-manifest sh -c 'echo "{\"platform\":\"ios\"}" > matrix.json'
+expect 1 "^snapshot-pages: no not-compared marks taken from .*matrix.json" \
+  "a manifest the marks cannot be read from gives none, with a line on stderr, and no exit 2" \
+  "$work/references" "$work/unreadable-manifest" "$work/out"
+expect 1 "^changed: $glass " "without marks, the glass is compared pixel by pixel" \
+  "$work/references" "$work/unreadable-manifest" "$work/out"
+
+# sync in the same environment (tolerance 1, record's default): the not-compared reference of the same size stays as
+# it was; a changed ordinary one is replaced.
 cp -R "$work/references" "$work/recorded"
 before_glass="$(shasum "$work/recorded/$glass" | cut -d' ' -f1)"
-output="$("$binary" sync "$work/plain-changed" "$work/recorded")"
+output="$("$binary" sync "$work/plain-changed" "$work/recorded" --tolerance 1)"
 if [ "$(shasum "$work/recorded/$glass" | cut -d' ' -f1)" = "$before_glass" ] \
   && cmp -s "$work/recorded/$plain" "$work/plain-changed/$plain" \
   && grep -qF "1 not compared kept as they were" <<< "$output"; then
-  ok "sync keeps a not-compared reference of the same size and replaces a changed ordinary one"
+  ok "sync in the same environment keeps a not-compared reference of the same size and replaces a changed ordinary one"
 else
   fail "sync: $output"
 fi
+
+# sync at tolerance 0 (record in another environment): the not-compared reference is held to the same pixels, so one
+# that differs takes the render's picture, and one with the same pixels stays.
+cp -R "$work/references" "$work/re-recorded"
+output="$("$binary" sync "$work/render" "$work/re-recorded" --tolerance 0)"
+if cmp -s "$work/re-recorded/$glass" "$work/render/$glass" && grep -qF "1 replaced" <<< "$output" \
+  && ! grep -qF "not compared kept" <<< "$output"; then
+  ok "sync at tolerance 0 (another environment) replaces a not-compared reference of the same size that differs"
+else
+  fail "sync at tolerance 0 kept a not-compared reference that differs: $output"
+fi
+before_glass="$(shasum "$work/re-recorded/$glass" | cut -d' ' -f1)"
+output="$("$binary" sync "$work/render" "$work/re-recorded" --tolerance 0)"
+if [ "$(shasum "$work/re-recorded/$glass" | cut -d' ' -f1)" = "$before_glass" ] \
+  && grep -qF "0 replaced" <<< "$output"; then
+  ok "sync at tolerance 0 keeps a not-compared reference with the same pixels"
+else
+  fail "sync at tolerance 0 rewrote a not-compared reference with the same pixels: $output"
+fi
+rm -rf "$work/re-recorded"
 "$binary" sync "$work/glass-wider" "$work/recorded" > /dev/null
 cmp -s "$work/recorded/$glass" "$work/glass-wider/$glass" \
   && ok "sync replaces a not-compared reference whose size changed" \

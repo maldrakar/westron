@@ -63,7 +63,9 @@ tools/apple/snapshot-matrix.sh ios [--component button]   # every combination of
                                                           # index.html; --component rule,surface: those only
 tools/apple/snapshot-matrix.sh macos                      # the same on macOS (about 15 s)
 tools/apple/snapshot-matrix.sh compare <dirA> <dirB>      # pixel diff of two renders, one level of tolerance
-                                                          # (--tolerance); exit 1 when one differs
+                                                          # (--tolerance); exit 1 when one differs, but not for
+                                                          # pictures a supplement marks not compared (glass on
+                                                          # iOS): presence and size only; --strict compares them
 tools/apple/snapshot-matrix.sh check ios|macos            # against the references; locally: exit 4, "the environment
                                                           # differs" (they are the CI runner's), so compare instead
 git diff --name-only main...HEAD | tools/apple/audit-scope.sh  # the catalog entries a pull request's audit

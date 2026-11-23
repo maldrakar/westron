@@ -280,8 +280,9 @@ still drives every generated sheet and combination:
 
 ```sh
 tools/apple/snapshot-matrix.sh ios                       # or macos; --component button,rule for some components
-tools/apple/snapshot-matrix.sh compare <before> <after>  # exit 0 when every image is the same, 1 otherwise;
-                                                         # --strict: compare the not-compared pictures too
+tools/apple/snapshot-matrix.sh compare <before> <after>  # exit 0 when every image is the same, 1 otherwise; a
+                                                         # supplement's not-compared pictures (glass on iOS) count
+                                                         # by presence and size only; --strict compares them too
 tools/apple/snapshot-matrix.sh check ios                 # against the references: 0 same, 1 changed, 3 none yet,
                                                          # 4 another environment (locally, always)
 tools/apple/snapshot-matrix.sh record ios                # on CI only (snapshot-references.yml)
@@ -403,10 +404,12 @@ number of images (`Snapshots/README.md`). They are recorded on the CI runner onl
 `.build/snapshot-matrix/check-<platform>/`; with no references yet it exits 3, and in another environment it says what
 differs and exits 4 without comparing: on your Mac that is the usual outcome, so render before and after your change
 and `compare` them. `record <platform>` writes a render into the references, keeping a reference within the tolerance
-of its new picture, so a drift does not rewrite it. A not-compared picture's reference is kept as it was while its
-size holds, whatever its pixels, and replaced only when its size changes: it marks that the picture exists, and
-recording does not rewrite it on every run. So it shows the picture as first recorded, not kept current; the report
-captions it so. Both refuse a render with a failed picture (exit 1, naming it):
+of its new picture, so a drift does not rewrite it; in another environment (or over no references) only the same
+pixels keep one. A not-compared picture's reference is kept as it was in the same environment while its size holds,
+whatever its pixels, and replaced only when its size changes: it marks that the picture exists, and recording does not
+rewrite it on every run. So it shows the picture as first recorded in that environment, not kept current; the report
+captions it so. In another environment it is held to the same pixels as any other, so recording for a new runner image
+replaces it and it never shows an older OS's look. Both refuse a render with a failed picture (exit 1, naming it):
 a missing PNG would read as a removed sheet, and `record` would delete its reference. `.lfsconfig` keeps the references out of what Git LFS fetches by
 default (they would be pointers in a clone; `git lfs pull --include "platforms/apple/Snapshots/**" --exclude ""` gets
 them).

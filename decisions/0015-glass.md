@@ -961,15 +961,20 @@ with the reason (`ComponentMatrix.Supplement.notCompared`); the render's manifes
 and `tools/apple/snapshot-matrix.sh compare`, `check` and `record` (`tools/apple/snapshot-pages.swift`) hold those
 pictures to their presence and size, not their pixels. `floating-on-glass` and `floating-on-glass-inverse` are so
 marked on iOS: their 168 pictures there (both supplements, every size, label and icon-only, primary and secondary,
-four themes at the default text size and light at xSmall and accessibility5) are still rendered, shown on the review
-page and in the report's section "Not compared" with the reason, and counted on the summary line; a missing,
-unexpected or resized one still fails. Their pixels on iOS are no longer protected by the matrix. On macOS the same
+four themes at the default text size and light at xSmall and accessibility5) are still rendered and shown on the
+render's review page, marked "Not compared on iOS" with the reason (on CI the artifact `snapshot-matrix`, on every
+run); `compare` and `check` list them by reason and count them on their summary line, which the `snapshots` job copies
+into its summary on every run, passing or not, and the report's section "Not compared" shows them beside their
+references (on CI the artifact `snapshot-diff`, uploaded when the job fails); a missing, unexpected or resized one
+still fails. Their pixels on iOS are no longer protected by the matrix. On macOS the same
 sheets are compared as every other picture, and ButtonFloatingPixelTests measures the floating button on glass there
 (the disabled glass, `text.primary` and the glyph's colors over the band and the stripes): the floating button's
 pixels on glass are held on macOS only. Every other sheet on both platforms, the generated `floating-true` sheets
 (no glass) among them, keeps the comparison within one level. The iOS references of the glass pictures stay in
 `platforms/apple/Snapshots/ios/` as recorded: `record` keeps such a reference while its size holds, whatever its
 pixels, so recording does not rewrite them on every run, and they show the look as first recorded, not kept current.
+Recording for another environment (a new runner image) holds them to the same pixels as any other picture, so they are
+replaced then and never show an older OS's look.
 
 ## Consequences
 

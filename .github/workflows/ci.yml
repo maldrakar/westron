@@ -180,9 +180,12 @@ jobs:
     # snapshot-references.yml (decisions/0008, the note of 2026-11-21). The outcome of each platform's check:
     #   - the same, within one level a channel: the step passes. A supplement that names an OS where its pictures are
     #     not the same from one render to the next (`notCompared`, Button's glass on iOS, decisions/0015) has its
-    #     pictures on that OS checked for presence and size only, listed in the report as "not compared" with the
-    #     reason; they never fail the check, and the comparison's own test (tools/apple/snapshot-pages-test.sh) runs
-    #     first;
+    #     pictures on that OS checked for presence and size only; they never fail the check, and the comparison's own
+    #     test (tools/apple/snapshot-pages-test.sh) runs first. On every run, passing or not, the job summary gives each
+    #     platform's summary line and each "not compared (N, component): reason" line of the check, so a new mark or a
+    #     changed reason shows on a green run too; the pictures are on the render's review page (artifact
+    #     `snapshot-matrix`, `<platform>/index.html`, marked "Not compared on iOS"), and on a failure also in the
+    #     report's section "Not compared" (`snapshot-diff`);
     #   - a picture changed, was added or removed, or the render failed: the job fails, and the artifact
     #     `snapshot-diff` holds the report (index.html: reference, new picture and diff side by side, the changed
     #     components named). An intended change is recorded with the label `record-snapshots` on the pull request;
@@ -255,6 +258,7 @@ jobs:
         run: |
           set -uo pipefail
           failed=0
+          mkdir -p .build/logs
           for platform in macos ios; do
             if [ ! -f ".build/snapshot-matrix/$platform/environment.json" ]; then
               echo "::error title=Snapshot matrix ($platform)::The render failed before its manifest; see the step above and the logs."
@@ -262,7 +266,9 @@ jobs:
               continue
             fi
             status=0
-            tools/apple/snapshot-matrix.sh check "$platform" --from ".build/snapshot-matrix/$platform" || status=$?
+            # The output is kept for the step "Summary of the check"; with pipefail the status is the check's.
+            tools/apple/snapshot-matrix.sh check "$platform" --from ".build/snapshot-matrix/$platform" 2>&1 \
+              | tee ".build/logs/snapshot-check-$platform.log" || status=$?
             case "$status" in
               0) ;;
               3 | 4)
@@ -286,6 +292,33 @@ jobs:
             esac
           done
           exit "$failed"
+      - name: Summary of the check
+        # On every run, passing or not: each platform's summary line and its "not compared" lines, from the check's
+        # own output, so that what is not compared shows on a green run too.
+        if: ${{ !cancelled() }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### Snapshot matrix against the references"
+            for platform in macos ios; do
+              case "$platform" in macos) name=macOS ;; *) name=iOS ;; esac
+              log=".build/logs/snapshot-check-$platform.log"
+              if [ ! -f "$log" ]; then
+                echo "- **$name**: not checked, the render failed (the step \"Check against the references\")"
+                continue
+              fi
+              line="$(grep -m 1 -E '^snapshot-matrix compare: [0-9]+ changed' "$log" || true)"
+              echo "- **$name**: ${line:-nothing compared (the step \"Check against the references\" says why)}"
+              { grep -E '^not compared \([0-9]+, ' "$log" || true; } | sed 's/^/  - /'
+            done
+            cat << 'EOF'
+
+          Pictures marked not compared are checked for presence and size only, never pixel by pixel. To see them:
+          the artifact `snapshot-matrix`, `<platform>/index.html` (the render's review page), marks their supplement
+          "Not compared on iOS" with the reason; when the job fails, `snapshot-diff`'s `check-<platform>/index.html`
+          also shows each beside its reference in the section "Not compared".
+          EOF
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Keep only this commit's references in the LFS cache
         if: ${{ !cancelled() }}
         run: git -c lfs.fetchexclude= lfs prune || echo "::warning::git lfs prune failed; the LFS cache keeps older references too."
