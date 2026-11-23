@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Tests tools/apple/lock.sh, the lock the Apple scripts queue on (#107), with no simulator and no Xcode: on macOS and
 # on Linux, where tools/check.sh runs it (step locks). Each case runs scripts that take one lock in a folder of its
-# own, under the bash that runs this script, and prints what they said; about 5 s in all.
+# own, under the bash that runs this script, and prints what they said; about 6 s in all.
 #
 #   tools/apple/lock-test.sh
 #
@@ -70,23 +70,29 @@ wait_until() {
 # Waits until <file> exists.
 wait_for() { wait_until [ -e "$1" ]; }
 
+# Whether the script <name>, run with counting, has slept twice or more: a waiter that has looked at the lock again
+# after its first look, and so was tested on a later look too, however slow the machine.
+slept_twice() { [ -e "$work/$1.sleeps" ] && [ "$(grep -c '' "$work/$1.sleeps")" -ge 2 ]; }
+
 # The resource is free when its lock is gone (it is a symbolic link, dangling, so -L).
 free() { [ ! -L "$lock" ]; }
 
 echo "== two holders at once"
-# The first holds the lock until the second says it waits, or has run (a lock that let it in), at most 30 s.
+# The first holds the lock until the second has slept twice in its wait, so it looked at the lock at least three times
+# and found it held each time, or until the second has run (a lock that let it in), at most 30 s.
 "$BASH" -c "$load"'trap "echo first: its own EXIT trap ran" EXIT
   westron_lock test "the test resource"
   echo "first start" >> "$1"; touch "$1.first"
   started=$SECONDS
-  until grep -qs "waiting for" "$2" || grep -q "second end" "$1" || [ $((SECONDS - started)) -ge 30 ]; do
+  until { [ -e "$2" ] && [ "$(grep -c "" "$2")" -ge 2 ]; } || grep -q "second end" "$1" \
+    || [ $((SECONDS - started)) -ge 30 ]; do
     sleep 0.1
   done
-  echo "first end" >> "$1"' first "$work/order" "$work/second.err" > "$work/first.out" 2> "$work/first.err" &
+  echo "first end" >> "$1"' first "$work/order" "$work/second.sleeps" > "$work/first.out" 2> "$work/first.err" &
 first=$!
 background+=("$first")
 wait_for "$work/order.first"
-run second 'westron_lock test "the test resource"; echo "second start" >> "$1"; echo "second end" >> "$1"' \
+run second "$counting"'westron_lock test "the test resource"; echo "second start" >> "$1"; echo "second end" >> "$1"' \
   "$work/order" 2> "$work/second.err"
 wait "$first"
 show "$work/order"
@@ -162,22 +168,25 @@ LC_ALL=C TZ=ABC+3 "$BASH" -c "$load"'trap "kill \$sleeper" EXIT; westron_lock te
 holder=$!
 background+=("$holder")
 wait_for "$work/holder.locked"
-# The limit is the very thing under test, so this case measures time: the waiter must not give up before 2 s, by its
-# own count, and must give up well before the holder goes, within 15 s: a margin for a busy machine, where a turn of
-# the lock's loop can take longer than its one-second sleep.
+# The limit is the very thing under test. The waiter must not give up before 2 s by its own count, and must give up at
+# the limit, which a count of its sleeps tells however slow the machine: it sleeps 1 s between two looks, so after 2
+# sleeps at least 2 s have passed and the next look gives up; one more is a margin for the clock (SECONDS counts whole
+# seconds of the wall clock). The seconds it reports have no such bound, as a turn of the loop on a busy machine can
+# take longer than its sleep; the run as a whole within 15 s is only a backstop, well before the holder goes.
 status=0
 started=$SECONDS
-WESTRON_LOCK_TIMEOUT=2 run impatient 'westron_lock test "the test resource" && echo "impatient: took it"' \
+WESTRON_LOCK_TIMEOUT=2 run impatient "$counting"'westron_lock test "the test resource" && echo "impatient: took it"' \
   > "$work/impatient.out" 2> "$work/impatient.err" || status=$?
 elapsed=$((SECONDS - started))
 show "$work/impatient.err"
+slept="$(grep -c '' "$work/impatient.sleeps" 2> /dev/null || true)"
 gave_up="$(sed -n "s/^impatient: gave up waiting for the test resource after \([0-9]*\) s (WESTRON_LOCK_TIMEOUT=2): pid $holder .*/\1/p" \
   "$work/impatient.err")"
 if [ "$status" -ne 0 ] && [ ! -s "$work/impatient.out" ] && [ "$elapsed" -lt 15 ] \
-  && [ -n "$gave_up" ] && [ "$gave_up" -ge 2 ]; then
-  ok "it failed with status $status after $gave_up s"
+  && [ -n "$gave_up" ] && [ "$gave_up" -ge 2 ] && [ "${slept:-0}" -le 3 ]; then
+  ok "it failed with status $status after $gave_up s and ${slept:-0} sleeps"
 else
-  fail "the wait did not end at the limit with a message (status $status, after $elapsed s)"
+  fail "the wait did not end at the limit with a message (status $status, after $elapsed s and ${slept:-0} sleeps)"
 fi
 
 echo "== a waiter in another locale and time zone than the holder's"
@@ -187,24 +196,24 @@ echo "== a waiter in another locale and time zone than the holder's"
 foreign_locale="$(locale -a 2> /dev/null || true)"
 foreign_locale="$(grep -ix "ru_RU.utf-\{0,1\}8" <<< "$foreign_locale" | head -1 || true)"
 foreign_locale="${foreign_locale:-C}"
-# The waiter compares the holder's start with its own reading before it says it waits, and takes the lock over and
-# exits instead when they differ: it is stopped once it has done either, still waiting if the lock is right. Its limit
-# only bounds a waiter left behind.
+# The waiter compares the holder's start with its own reading on each look at the lock, and takes the lock over and
+# exits when they differ: it is stopped once it has slept twice (three looks, each finding the holder alive), or has
+# taken the lock over, still waiting if the lock is right. Its limit only bounds a waiter left behind.
 LC_ALL="$foreign_locale" TZ=XYZ-5:45 WESTRON_LOCK_TIMEOUT=60 \
-  "$BASH" -c "$load"'westron_lock test "the test resource" && echo "foreigner: took it"' foreigner \
+  "$BASH" -c "$load$counting"'westron_lock test "the test resource" && echo "foreigner: took it"' foreigner \
   > "$work/foreigner.out" 2> "$work/foreigner.err" &
 foreigner=$!
 background+=("$foreigner")
-foreigner_said() {
-  grep -q -e "^foreigner: waiting for" -e "no longer runs" "$work/foreigner.err" || ! kill -0 "$foreigner" 2> /dev/null
+foreigner_done() {
+  slept_twice foreigner || grep -q "no longer runs" "$work/foreigner.err" || ! kill -0 "$foreigner" 2> /dev/null
 }
-wait_until foreigner_said || true
+wait_until foreigner_done || true
 still_waiting=0
 if kill -TERM "$foreigner" 2> /dev/null; then still_waiting=1; fi
 wait "$foreigner" 2> /dev/null || true
 show "$work/foreigner.err"
 show "$work/foreigner.out"
-if [ "$still_waiting" -eq 1 ] && [ ! -s "$work/foreigner.out" ] && ! grep -q "no longer runs" "$work/foreigner.err" \
+if [ "$still_waiting" -eq 1 ] && slept_twice foreigner && [ ! -s "$work/foreigner.out" ] && ! grep -q "no longer runs" "$work/foreigner.err" \
   && grep -q "^foreigner: waiting for the test resource: pid $holder" "$work/foreigner.err"; then
   ok "under LC_ALL=$foreign_locale TZ=XYZ-5:45 it waited for the holder in LC_ALL=C TZ=ABC+3"
 else
