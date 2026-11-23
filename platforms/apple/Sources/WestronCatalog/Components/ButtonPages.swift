@@ -12,9 +12,11 @@ import WestronUI
 // label, icon and label, icon-only), `button-destructive` (the same in the destructive role), `button-states` (every
 // state and the combinations the contract excludes), the same in the destructive role in two entries,
 // `button-states-destructive` (the enabled rows) and `button-states-destructive-disabled` (the disabled rows),
-// `button-behavior` (live buttons that count accepted presses, close neighbors and focus), and `button-floating`
-// (floating buttons over a busy ground, on glass and as before OS 26, at the end of this file). The variants, sizes and states come from the
-// generated enums, so the pages follow the contract.
+// `button-behavior` (live buttons that count accepted presses, close neighbors and focus), and floating buttons over
+// a busy ground, on glass and as before OS 26, in four entries at the end of this file: `button-floating` (live, over a
+// pressable list, a group), `button-floating-sizes` (every size, over the stripes and the inverse band),
+// `button-floating-states` (each state on glass) and `button-floating-before-26` (each state before OS 26, and
+// loading). The variants, sizes and states come from the generated enums, so the pages follow the contract.
 
 extension CatalogEntry {
     static let button = CatalogEntry(id: "button", title: "Button", section: .components) {
@@ -53,11 +55,36 @@ extension CatalogEntry {
         ButtonBehaviorPage()
     }
 
-    /// Floating buttons over a busy ground, on glass and as before OS 26 (#121).
+    /// Floating buttons over content (#121) are four entries: at accessibility5 the accessibility audit could not
+    /// finish one page that held them all ("Audit failed to complete in time" on four of its screens, its text-only
+    /// first screen among them), and finishes each part. Together they hold every sample that page held. This one: the
+    /// live buttons, the buttons over a pressable list and a group in the system's `GlassEffectContainer`, which the
+    /// behavior tests press.
     static let buttonFloating = CatalogEntry(
         id: "button-floating", title: "Button: floating, over content", section: .components
     ) {
-        ButtonFloatingPage()
+        ButtonFloatingPage(part: .live)
+    }
+
+    /// Floating buttons on glass at every size, over the stripes and over the inverse band (Q5).
+    static let buttonFloatingSizes = CatalogEntry(
+        id: "button-floating-sizes", title: "Button: floating, sizes on glass", section: .components
+    ) {
+        ButtonFloatingPage(part: .sizes)
+    }
+
+    /// Floating buttons on glass in each state but loading.
+    static let buttonFloatingStates = CatalogEntry(
+        id: "button-floating-states", title: "Button: floating, states on glass", section: .components
+    ) {
+        ButtonFloatingPage(part: .states)
+    }
+
+    /// Floating buttons as before OS 26 in each state, and loading, on glass and before OS 26.
+    static let buttonFloatingBefore26 = CatalogEntry(
+        id: "button-floating-before-26", title: "Button: floating, before OS 26 and loading", section: .components
+    ) {
+        ButtonFloatingPage(part: .before26)
     }
 }
 
@@ -646,7 +673,7 @@ private struct ButtonBehaviorPage: View {
 //
 // Button's floating look (#121, decisions/0015 at the repository's root). The generated sheets draw a floating button
 // as the bindings say, the look where there is no glass, on every OS (`ButtonMatrixCell`), so they are the same on
-// every run; the system's glass is only on these supplements and on the `button-floating` entry's page, over content:
+// every run; the system's glass is only on these supplements and on the floating entries' pages, over content:
 // a busy ground of stripes, and an inverse band, dark in the light theme and light in the dark one (Q5's test).
 
 /// Accessibility identifiers and words of the floating samples. The accessibility audit reports a button's text, which
@@ -778,9 +805,23 @@ extension ComponentMatrix.SheetNote {
             + "supplements \"floating, on glass\" show it on glass, over content (decisions/0015).")
 }
 
-/// Floating buttons over content: live ones, over a pressable list, every size, each state, the inverse band, a
-/// group in the system's `GlassEffectContainer` as a product writes it, the look before OS 26, and loading.
+/// Floating buttons over content, one part of them per catalog entry: live ones, over a pressable list, a group in
+/// the system's `GlassEffectContainer` as a product writes it; every size, over the stripes and the inverse band; each
+/// state on glass; each state as before OS 26, and loading.
 private struct ButtonFloatingPage: View {
+    /// What the page holds; each part is a catalog entry.
+    enum Part {
+        /// The live buttons, the buttons over a pressable list, a group in the system's container, and on macOS focus.
+        case live
+        /// Every size on glass, over the stripes and over the inverse band (Q5).
+        case sizes
+        /// Each state but loading, on glass.
+        case states
+        /// Each state but loading as before OS 26, then loading, on glass and before OS 26.
+        case before26
+    }
+
+    let part: Part
     @State private var accepted = 0
     @State private var rowPresses = 0
     @State private var floatingPresses = 0
@@ -804,50 +845,74 @@ private struct ButtonFloatingPage: View {
     }
 
     var body: some View {
-        TokenPage(
-            title: "Button · floating",
-            summary: "A floating button stands over content, outside any bar. Secondary: the system's glass from OS "
-                + "26, with nothing of westron's on it; before OS 26 an opaque raised surface. Primary: its fill and "
-                + "shadow.overlay. Tertiary and a destructive secondary do not float. Hover, pressed and focus are "
-                + "forced; on glass the glass answers a real touch or pointer itself."
-        ) {
-            section("Live") {
-                Text("Accepted presses: \(accepted)")
-                    .textRole(.body.regular)
-                    .foregroundStyle(.text.primary)
-                    .accessibilityIdentifier(ButtonFloatingID.count)
+        switch part {
+        case .live:
+            TokenPage(
+                title: "Button · floating",
+                summary: "A floating button stands over content, outside any bar. Secondary: the system's glass from "
+                    + "OS 26, with nothing of westron's on it; before OS 26 an opaque raised surface. Primary: its "
+                    + "fill and shadow.overlay. Tertiary and a destructive secondary do not float."
+            ) { livePart }
+        case .sizes:
+            TokenPage(
+                title: "Button · floating, sizes",
+                summary: "Every size on the system's glass from OS 26, over stripes and over an inverse band."
+            ) {
+                section("Sizes, on glass from OS 26") { sizes(ground: .stripes, secondary: "Edit") }
+                section("Over an inverse band (Q5)") { sizes(ground: .inverse, secondary: "Open") }
+            }
+        case .states:
+            TokenPage(
+                title: "Button · floating, states",
+                summary: "Each state on the system's glass from OS 26. Hover, pressed and focus are forced; the glass "
+                    + "answers a real touch or pointer itself."
+            ) {
+                section("States, on glass from OS 26") { states(withoutGlass: false) }
+            }
+        case .before26:
+            TokenPage(
+                title: "Button · floating, before OS 26",
+                summary: "Each state as before OS 26, an opaque raised surface, forced on this OS; then loading."
+            ) {
+                section("Before OS 26: forced on this OS") { states(withoutGlass: true) }
+                section("Loading") { loading }
+            }
+        }
+    }
+
+    /// The live buttons, the buttons over a pressable list, on macOS the focus ring, and a group.
+    @ViewBuilder private var livePart: some View {
+        section("Live") {
+            Text("Accepted presses: \(accepted)")
+                .textRole(.body.regular)
+                .foregroundStyle(.text.primary)
+                .accessibilityIdentifier(ButtonFloatingID.count)
+            FloatingPanel {
+                HStack(spacing: .space200) {
+                    live("Back", icon: .chevronLeft, variant: .secondary, id: ButtonFloatingID.back)
+                    live("More", icon: .ellipsis, variant: .secondary, id: ButtonFloatingID.more)
+                    live("Share", icon: .expand, variant: .secondary, id: ButtonFloatingID.disabled)
+                        .disabled(true)
+                    Spacer(minLength: 0)
+                    live("Add", icon: .plus, variant: .primary, id: ButtonFloatingID.add)
+                }
+            }
+        }
+        section("Over a pressable list: sizes s, m and l") { overList }
+        #if os(macOS)
+            section("Focus: the system's ring over glass") {
+                // A button takes keyboard focus on a Mac only with the system's keyboard navigation on; the
+                // catalog makes this one focusable and focuses it, to show the ring the system draws over glass.
                 FloatingPanel {
-                    HStack(spacing: .space200) {
-                        live("Back", icon: .chevronLeft, variant: .secondary, id: ButtonFloatingID.back)
-                        live("More", icon: .ellipsis, variant: .secondary, id: ButtonFloatingID.more)
-                        live("Share", icon: .expand, variant: .secondary, id: ButtonFloatingID.disabled)
-                            .disabled(true)
-                        Spacer(minLength: 0)
-                        live("Add", icon: .plus, variant: .primary, id: ButtonFloatingID.add)
-                    }
+                    sample("Edit", icon: .pen, variant: .secondary)
+                        .focusable()
+                        .focused($isFocused)
                 }
+                .onAppear { isFocused = true }
             }
-            section("Over a pressable list: sizes s, m and l") { overList }
-            #if os(macOS)
-                section("Focus: the system's ring over glass") {
-                    // A button takes keyboard focus on a Mac only with the system's keyboard navigation on; the
-                    // catalog makes this one focusable and focuses it, to show the ring the system draws over glass.
-                    FloatingPanel {
-                        sample("Edit", icon: .pen, variant: .secondary)
-                            .focusable()
-                            .focused($isFocused)
-                    }
-                    .onAppear { isFocused = true }
-                }
-            #endif
-            section("Sizes, on glass from OS 26") { sizes(ground: .stripes, secondary: "Edit") }
-            section("States, on glass from OS 26") { states(withoutGlass: false) }
-            section("Over an inverse band (Q5)") { sizes(ground: .inverse, secondary: "Open") }
-            section("A group: the system's GlassEffectContainer") {
-                FloatingPanel { group }
-            }
-            section("Before OS 26: forced on this OS") { states(withoutGlass: true) }
-            section("Loading") { loading }
+        #endif
+        section("A group: the system's GlassEffectContainer") {
+            FloatingPanel { group }
         }
     }
 

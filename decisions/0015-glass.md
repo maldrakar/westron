@@ -753,7 +753,8 @@ which records the references, is on iOS 27.0 and macOS 27.0.1, so its pictures w
   `nameInMatrixAtDefault`), the sheets that do not float keep main's names and titles. Compared with a render of main
   (733441f) at the default tolerance: macOS 72 of 72 of main's pictures identical byte for byte, iOS 152 of 152; the
   rest of the branch's pictures (168 on macOS, 320 on iOS) are new: the floating sheets and the two supplements.
-- **Before OS 26, for real.** The `button-floating` entry on an iPhone 15 simulator on iOS 17.5 draws every floating
+- **Before OS 26, for real.** The catalog's floating page (then one entry, `button-floating`, since split in four,
+  below) on an iPhone 15 simulator on iOS 17.5 draws every floating
   secondary on `background.surface` with `shadow.overlay`, its forced hover and pressed in the row tints, the pressed
   one scaled down: the same as the catalog's override draws on iOS 26.3, so the override's references stand for the
   minimum OS versions.
@@ -782,8 +783,9 @@ which records the references, is on iOS 27.0 and macOS 27.0.1, so its pictures w
   the high-contrast themes) against the median. In these cells the glass does not turn against the label: in the
   light themes it stays light over the dark band, in the dark ones dark over the light band.
 
-  **On the catalog page the band is wider, and the glass behaves otherwise** (iOS 26.3, `button-floating`, "Over an
-  inverse band (Q5)", the label "Open" at sizes s, m and l, the same sampler on the catalog's screenshots):
+  **On the catalog page the band is wider, and the glass behaves otherwise** (iOS 26.3, then `button-floating`, now
+  `button-floating-sizes`, "Over an inverse band (Q5)", the label "Open" at sizes s, m and l, the same sampler on the
+  catalog's screenshots):
 
   | | the glass | the label | ratio |
   |---|---|---|---|
@@ -797,8 +799,8 @@ which records the references, is on iOS 27.0 and macOS 27.0.1, so its pictures w
   text's 4.5:1 at every size: Q5's trigger fired for `text.primary` there. The accessibility audit flags the same
   label in the dark appearance. Not switched to Q5 (B): that is the owner's to decide. The supplement's cells, a band
   only `space.200` wider than the button, do not show it, so the matrix holds the case that passes and the catalog
-  page the one that fails. To see it: `TEST_RUNNER_WESTRON_SCROLL_ANCHOR=0.55 tools/apple/catalog-screenshot.sh ios
-  --entry button-floating --appearance dark --out <file.png>`.
+  page the one that fails. To see it: `TEST_RUNNER_WESTRON_SCROLL_ANCHOR=1 tools/apple/catalog-screenshot.sh ios
+  --entry button-floating-sizes --appearance dark --out <file.png>`.
 - **Q5's trigger fired for the danger color.** `color.status.danger.text` on the glass over the stripes, measured by
   the accessibility auditor: 2.96:1 in the light theme and 2.79 to 4.18:1 in the dark one, below text's 4.5:1. So a
   floating secondary does not take the destructive role, a constraint of severity `error`; a floating destructive
@@ -828,19 +830,43 @@ which records the references, is on iOS 27.0 and macOS 27.0.1, so its pictures w
   tools/apple/audit-scope.sh` gives: Button's seven and `surface`). It reports a button's text, which carries no
   identifier, so it never reports an icon-only button, and the floating samples carry their own words to be told
   apart: "Edit" on glass over the stripes, "Open" on glass over the band, "Rest", "Hover", "Focus", "Pressed" and
-  "Disabled" before OS 26, "New" and "Delete" the primaries. Its suppressions on `button-floating`, each named in the
-  log on every match: contrast on the disabled "Edit" and "Disabled" (an inactive control); "Text clipped" on
-  "Pressed" (the pressed fallback drawn at 0.98 of its size, as Chip's); contrast on the enabled "Edit" on glass,
-  which the audit flagged in the dark appearance and at accessibility5 where pixels give 5.85:1 and more and 8.09:1
-  (the audit reports no colors, so what it sampled on the glass cannot be shown); contrast on "Open" in the dark
-  appearance, the real failure above, left to the owner; contrast on the rows "Groceries", "Work" and "Home" under the
-  floating buttons of the pressable list, whose frames hold the buttons' glass (size l, 50 pt, reaches into the rows
-  above and below the 44 pt row it stands on); and "Potentially inaccessible text" with no element at the default
-  settings on two screens of labels on glass, inferred to be the glass's refraction. The primaries "New" and
+  "Disabled" before OS 26, "New" and "Delete" the primaries. Its suppressions on the floating entries (below), each
+  named in the log on every match: contrast on the disabled "Edit" (`button-floating-states`) and "Disabled"
+  (`button-floating-before-26`), an inactive control; "Text clipped" on "Pressed" (the pressed fallback drawn at 0.98
+  of its size, as Chip's; `button-floating-before-26`); contrast on the enabled "Edit" on glass, which the audit
+  flagged in the dark appearance and at accessibility5 where pixels give 5.85:1 and more and 8.09:1 (the audit reports
+  no colors, so what it sampled on the glass cannot be shown; on the three entries that hold an "Edit" on glass);
+  contrast on "Open" in the dark appearance, the real failure above, left to the owner (`button-floating-sizes`);
+  contrast on the rows "Groceries", "Work" and "Home" under the floating buttons of the pressable list, whose frames
+  hold the buttons' glass (size l, 50 pt, reaches into the rows above and below the 44 pt row it stands on;
+  `button-floating`); and "Potentially inaccessible text" with no element at the default settings on
+  `button-floating-before-26`, the status bar's clock over the page's title (below). The primaries "New" and
   "Delete" and the samples before OS 26 are audited with no suppression, and pass; the icon-only ones are measured
   by pixels instead (above). The last screen of every Button page with a spinner was "still moving after 5 s", and is
-  audited as it is: an indeterminate spinner never settles, on `button-states` as on `button-floating`, whose loading
-  samples are the page's last section so that only its last screen moves.
+  audited as it is: an indeterminate spinner never settles, on `button-states` as on `button-floating-before-26`,
+  whose loading samples are the page's last section, the only floating samples with a spinner.
+- **The catalog page, split in four (2026-11-23).** The floating samples were one entry, `button-floating`, about
+  eleven screenfuls at accessibility5. There the iOS audit (`testAccessibilityDynamicType`) gave up, "Audit failed to
+  complete in time" (-56), on three to five of its screenfuls (among 1 to 5 and 8) in each of four tries, the audit
+  and its nudged retry both, while `button-states` finished in the same session. At accessibility5 its first
+  screenful holds the title and the summary alone (the catalog's screenshot at that size), and it gave up there too,
+  so what the audit could not finish was the page as a whole, not what was on screen. Split by what the samples show,
+  each entry with fewer glass samples:
+  `button-floating` (the live buttons, the buttons over a pressable list, the group in `GlassEffectContainer`, on
+  macOS the focus ring), `button-floating-sizes` (every size over the stripes, and over the inverse band, Q5),
+  `button-floating-states` (each state on glass) and `button-floating-before-26` (each state before OS 26, and
+  loading on glass and before OS 26). Every sample the page held is on one of them; the snapshot matrix does not
+  change (its supplements are not catalog pages): `tools/apple/snapshot-matrix.sh macos --component button` before
+  and after the split, compared: 0 changed, 0 added, 0 removed, 240 identical files. The audit of the four entries
+  (`WESTRON_ENTRY=button-floating,button-floating-sizes,button-floating-states,button-floating-before-26
+  tools/apple/check.sh a11y`) then passed all five configurations in each of two runs, with no "Audit failed to
+  complete in time" and no retry, `testAccessibilityDynamicType` in about 121 s for the four. The "Potentially
+  inaccessible text" with no element that the single page drew at the default settings, then inferred to be the glass
+  refracting a label, comes from `button-floating-before-26` alone, on its last screenful, where the page's title
+  lies under the status bar: the audit's screenshot of the issue shows the clock drawn over the title. It came in
+  every run of that page as it is (six), in neither of two with the page's status bar hidden, and in none of two each
+  with only its states or only its loading, where the page ends elsewhere; the entries with glass did not draw it.
+  Its suppression holds only while a text of the page reaches under the status bar.
 - **Not measured.** Reduce Transparency: set through the simulator's accessibility defaults, the glass looked
   unchanged, and nothing confirmed that the setting reached the app, so its effect is unknown. Reduce Motion: a still
   cannot show the glass's response to a press; westron's own press scale, which it drops, is not drawn on glass. The
