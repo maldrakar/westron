@@ -4,8 +4,9 @@
 # and compared with the references in platforms/apple/Snapshots/.
 #
 #   tools/apple/snapshot-matrix.sh <ios|macos> [--component ID[,ID…]]… [--device "iPhone 17"] [--out DIR]
-#   tools/apple/snapshot-matrix.sh compare DIR_A DIR_B [--out DIR] [--tolerance N]
+#   tools/apple/snapshot-matrix.sh compare DIR_A DIR_B [--out DIR] [--tolerance N] [--strict]
 #   tools/apple/snapshot-matrix.sh check <ios|macos> [--from DIR] [--device "iPhone 17"] [--out DIR] [--tolerance N]
+#                                        [--strict]
 #   tools/apple/snapshot-matrix.sh record <ios|macos> [--from DIR] [--device "iPhone 17"]
 #
 # Render: runs the snapshot tests (platforms/apple/Tests/WestronSnapshotTests), which draw every sheet of every matrix
@@ -31,6 +32,11 @@
 # most N levels (--tolerance, default 1) counts as the same: renders in one environment drift by a level in a few
 # pixels from run to run. Only renders from the same environment compare (decisions/0008): two local renders, before
 # and after a change, on one Mac and simulator.
+# Not compared: the pictures of a supplement that names the render's OS in `notCompared` (the manifest's group carries
+# the reason; Button's glass on iOS, decisions/0015), drawn but not the same from one render to the next there. They
+# are held to their presence and size only: listed with the reason in the report's section "Not compared", counted on
+# the summary line ("…; 168 not compared"), and never exit 1 for their pixels; a missing, an unexpected or a resized one
+# fails as any picture does. --strict compares them pixel by pixel too.
 #
 # Check: compares a render (DIR with --from, else a fresh full render) with the references of the platform and writes
 # the report to .build/snapshot-matrix/check-<platform>/ (--out). The environment is what besides the code changes a
@@ -44,7 +50,8 @@
 #      references were made on, this is the normal outcome; render before and after a change and `compare` them.
 # Record: writes the render (--from, else a fresh full render) into the references and its environment beside them.
 # A reference within the tolerance of its new picture stays as it was, so a drift does not rewrite it; in another
-# environment only the same pixels keep one. CI records them (.github/workflows/snapshot-references.yml): references
+# environment only the same pixels keep one. A not-compared picture's reference stays as it was while its size holds,
+# whatever its pixels: it records that the picture exists, and recording does not rewrite it on every run. CI records them (.github/workflows/snapshot-references.yml): references
 # recorded elsewhere would not match the runner's renders.
 # On iOS the render queues for the simulator while another run on this Mac uses it: it says whom it waits for and
 # waits, at most WESTRON_LOCK_TIMEOUT seconds (default 5400; tools/apple/lock.sh). On macOS it needs no screen (its
@@ -234,18 +241,19 @@ case "${1:-}" in
     [ $# -ge 2 ] || usage
     before="$(absolute "$1")" after="$(absolute "$2")"
     shift 2
-    out=".build/snapshot-matrix/compare" tolerance=1
+    out=".build/snapshot-matrix/compare" tolerance=1 strict=()
     while [ $# -gt 0 ]; do
       case "$1" in
         --out) out="$2"; shift 2 ;;
         --tolerance) tolerance="$2"; shift 2 ;;
+        --strict) strict=(--strict); shift ;;
         *) usage ;;
       esac
     done
     out="$(absolute "$out")"
     mkdir -p "$out"
     status=0
-    pages compare "$before" "$after" "$out" --tolerance "$tolerance" || status=$?
+    pages compare "$before" "$after" "$out" --tolerance "$tolerance" ${strict[@]+"${strict[@]}"} || status=$?
     [ "$status" -le 1 ] || exit "$status"
     echo "$out/index.html"
     exit "$status"
@@ -256,12 +264,14 @@ case "${1:-}" in
     [ "$platform" = ios ] || [ "$platform" = macos ] || usage
     shift 2
     from="" device="${WESTRON_SIM_DEVICE:-iPhone 17}" out=".build/snapshot-matrix/check-$platform" tolerance=1
+    strict=()
     while [ $# -gt 0 ]; do
       case "$1" in
         --from) from="$2"; shift 2 ;;
         --device) device="$2"; shift 2 ;;
         --out) [ "$command" = check ] || usage; out="$2"; shift 2 ;;
         --tolerance) tolerance="$2"; shift 2 ;;
+        --strict) [ "$command" = check ] || usage; strict=(--strict); shift ;;
         *) usage ;;
       esac
     done
@@ -338,7 +348,7 @@ case "${1:-}" in
       status=0
       mkdir -p "$out"
       pages compare "$references" "$render_dir" "$out" --tolerance "$tolerance" --labels reference,new \
-        || status=$?
+        ${strict[@]+"${strict[@]}"} || status=$?
       [ "$status" -le 1 ] || exit "$status"
       echo "$out/index.html"
       if [ "$status" -eq 0 ]; then

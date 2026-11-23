@@ -4,7 +4,8 @@ Date: 2026-11-23. Status: approved on 2026-11-23 (#121): the owner answered the 
 coordinating agent the others under the owner's delegation (decisions/0014), each with its recommendation (A); see
 "Decision". Implemented on Apple in the same pull request ("Implementation: what was measured"). Q5's failure at
 implementation answered by the owner on 2026-11-23: (A) stands, and the contract records the limitation ("Q5: the
-owner's answer to its failure").
+owner's answer to its failure"). On 2026-11-24 the glass supplements were taken out of the pixel comparison on iOS,
+where the CI runner does not draw them the same twice ("Note of 2026-11-24").
 
 ## Decision
 
@@ -753,7 +754,8 @@ which records the references, is on iOS 27.0 and macOS 27.0.1, so its pictures w
   (`tools/apple/snapshot-matrix.sh ios|macos --component button`, each render compared with the first at the default
   tolerance): macOS 240 of 240 pictures identical byte for byte in both pairs; iOS 472 of 472 identical in four of
   five pairs, and in the fifth 471 identical and one within the tolerance (`floating-on-glass`, size s, icon-only,
-  part 2, light at xSmall: 2 pixels by one level). 0 changed in every pair, so no glass picture is kept out.
+  part 2, light at xSmall: 2 pixels by one level). 0 changed in every pair, so no glass picture is kept out. On the
+  CI runner's iOS 27 they are not the same twice: see the note of 2026-11-24.
 - **Buttons that do not float are unchanged.** With `floating` named in no sheet at its default (the schema's
   `nameInMatrixAtDefault`), the sheets that do not float keep main's names and titles. Compared with a render of main
   (733441f) at the default tolerance: macOS 72 of 72 of main's pictures identical byte for byte, iOS 152 of 152; the
@@ -939,6 +941,35 @@ request's job "Accessibility audit — changed components (2/3)" (run 4519176842
 audit reports no colors, and this Mac has only iOS 26.3 simulators, so no pixel measurement on iOS 27 confirms or
 refutes them. On iOS 26.3 the label passes over the band in light, light-hc and dark-hc (the table above). They fall
 under the same recorded limitation, which is why the suppression now covers every configuration.
+
+## Note of 2026-11-24: glass on iOS is not compared pixel by pixel
+
+**Observed on the CI runner.** The references were recorded on the runner (iOS 27.0, iPhone 17, Xcode 27.1, macOS
+27.0.1, "Apple M1 (Virtual)"; commit 6d2decd), and the very next run of the `snapshots` job, on the same commit in the
+same environment, failed the check on iOS with five pictures of the glass supplements, all in the dark theme:
+`floating-on-glass-inverse`, size l, label, part 2 of 2 (2255 pixels beyond one level, up to 3 levels); the same,
+icon-only (4282 pixels, up to 3); size m, icon-only, part 1 of 2 (23475 pixels, up to 4); size s, icon-only, part 2 of 2
+(11887 pixels, up to 5); and `floating-on-glass`, size m, icon-only, part 2 of 2 (8 pixels, up to 2): "5 changed, 0
+added, 0 removed, 1623 unchanged". macOS in the same run: 0 changed of 804, the glass sheets included. So the system's
+glass on the iOS simulator varies between renders by a few levels over large areas, in the dark theme at least, where
+iOS 26.3 on this Mac had drawn it the same six times; Q5's prototype had also seen dark-hc's glass take a light or a
+dark tone from one launch to the next. How far it can vary is not known, so a larger tolerance would not do: a tone
+flip exceeds any reasonable one, and a tolerance would hide real changes while still failing at random.
+
+**What is and is not compared now.** A supplement names the OSes where its pictures are drawn but not the same twice,
+with the reason (`ComponentMatrix.Supplement.notCompared`); the render's manifest carries the reason on that group,
+and `tools/apple/snapshot-matrix.sh compare`, `check` and `record` (`tools/apple/snapshot-pages.swift`) hold those
+pictures to their presence and size, not their pixels. `floating-on-glass` and `floating-on-glass-inverse` are so
+marked on iOS: their 168 pictures there (both supplements, every size, label and icon-only, primary and secondary,
+four themes at the default text size and light at xSmall and accessibility5) are still rendered, shown on the review
+page and in the report's section "Not compared" with the reason, and counted on the summary line; a missing,
+unexpected or resized one still fails. Their pixels on iOS are no longer protected by the matrix. On macOS the same
+sheets are compared as every other picture, and ButtonFloatingPixelTests measures the floating button on glass there
+(the disabled glass, `text.primary` and the glyph's colors over the band and the stripes): the floating button's
+pixels on glass are held on macOS only. Every other sheet on both platforms, the generated `floating-true` sheets
+(no glass) among them, keeps the comparison within one level. The iOS references of the glass pictures stay in
+`platforms/apple/Snapshots/ios/` as recorded: `record` keeps such a reference while its size holds, whatever its
+pixels, so recording does not rewrite them on every run, and they show the look as first recorded, not kept current.
 
 ## Consequences
 

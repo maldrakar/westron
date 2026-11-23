@@ -131,14 +131,31 @@ public struct ComponentMatrix: Sendable {
         /// The most columns of one picture at every text size, for a cell that needs a sheet's whole width (ListRow
         /// forced to accessibility5); nil: as many as the text size takes.
         let columnsPerPicture: Int?
+        /// The OSes, as `currentOS` names them, where its pictures are drawn and shown but not the same from one render
+        /// to the next (the system's glass on the iOS simulator), and why: there the comparison holds them to their
+        /// presence and size, not their pixels (`tools/apple/snapshot-matrix.sh`, "not compared"). nil compares them
+        /// pixel by pixel on every OS. Not a tolerance: how far such a picture varies is not known.
+        let notCompared: NotCompared?
         let cell: @MainActor @Sendable (Combination) -> AnyView
+
+        /// Where a supplement's pictures are not compared pixel by pixel, and why (`notCompared`).
+        struct NotCompared: Sendable {
+            /// The OSes, as `currentOS` names them.
+            let on: [String]
+            /// For the review page and the comparison's report: what varies, and what holds the look instead.
+            let reason: String
+        }
 
         init<Content: View>(
             component: String, id: String, title: String, note: String, keeps: [String: String],
             rows: [String]? = nil, columns: [String]? = nil, rowsPerPicture: Int? = nil, onlyOn: [String]? = nil,
-            splitsAtEverySize: Bool = false, columnsPerPicture: Int? = nil,
+            splitsAtEverySize: Bool = false, columnsPerPicture: Int? = nil, notCompared: NotCompared? = nil,
             @ViewBuilder cell: @escaping @MainActor @Sendable (Combination) -> Content
         ) {
+            precondition(
+                notCompared.map { !$0.on.isEmpty && !$0.reason.isEmpty } ?? true,
+                "\(component), supplement \(id): notCompared names no OS or gives no reason")
+            self.notCompared = notCompared
             self.rowsPerPicture = rowsPerPicture
             self.onlyOn = onlyOn
             self.splitsAtEverySize = splitsAtEverySize
@@ -356,6 +373,12 @@ public struct ComponentMatrix: Sendable {
         matrix.makeCell = supplement.cell
         matrix.supplement = supplement
         return matrix
+    }
+
+    /// Why the comparison holds this supplement's pictures on the current OS to their presence and size, not their
+    /// pixels (`Supplement.notCompared`); nil where it compares them pixel by pixel, and for the generated matrix.
+    var notComparedReason: String? {
+        supplement?.notCompared.flatMap { $0.on.contains(Self.currentOS) ? $0.reason : nil }
     }
 
     /// `ios`, `macos` or `watchos`: the key of the current OS in the contract's `platforms.apple`.

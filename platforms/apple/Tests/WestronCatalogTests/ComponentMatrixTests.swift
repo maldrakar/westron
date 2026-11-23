@@ -357,6 +357,21 @@ struct ComponentMatrixTests {
         #expect(!Catalog.entries.contains { $0.id.contains("label-without-icon") }, "not an audited catalog entry")
     }
 
+    @Test("only Button's glass supplements are not compared pixel by pixel, and on iOS alone (decisions/0015)")
+    func notCompared() {
+        let glass = ["button.floating-on-glass", "button.floating-on-glass-inverse"]
+        let marked = ComponentMatrix.Supplement.all.filter { $0.notCompared != nil }
+        #expect(marked.map { "\($0.component).\($0.id)" } == glass)
+        #expect(marked.allSatisfy { $0.notCompared?.on == ["ios"] && $0.notCompared?.reason.isEmpty == false })
+        let reasons = ComponentMatrix.all.flatMap { [$0] + $0.supplements }.filter { $0.notComparedReason != nil }
+            .map { "\($0.component).\($0.supplement?.id ?? "contract")" }
+        #if os(iOS)
+            #expect(reasons == glass)
+        #else
+            #expect(reasons.isEmpty, "this OS compares every picture pixel by pixel")
+        #endif
+    }
+
     #if os(macOS)
         /// The reason a Mac captures the default text size alone: macOS has no Dynamic Type, and a cell measures the
         /// same at every `dynamicTypeSize`. If a macOS starts to scale, this fails, and the Mac's text sizes are due.

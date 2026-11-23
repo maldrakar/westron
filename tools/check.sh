@@ -8,14 +8,16 @@
 #                             after spec check, since it reads the contracts), the test of the lock the Apple scripts
 #                             queue on (locks: tools/apple/lock-test.sh, plain bash, so CI keeps it alive on Linux),
 #                             the test of the pull request audit's scope (audit-scope: tools/apple/audit-scope-test.sh,
-#                             plain bash over the catalog's sources)
+#                             plain bash over the catalog's sources), the test of the snapshot matrix's comparison
+#                             (pages: tools/apple/snapshot-pages-test.sh, macOS only, as it reads PNGs with ImageIO;
+#                             skipped on Linux, and CI's job `snapshots` runs it on the Mac)
 #   tools/check.sh STEP …     those steps only, still in that order: the Stop hook runs the ones the changes touch
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 
-all_steps="tools raw-values generate tokens contrast icons spec api-parity locks audit-scope"
+all_steps="tools raw-values generate tokens contrast icons spec api-parity locks audit-scope pages"
 for step in "$@"; do
   if [[ " $all_steps " != *" $step "* ]]; then
     echo "tools/check.sh: no step \"$step\"; the steps: $all_steps" >&2
@@ -70,4 +72,12 @@ fi
 if selected audit-scope; then
   echo "== audit-scope: the pull request audit's entries (tools/apple/audit-scope-test.sh)"
   tools/apple/audit-scope-test.sh
+fi
+if selected pages; then
+  if [ "$(uname -s)" = Darwin ]; then
+    echo "== pages: the snapshot matrix's comparison (tools/apple/snapshot-pages-test.sh)"
+    tools/apple/snapshot-pages-test.sh
+  else
+    echo "== pages: skipped, macOS only (ImageIO); CI's job snapshots runs it"
+  fi
 fi

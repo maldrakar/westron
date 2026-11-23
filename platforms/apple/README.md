@@ -218,7 +218,10 @@ still drives every generated sheet and combination:
   `columnsPerPicture` caps a picture's columns where the cells are wide. `ComponentMatrix.rowsAtLimit` caps the
   generated sheets of a component whose cells grow tall at the splitting size (ListRow, one row a picture). A
   supplement whose render on one OS is not worth reading, or not the same twice, names the OSes it is drawn on
-  (`onlyOn`), and its note says why. There are thirty-eight (`SnapshotMatrix/Supplements.swift`, `Supplement.all`):
+  (`onlyOn`), and its note says why. One that must still be drawn there for the reviewer, but whose pixels the OS
+  does not repeat from one render to the next, names that OS in `notCompared` with the reason: its pictures there are
+  rendered and shown, and `compare`, `check` and `record` hold them to their presence and size, not their pixels
+  (below, "Comparing"). There are thirty-eight (`SnapshotMatrix/Supplements.swift`, `Supplement.all`):
   - Button, `label-without-icon`: its generated cells have an icon and a label or are icon-only, so a label without an
     icon, which while loading has the indicator before the label and widens the button (P13), is shown on the sheets
     with iconOnly false: every variant, size and role, floating or not, at rest and in each state, but what the
@@ -230,9 +233,11 @@ still drives every generated sheet and combination:
   - Button's generated `_floating-true` sheets draw the bindings, the look where there is no glass (before OS 26), on
     every OS: the catalog's matrix cell sets `drawingButtonsWithoutGlass()`, `package` in WestronUI, and each such
     sheet's header says so (`ComponentMatrix.SheetNote`). Glass on the plain canvas differed now and then by a pixel
-    from one iOS render to the next, so the system's glass is only in the two supplements above, whose renders were
-    the same every time (decisions/0015, "what was measured"). The option `floating` is named in no sheet's id or title
-    at its default (`nameInMatrixAtDefault: false` in the contract), so every sheet that does not float keeps the
+    from one iOS render to the next, so the system's glass is only in the two supplements above. On this Mac's iOS
+    26.3 their renders were the same every time, but on the CI runner's iOS 27 they were not (a few levels over large
+    areas between two runs of one commit), so on iOS both are `notCompared`: drawn and shown, not compared pixel by
+    pixel. On macOS they are compared as every other picture (decisions/0015, "what was measured" and the note of
+    2026-11-24). The option `floating` is named in no sheet's id or title at its default (`nameInMatrixAtDefault: false` in the contract), so every sheet that does not float keeps the
     name, the title and the pixels it had before the option.
   - Icon, `beside-text`: three glyphs, each beside text in four roles (one row to a picture at `accessibility5`); and
     `color-roles`: six glyphs in the color roles of design-language/07 (three rows to a picture there).
@@ -275,7 +280,8 @@ still drives every generated sheet and combination:
 
 ```sh
 tools/apple/snapshot-matrix.sh ios                       # or macos; --component button,rule for some components
-tools/apple/snapshot-matrix.sh compare <before> <after>  # exit 0 when every image is the same, 1 otherwise
+tools/apple/snapshot-matrix.sh compare <before> <after>  # exit 0 when every image is the same, 1 otherwise;
+                                                         # --strict: compare the not-compared pictures too
 tools/apple/snapshot-matrix.sh check ios                 # against the references: 0 same, 1 changed, 3 none yet,
                                                          # 4 another environment (locally, always)
 tools/apple/snapshot-matrix.sh record ios                # on CI only (snapshot-references.yml)
@@ -382,6 +388,13 @@ added and removed ones, and the changed components named. A pixel whose every ch
 counts as the same (`--tolerance <n>`): within one environment, renders have drifted by a level in a few pixels of a
 shadow or an edge. Compare only renders from the same environment (decisions/0008): every image differs between this
 Mac and the runner, in text and symbol anti-aliasing.
+A picture of a supplement that is `notCompared` on the render's OS (the manifest's group carries the reason, and a
+mark in either directory's `matrix.json` counts) is not compared pixel by pixel: it is listed in its own section,
+"Not compared", with its reason and both pictures, counted on the summary line (`…; 168 not compared`), and never
+makes the exit status 1. Its presence and its size still count: a missing one is removed, an unexpected one added, a
+size that changed a change, each failing as for any picture. `--strict` compares them too. A larger tolerance is not
+the answer for such pictures: the system's glass on the iOS simulator varies by an amount nobody bounds (a tone flip
+exceeds any), and a tolerance would hide real changes while still failing at random.
 
 **References and the check.** `Snapshots/<platform>/` holds the references, the PNGs in Git LFS, and
 `environment.json`: the Mac's macOS and processor, Xcode, on iOS the simulator's runtime and device, the scale, the
@@ -390,7 +403,10 @@ number of images (`Snapshots/README.md`). They are recorded on the CI runner onl
 `.build/snapshot-matrix/check-<platform>/`; with no references yet it exits 3, and in another environment it says what
 differs and exits 4 without comparing: on your Mac that is the usual outcome, so render before and after your change
 and `compare` them. `record <platform>` writes a render into the references, keeping a reference within the tolerance
-of its new picture, so a drift does not rewrite it. Both refuse a render with a failed picture (exit 1, naming it):
+of its new picture, so a drift does not rewrite it. A not-compared picture's reference is kept as it was while its
+size holds, whatever its pixels, and replaced only when its size changes: it marks that the picture exists, and
+recording does not rewrite it on every run. So it shows the picture as first recorded, not kept current; the report
+captions it so. Both refuse a render with a failed picture (exit 1, naming it):
 a missing PNG would read as a removed sheet, and `record` would delete its reference. `.lfsconfig` keeps the references out of what Git LFS fetches by
 default (they would be pointers in a clone; `git lfs pull --include "platforms/apple/Snapshots/**" --exclude ""` gets
 them).

@@ -178,7 +178,11 @@ jobs:
     # platforms/apple/Tests/WestronSnapshotTests, under `swift test` on macOS and hosted by the catalog app on the iOS
     # simulator) and compares it with the references in platforms/apple/Snapshots/, recorded on this runner image by
     # snapshot-references.yml (decisions/0008, the note of 2026-11-21). The outcome of each platform's check:
-    #   - the same, within one level a channel: the step passes;
+    #   - the same, within one level a channel: the step passes. A supplement that names an OS where its pictures are
+    #     not the same from one render to the next (`notCompared`, Button's glass on iOS, decisions/0015) has its
+    #     pictures on that OS checked for presence and size only, listed in the report as "not compared" with the
+    #     reason; they never fail the check, and the comparison's own test (tools/apple/snapshot-pages-test.sh) runs
+    #     first;
     #   - a picture changed, was added or removed, or the render failed: the job fails, and the artifact
     #     `snapshot-diff` holds the report (index.html: reference, new picture and diff side by side, the changed
     #     components named). An intended change is recorded with the label `record-snapshots` on the pull request;
@@ -243,6 +247,9 @@ jobs:
       - name: References from Git LFS
         if: ${{ !cancelled() }}
         run: git lfs pull --include 'platforms/apple/Snapshots/**' --exclude ''
+      - name: The comparison's own test
+        if: ${{ !cancelled() }}
+        run: tools/apple/snapshot-pages-test.sh
       - name: Check against the references
         if: ${{ !cancelled() }}
         run: |

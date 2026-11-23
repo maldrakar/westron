@@ -787,7 +787,7 @@ extension ComponentMatrix.Supplement {
             + "touch, which a forced state does not show. A floating primary keeps its fill and casts shadow.overlay "
             + "(decisions/0015).",
         keeps: ["floating": "true", "role": "default"], columns: ["primary", "secondary"], rowsPerPicture: 3,
-        splitsAtEverySize: true
+        splitsAtEverySize: true, notCompared: .glassOnIOS
     ) { ButtonFloatingCell(values: ButtonMatrixValues($0), ground: .stripes) }
 
     /// The same over the inverse band, Q5's test of the label's color on glass (#121).
@@ -796,8 +796,19 @@ extension ComponentMatrix.Supplement {
         note: "Q5's test (decisions/0015): the glass over a band of text.primary's color, dark in the light themes and "
             + "light in the dark ones, where the glass turns against the label's color, which stays text.primary.",
         keeps: ["floating": "true", "role": "default"], columns: ["primary", "secondary"], rowsPerPicture: 3,
-        splitsAtEverySize: true
+        splitsAtEverySize: true, notCompared: .glassOnIOS
     ) { ButtonFloatingCell(values: ButtonMatrixValues($0), ground: .inverse) }
+}
+
+extension ComponentMatrix.Supplement.NotCompared {
+    /// The two glass supplements on iOS: drawn and shown for the review, not compared pixel by pixel (decisions/0015,
+    /// the note of 2026-11-24). macOS draws the same glass the same every time, so it compares them.
+    static let glassOnIOS = Self(
+        on: ["ios"],
+        reason: "the system's glass on the iOS simulator is not the same from one render to the next: on the CI "
+            + "runner's iOS 27, two renders of one commit differed by up to 5 levels over thousands of pixels "
+            + "(decisions/0015, the note of 2026-11-24). Checked for presence and size only; on macOS these sheets are "
+            + "compared, and ButtonFloatingPixelTests measures the button on glass there.")
 }
 
 extension ComponentMatrix.SheetNote {
