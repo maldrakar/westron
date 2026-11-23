@@ -23,6 +23,7 @@ public enum Catalog {
         .listRow,
         .listRowInList,
         .textField,
+        .textFieldGlyphs,
         .textFieldBehavior,
         .textFieldFocusFramed,
         .textFieldFocusInline,

@@ -200,7 +200,7 @@ public struct AppleComponents: Generator {
             }
             // An extension whose option is the icon registry's names is not derived: no initializer of SwiftUI's Image
             // can hide or name a symbol, so Icon (#28) is an own view (`Own`).
-            if let option = contract.options.first(where: { $0.kind == .icons }) {
+            if let option = contract.options.first(where: \.kind.isIcons) {
                 throw problem(
                     .root.key("options").key(option.name),
                     "\(option.name) takes its values from the icon registry: the conventions give an "
@@ -425,11 +425,12 @@ public struct AppleComponents: Generator {
                         "\(option.name) takes its values from the tokens of \(group): the generator does not give a "
                             + "style such an option yet")
                 }
-                if case .icons = option.kind {
+                // An optional glyph is a labeled `Westron.Icon? = nil`; a glyph every use names is not derived.
+                if case .icons(optional: false) = option.kind {
                     throw problem(
                         .root.key("options").key(option.name),
-                        "\(option.name) takes its values from the icon registry: the generator does not give a style "
-                            + "such an option yet")
+                        "\(option.name) takes its values from the icon registry and every use names one: the "
+                            + "generator gives a style only an optional such option, optional: true, yet")
                 }
                 if case .integer = option.kind {
                     throw problem(
@@ -611,7 +612,9 @@ public struct AppleComponents: Generator {
                 switch option.kind {
                 case .bool(let value):
                     result.append((name, "\(option.name): Bool = \(value)", false))
-                case .tokenGroup, .icons, .integer:
+                case .icons(optional: true):
+                    result.append((name, "\(option.name): \(AppleIcons.iconType)? = nil", false))
+                case .tokenGroup, .icons(optional: false), .integer:
                     continue  // API's initializer rejects it.
                 case .enumeration:
                     guard let item = enums.first(where: { $0.option.name == option.name }) else { continue }
@@ -662,7 +665,12 @@ public struct AppleComponents: Generator {
                     let summary =
                         option.description.map(Self.firstSentence) ?? "The contract's option `\(option.name)`."
                     items.append("- \(option.name): \(summary) By default `\(value)`.")
-                case .tokenGroup, .icons, .integer:
+                case .icons(optional: true):
+                    let summary =
+                        option.description.map(Self.firstSentence) ?? "The contract's option `\(option.name)`."
+                    items.append(
+                        "- \(option.name): \(summary) A name of `\(AppleIcons.iconType)`; by default `nil`, none.")
+                case .tokenGroup, .icons(optional: false), .integer:
                     continue  // API's initializer rejects it.
                 case .enumeration:
                     guard let item else { continue }

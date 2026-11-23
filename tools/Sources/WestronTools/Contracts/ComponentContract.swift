@@ -11,11 +11,18 @@ public struct ComponentContract: Equatable, Sendable {
             /// when every use must name one. The values are in tokens/, not in the contract.
             case tokenGroup(String, default: String?)
             /// The names of the icon registry, `spec/icons/icons.yaml`, in its order: the values are in the registry,
-            /// not in the contract. There is no default: every use names its glyph.
-            case icons
+            /// not in the contract. There is no default: every use names its glyph, unless the option is `optional`, and
+            /// then a use that names none draws no glyph (a style's `Westron.Icon? = nil`, spec/conventions.md).
+            case icons(optional: Bool)
             /// A whole number, such as a nesting level, at least `minimum` when the contract gives one. It is a quantity,
             /// not a choice: the matrix draws its default, and no constraint, case or restriction names it.
             case integer(default: Int, minimum: Int?)
+
+            /// Whether the values are the icon registry's names, optional or not.
+            public var isIcons: Bool {
+                if case .icons = self { return true }
+                return false
+            }
         }
 
         public let name: String
@@ -352,7 +359,8 @@ public struct ComponentContract: Equatable, Sendable {
             return Option(
                 name: name, kind: .tokenGroup(group, default: entry["default"]?.string), description: description)
         case "icons":
-            return Option(name: name, kind: .icons, description: description)
+            let optional = entry["optional"] == .bool(true)
+            return Option(name: name, kind: .icons(optional: optional), description: description)
         case "integer":
             guard let value = entry["default"]?.integer else {
                 throw problem(path.key("default"), "an integer option needs a whole number as its default")

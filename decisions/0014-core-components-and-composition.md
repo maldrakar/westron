@@ -89,7 +89,7 @@ the pilot.
 | Tile (`TileModel`, `TileStyle`) | IconTile (#118) | westron |
 | Check (`CheckModel`, `CheckStyle`) | Checkbox; its pop and the tick that draws itself give way to Checkbox's `motion.check` | westron |
 | Text field (`TextFieldModel`, `FieldStyle`) | TextField: framed for a name typed in a row, inline for a card's title and notes | westron |
-| Search field (`SearchFieldModel`, `SearchFieldStyle`) | TextField, framed, with `magnifier` at the start and `microphone` at the end (#115) | westron's TextField |
+| Search field (`SearchFieldModel`, `SearchFieldStyle`) | TextField, framed, with `magnifier` at the start (#115); the pilot's microphone at the end is an action and waits for a slot for a control (TextField's decisions/0003, second revision) | westron's TextField |
 | Button (`ButtonModel`, `ButtonLabelModel`, `ButtonLabelStyle`, `ControlFillStyle`) | Button. `ControlFillStyle.color`, a fill of its own, is a variant; `.container`, the glass under a bar's controls, is #121 | westron |
 | Menu (`MenuModel`, `MenuButtonModel`, `GlassMenuButtonModel`) | `Menu` and `.contextMenu`; the button that opens one is a Button, on glass for "…" (#121) | system |
 | Confirmation (`ConfirmationModel`, `ChoiceModel`) | `.alert`, its choices the system's buttons | system |

@@ -40,8 +40,24 @@ extension View {
     /// - Parameters:
     ///   - variant: See `TextFieldVariant`. Every call names one.
     ///   - size: The size; without it, the size comes from `controlSize` (`TextFieldSize.init(_:)`).
-    public func textFieldStyle(_ variant: TextFieldVariant, size: TextFieldSize? = nil) -> some View {
-        textFieldStyle(TextFieldVariantStyle(variant: variant, size: size))
+    ///   - leadingIcon: The glyph at the field's start, a name of the icon registry that names what the field is for,
+    ///     never an action, or none, which draws no glyph there and gives the text that room. A name of `Westron.Icon`;
+    ///     by default `nil`, none.
+    ///   - trailingIcon: The glyph at the field's end, a name of the icon registry that names what the field is for,
+    ///     never an action, or none, such as a number sign at the end of a field that holds a tag's name. A name of
+    ///     `Westron.Icon`; by default `nil`, none.
+    public func textFieldStyle(
+        _ variant: TextFieldVariant,
+        size: TextFieldSize? = nil,
+        leadingIcon: Westron.Icon? = nil,
+        trailingIcon: Westron.Icon? = nil
+    ) -> some View {
+        let style = TextFieldVariantStyle(
+            variant: variant,
+            size: size,
+            leadingIcon: leadingIcon,
+            trailingIcon: trailingIcon)
+        return textFieldStyle(style)
     }
 }
 

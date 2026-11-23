@@ -2,8 +2,9 @@ import SwiftUI
 import WestronUI
 
 // TextField's catalog entries, from spec/components/text-field/text-field.spec.yaml: `text-field` (variants × sizes at
-// rest on one line, empty with a placeholder and with text, then multiple lines and every state at size m), and three
-// live pages with real fields:
+// rest on one line, empty with a placeholder and with text, then multiple lines and every state at size m),
+// `text-field-glyphs` (a search field and the glyphs at the start and the end, #115), and three live pages with real
+// fields:
 // `text-field-behavior` (nothing focused; the UI tests tap and click around the fields), `text-field-focus-framed` and
 // `text-field-focus-inline` (the field focused for real, to show westron's ring and no system ring). The variants,
 // sizes and states come from the generated enums, so the pages follow the contract.
@@ -11,6 +12,12 @@ import WestronUI
 extension CatalogEntry {
     static let textField = CatalogEntry(id: "text-field", title: "TextField", section: .components) {
         TextFieldMatrixPage()
+    }
+
+    static let textFieldGlyphs = CatalogEntry(
+        id: "text-field-glyphs", title: "TextField: glyphs", section: .components
+    ) {
+        TextFieldGlyphsPage()
     }
 
     static let textFieldBehavior = CatalogEntry(
@@ -42,6 +49,10 @@ enum TextFieldCatalogID {
     static let notes = "text-field.live.notes"
     /// A framed SecureField.
     static let secure = "text-field.live.secure"
+    /// A search field: a framed field at size m with the magnifier at its start.
+    static let search = "text-field.live.search"
+    /// A tag's name: a framed field at size m with a number sign at its end.
+    static let tag = "text-field.live.tag"
     /// The text that names the focused field: "Focused: small", "Focused: none".
     static let focused = "text-field.live.focused"
     /// The button that takes the focus away from every field.
@@ -51,17 +62,26 @@ enum TextFieldCatalogID {
 /// A sample field as a product writes it: a label that names what it holds, a prompt, and, for `inline`, the text role
 /// and the color of its context, which a framed field does not take. On one line (`axis` horizontal, the contract's
 /// `lines: single`) a list's name; on several (vertical, `multiple`) a list's notes, whose text wraps to two lines.
+/// With glyphs at its start or its end (the contract's `leadingIcon` and `trailingIcon`), the same field draws them.
 struct TextFieldSample: View {
     let variant: TextFieldVariant
     var size: TextFieldSize? = nil
     var axis: Axis = .horizontal
+    var leadingIcon: Westron.Icon? = nil
+    var trailingIcon: Westron.Icon? = nil
     @State private var text: String
 
-    init(variant: TextFieldVariant, size: TextFieldSize? = nil, axis: Axis = .horizontal, filled: Bool) {
+    init(
+        variant: TextFieldVariant, size: TextFieldSize? = nil, axis: Axis = .horizontal, filled: Bool,
+        leadingIcon: Westron.Icon? = nil, trailingIcon: Westron.Icon? = nil, text: String? = nil
+    ) {
         self.variant = variant
         self.size = size
         self.axis = axis
-        _text = State(initialValue: filled ? (axis == .vertical ? Self.filledNotes : Self.filledText) : "")
+        self.leadingIcon = leadingIcon
+        self.trailingIcon = trailingIcon
+        _text = State(
+            initialValue: text ?? (filled ? (axis == .vertical ? Self.filledNotes : Self.filledText) : ""))
     }
 
     /// The text of a filled sample on one line; the prompt of an empty one is "Untitled".
@@ -75,13 +95,13 @@ struct TextFieldSample: View {
         Group {
             if axis == .vertical {
                 TextField("Notes", text: $text, prompt: Text("Add a note"), axis: .vertical)
-                    .textFieldStyle(variant, size: size)
+                    .textFieldStyle(variant, size: size, leadingIcon: leadingIcon, trailingIcon: trailingIcon)
                     .accessibilityLabel("Notes")
                     .lineLimit(1...4)
                 // No fixed size of its own: the style keeps a field's height (the contract's description).
             } else {
                 TextField("List name", text: $text, prompt: Text("Untitled"))
-                    .textFieldStyle(variant, size: size)
+                    .textFieldStyle(variant, size: size, leadingIcon: leadingIcon, trailingIcon: trailingIcon)
                     // The product names the field: with a prompt, the system field takes no accessibility label from
                     // its title (decisions/0001, I2). Every field in the catalog is named so.
                     .accessibilityLabel("List name")
@@ -90,6 +110,25 @@ struct TextFieldSample: View {
         // The context of an inline field: body text in the primary color. A framed field sets its own.
         .textRole(.body.regular)
         .foregroundStyle(.text.primary)
+    }
+}
+
+/// A search field as a product writes it with westron's field (the contract's decisions/0003): a framed field with the
+/// magnifier at its start, decoration. No microphone at its end, as the pilot's search bar draws one: a glyph names
+/// what the field is for, never an action (decisions/0003, second revision). The product names the field, gives it the
+/// search field's trait, which the style does not (the contract's accessibility), and colors its prompt, its only
+/// visible name, in `text.placeholder` (macOS ignores the color); the glyph is hidden from assistive technology.
+struct TextFieldSearchSample: View {
+    /// framed, as the contract's recipe has it; the snapshot supplement `search-prompt` draws its inline column too.
+    var variant: TextFieldVariant = .framed
+    var size: TextFieldSize? = nil
+    @State private var text = ""
+
+    var body: some View {
+        TextField("Search", text: $text, prompt: Text("Search").foregroundStyle(.text.placeholder))
+            .textFieldStyle(variant, size: size, leadingIcon: .magnifier)
+            .accessibilityLabel("Search")
+            .accessibilityAddTraits(.isSearchField)
     }
 }
 
@@ -111,11 +150,19 @@ struct TextFieldMatrixCell: View {
     /// Whether the cell always holds both fields, as on the scrolling `text-field` entry; otherwise, as on a matrix
     /// sheet, which does not scroll, a multiline cell at the accessibility text sizes holds the two-line field alone.
     let whole: Bool
+    /// The glyphs the fields draw, which the generated matrix leaves out (its supplements draw them, #115).
+    var leadingIcon: Westron.Icon? = nil
+    var trailingIcon: Westron.Icon? = nil
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    init(_ values: TextFieldMatrixValues, whole: Bool = false) {
+    init(
+        _ values: TextFieldMatrixValues, whole: Bool = false, leadingIcon: Westron.Icon? = nil,
+        trailingIcon: Westron.Icon? = nil
+    ) {
         self.values = values
         self.whole = whole
+        self.leadingIcon = leadingIcon
+        self.trailingIcon = trailingIcon
     }
 
     var body: some View {
@@ -131,9 +178,13 @@ struct TextFieldMatrixCell: View {
             // the other text sizes' sheets and, at every text size, on the `text-field` entry, which the
             // accessibility audit walks.
             if whole || axis == .horizontal || !dynamicTypeSize.isAccessibilitySize {
-                TextFieldSample(variant: variant, size: size, axis: axis, filled: false)
+                TextFieldSample(
+                    variant: variant, size: size, axis: axis, filled: false, leadingIcon: leadingIcon,
+                    trailingIcon: trailingIcon)
             }
-            TextFieldSample(variant: variant, size: size, axis: axis, filled: true)
+            TextFieldSample(
+                variant: variant, size: size, axis: axis, filled: true, leadingIcon: leadingIcon,
+                trailingIcon: trailingIcon)
         }
         // Room for the ring, which is drawn outside the field's frame: forced, it touches neither the next cell nor
         // the picture's edge (the contract's platforms.apple).
@@ -174,7 +225,8 @@ extension ComponentMatrix.Supplement {
     /// The same style on SecureField.
     static let textFieldSecure = ComponentMatrix.Supplement(
         component: "text-field", id: "secure-field", title: "SecureField",
-        note: "SecureField takes the same .textFieldStyle(_:size:) as TextField (the contract's platforms.apple); the "
+        note: "SecureField takes the same .textFieldStyle(_:size:leadingIcon:trailingIcon:) as TextField (the "
+            + "contract's platforms.apple); the "
             + "kind of field is not a contract option. Each cell holds an empty field and one with a password; iOS "
             + "keeps a secure field's text out of screen captures, so there the second looks empty.",
         keeps: ["size": "m", "lines": "single"]
@@ -191,6 +243,86 @@ extension ComponentMatrix.Supplement {
     /// A field on the sunken ground, for its fill's contrast. `.surface(.sunken)` would draw this ground the same,
     /// with no shadow or line; it stays on `grounded(_:name:)` so the two sheets are drawn alike.
     static let textFieldOnSunken = grounded(.background.sunken, name: "sunken")
+
+    /// The glyphs at a field's start and its end (#115), on every generated sheet again: each variant, size, value of
+    /// lines and state, the generated cell's fields, empty and with text, with the magnifier at the start
+    /// (`textFieldGlyphLeading`), a number sign at the end, as for a tag's name (`textFieldGlyphTrailing`), or both
+    /// (`textFieldGlyphsBoth`). Each glyph names what the field is for, never an action (decisions/0003).
+    /// They are optional options of the contract, `leadingIcon` and `trailingIcon`, which are no axis of the generated
+    /// matrix: it draws every combination without them (spec/conventions.md, "Snapshot matrix").
+    static let textFieldGlyphLeading = glyphs(
+        leading: .magnifier, trailing: nil, id: "glyph-leading", title: "a glyph at the start",
+        which: "the magnifier "
+            + "at the start, leadingIcon: .magnifier")
+    static let textFieldGlyphTrailing = glyphs(
+        leading: nil, trailing: .hash, id: "glyph-trailing", title: "a glyph at the end",
+        which: "a number sign at the end, as for a tag's name, trailingIcon: .hash")
+    static let textFieldGlyphsBoth = glyphs(
+        leading: .magnifier, trailing: .hash, id: "glyphs-both", title: "glyphs at the start and the end",
+        which: "the magnifier at the start and a number sign at the end, as a search among tags")
+
+    private static func glyphs(
+        leading: Westron.Icon?, trailing: Westron.Icon?, id: String, title: String, which: String
+    ) -> Self {
+        ComponentMatrix.Supplement(
+            component: "text-field", id: id, title: title,
+            note: "The contract's leadingIcon and trailingIcon are optional, and an optional option whose values are "
+                + "icons is no axis of the generated matrix, which draws every field without a glyph: these sheets "
+                + "draw the generated cells again with \(which). A glyph stands at the field's padding and "
+                + "container.gap from the text, on the first line's baseline, in text.secondary in every state, at "
+                + "the text's size up to xxxLarge; at the accessibility sizes the glyph and its gap stay as at "
+                + "xxxLarge while the text grows on, and the glyph is centred on the first line.",
+            keeps: [:],
+            // At the largest text size the glyphs still take some width from the text, which wraps more: a column of
+            // three multiline cells is taller than an iPhone's screen, so a picture holds one row.
+            rowsPerPicture: 1
+        ) { combination in
+            TextFieldMatrixCell(TextFieldMatrixValues(combination), leadingIcon: leading, trailingIcon: trailing)
+        }
+    }
+
+    /// The contract's search field, empty (`TextFieldSearchSample`): its prompt in `text.placeholder`, which only
+    /// iOS draws, so that the references hold the prompt's colour.
+    static let textFieldSearchPrompt = ComponentMatrix.Supplement(
+        component: "text-field", id: "search-prompt", title: "a search field's prompt",
+        note: "A search field is no contract option: it is a framed field with the magnifier at its start, and the "
+            + "product colours its prompt, the field's only visible name, in text.placeholder: TextField(\"Search\", "
+            + "text: $query, prompt: Text(\"Search\").foregroundStyle(.text.placeholder)).textFieldStyle(.framed, "
+            + "leadingIcon: .magnifier) (the contract's platforms.apple). Each cell holds that field, empty, its "
+            + "prompt shown; the inline column draws the same field inline. iOS only: macOS ignores a prompt's colour "
+            + "and draws the system's (the contract's platforms.apple.macos), so there the sheet would only repeat "
+            + "glyph-leading's empty fields.",
+        keeps: ["size": "m", "lines": "single"], onlyOn: ["ios"]
+    ) { combination in
+        TextFieldSearchPromptSample(values: TextFieldMatrixValues(combination))
+            .matrixCellTakesOfferedWidth()
+    }
+
+    /// A text longer than the field, which reaches the glyph at its end, left to right and right to left.
+    static let textFieldGlyphsLongText = ComponentMatrix.Supplement(
+        component: "text-field", id: "glyphs-long-text", title: "glyphs with a long text",
+        note: "The text's length is not a contract option. A text longer than the field, with glyphs at both ends, "
+            + "stops at the gap before the glyph at the end on one line, and wraps before it on several, where the "
+            + "glyphs stay on the first line; past the product's line limit (here 4) the field scrolls.",
+        keeps: ["size": "m"],
+        rowsPerPicture: 1
+    ) { combination in
+        TextFieldLongTextSample(values: TextFieldMatrixValues(combination), direction: .leftToRight)
+            .matrixCellTakesOfferedWidth()
+    }
+
+    /// The same right to left, with a Hebrew text.
+    static let textFieldGlyphsRightToLeft = ComponentMatrix.Supplement(
+        component: "text-field", id: "glyphs-right-to-left", title: "glyphs right to left",
+        note: "The layout direction is not a contract option. Right to left, with a long Hebrew text, the glyph at the "
+            + "start (the magnifier) stands at the right and the one at the end (the number sign) at the left; the "
+            + "text stops at, or wraps before, the gap before the number sign.",
+        keeps: ["size": "m"],
+        rowsPerPicture: 1
+    ) { combination in
+        TextFieldLongTextSample(values: TextFieldMatrixValues(combination), direction: .rightToLeft)
+            .matrixCellTakesOfferedWidth()
+    }
 
     private static func grounded(_ ground: Westron.Color, name: String) -> Self {
         ComponentMatrix.Supplement(
@@ -277,6 +409,28 @@ private struct TextFieldSecureSample: View {
     }
 }
 
+/// The long-text supplement's cell: a field with both glyphs and a text longer than it, left to right and then right
+/// to left.
+private struct TextFieldLongTextSample: View {
+    let values: TextFieldMatrixValues
+    let direction: LayoutDirection
+
+    /// Longer than a cell's field on one line, and a few lines on several.
+    static let english = "Groceries: milk, bread, apples and eggs"
+    static let hebrew = "מצרכים: חלב, לחם, תפוחים וביצים"
+
+    var body: some View {
+        let (variant, size, lines, stateName) = values.fields
+        TextFieldSample(
+            variant: variant, size: size, axis: Axis(textFieldLines: lines), filled: true, leadingIcon: .magnifier,
+            trailingIcon: .hash, text: direction == .rightToLeft ? Self.hebrew : Self.english
+        )
+        .environment(\.layoutDirection, direction)
+        .padding(variant.focusRingClearance)
+        .forcingTextFieldState(stateName.flatMap(TextFieldCatalogState.init(named:)))
+    }
+}
+
 /// A filled field on a ground.
 private struct TextFieldGroundSample: View {
     let values: TextFieldMatrixValues
@@ -352,7 +506,8 @@ private struct TextFieldMatrixPage: View {
             title: "TextField",
             summary: "Each size on one line, empty with its placeholder, then with text; multiple lines; each state "
                 + "with text. framed is a capsule on one line and a rounded rectangle on several. inline takes the "
-                + "context's role and color (here body.regular, text.primary). Focus is forced here."
+                + "context's role and color (here body.regular, text.primary). Focus is forced here. The glyphs at "
+                + "the start and the end are on TextField: glyphs."
         ) {
             SectionRow {
                 ForEach(TextFieldSize.allCases, id: \.self) { size in
@@ -384,14 +539,50 @@ private struct TextFieldMatrixPage: View {
             }
         }
     }
+}
 
-    private func section(_ title: String, @ViewBuilder content: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: .space50) {
-            Text(title)
-                .textRole(.subheadline.strong)
-                .foregroundStyle(.text.primary)
-            content()
+/// The glyphs at a field's start and its end (the contract's `leadingIcon` and `trailingIcon`, #115): a search field,
+/// then each variant with a glyph at the start, at the end, and both on several lines. A page of its own, not a section
+/// of `text-field`: on the iPhone's screenful that held both, six multi-line fields at once, the accessibility audit's
+/// contrast analysis did not complete in time ("Audit failed to complete in time", -56) in any theme, with glyphs or
+/// without them, where four take it 0.3 s (the contract's decisions/0003, "Revision: the glyphs stop at xxxLarge").
+private struct TextFieldGlyphsPage: View {
+    var body: some View {
+        TokenPage(
+            title: "TextField: glyphs",
+            summary: "A search field, framed at size m with the magnifier at its start, named, given the search "
+                + "field's trait and its prompt's color by the product; then each variant with the magnifier at the "
+                + "start, a number sign at the end, and both on several lines. A glyph is decoration that names what "
+                + "the field is for, never an action, in text.secondary, at the text's size up to xxxLarge."
+        ) {
+            SectionRow {
+                section("a search field, size m") {
+                    TextFieldSearchSample(size: .m)
+                }
+                section("glyphs at the start, the end and both, size m") {
+                    VariantColumns { variant in
+                        VStack(alignment: .leading, spacing: .space150) {
+                            TextFieldSample(variant: variant, size: .m, filled: true, leadingIcon: .magnifier)
+                            TextFieldSample(variant: variant, size: .m, filled: true, trailingIcon: .hash)
+                            TextFieldSample(
+                                variant: variant, size: .m, axis: .vertical, filled: true, leadingIcon: .magnifier,
+                                trailingIcon: .hash)
+                        }
+                    }
+                }
+            }
         }
+    }
+}
+
+/// A titled section of a TextField page.
+@MainActor
+private func section(_ title: String, @ViewBuilder content: () -> some View) -> some View {
+    VStack(alignment: .leading, spacing: .space50) {
+        Text(title)
+            .textRole(.subheadline.strong)
+            .foregroundStyle(.text.primary)
+        content()
     }
 }
 
@@ -402,12 +593,13 @@ extension TextFieldMatrixValues {
     }
 }
 
-/// Live fields: a framed field at size s, a card's inline title and multiline notes, and a framed SecureField. With
+/// Live fields: a framed field at size s, a card's inline title and multiline notes, a framed SecureField, a search
+/// field with the magnifier at its start and a tag's field with a number sign at its end. With
 /// `focusing`, the page focuses that field for real once it appears, as a product does with `.focused(_:)`, to show
 /// westron's ring and that the system draws none.
 private struct TextFieldLivePage: View {
     enum Field: String, Hashable {
-        case small, title, notes, secure
+        case small, title, notes, secure, search, tag
     }
 
     /// The field to focus: `framed` focuses the size s field, `inline` the card's title.
@@ -417,13 +609,15 @@ private struct TextFieldLivePage: View {
     @State private var title = "Buy groceries"
     @State private var notes = "Milk, bread and apples"
     @State private var password = ""
+    @State private var query = ""
+    @State private var tag = ""
     @FocusState private var focused: Field?
 
     var body: some View {
         TokenPage(
             title: "TextField · live",
             summary: "Real fields. A framed field at size s takes touches and clicks in the platform's target "
-                + "around what it draws; a tap or a click on its padding focuses it."
+                + "around what it draws; a tap or a click on its padding, or on a field's glyph, focuses it."
         ) {
             VStack(alignment: .leading, spacing: .space200) {
                 TextField("List name", text: $name, prompt: Text("Untitled"))
@@ -454,6 +648,19 @@ private struct TextFieldLivePage: View {
                     .accessibilityLabel("Password")
                     .focused($focused, equals: .secure)
                     .accessibilityIdentifier(TextFieldCatalogID.secure)
+                // A tap or a click on a glyph focuses the field, as one on its padding does: the magnifier at the
+                // search field's start, the number sign at the tag field's end.
+                TextField("Search", text: $query, prompt: Text("Search").foregroundStyle(.text.placeholder))
+                    .textFieldStyle(.framed, size: .m, leadingIcon: .magnifier)
+                    .accessibilityLabel("Search")
+                    .accessibilityAddTraits(.isSearchField)
+                    .focused($focused, equals: .search)
+                    .accessibilityIdentifier(TextFieldCatalogID.search)
+                TextField("Tag", text: $tag, prompt: Text("Tag"))
+                    .textFieldStyle(.framed, size: .m, trailingIcon: .hash)
+                    .accessibilityLabel("Tag")
+                    .focused($focused, equals: .tag)
+                    .accessibilityIdentifier(TextFieldCatalogID.tag)
                 HStack(spacing: .space200) {
                     Text("Focused: \(focused?.rawValue ?? "none")")
                         .textRole(.footnote.regular)
@@ -473,5 +680,18 @@ private struct TextFieldLivePage: View {
             try? await Task.sleep(for: .milliseconds(300))
             focused = focusing == .framed ? .small : .title
         }
+    }
+}
+
+/// The search field of `TextFieldSearchSample`, empty, in the combination's variant, size and state.
+private struct TextFieldSearchPromptSample: View {
+    let values: TextFieldMatrixValues
+
+    var body: some View {
+        let (variant, size, _, stateName) = values.fields
+        TextFieldSearchSample(variant: variant, size: size)
+            // Room for the ring, drawn outside the field's frame, as in the generated cell.
+            .padding(variant.focusRingClearance)
+            .forcingTextFieldState(stateName.flatMap(TextFieldCatalogState.init(named:)))
     }
 }

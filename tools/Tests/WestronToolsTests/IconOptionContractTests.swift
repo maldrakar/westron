@@ -134,7 +134,7 @@ struct IconOptionContractTests {
         let contract = try ComponentContract(yaml: iconFixture, source: iconSource)
         #expect(
             contract.options == [
-                .init(name: "glyph", kind: .icons),
+                .init(name: "glyph", kind: .icons(optional: false)),
                 .init(name: "scale", kind: .enumeration(values: ["small", "medium", "large"], default: "medium")),
             ])
         #expect(contract.apple?.systemOptions == ["scale": "SwiftUI.Image.Scale"])
@@ -178,7 +178,7 @@ struct IconOptionContractTests {
         #expect(lint.first?.contains("the lint cannot derive Icon's API: glyph takes its values from the icon") == true)
     }
 
-    @Test("generation: a style does not take an icons option yet")
+    @Test("generation: a style does not take an icons option every use names yet; an optional one, see below")
     func styleWithIconOption() throws {
         let yaml = """
             id: button
@@ -204,9 +204,21 @@ struct IconOptionContractTests {
         } catch {
             #expect(
                 error.description
-                    == "\(source): options.glyph: glyph takes its values from the icon registry: the generator does "
-                    + "not give a style such an option yet")
+                    == "\(source): options.glyph: glyph takes its values from the icon registry and every use names "
+                    + "one: the generator gives a style only an optional such option, optional: true, yet")
         }
+        // The lint does not skip it: it says it cannot derive the overload, rather than expect one without it.
+        let lint = APIParity.check(
+            contracts: [APIParity.Contract(contract: contract, source: source, text: yaml)], files: [],
+            sourceRoot: "WestronUI"
+        ).problems.map(\.description)
+        #expect(
+            lint.contains {
+                $0.contains(
+                    "the lint cannot derive Button's style overload: the conventions give a style no argument for "
+                        + "glyph, whose values are tokens or icons every use names")
+            }, "\(lint)")
+        #expect(!lint.contains { $0.contains("buttonStyle") }, "no overload is expected without the glyph: \(lint)")
     }
 }
 

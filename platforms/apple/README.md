@@ -217,7 +217,7 @@ still drives every generated sheet and combination:
   `columnsPerPicture` caps a picture's columns where the cells are wide. `ComponentMatrix.rowsAtLimit` caps the
   generated sheets of a component whose cells grow tall at the splitting size (ListRow, one row a picture). A
   supplement whose render on one OS is not worth reading, or not the same twice, names the OSes it is drawn on
-  (`onlyOn`), and its note says why. There are thirty (`SnapshotMatrix/Supplements.swift`, `Supplement.all`):
+  (`onlyOn`), and its note says why. There are thirty-six (`SnapshotMatrix/Supplements.swift`, `Supplement.all`):
   - Button, `label-without-icon`: its generated cells have an icon and a label or are icon-only, so a label without an
     icon, which while loading has the indicator before the label and widens the button (P13), is shown on the sheets
     with iconOnly false: every variant, size and role, at rest and in each state, 108 combinations on 6 sheets.
@@ -229,7 +229,12 @@ still drives every generated sheet and combination:
     `accessibility5`); and `text-roles`: a task's check and a subtask's beside labels of their roles.
   - Text field, at size m: `card-notes`, a card's title and multiline notes (two rows to a picture at
     `accessibility5`); `secure-field`, the style on `SecureField`; `on-surface` and `on-sunken`, a field on those
-    grounds.
+    grounds. Its glyphs (#115), optional options and so no axis of the generated matrix: at every size,
+    `glyph-leading`, `glyph-trailing` and `glyphs-both`, the generated cells again with the magnifier at the start, a
+    number sign at the end, or both (one row to a picture at `accessibility5`); at size m, `glyphs-long-text` and
+    `glyphs-right-to-left`, a text longer than the field reaching the glyph at its end, left to right and in Hebrew;
+    and at size m on one line, on iOS only, `search-prompt`, an empty search field with its prompt in
+    `text.placeholder` (macOS ignores a prompt's colour).
   - Rule, `labelled`, on the sheet with purpose separator: a short label, a long one truncated and a rule with none,
     each above a row; a vertical rule takes no label.
   - IconTile, over the glyph folder or tray: `list-colors`, neutral and the twelve list colors; `beside-title`, a tile
