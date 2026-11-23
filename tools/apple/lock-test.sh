@@ -20,7 +20,8 @@ set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 work="$(mktemp -d "${TMPDIR:-/tmp}/westron-lock-test.XXXXXX")"
-export WESTRON_LOCK_DIR="$work/locks" WESTRON_LOCK_TEST_HELPER="$root/tools/apple/lock.sh" WESTRON_LOCK_TEST_WORK="$work"
+export WESTRON_LOCK_DIR="$work/locks" WESTRON_LOCK_TEST_HELPER="$root/tools/apple/lock.sh" \
+  WESTRON_LOCK_TEST_WORK="$work"
 unset WESTRON_LOCK_HOLDERS WESTRON_LOCK_TIMEOUT
 lock="$WESTRON_LOCK_DIR/test"
 background=()
@@ -78,8 +79,9 @@ slept_twice() { [ -e "$work/$1.sleeps" ] && [ "$(grep -c '' "$work/$1.sleeps")" 
 free() { [ ! -L "$lock" ]; }
 
 echo "== two holders at once"
-# The first holds the lock until the second has slept twice in its wait, so it looked at the lock at least three times
-# and found it held each time, or until the second has run (a lock that let it in), at most 30 s.
+# The first holds the lock until the second has begun its second sleep in its wait (counting writes a sleep's line
+# before it sleeps), so it looked at the lock at least twice and found it held each time, or until the second has run
+# (a lock that let it in), at most 30 s.
 "$BASH" -c "$load"'trap "echo first: its own EXIT trap ran" EXIT
   westron_lock test "the test resource"
   echo "first start" >> "$1"; touch "$1.first"
@@ -168,22 +170,25 @@ LC_ALL=C TZ=ABC+3 "$BASH" -c "$load"'trap "kill \$sleeper" EXIT; westron_lock te
 holder=$!
 background+=("$holder")
 wait_for "$work/holder.locked"
-# The limit is the very thing under test. The waiter must not give up before 2 s by its own count, and must give up at
-# the limit, which a count of its sleeps tells however slow the machine: it sleeps 1 s between two looks, so after 2
-# sleeps at least 2 s have passed and the next look gives up; one more is a margin for the clock (SECONDS counts whole
-# seconds of the wall clock). The seconds it reports have no such bound, as a turn of the loop on a busy machine can
-# take longer than its sleep; the run as a whole within 15 s is only a backstop, well before the holder goes.
+# The limit is the very thing under test. The waiter must not give up before the limit by its own count, and must give
+# up at the limit, which a count of its sleeps tells however slow the machine: at most `limit` sleeps. Before its k-th
+# sleep the lock's check found SECONDS - started < limit; by then it had finished k - 1 sleeps of at least 1 s each,
+# and two whole-second readings of one clock differ by at least the whole seconds between them, so k - 1 < limit, that
+# is k <= limit. The seconds it reports have no such upper bound, as a turn of the loop on a busy machine can take
+# longer than its sleep; the run as a whole within 15 s is only a backstop, well before the holder goes.
+limit=2
 status=0
 started=$SECONDS
-WESTRON_LOCK_TIMEOUT=2 run impatient "$counting"'westron_lock test "the test resource" && echo "impatient: took it"' \
+WESTRON_LOCK_TIMEOUT=$limit \
+  run impatient "$counting"'westron_lock test "the test resource" && echo "impatient: took it"' \
   > "$work/impatient.out" 2> "$work/impatient.err" || status=$?
 elapsed=$((SECONDS - started))
 show "$work/impatient.err"
 slept="$(grep -c '' "$work/impatient.sleeps" 2> /dev/null || true)"
-gave_up="$(sed -n "s/^impatient: gave up waiting for the test resource after \([0-9]*\) s (WESTRON_LOCK_TIMEOUT=2): pid $holder .*/\1/p" \
-  "$work/impatient.err")"
+gave_up="gave up waiting for the test resource after \([0-9]*\) s (WESTRON_LOCK_TIMEOUT=$limit): pid $holder"
+gave_up="$(sed -n "s/^impatient: $gave_up .*/\1/p" "$work/impatient.err")"
 if [ "$status" -ne 0 ] && [ ! -s "$work/impatient.out" ] && [ "$elapsed" -lt 15 ] \
-  && [ -n "$gave_up" ] && [ "$gave_up" -ge 2 ] && [ "${slept:-0}" -le 3 ]; then
+  && [ -n "$gave_up" ] && [ "$gave_up" -ge "$limit" ] && [ "${slept:-0}" -le "$limit" ]; then
   ok "it failed with status $status after $gave_up s and ${slept:-0} sleeps"
 else
   fail "the wait did not end at the limit with a message (status $status, after $elapsed s and ${slept:-0} sleeps)"
@@ -197,8 +202,8 @@ foreign_locale="$(locale -a 2> /dev/null || true)"
 foreign_locale="$(grep -ix "ru_RU.utf-\{0,1\}8" <<< "$foreign_locale" | head -1 || true)"
 foreign_locale="${foreign_locale:-C}"
 # The waiter compares the holder's start with its own reading on each look at the lock, and takes the lock over and
-# exits when they differ: it is stopped once it has slept twice (three looks, each finding the holder alive), or has
-# taken the lock over, still waiting if the lock is right. Its limit only bounds a waiter left behind.
+# exits when they differ: it is stopped once it has begun its second sleep (two looks, each finding the holder alive),
+# or has taken the lock over, still waiting if the lock is right. Its limit only bounds a waiter left behind.
 LC_ALL="$foreign_locale" TZ=XYZ-5:45 WESTRON_LOCK_TIMEOUT=60 \
   "$BASH" -c "$load$counting"'westron_lock test "the test resource" && echo "foreigner: took it"' foreigner \
   > "$work/foreigner.out" 2> "$work/foreigner.err" &
