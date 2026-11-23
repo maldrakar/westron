@@ -237,7 +237,12 @@ extension Westron.TextRole {
     /// SwiftUI does. `scaledValue(for:)` rounds to the screen's pixels first, to half points at 2x, and rounding that
     /// again sends a size just under a half point up: the caption's 12 points at accessibility5 came out 38.5, so 39
     /// where SwiftUI draws 38, on every 2x screen, iOS 17 and 26 alike (#133).
-    func drawnSize(at dynamicTypeSize: DynamicTypeSize) -> CGFloat {
+    ///
+    /// `displayScale` is for tests only: on iOS it adds a display scale to the traits the size is computed with, so
+    /// that `TextRoleTests` can hold the size to be the same at 1x, 2x and 3x on any one device. UIKit takes the scale
+    /// from the screen, not from the current trait collection. Nil, as every caller passes, computes with the screen's.
+    /// macOS and watchOS ignore it.
+    func drawnSize(at dynamicTypeSize: DynamicTypeSize, displayScale: CGFloat? = nil) -> CGFloat {
         #if os(macOS)
             return platformSize
         #elseif os(watchOS)
@@ -248,7 +253,10 @@ extension Westron.TextRole {
             }
             return platformSize
         #else
-            let traits = UITraitCollection(preferredContentSizeCategory: UIContentSizeCategory(dynamicTypeSize))
+            var traits = UITraitCollection(preferredContentSizeCategory: UIContentSizeCategory(dynamicTypeSize))
+            if let displayScale {
+                traits = traits.modifyingTraits { $0.displayScale = displayScale }
+            }
             let style = UIFont.TextStyle(textStyle)
             if let name = shippedFont(boldText: false), BundledFonts.registered,
                 let font = UIFont(name: name, size: platformSize)
