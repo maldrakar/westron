@@ -405,6 +405,8 @@ extension Westron.Color {
                     ["color.background.muted"],
                     ["color.background.muted-hover-colored"],
                     ["color.background.muted-pressed-colored"],
+                    ["color.background.hover"],
+                    ["color.background.pressed"],
                 ])
 
             /// The icon or dot of the status danger.

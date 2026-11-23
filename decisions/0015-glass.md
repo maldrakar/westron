@@ -278,9 +278,9 @@ which matters on iOS, where a control within about 16 pt shares the touch tolera
   24 sheets where there are 12).
 - **The ground.** The generated cells stand on the canvas, where glass shows almost nothing of itself. A
   hand-written supplement ("not a contract option", platforms/apple/README.md) draws the floating secondary and
-  primary over a deterministic ground of westron's own: bands of `background.canvas`, `background.surface`, a list's
-  `color.category.*` fill and dark text rows, the same in every theme, so the reference shows the glass over light,
-  dark and colored content.
+  primary over a deterministic ground of westron's own. As built: diagonal stripes in four list colors' fills
+  (`color.category.{orange,blue,green,violet}.fill`), which follow the theme, drawn by a `Canvas` with no image and no
+  randomness, on the floating sheets of size `m`.
 - **Both eras.** The CI runner renders on iOS 27.0 and macOS 27.0.1 (`platforms/apple/Snapshots/*/environment.json`),
   so the `else` branch, everything before OS 26, would never be rendered. The style reads a `package`-level override
   in `WestronUI`, set only by the catalog's supplement, that draws the fallback on any OS (gap G4); it is not public, so
@@ -670,7 +670,14 @@ decisions/0013 and Button's decisions/0003). Does a floating secondary stand on 
 
 ## Gaps in the schema and the tools
 
-Described, not built.
+Described, not built, except where "As built" says what the implementation did.
+
+As built, 2026-11-23: G1 and G3 stay in Button's description, since no schema field is both small and general enough
+to add for one option; G4 is `drawingButtonsWithoutGlass()`, `package` in `WestronUI` beside the catalog's other hooks
+(`ButtonCatalogSupport.swift`), which the API parity lint does not see (it reads `public` and `open` declarations
+only, as for `forcingButtonStates(_:)`); G5 is the two supplements above; G6 was not needed, since glass renders on
+both paths; G8 is declared (`color.status.danger.border` on `background.hover`, 3.22 / 3.49 / 4.83 / 5.26, and on
+`background.pressed`, 3.02 / 3.03 / 4.54 / 4.56, light / dark / light-hc / dark-hc, all passing).
 
 - **G1. No field for an OS version.** The `platforms` block restricts per OS (`ios`, `macos`, `watchos`) but not per
   OS version, so "glass from 26, a surface before" is text in Apple's description, and the parity lint cannot hold the

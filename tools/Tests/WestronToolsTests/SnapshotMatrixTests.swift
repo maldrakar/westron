@@ -71,9 +71,9 @@ struct SnapshotMatrixTests {
         #expect(!contract.constraints[0].isBroken(by: ["variant": "primary", "size": "l", "iconOnly": "false"]))
     }
 
-    @Test(
-        "westron's Button: 3 variants × 3 sizes × 2 roles × 2 iconOnly × 2 floating × (rest + 5 states) = 432, less "
-            + "the 72 of a floating tertiary = 360, on 24 sheets")
+    /// 3 variants × 3 sizes × 2 roles × 2 iconOnly × 2 floating × (rest + 5 states) = 432, less the 72 of a floating
+    /// tertiary, which a constraint of severity error leaves out.
+    @Test("westron's Button: 360 combinations, on 24 sheets")
     func button() throws {
         let matrix = try SnapshotMatrix(try buttonContract(), source: buttonSource)
         #expect(matrix.axes.map(\.name) == ["variant", "size", "role", "iconOnly", "floating"])
