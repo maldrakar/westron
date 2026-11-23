@@ -267,7 +267,8 @@ struct ComponentMatrixTests {
     @Test("a cap of columns to a picture splits a sheet whose cells do not fit side by side; each part is found by key")
     func columnCap() throws {
         let matrix = try #require(ComponentMatrix.all.first { $0.component == "button" })
-        let sheet = try #require(matrix.sheets.first { $0.id == "size-l_role-destructive_iconOnly-false_floating-false" })
+        let sheet = try #require(
+            matrix.sheets.first { $0.id == "size-l_role-destructive_iconOnly-false_floating-false" })
         #expect(matrix.pictures(of: sheet, at: .large, columns: 3).map(\.id) == [sheet.id], "a cap that fits all")
         let parts = matrix.pictures(of: sheet, at: .large, columns: 2)
         #expect(parts.map(\.id) == [1, 2].map { "\(sheet.id)_part-\($0)-of-2" })
@@ -310,7 +311,9 @@ struct ComponentMatrixTests {
         #expect(matrix.supplement == nil)
         let supplements = matrix.supplements
         #expect(
-            supplements.map { $0.supplement?.id } == ["label-without-icon", "floating-over-content", "floating-before-26"])
+            supplements.map { $0.supplement?.id } == [
+                "label-without-icon", "floating-over-content", "floating-before-26",
+            ])
         let labels = try #require(supplements.first)
         #expect(labels.supplements.isEmpty)
         // Variant × size × role × floating × (rest + 5 states), iconOnly kept false: half of the generated matrix.
@@ -323,7 +326,8 @@ struct ComponentMatrixTests {
             labels.title(of: labels.sheets[0])
                 == "label without an icon · size s · role default · iconOnly false · floating false")
         let found = try #require(
-            ComponentMatrix.sheet(key: "button.label-without-icon_size-m_role-destructive_iconOnly-false_floating-false"))
+            ComponentMatrix.sheet(
+                key: "button.label-without-icon_size-m_role-destructive_iconOnly-false_floating-false"))
         #expect(found.matrix.supplement?.id == "label-without-icon")
         // The floating ones (#121): the floating sheets of size m, primary and secondary, over the busy ground.
         for floating in supplements.dropFirst() {
