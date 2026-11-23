@@ -9,7 +9,8 @@ Phases 1 to 3 are done; phases are GitHub milestones, tasks are issues. Phase 3 
 six components (Text, Icon, Surface, Rule, TextField, Checkbox), and their snapshot matrices passed the second gate
 (decisions/0005). Phase 4 "Pilot components (Apple)" is in progress: a small core the pilot composes its screens from
 (decisions/0014), in order TextField's icon slots (#115) and Rule's label (#116), Chip (#117) and IconTile (#118),
-ListRow (#119) and Disclosure (#120), then glass (#121); one pull request per issue. Order matters more than speed:
+ListRow (#119) and Disclosure (#120), then glass (#121), which is Button's option `floating` and no glass Surface
+(decisions/0015); one pull request per issue. Order matters more than speed:
 tokens (phase 1), then the contract schema, API generation, the parity lint, the snapshot matrix and the end-to-end
 Button slice on Apple (phase 2), before a second component (`reports/`, section "Work plan").
 
@@ -147,5 +148,6 @@ them to that branch.
 - [0012](decisions/0012-color.md) color: the cobalt palette, solved into ramps for each theme
 - [0013](decisions/0013-typography-space-shape-motion.md) typography, space, shape and motion of direction B
 - [0014](decisions/0014-core-components-and-composition.md) a small core of components; products compose the rest
+- [0015](decisions/0015-glass.md) glass: a floating Button on the system's glass; the bars are the system's
 
 The final research report, with sources: `reports/`.

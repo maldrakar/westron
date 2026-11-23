@@ -51,9 +51,10 @@ This chapter says why. The values are in decisions/0013 and in `tokens/semantic/
 
 ## Lines
 
-- **Four widths, each with a job.** `stroke.hairline` edges glass and a card on a fill. `stroke.thin` draws rules,
-  dividers and tree guides in a sidebar. `stroke.regular` draws guides on a phone, a dashed outline and a small check's
-  ring. `stroke.thick` draws a focus ring, a drop indicator and a selected row's bar.
+- **Four widths, each with a job.** `stroke.hairline` edges a card on a fill; glass is the system's and takes no edge
+  of westron's (decisions/0015). `stroke.thin` draws rules, dividers and tree guides in a sidebar. `stroke.regular`
+  draws guides on a phone, a dashed outline and a small check's ring. `stroke.thick` draws a focus ring, a drop
+  indicator and a selected row's bar.
 - **A thicker line means more attention.** The thick width marks what a person must find at once: where focus is,
   where a dragged item will land. Rules and guides stay thin, because space and alignment already show the grouping.
 - **A card needs no outline.** In the standard themes a card is set off from the canvas by its tone, and in light also

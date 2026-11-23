@@ -1,6 +1,8 @@
 # westron's Surface contract (#29), approved on 2026-11-18 under the owner's delegation of that day:
 # decisions/0001-surface-contract.md records the owner's answers, what the documents already decide, and the proposals
-# approved on top of them; P5 and P12 still wait for the owner's confirmation.
+# approved on top of them; P5 and P12 still wait for the owner's confirmation. Its sentence on glass scoped on
+# 2026-11-23 (#121), approved with decisions/0015-glass.md at the repository's root: a surface still never takes
+# glass, and the description now says where the glass under a group of controls comes from.
 id: surface
 status: approved
 description: >-
@@ -20,7 +22,10 @@ description: >-
   or not outlined is set, because a shadow alone does not mark an edge (decisions/0013); an outlined surface then
   draws that line instead of its hairline. The bindings below cannot say this, since a case has no contrast key, so
   this description is the contract for it. westron's shadow never goes on what the system draws itself, a sheet, a
-  popover, a menu or glass, and a surface never takes glass (design-language/04, "Shadows"; 09, "Liquid Glass"). It
+  popover, a menu or glass, and a surface never takes glass (design-language/04, "Shadows"; 09, "Liquid Glass"): it is
+  the ground of content, and glass is the layer of controls above it. The glass under a group of controls is the
+  system's: a toolbar's or a bar's own group, from OS 26, or the system's GlassEffectContainer that a product writes
+  around floating Buttons, from OS 26 too; a single control over content is a floating Button (decisions/0015). It
   has no states.
 consumers: [todo-app/lists-screen, todo-app/list-screen]
 

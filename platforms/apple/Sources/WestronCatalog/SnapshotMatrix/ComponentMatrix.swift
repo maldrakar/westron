@@ -22,11 +22,15 @@ public struct ComponentMatrix: Sendable {
         let values: [String]
         /// The system API that carries the option on Apple, such as `SwiftUI.ButtonRole`.
         let system: String?
+        /// The value at which a sheet does not name the option, in its id or its title: the default of an option with
+        /// `nameInMatrixAtDefault: false` in the contract (Button's `floating`); nil: named at every value.
+        let unnamed: String?
 
-        init(_ name: String, values: [String], system: String? = nil) {
+        init(_ name: String, values: [String], system: String? = nil, unnamed: String? = nil) {
             self.name = name
             self.values = values
             self.system = system
+            self.unnamed = unnamed
         }
     }
 
@@ -112,6 +116,9 @@ public struct ComponentMatrix: Sendable {
         /// For a matrix whose rows are an option (Icon's glyphs), the values of it the supplement keeps, so that it
         /// draws one sheet of a few rows rather than every generated sheet again; nil keeps every row.
         let rows: [String]?
+        /// The values of the column option the supplement keeps, so that a column whose every cell a constraint forbids
+        /// on its sheets is not drawn again (Button's tertiary, which does not float); nil keeps every column.
+        let columns: [String]?
         /// The most rows of one picture at a text size that splits sheets (`TextSize.limit`), where its cells are
         /// taller than a generated cell; nil takes the text size's own limit.
         let rowsPerPicture: Int?
@@ -124,14 +131,31 @@ public struct ComponentMatrix: Sendable {
         /// The most columns of one picture at every text size, for a cell that needs a sheet's whole width (ListRow
         /// forced to accessibility5); nil: as many as the text size takes.
         let columnsPerPicture: Int?
+        /// The OSes, as `currentOS` names them, where its pictures are drawn and shown but not the same from one render
+        /// to the next (the system's glass on the iOS simulator), and why: there the comparison holds them to their
+        /// presence and size, not their pixels (`tools/apple/snapshot-matrix.sh`, "not compared"). nil compares them
+        /// pixel by pixel on every OS. Not a tolerance: how far such a picture varies is not known.
+        let notCompared: NotCompared?
         let cell: @MainActor @Sendable (Combination) -> AnyView
+
+        /// Where a supplement's pictures are not compared pixel by pixel, and why (`notCompared`).
+        struct NotCompared: Sendable {
+            /// The OSes, as `currentOS` names them.
+            let on: [String]
+            /// For the review page and the comparison's report: what varies, and what holds the look instead.
+            let reason: String
+        }
 
         init<Content: View>(
             component: String, id: String, title: String, note: String, keeps: [String: String],
-            rows: [String]? = nil, rowsPerPicture: Int? = nil, onlyOn: [String]? = nil,
-            splitsAtEverySize: Bool = false, columnsPerPicture: Int? = nil,
+            rows: [String]? = nil, columns: [String]? = nil, rowsPerPicture: Int? = nil, onlyOn: [String]? = nil,
+            splitsAtEverySize: Bool = false, columnsPerPicture: Int? = nil, notCompared: NotCompared? = nil,
             @ViewBuilder cell: @escaping @MainActor @Sendable (Combination) -> Content
         ) {
+            precondition(
+                notCompared.map { !$0.on.isEmpty && !$0.reason.isEmpty } ?? true,
+                "\(component), supplement \(id): notCompared names no OS or gives no reason")
+            self.notCompared = notCompared
             self.rowsPerPicture = rowsPerPicture
             self.onlyOn = onlyOn
             self.splitsAtEverySize = splitsAtEverySize
@@ -142,6 +166,7 @@ public struct ComponentMatrix: Sendable {
             self.note = note
             self.keeps = keeps
             self.rows = rows
+            self.columns = columns
             self.cell = { AnyView(cell($0)) }
         }
     }
@@ -320,7 +345,11 @@ public struct ComponentMatrix: Sendable {
             return rows.contains(combination.values[rowIndex])
         }
         let keptSheets = allSheets.filter { sheet in keeps(values(sheet, column: sheet.columns[0], row: sheet.rows[0]))
-        }
+        }.map { sheet in
+            guard let columns = supplement.columns else { return sheet }
+            return Sheet(
+                sheet.id, fixed: sheet.fixed, columns: sheet.columns.filter(columns.contains), rows: sheet.rows)
+        }.filter { !$0.columns.isEmpty }
         if let rows = supplement.rows {
             // A supplement that names rows of a row option draws those alone, on one sheet per value of the other
             // axes, its columns the generated sheets' in their order.
@@ -330,7 +359,7 @@ public struct ComponentMatrix: Sendable {
                     let columns = merged[index].columns + sheet.columns.filter { !merged[index].columns.contains($0) }
                     merged[index] = Sheet(merged[index].id, fixed: sheet.fixed, columns: columns, rows: rows)
                 } else {
-                    let fixed = fixedValues(of: sheet).map { "\($0.option)-\($0.value)" }
+                    let fixed = namedValues(of: sheet).map { "\($0.option)-\($0.value)" }
                     let id = "\(supplement.id)_" + (fixed.isEmpty ? "all" : fixed.joined(separator: "_"))
                     merged.append(Sheet(id, fixed: sheet.fixed, columns: sheet.columns, rows: rows))
                 }
@@ -344,6 +373,12 @@ public struct ComponentMatrix: Sendable {
         matrix.makeCell = supplement.cell
         matrix.supplement = supplement
         return matrix
+    }
+
+    /// Why the comparison holds this supplement's pictures on the current OS to their presence and size, not their
+    /// pixels (`Supplement.notCompared`); nil where it compares them pixel by pixel, and for the generated matrix.
+    var notComparedReason: String? {
+        supplement?.notCompared.flatMap { $0.on.contains(Self.currentOS) ? $0.reason : nil }
     }
 
     /// `ios`, `macos` or `watchos`: the key of the current OS in the contract's `platforms.apple`.
@@ -478,10 +513,16 @@ public struct ComponentMatrix: Sendable {
         return Array(zip(names, sheet.fixed)).map { (option: $0.0, value: $0.1) }
     }
 
+    /// The values a sheet fixes that its id and title name: all but an option at the value it is not named at
+    /// (`Option.unnamed`), so that the sheets of a button that does not float keep the names they had before `floating`.
+    func namedValues(of sheet: Sheet) -> [(option: String, value: String)] {
+        fixedValues(of: sheet).filter { fixed in options.first { $0.name == fixed.option }?.unnamed != fixed.value }
+    }
+
     /// `size s · role default · iconOnly false`; a supplement's title first, `label without an icon · size s · …`.
     /// A part's number is not in it (`partTitle(of:)`).
     public func title(of sheet: Sheet) -> String {
-        let fixed = fixedValues(of: sheet).map { "\($0.option) \($0.value)" }
+        let fixed = namedValues(of: sheet).map { "\($0.option) \($0.value)" }
         let title = fixed.isEmpty ? "every combination" : fixed.joined(separator: " · ")
         return supplement.map { "\($0.title) · \(title)" } ?? title
     }
@@ -506,6 +547,29 @@ public struct ComponentMatrix: Sendable {
     /// The file name of a sheet's picture in a capture: `button.size-s_role-default_iconOnly-false.dark-hc.png` at the
     /// default text size, `button.size-s_role-default_iconOnly-false_part-1-of-6.light.accessibility5.png` at another.
     public func fileName(of sheet: Sheet, capture: Capture) -> String { "\(key(of: sheet)).\(capture.name).png" }
+
+    /// A note a component's catalog code gives its generated sheets that fix an option at a value, for what the sheet
+    /// draws that its title does not say (Button's floating sheets draw the look where there is no glass). Hand-written
+    /// beside the component's cell, registered in `all`.
+    public struct SheetNote: Sendable {
+        let component: String
+        let option: String
+        let value: String
+        let text: String
+
+        /// Every component's sheet notes.
+        static let all: [SheetNote] = [.buttonFloatingWithoutGlass]
+    }
+
+    /// The note of a generated sheet that fixes an option at a value a `SheetNote` names; nil for any other sheet and
+    /// for a supplement's, which has its own.
+    public func sheetNote(of sheet: Sheet) -> String? {
+        guard supplement == nil else { return nil }
+        let fixed = fixedValues(of: sheet)
+        return SheetNote.all.first { note in
+            note.component == component && fixed.contains { $0.option == note.option && $0.value == note.value }
+        }?.text
+    }
 
     /// What the sheet and the review page say about the states that draw as rest; nil when every state is bound.
     public var unboundNote: String? {

@@ -26,6 +26,8 @@
             let variant: ButtonVariant
             let size: ButtonSize
             let iconOnly: Bool
+            var floating = false
+            var withoutGlass = false
 
             var body: some View {
                 Button {
@@ -33,7 +35,8 @@
                 } label: {
                     Label("Add", icon: .plus)
                 }
-                .buttonStyle(variant, size: size, iconOnly: iconOnly)
+                .buttonStyle(variant, size: size, iconOnly: iconOnly, floating: floating)
+                .drawingButtonsWithoutGlass(withoutGlass)
                 .background {
                     GeometryReader { proxy in
                         Color.clear.onAppear { presses.frame = proxy.frame(in: .named(Self.space)) }
@@ -67,9 +70,31 @@
             arguments: ButtonVariant.allCases, [false, true])
         func clicksInsideTheDrawnButton(variant: ButtonVariant, iconOnly: Bool) {
             for size in ButtonSize.allCases {
-                let presses = Presses()
-                let host = NSHostingView(
-                    rootView: Sample(presses: presses, variant: variant, size: size, iconOnly: iconOnly))
+                checkHitArea(Sample(presses: Presses(), variant: variant, size: size, iconOnly: iconOnly))
+            }
+        }
+
+        /// A floating button keeps Button's hit area: on the system's glass, which is laid after the button is drawn
+        /// and before its content shape, and on the surface before OS 26 (decisions/0015).
+        @Test(
+            "a floating button's hit area is its drawn capsule too, on glass and before OS 26",
+            arguments: [ButtonVariant.primary, .secondary], [false, true])
+        func floatingClicksInsideTheDrawnButton(variant: ButtonVariant, withoutGlass: Bool) {
+            for size in ButtonSize.allCases {
+                for iconOnly in [false, true] {
+                    checkHitArea(
+                        Sample(
+                            presses: Presses(), variant: variant, size: size, iconOnly: iconOnly, floating: true,
+                            withoutGlass: withoutGlass))
+                }
+            }
+        }
+
+        private func checkHitArea(_ sample: Sample) {
+            let presses = sample.presses
+            let (variant, size, iconOnly) = (sample.variant, sample.size, sample.iconOnly)
+            do {
+                let host = NSHostingView(rootView: sample)
                 let window = NSWindow(
                     contentRect: NSRect(x: 0, y: 0, width: 320, height: 200), styleMask: [.titled],
                     backing: .buffered, defer: false)
@@ -82,7 +107,9 @@
                 // The hosting view is flipped, so the conversion turns its top-left frame into the window's.
                 let button = host.convert(presses.frame, to: nil)
                 #expect(button.width > 0, "the button's frame was not reported")
-                let name = "\(variant), size \(size), iconOnly \(iconOnly)"
+                let name =
+                    "\(variant), size \(size), iconOnly \(iconOnly)"
+                    + (sample.floating ? ", floating\(sample.withoutGlass ? " without glass" : "")" : "")
                 // 1.5 pt in from each edge, at its middle: off the label, which a click on an unfilled button
                 // must not need.
                 let inside = [

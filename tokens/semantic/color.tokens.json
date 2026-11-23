@@ -368,7 +368,9 @@
                   "color.status.danger.background",
                   "color.background.muted",
                   "color.background.muted-hover-colored",
-                  "color.background.muted-pressed-colored"
+                  "color.background.muted-pressed-colored",
+                  "color.background.hover",
+                  "color.background.pressed"
                 ]
               }
             ]

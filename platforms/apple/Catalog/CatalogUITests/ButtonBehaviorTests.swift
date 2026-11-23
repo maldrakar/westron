@@ -264,6 +264,135 @@ final class ButtonBehaviorTests: XCTestCase {
         #endif
     }
 
+    // MARK: - Floating (#121, decisions/0015), on the `button-floating` entry
+
+    /// Must match `ButtonFloatingID` in WestronCatalog.
+    private enum FloatingID {
+        static let back = "button.floating.live.back"
+        static let more = "button.floating.live.more"
+        static let add = "button.floating.live.add"
+        static let disabled = "button.floating.live.disabled"
+        static let count = "button.floating.live.count"
+        static func overList(_ size: String) -> String { "button.floating.over-list.\(size)" }
+        static let overListRow = "button.floating.over-list.row"
+        static let overListCount = "button.floating.over-list.count"
+    }
+
+    /// Relaunches the catalog on the `button-floating` entry.
+    @MainActor
+    private func launchFloating() {
+        app.terminate()
+        app.launchArguments = ["-WestronEntry", "button-floating"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts[FloatingID.count].waitForExistence(timeout: 30), "the entry did not render")
+    }
+
+    @MainActor
+    private var acceptedFloating: Int {
+        Int(text(FloatingID.count).split(separator: " ").last ?? "") ?? -1
+    }
+
+    /// A floating button is a button with its name, on glass (secondary) and on its fill (primary): icon-only, it
+    /// reads as its title and nothing else, and a press reaches it.
+    @MainActor
+    func testFloatingButtonsAreButtonsWithTheirNames() {
+        launchFloating()
+        for (id, name, count) in [
+            (FloatingID.back, "Back", 1), (FloatingID.more, "More", 2), (FloatingID.add, "Add", 3),
+        ] {
+            let floating = button(id)
+            XCTAssertEqual(floating.label, name)
+            XCTAssertEqual(floating.elementType, .button)
+            XCTAssertTrue(floating.isEnabled, "\(name) is not enabled")
+            XCTAssertEqual(floating.value as? String ?? "", "")
+            press(floating)
+            XCTAssertEqual(acceptedFloating, count, "a press on the floating \(name) did not reach it")
+        }
+    }
+
+    /// A disabled floating button on glass is announced as unavailable and takes no press.
+    @MainActor
+    func testDisabledFloatingButtonRefusesPresses() {
+        launchFloating()
+        let disabled = button(FloatingID.disabled)
+        XCTAssertEqual(disabled.label, "Share")
+        XCTAssertFalse(disabled.isEnabled, "the disabled floating button is enabled")
+        press(disabled)
+        XCTAssertEqual(acceptedFloating, 0, "a disabled floating button accepted a press")
+    }
+
+    /// A floating button keeps Button's hit area. On iOS, Back, size m icon-only on glass, is drawn 36 pt, below
+    /// size.target.minimum: a tap 4 pt below what is drawn, at the target's edge, reaches it through the system's touch
+    /// tolerance, as for any Button (testMediumButtonHitAreaOnTouch). On macOS the hit area is the drawn button: a
+    /// click 1.5 pt inside its bottom edge reaches it, one 1.5 pt below misses (ButtonHitAreaTests clicks every size,
+    /// variant and the look before OS 26).
+    @MainActor
+    func testFloatingButtonHitArea() {
+        launchFloating()
+        let back = button(FloatingID.back)
+        func pressBelow(_ below: CGFloat) {
+            press(
+                back.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 1)).withOffset(CGVector(dx: 0, dy: below)))
+        }
+        #if os(macOS)
+            XCTAssertEqual(back.frame.height, 32, accuracy: 0.5)
+            pressBelow(-1.5)
+            XCTAssertEqual(acceptedFloating, 1, "a click 1.5 pt inside the floating button's bottom edge missed it")
+            Thread.sleep(forTimeInterval: NSEvent.doubleClickInterval)
+            pressBelow(1.5)
+            XCTAssertEqual(acceptedFloating, 1, "a click 1.5 pt below the floating button reached it")
+        #else
+            XCTAssertEqual(back.frame.height, 36, accuracy: 0.5)
+            XCTAssertEqual(back.frame.width, 36, accuracy: 0.5)
+            pressBelow(4)
+            XCTAssertEqual(acceptedFloating, 1, "a tap 4 pt below the floating button, at the target's edge, missed it")
+        #endif
+    }
+
+    /// A floating secondary of each size on glass over a list a product presses: where a press at and a few points
+    /// outside the drawn button goes, to the button or to the row beneath it (decisions/0015, the contract's
+    /// `platforms.apple.ios`). Each outcome is printed, `MEASURE over a list: …`. Measured on iOS 26.3: a press 2 pt
+    /// inside and half a point inside the drawn edge reaches the button at every size; 1 pt and 4 pt past it, below or
+    /// beside, the row takes it at every size: over a pressable row the system's touch tolerance gives the button
+    /// nothing past what it draws, so only size l, 50 pt, reaches size.target.minimum. The test holds the presses
+    /// inside to the button and only prints the others, which are the system's to change.
+    @MainActor
+    func testFloatingButtonOverAPressableList() {
+        launchFloating()
+        let count = app.staticTexts[FloatingID.overListCount]
+        XCTAssertTrue(count.waitForExistence(timeout: 10), "no list under floating buttons")
+        func counts() -> (rows: Int, floating: Int) {
+            let numbers = text(FloatingID.overListCount).split(whereSeparator: { !$0.isNumber })
+            return (Int(numbers.first ?? "") ?? -1, Int(numbers.last ?? "") ?? -1)
+        }
+        var outcomes: [String: String] = [:]
+        for size in ["s", "m", "l"] {
+            let floating = button(FloatingID.overList(size))
+            for (side, offset) in [
+                ("inside", CGVector(dx: 0, dy: -2)), ("at the edge", CGVector(dx: 0, dy: -0.5)),
+                ("just below", CGVector(dx: 0, dy: 1)), ("below", CGVector(dx: 0, dy: 4)),
+                ("beside", CGVector(dx: 4, dy: 0)),
+            ] {
+                #if os(macOS)
+                    Thread.sleep(forTimeInterval: NSEvent.doubleClickInterval)
+                #endif
+                let before = counts()
+                let edge = side == "beside" ? CGVector(dx: 1, dy: 0.5) : CGVector(dx: 0.5, dy: 1)
+                press(floating.coordinate(withNormalizedOffset: edge).withOffset(offset))
+                let after = counts()
+                let outcome =
+                    after.floating > before.floating ? "button" : after.rows > before.rows ? "row" : "nothing"
+                outcomes["\(size) \(side)"] = outcome
+                print("MEASURE over a list: size \(size), \(side) \(offset): \(outcome), frame \(floating.frame)")
+            }
+        }
+        for size in ["s", "m", "l"] {
+            XCTAssertEqual(outcomes["\(size) inside"], "button", "a press inside the floating \(size) missed it")
+            XCTAssertEqual(
+                outcomes["\(size) at the edge"], "button", "a press at the floating \(size)'s drawn edge missed it")
+        }
+    }
+
     /// Two size s icon-only buttons 8 pt apart: a press inside a button's drawn frame reaches it, and on iOS a tap in
     /// the gap reaches the closer one (the system's touch tolerance decides; westron adds no hit area that would hand
     /// the gap to the later sibling). On macOS a click in the gap reaches neither.
