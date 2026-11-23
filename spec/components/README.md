@@ -221,7 +221,9 @@ an axis of the group's tokens, in token order, read from `tokens/`; one whose va
 names, in its order, read from `spec/icons/icons.yaml`, which runs down the rows of a contract without states. An
 optional option whose values are icons is no axis: the generated matrix draws every combination without the glyph, and
 the component's hand-written supplements draw the glyphs, marked "not a contract option" (TextField's `glyph-leading`,
-`glyph-trailing`, `glyphs-both`).
+`glyph-trailing`, `glyphs-both`). A bool option with `nameInMatrixAtDefault: false` is an axis whose default value is
+named in no sheet's id or title, so that an option added to a contract whose sheets were reviewed leaves the names,
+titles and pixels of the sheets at its default as they were (Button's `floating`, #121).
 
 Generation fails, with every problem, when a contract does not pass the check below; when a generated name is a
 public SwiftUI type; when two contracts generate one type name (`button`'s option `groupSize` and `button-group`'s

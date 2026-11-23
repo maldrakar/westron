@@ -27,6 +27,11 @@ no westron outline on glass under Increase Contrast; Q9, no glass Surface; Q10, 
 cannot float, a constraint of severity `error`; Q12, the option is named `floating`; Q13, an icon-only floating glyph
 takes Button's own scale, and the pilot's larger glyphs are a recorded difference, not adopted.
 
+Q5's test at implementation (2026-11-23, "Implementation: what was measured"): the danger words fail on glass, so a
+floating secondary does not take the destructive role (a constraint); `text.primary` passes over the stripes and over
+a dark band, and fails over a light band in the dark theme, 3.8:1. Q5 (A) stands until the owner answers that
+failure; (B) was not taken in his place.
+
 A shared decision rather than one under `spec/components/button/decisions/`: it answers for two contracts, Button and
 Surface (decisions/0014 names both for #121), answers design-language/09's open question 3, and scopes statements in
 decisions/0013, in chapters 00, 04, 08 and 09 and in Button's decisions 0001 and 0003. A component's own decision
@@ -731,41 +736,122 @@ On Apple, 2026-11-23, Xcode 27.1 on macOS 26.7.1, the iPhone 17 simulator on iOS
 which records the references, is on iOS 27.0 and macOS 27.0.1, so its pictures will differ from these in detail.
 
 - **Glass renders in both of the matrix's paths.** iOS's `drawHierarchy` draws the system's glass as on screen; macOS's
-  `CARenderer`, in a window never ordered in, draws it too, as a blurred and lightened ground with its edge. Rendered
-  three times on each platform: macOS 208 of 208 pictures identical byte for byte, every time; iOS 463 to 466 of 468
-  identical, the others differing in at most 4 pixels, of which at most one pixel in a picture by 2 levels, always on
-  a generated `floating-true` sheet in `dark-hc`, where the glass stands on the plain canvas. The two supplements over
-  the busy ground were identical in all three iOS renders. So the references hold glass on both platforms; on iOS a
-  single pixel of a `dark-hc` floating sheet may now and then pass the check's tolerance of one level (seen in two of
-  three pairs of renders), which the CI job `snapshots` would report as a change.
-- **Buttons that do not float are unchanged.** The new code rendered with the contract before `floating` (its
-  generated files and the catalog's matrix cell of then) against the render before the change: macOS 72 of 72
-  pictures identical, iOS 152 of 152, at a tolerance of 0.
+  `CARenderer`, in a window never ordered in, draws it too, as a blurred and lightened ground with its edge.
+- **Where glass is drawn, and whether twice the same.** In the first build every generated `floating-true` cell stood
+  on glass. Rendered three times on each platform: macOS identical byte for byte every time; on iOS a generated
+  `floating-true` sheet in `dark-hc`, glass on the plain canvas, differed now and then in up to 4 pixels, one of them
+  by 2 levels, past the check's tolerance of one level, which the CI job `snapshots` would report as a change. So the
+  generated cells now draw the bindings on every OS, the look where there is no glass, and say so in their header,
+  and glass is in the two supplements alone, `floating-on-glass` (stripes) and `floating-on-glass-inverse` (Q5's
+  band), every floating sheet of the default role: sizes s, m and l, a label and icon-only, primary and secondary, at
+  rest and in each state, four themes. Rendered then six times on iOS and three on macOS
+  (`tools/apple/snapshot-matrix.sh ios|macos --component button`, each render compared with the first at the default
+  tolerance): macOS 240 of 240 pictures identical byte for byte in both pairs; iOS 472 of 472 identical in four of
+  five pairs, and in the fifth 471 identical and one within the tolerance (`floating-on-glass`, size s, icon-only,
+  part 2, light at xSmall: 2 pixels by one level). 0 changed in every pair, so no glass picture is kept out.
+- **Buttons that do not float are unchanged.** With `floating` named in no sheet at its default (the schema's
+  `nameInMatrixAtDefault`), the sheets that do not float keep main's names and titles. Compared with a render of main
+  (733441f) at the default tolerance: macOS 72 of 72 of main's pictures identical byte for byte, iOS 152 of 152; the
+  rest of the branch's pictures (168 on macOS, 320 on iOS) are new: the floating sheets and the two supplements.
 - **Before OS 26, for real.** The `button-floating` entry on an iPhone 15 simulator on iOS 17.5 draws every floating
   secondary on `background.surface` with `shadow.overlay`, its forced hover and pressed in the row tints, the pressed
   one scaled down: the same as the catalog's override draws on iOS 26.3, so the override's references stand for the
   minimum OS versions.
-- **Disabled dims the glass.** The whole button at `opacity.disabled`, the glass with it, on both platforms (Q7 holds).
+- **Disabled dims the glass.** The whole button at `opacity.disabled`, the glass with it, on both platforms (Q7 holds):
+  the opacity is laid outside the glass. ButtonFloatingPixelTests measures it on macOS over the inverse band: the
+  glass at rest stands 237 to 369 levels (sRGB distance) off the band, the disabled glass 95 to 147, in the four
+  themes, so the disabled one is about 0.4 of the way, as `opacity.disabled` would leave it.
+- **Q5's test: `text.primary` on glass, by pixels.** A floating secondary at rest, size m, the label "Save" and the
+  icon-only glyph, over the inverse band (a band of `text.primary`'s own color: dark in the light themes, light in the
+  dark ones) and over the stripes. The ink is the pixels within 60 levels of `text.primary`, the ground the glass
+  beside it; the ratio is against the ground's median and against its 5 % nearest the ink.
+
+  | | light | dark | light-hc | dark-hc |
+  |---|---|---|---|---|
+  | iOS 26.3, label over the band | 11.13 / 11.13 | 6.34 / 6.34 | 13.94 / 13.94 | 15.04 / 15.04 |
+  | iOS 26.3, glyph over the band | 11.03 / 11.03 | 6.30 / 6.30 | 13.82 / 13.82 | 14.96 / 14.96 |
+  | iOS 26.3, label over the stripes | 11.85 / 11.41 | 9.38 / 8.60 | 14.27 / 14.21 | 15.14 / 14.90 |
+  | iOS 26.3, glyph over the stripes | 11.91 / 11.29 | 9.17 / 8.50 | 14.14 / 14.08 | 15.06 / 14.72 |
+  | macOS 26.7.1, label over the band | 10.46 / 9.03 | 5.30 / 5.06 | 14.13 / 11.87 | 14.51 / 10.79 |
+  | macOS 26.7.1, glyph over the band | 10.46 / 10.46 | 5.22 / 5.22 | 13.98 / 13.98 | 14.32 / 14.32 |
+  | macOS 26.7.1, label over the stripes | 11.27 / 9.66 | 8.81 / 7.29 | 14.16 / 11.89 | 13.62 / 10.06 |
+  | macOS 26.7.1, glyph over the stripes | 11.20 / 10.87 | 8.75 / 8.40 | 14.01 / 13.97 | 13.47 / 13.32 |
+
+  iOS: the auditor's sampler on the render's PNGs; macOS: ButtonFloatingPixelTests, "text.primary on glass over the
+  inverse band and the stripes", which holds the label and the glyph over the band to text's target (4.5:1, 7:1 in
+  the high-contrast themes) against the median. In these cells the glass does not turn against the label: in the
+  light themes it stays light over the dark band, in the dark ones dark over the light band.
+
+  **On the catalog page the band is wider, and the glass behaves otherwise** (iOS 26.3, `button-floating`, "Over an
+  inverse band (Q5)", the label "Open" at sizes s, m and l, the same sampler on the catalog's screenshots):
+
+  | | the glass | the label | ratio |
+  |---|---|---|---|
+  | light | turns dark (luminance 0.013) | turns with it, the dark theme's `text.primary` | 12.13 to 12.20 |
+  | light-hc | turns dark (0.007) | the dark high-contrast theme's | 15.69 |
+  | dark | stays dark, but mid-gray over the light band (0.152) | the dark theme's, light | **3.78 to 3.82** |
+  | dark-hc | turns light (0.938) | the light high-contrast theme's, dark | 15.39 to 15.48 |
+
+  Where the glass turns, it turns the appearance of what it holds, and the label's colorset resolves in it, so the
+  label follows the glass and reads. In the dark theme it does not turn, and `text.primary` on it is 3.8:1, below
+  text's 4.5:1 at every size: Q5's trigger fired for `text.primary` there. The accessibility audit flags the same
+  label in the dark appearance. Not switched to Q5 (B): that is the owner's to decide. The supplement's cells, a band
+  only `space.200` wider than the button, do not show it, so the matrix holds the case that passes and the catalog
+  page the one that fails. To see it: `TEST_RUNNER_WESTRON_SCROLL_ANCHOR=0.55 tools/apple/catalog-screenshot.sh ios
+  --entry button-floating --appearance dark --out <file.png>`.
+- **Q5's trigger fired for the danger color.** `color.status.danger.text` on the glass over the stripes, measured by
+  the accessibility auditor: 2.96:1 in the light theme and 2.79 to 4.18:1 in the dark one, below text's 4.5:1. So a
+  floating secondary does not take the destructive role, a constraint of severity `error`; a floating destructive
+  primary, on its opaque fill, stays. Q5's (A) stands for `text.primary` pending the owner's answer to its failure in
+  the dark theme (above).
+- **Icon-only buttons by their pixels.** The audit never reports an icon-only button (it reports a button's text),
+  so ButtonFloatingPixelTests measures the glyph of the deterministic looks on macOS, size m, against its declared
+  pair: the floating primary's `text.on-accent` on `background.accent` 5.45 / 5.45 / 7.00 / 7.04:1 and the pre-26
+  secondary's `text.primary` on `background.surface` 15.02 / 12.74 / 16.75 / 14.77:1 (light / dark / light-hc /
+  dark-hc), each the tokens' own ratio. On glass the numbers above stand instead.
 - **Increase Contrast** (the system's setting, through `simctl ui … increase_contrast`, on a separate iPhone 17 Pro
-  simulator, iOS 26.3): the glass turns nearly opaque and light, with a faint edge; the label is the high-contrast theme's. westron draws no
-  outline on it (Q8 holds). The matrix's high-contrast captures show the same glass.
+  simulator, iOS 26.3): the glass turns nearly opaque and light, with a faint edge; the label is the high-contrast
+  theme's. westron draws no outline on it (Q8 holds). The matrix's high-contrast captures show the same glass.
 - **Hit area.** On macOS a floating button takes clicks in its drawn capsule and none past it, on glass and before OS 26,
-  every size (ButtonHitAreaTests). On iOS the behavior tests press the live floating buttons, find no press 4 points
-  below one, and see the disabled one refuse a press (`behavior ios ButtonBehaviorTests`: 12 run, 1 skipped, 0
-  failed). On macOS the same tests did not run: the Mac's screen was locked, so no app could be activated.
-- **The accessibility audit** (iOS, the five configurations, `button-floating` and the entries it touches) passes with
-  three suppressions of its own, each named in the log on every match: contrast on the enabled secondaries with a
-  label on glass, which westron cannot promise over content it does not draw (the floating primary and the
-  secondaries before OS 26 are audited as usual, and pass); contrast on the disabled samples (an inactive control);
-  and "Text clipped" on the samples before OS 26 held pressed, whose frame is 0.98 of the unpressed one's, as the
-  Chip's pressed sample is. The audit reports a button's text, which carries no identifier, so the samples on glass
-  and before OS 26 carry different words to be told apart.
+  every size (ButtonHitAreaTests). On iOS the behavior tests press the live floating buttons, a tap 4 pt below the
+  size m one reaching it (the edge of `size.target.minimum` over the plain canvas), and see the disabled one refuse a
+  press.
+- **Over a pressable list (iOS 26.3).** Three floating secondaries, icon-only, sizes s, m and l, over three ListRows
+  that count their presses (`button-floating`, "Over a pressable list"; ButtonBehaviorTests,
+  `testFloatingButtonOverAPressableList`). A press 2 pt and half a point inside the drawn edge reaches the button at
+  every size; a press 1 pt and 4 pt below it, and 4 pt beside it, reaches the row at every size, l included. Over
+  pressable content the system's touch tolerance gives the button nothing past what it draws, so s (28 pt) and m
+  (36 pt) stay below `size.target.minimum` there, and l (50 pt) alone reaches it. The contract's iOS description
+  records it and says to use size l for a floating button over pressable content; s and m lose no press inside their
+  own drawn edge. `behavior ios ButtonBehaviorTests`: 13 run, 1 skipped, 0 failed.
+- **The accessibility audit** (iOS, the five configurations, the entries `git diff --name-only main...HEAD |
+  tools/apple/audit-scope.sh` gives: Button's seven and `surface`). It reports a button's text, which carries no
+  identifier, so it never reports an icon-only button, and the floating samples carry their own words to be told
+  apart: "Edit" on glass over the stripes, "Open" on glass over the band, "Rest", "Hover", "Focus", "Pressed" and
+  "Disabled" before OS 26, "New" and "Delete" the primaries. Its suppressions on `button-floating`, each named in the
+  log on every match: contrast on the disabled "Edit" and "Disabled" (an inactive control); "Text clipped" on
+  "Pressed" (the pressed fallback drawn at 0.98 of its size, as Chip's); contrast on the enabled "Edit" on glass,
+  which the audit flagged in the dark appearance and at accessibility5 where pixels give 5.85:1 and more and 8.09:1
+  (the audit reports no colors, so what it sampled on the glass cannot be shown); contrast on "Open" in the dark
+  appearance, the real failure above, left to the owner; contrast on the rows "Groceries", "Work" and "Home" under the
+  floating buttons of the pressable list, whose frames hold the buttons' glass (size l, 50 pt, reaches into the rows
+  above and below the 44 pt row it stands on); and "Potentially inaccessible text" with no element at the default
+  settings on two screens of labels on glass, inferred to be the glass's refraction. The primaries "New" and
+  "Delete" and the samples before OS 26 are audited with no suppression, and pass; the icon-only ones are measured
+  by pixels instead (above). The last screen of every Button page with a spinner was "still moving after 5 s", and is
+  audited as it is: an indeterminate spinner never settles, on `button-states` as on `button-floating`, whose loading
+  samples are the page's last section so that only its last screen moves.
 - **Not measured.** Reduce Transparency: set through the simulator's accessibility defaults, the glass looked
   unchanged, and nothing confirmed that the setting reached the app, so its effect is unknown. Reduce Motion: a still
   cannot show the glass's response to a press; westron's own press scale, which it drops, is not drawn on glass. The
-  glass's response to a real touch and pointer, which forced states cannot show. watchOS at run time. On macOS, with
-  the screen locked: the behavior tests, the accessibility audit, the catalog's screenshot and the system's focus ring
-  over glass.
+  glass's response to a real touch and pointer, which forced states cannot show, nor whether glass that is not
+  interactive (disabled, loading) still moves under a touch: the code passes `interactive(false)` there, and a still
+  shows only that it is drawn as at rest. watchOS at run time. The accessibility audit on macOS.
+- **macOS, measured once the screen was unlocked** (macOS 26.7.1): `behavior macos ButtonBehaviorTests`, 13 run, 1
+  skipped, 0 failed; over the pressable list a click half a point inside the drawn edge reaches the button and one
+  1 pt or 4 pt past it reaches the row, at every size, as the drawn hit area says. The catalog's screenshot of
+  `button-floating` shows the system's focus ring around the glass capsule of the focused sample, outside its edge,
+  in the accent, as on any focused Button.
 
 ## Consequences
 

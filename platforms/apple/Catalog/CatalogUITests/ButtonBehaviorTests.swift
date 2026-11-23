@@ -349,9 +349,13 @@ final class ButtonBehaviorTests: XCTestCase {
         #endif
     }
 
-    /// A floating secondary of each size on glass over a list a product presses: where a press a few points outside
-    /// the drawn button goes, to the button or to the row beneath it (decisions/0015, the contract's
-    /// `platforms.apple.ios`). Each outcome is printed, `MEASURE over a list: …`.
+    /// A floating secondary of each size on glass over a list a product presses: where a press at and a few points
+    /// outside the drawn button goes, to the button or to the row beneath it (decisions/0015, the contract's
+    /// `platforms.apple.ios`). Each outcome is printed, `MEASURE over a list: …`. Measured on iOS 26.3: a press 2 pt
+    /// inside and half a point inside the drawn edge reaches the button at every size; 1 pt and 4 pt past it, below or
+    /// beside, the row takes it at every size: over a pressable row the system's touch tolerance gives the button
+    /// nothing past what it draws, so only size l, 50 pt, reaches size.target.minimum. The test holds the presses
+    /// inside to the button and only prints the others, which are the system's to change.
     @MainActor
     func testFloatingButtonOverAPressableList() {
         launchFloating()
@@ -365,7 +369,8 @@ final class ButtonBehaviorTests: XCTestCase {
         for size in ["s", "m", "l"] {
             let floating = button(FloatingID.overList(size))
             for (side, offset) in [
-                ("inside", CGVector(dx: 0, dy: -2)), ("below", CGVector(dx: 0, dy: 4)),
+                ("inside", CGVector(dx: 0, dy: -2)), ("at the edge", CGVector(dx: 0, dy: -0.5)),
+                ("just below", CGVector(dx: 0, dy: 1)), ("below", CGVector(dx: 0, dy: 4)),
                 ("beside", CGVector(dx: 4, dy: 0)),
             ] {
                 #if os(macOS)
@@ -383,6 +388,8 @@ final class ButtonBehaviorTests: XCTestCase {
         }
         for size in ["s", "m", "l"] {
             XCTAssertEqual(outcomes["\(size) inside"], "button", "a press inside the floating \(size) missed it")
+            XCTAssertEqual(
+                outcomes["\(size) at the edge"], "button", "a press at the floating \(size)'s drawn edge missed it")
         }
     }
 

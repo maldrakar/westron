@@ -161,6 +161,11 @@ struct ButtonFloatingPixelTests {
     /// pixel there. It prints the ink against the glass's median and against its 5 % nearest the ink, and holds the
     /// label to text's target against the median (4.5:1, 7:1 in the high-contrast themes) over the inverse band, the
     /// ground the question names; over the stripes the numbers are recorded in the decision.
+    ///
+    /// It holds the supplement's cell, a band only space.200 wider than the button, and that is not the whole of Q5:
+    /// on the catalog page, over a wider band, the glass on iOS 26.3 turns otherwise, and in the dark theme the label
+    /// reads at 3.8:1 there (decisions/0015, "Q5's test"). A pass here says the supplement's picture holds, not that
+    /// text.primary does on glass over any light ground.
     @Test(
         "text.primary on glass over the inverse band and the stripes, by pixels",
         arguments: ComponentMatrix.Theme.allCases, ["floating-on-glass-inverse", "floating-on-glass"])

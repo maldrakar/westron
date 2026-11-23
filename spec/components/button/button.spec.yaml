@@ -10,8 +10,8 @@ description: >-
   A push button that runs an action: westron's style on the platform's own button, with a label and a leading icon.
   It is the platform's capsule at every variant and size, its ends round at any height, so it stays a capsule when
   the text grows (design-language/04); icon-only is a circle. Every fill is flat and opaque, in westron's colors, with
-  no glass or material, but for one exception, a floating secondary from OS 26 (below). primary is filled with the accent, secondary with color.background.muted and no outline,
-  tertiary has no fill. Under the pointer and pressed, secondary's fill darkens towards its words, a step each; with
+  no glass or material, but for one exception, a floating secondary from OS 26 (below). primary is filled with the
+  accent, secondary with color.background.muted and no outline, tertiary has no fill. Under the pointer and pressed, secondary's fill darkens towards its words, a step each; with
   the destructive role it darkens only as far as the danger words still read, which is much less (the owner's
   decision of 2026-11-20). In the high-contrast themes a secondary button also draws an outline, color.border.strong
   (color.status.danger.border with the destructive role) at stroke.thin, over its fill, in every state: the muted
@@ -210,8 +210,8 @@ platforms:
       the padding, the frame and the background, as glassEffect asks, and before the content shapes and the disabled
       opacity, which so dims the glass too; the else branch draws the surface, the shadow and the tints of the
       bindings. A floating tertiary or destructive secondary, which the constraints forbid, draws as the same button
-      not floating, silently: no assertionFailure, while spec/conventions.md's open question 3 is open. These two looks by OS version are one contract: the platforms block
-      has no field for an OS version, so this description is the record of the difference (decisions/0015). westron
+      not floating, silently: no assertionFailure, while spec/conventions.md's open question 3 is open. These two
+      looks by OS version are one contract: the platforms block has no field for an OS version, so this description is the record of the difference (decisions/0015). westron
       adds no GlassEffectContainer, glassEffectID or glassEffectUnion: a product that sets floating buttons side by
       side, or morphs one into another, writes the system's own around them from OS 26. The shadow is
       View.shadow(_:), as Surface's.
@@ -226,7 +226,11 @@ platforms:
         in the measured cases 10 pt of a 20 pt gap, 7 of 16, and, with a Toggle row 12 pt below a size s button, 8 pt
         on iOS 26.3 and 7.67 on 27.0, one pixel less, so the test's tap at 8 pt failed on 27.0 until the catalog moved
         the row away. So a size s button reaches the full target only where no other control is within about 16 pt of
-        it (the owner's decision of 2026-11-21, decisions/0001).
+        it (the owner's decision of 2026-11-21, decisions/0001). A floating button over content a person presses, a
+        list's rows, gets no tolerance at all: on iOS 26.3 a press half a point inside its drawn edge reaches it and a
+        press 1 or 4 pt past it, below or beside, reaches the row, at sizes s, m and l alike (ButtonBehaviorTests,
+        decisions/0015). So over pressable content its hit area is what it draws, and only size l, 50 pt, reaches
+        size.target.minimum: use size l for a floating button over pressable content on iOS.
     macos:
       keyboardIntents: [defaultAction, cancelAction]
       description: >-
