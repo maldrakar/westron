@@ -111,22 +111,45 @@ final class TextFieldBehaviorTests: XCTestCase {
         return focusedName
     }
 
-    /// The small field's drawn frame, from the system field's own frame: the field is centered in its drawn height and
-    /// inset by its padding.
+    /// The small field's drawn frame, its padding included, and the system field's frame inside it, from the element's
+    /// frame, which is a different one on each platform, as the glyph test below reads it too (measured in #132 against
+    /// the window's screenshot, on iOS 26.3 and macOS 26.7.1):
+    /// - iOS: the drawn field, padding included: (16, 169.7, 370 × 28), exactly the fill; the system field is it less
+    ///   the padding at each side, where the prompt starts.
+    /// - macOS: the system field's, 18 pt high and 1 pt wider at each side than its laid out frame: (531, 362, 666 ×
+    ///   18) in a fill of (516, 359, 696 × 24). The drawn field is it grown by the padding less that point and centered
+    ///   in the drawn height.
+    /// The element's height says which of the two it is, so a change in either fails here, not in a tap that lands
+    /// outside the field and passes on the system's touch tolerance (#132).
     @MainActor
-    private var drawnSmallField: CGRect {
+    private var smallField: (drawn: CGRect, system: CGRect) {
         let frame = field(ID.small).frame
-        return CGRect(
-            x: frame.minX - padding, y: frame.midY - drawnHeight / 2, width: frame.width + 2 * padding,
-            height: drawnHeight)
+        #if os(iOS)
+            XCTAssertEqual(frame.height, drawnHeight, accuracy: 0.5, "not the drawn field: \(frame)")
+            return (frame, frame.insetBy(dx: padding, dy: 0))
+        #else
+            XCTAssertLessThan(frame.height, drawnHeight, "not the system field: \(frame)")
+            let outset = padding - 1
+            let drawn = CGRect(
+                x: frame.minX - outset, y: frame.midY - drawnHeight / 2, width: frame.width + 2 * outset,
+                height: drawnHeight)
+            return (drawn, frame)
+        #endif
     }
 
+    /// A touch or a click in the padding, inside the drawn field and outside the system field, at the middle of the
+    /// padding at each side, focuses the field, as one on the system field does (#30, #132).
     @MainActor
     func testATouchOrClickOnThePaddingFocusesTheField() {
-        let drawn = drawnSmallField
-        XCTAssertEqual(press(at: CGPoint(x: drawn.minX + padding / 2, y: drawn.midY)), "Focused: small")
-        XCTAssertEqual(press(at: CGPoint(x: drawn.maxX - padding / 2, y: drawn.midY)), "Focused: small")
-        XCTAssertEqual(press(at: CGPoint(x: drawn.midX, y: drawn.midY)), "Focused: small")
+        let (drawn, system) = smallField
+        let start = CGPoint(x: (drawn.minX + system.minX) / 2, y: drawn.midY)
+        let end = CGPoint(x: (system.maxX + drawn.maxX) / 2, y: drawn.midY)
+        for (point, side) in [(start, "start"), (end, "end")] {
+            XCTAssertTrue(drawn.contains(point), "the \(side)'s point \(point) is outside the drawn field \(drawn)")
+            XCTAssertFalse(system.contains(point), "the \(side)'s point \(point) is in the system field \(system)")
+            XCTAssertEqual(press(at: point), "Focused: small", "the padding at the \(side), at \(point) in \(drawn)")
+        }
+        XCTAssertEqual(press(at: CGPoint(x: drawn.midX, y: drawn.midY)), "Focused: small", "the system field")
     }
 
     /// A field's glyphs (the contract's decisions/0003, #115) stand at its padding, `space.250` at size m, and
@@ -173,7 +196,7 @@ final class TextFieldBehaviorTests: XCTestCase {
 
     @MainActor
     func testTheSmallFieldTakesTheTargetAroundWhatItDraws() {
-        let drawn = drawnSmallField
+        let drawn = smallField.drawn
         // How far the target reaches past the drawn edge: 8 pt on iOS, 2 pt on macOS.
         let reach = (target - drawnHeight) / 2
         let x = drawn.midX
