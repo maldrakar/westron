@@ -672,13 +672,21 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             ) { $0 == "Edit" }
         }
         suppressions += [
-            // Contrast on "Open", the floating secondary on glass over the light band in the dark theme: a real
-            // failure, text.primary at 3.8:1 on the glass there by pixels (decisions/0015, Q5's test), left to the
-            // owner's answer to Q5. Only "Open" in the dark appearance matches; over the band in the other themes the
-            // glass turns light or dark against the band and the label passes at 12:1 and more.
+            // Contrast on "Open", the floating secondary on glass over the band of the opposite tone: the contract's
+            // recorded limitation. On glass the label keeps text.primary, which follows the theme, while the glass
+            // follows what lies beneath, and the owner kept westron's colors there rather than the system's adaptive
+            // foreground (decisions/0015, Q5, 2026-11-23); the contract promises no ratio for it. By pixels on
+            // iOS 26.3 it fails in the dark theme alone, 3.78 to 3.82:1 over the wide light band, and passes in the
+            // others: 12.14 to 12.19 in light, 15.70 to 15.75 in light-hc, 15.40 to 15.50 in dark-hc. On the CI
+            // runner's iOS 27 the audit also flags it in the default, increased-contrast and accessibility5 runs,
+            // which no pixel measurement here confirms or refutes (iOS 27 is the runner's only). So every
+            // configuration matches, and only "Open" on this entry: the other words on glass have their own
+            // suppressions, and the primaries and the samples before OS 26 are still audited.
             Suppression(
                 .entry("button-floating-sizes"), type: .contrast,
-                reason: "Q5's failure in the dark theme, for the owner", appearance: .dark, enabled: true
+                reason: "a label on glass over content of the opposite tone: the contract's recorded limitation "
+                    + "(decisions/0015, Q5)",
+                enabled: true
             ) { $0 == "Open" },
             // Contrast on the list rows under the floating buttons of "Over a pressable list": the buttons stand in
             // the rows' frames (size l, 50 pt, reaches into the rows above and below), and the audit samples their

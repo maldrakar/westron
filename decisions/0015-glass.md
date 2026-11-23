@@ -2,7 +2,9 @@
 
 Date: 2026-11-23. Status: approved on 2026-11-23 (#121): the owner answered the questions marked for him, and the
 coordinating agent the others under the owner's delegation (decisions/0014), each with its recommendation (A); see
-"Decision". Implemented on Apple in the same pull request ("Implementation: what was measured").
+"Decision". Implemented on Apple in the same pull request ("Implementation: what was measured"). Q5's failure at
+implementation answered by the owner on 2026-11-23: (A) stands, and the contract records the limitation ("Q5: the
+owner's answer to its failure").
 
 ## Decision
 
@@ -29,8 +31,11 @@ takes Button's own scale, and the pilot's larger glyphs are a recorded differenc
 
 Q5's test at implementation (2026-11-23, "Implementation: what was measured"): the danger words fail on glass, so a
 floating secondary does not take the destructive role (a constraint); `text.primary` passes over the stripes and over
-a dark band, and fails over a light band in the dark theme, 3.8:1. Q5 (A) stands until the owner answers that
-failure; (B) was not taken in his place.
+a dark band, and fails over a light band in the dark theme, 3.8:1. The owner answered that failure on 2026-11-23,
+after a prototype of (B): **keep westron's colors, (A), and record the limitation**; (B) is not adopted. Button's
+contract says that over content of the tone opposite to the theme a label on glass can fall below 4.5:1, promises no
+ratio there, and tells a product what to do over content whose tone it does not control ("Q5: the owner's answer to
+its failure").
 
 A shared decision rather than one under `spec/components/button/decisions/`: it answers for two contracts, Button and
 Surface (decisions/0014 names both for #121), answers design-language/09's open question 3, and scopes statements in
@@ -878,6 +883,62 @@ which records the references, is on iOS 27.0 and macOS 27.0.1, so its pictures w
   1 pt or 4 pt past it reaches the row, at every size, as the drawn hit area says. The catalog's screenshot of
   `button-floating` shows the system's focus ring around the glass capsule of the focused sample, outside its edge,
   in the accent, as on any focused Button.
+
+## Q5: the owner's answer to its failure
+
+2026-11-23, after "Implementation: what was measured" above, which left Q5's failure in the dark theme to the owner.
+
+**The prototype of (B).** A local change, `497a6ef`, not part of this pull request: one file, the label, the icon and
+the progress indicator of a floating secondary on glass in `.foregroundStyle(.primary)`, the system's adaptive
+foreground, in place of `color.text.primary`. Measured against (A) on iOS 26.3, the iPhone 17 simulator, the entry
+`button-floating-sizes`, the section over the band (then "Over an inverse band (Q5)"), the label "Open" and the Back
+glyph at sizes s, m and l, with the pixel sampler of "Q5's test" on the catalog's screenshots:
+
+| Theme, ground | (A) tokens | (B) prototype |
+|---|---|---|
+| dark, the wide light band | 3.78–3.82 label, 3.74–3.80 glyph: **fails** 4.5:1 | 4.78–4.83 label, 4.76–4.82 glyph |
+| light, the dark band | 12.14–12.19 | 14.86–14.90 |
+| light-hc, the band | 15.70–15.75 | 16.41–16.46 |
+| dark-hc, the band | 15.40–15.50 | 15.76–19.62 |
+| light, the stripes | 7.86–8.04 | 11.37–11.40 |
+| dark, the stripes | 6.19–6.32 | 7.73–7.87 |
+
+What the prototype showed:
+
+- **The glass does not change.** In the failing case, dark over the light band, the glass stays the same mid-gray
+  (luminance 0.152) under (B) as under (A). The adaptive foreground does not turn the glass; it only changes the ink.
+- **The gain is the ink's alone.** Under (B) the label is pure white instead of `text.primary`'s #D7DFEA in the dark
+  theme, and that lifts it from 3.8 to 4.8:1: a thin margin over 4.5, not a different behavior of the glass.
+- **dark-hc is not stable.** After the change, in one of three captures each sample's glass took a light or a dark
+  tone differently from one launch to the next (hence 15.76 to 19.62). "Before" was captured once, so whether (A) does
+  the same is not known.
+- And (B) would cost what Q5's options said: a marked exception to the raw-values rule, and a label outside
+  westron's themes, its high-contrast themes included.
+
+**The owner's decision, having seen the before and after pictures: keep westron's colors, (A), and record the
+limitation. (B) is not adopted**, and its prototype is not merged.
+
+What changes with it, text only (no code, token or pixel of the matrix):
+
+- Button's contract states the limitation where it describes the glass: on glass the label and the icon keep westron's
+  colors, which follow the theme, while the glass follows what lies beneath; over content of the tone opposite to the
+  theme (a light photo or map under a floating button in the dark theme, and the reverse) the label can fall below
+  4.5:1, measured 3.8:1 in the dark theme over a wide light ground on iOS 26.3, and the contract promises no ratio
+  there. Guidance, not a constraint: over content whose tone it does not control, a product uses a floating primary,
+  whose fill is opaque, or keeps the content beneath in the theme's tone.
+- The catalog's section over the band is titled "Over the opposite tone: a recorded limitation", with a caption that
+  says so; its samples keep their words ("Open"), which the audit's suppression matches.
+- The accessibility audit's suppression of contrast on "Open" in `button-floating-sizes` was for the dark appearance
+  alone, "for the owner"; it now matches every configuration, still that entry, contrast and the label "Open" only,
+  named "a label on glass over content of the opposite tone: the contract's recorded limitation (decisions/0015, Q5)".
+
+**iOS 27, flagged by the audit and not measured by pixels.** On the CI runner (iOS 27) the accessibility audit flags
+the same "Open" on `button-floating-sizes` beyond the dark appearance: in `testDefaultSettings` (screens 1 and 2),
+`testIncreasedContrast` (screens 1 and 2) and `testAccessibilityDynamicType` (screen 4), which failed the pull
+request's job "Accessibility audit — changed components (2/3)" (run 45191768423). These are the audit's flags; the
+audit reports no colors, and this Mac has only iOS 26.3 simulators, so no pixel measurement on iOS 27 confirms or
+refutes them. On iOS 26.3 the label passes over the band in light, light-hc and dark-hc (the table above). They fall
+under the same recorded limitation, which is why the suppression now covers every configuration.
 
 ## Consequences
 

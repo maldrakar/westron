@@ -3,7 +3,8 @@
 # on top of them. Its look revised on 2026-11-20 (#85), the owner's choice from prototype renders, pending the owner's
 # review of this contract and its snapshot matrix together (decisions/0003-the-look-of-2026-11-20.md). The option
 # floating, a button over content, approved on 2026-11-23 (#121): the owner's answers and the coordinating agent's,
-# decisions/0015-glass.md at the repository's root.
+# decisions/0015-glass.md at the repository's root; the label's colors on glass kept and their limitation recorded by
+# the owner on 2026-11-23 (Q5).
 id: button
 status: approved
 description: >-
@@ -43,14 +44,20 @@ description: >-
   secondary cases are the look where there is no glass: before OS 26, and in the snapshot matrix, which draws the
   bindings on every OS; on glass the label and the icon keep their colors and the disabled button its
   opacity.disabled. The glass adapts its luminosity to what passes beneath it and follows Reduce Transparency,
-  Increase Contrast and the person's choice of the glass's look by itself, so the contract promises no contrast ratio
-  for text.primary on glass: what lies beneath is the product's content, which tokens do not name. The danger words
-  read too faintly there (measured 2.8 to 4.2:1 over a busy ground in the standard themes, decisions/0015), so a
-  floating secondary does not take the destructive role. Two combinations are forbidden, each by a constraint below:
-  a floating tertiary, which has no ground to float on, and a floating destructive secondary. A platform that is
-  given one anyway draws the button that does not float, the same variant and role in the layout's look, with no
-  warning at run time (spec/conventions.md, open question 3). A button in a system bar, toolbar or tab bar never
-  floats: the bar draws its own glass (design-language/09).
+  Increase Contrast and the person's choice of the glass's look by itself, while the label's and the icon's colors,
+  westron's, follow the theme, not the glass. So the contract promises no contrast ratio for text.primary on glass:
+  what lies beneath is the product's content, which tokens do not name. Over content of the tone opposite to the
+  theme, such as a light photo or map under a floating button in the dark theme, or a dark one in the light theme, the
+  label can fall below 4.5:1: measured 3.8:1 in the dark theme over a wide light ground on iOS 26.3. That is a
+  recorded limitation, not a defect: the owner kept westron's colors on glass rather than the system's adaptive
+  foreground (decisions/0015, Q5, 2026-11-23). Over content whose tone it does not control, a product uses a floating
+  primary, whose fill is opaque, or keeps the content beneath in the theme's tone. The danger words read too faintly
+  on glass (measured 2.8 to 4.2:1 over a busy ground in the standard themes, decisions/0015), so a floating secondary
+  does not take the destructive role. Two combinations are forbidden, each by a constraint below: a floating tertiary,
+  which has no ground to float on, and a floating destructive secondary. A platform that is given one anyway draws the
+  button that does not float, the same variant and role in the layout's look, with no warning at run time
+  (spec/conventions.md, open question 3). A button in a system bar, toolbar or tab bar never floats: the bar draws its
+  own glass (design-language/09).
 consumers: [todo-app/lists-screen, todo-app/list-screen]
 
 options:

@@ -173,8 +173,9 @@
         ///
         /// It holds the supplement's cell, a band only space.200 wider than the button, and that is not the whole of Q5:
         /// on the catalog page, over a wider band, the glass on iOS 26.3 turns otherwise, and in the dark theme the label
-        /// reads at 3.8:1 there (decisions/0015, "Q5's test"). A pass here says the supplement's picture holds, not that
-        /// text.primary does on glass over any light ground.
+        /// reads at 3.8:1 there (decisions/0015, "Q5's test"). The owner kept westron's colors on glass all the same
+        /// (Q5, 2026-11-23), and the contract records that case as a limitation with no promised ratio. A pass here says
+        /// the supplement's picture holds, not that text.primary does on glass over any light ground.
         @Test(
             "text.primary on glass over the inverse band and the stripes, by pixels",
             arguments: ComponentMatrix.Theme.allCases, ["floating-on-glass-inverse", "floating-on-glass"])

@@ -66,7 +66,8 @@ extension CatalogEntry {
         ButtonFloatingPage(part: .live)
     }
 
-    /// Floating buttons on glass at every size, over the stripes and over the inverse band (Q5).
+    /// Floating buttons on glass at every size, over the stripes and over a band of the opposite tone, where the
+    /// contract records that the label can read below 4.5:1 (decisions/0015, Q5).
     static let buttonFloatingSizes = CatalogEntry(
         id: "button-floating-sizes", title: "Button: floating, sizes on glass", section: .components
     ) {
@@ -674,11 +675,13 @@ private struct ButtonBehaviorPage: View {
 // Button's floating look (#121, decisions/0015 at the repository's root). The generated sheets draw a floating button
 // as the bindings say, the look where there is no glass, on every OS (`ButtonMatrixCell`), so they are the same on
 // every run; the system's glass is only on these supplements and on the floating entries' pages, over content:
-// a busy ground of stripes, and an inverse band, dark in the light theme and light in the dark one (Q5's test).
+// a busy ground of stripes, and an inverse band, dark in the light theme and light in the dark one (Q5's test, and on
+// the catalog page the contract's recorded limitation: a label on glass over content of the opposite tone).
 
 /// Accessibility identifiers and words of the floating samples. The accessibility audit reports a button's text, which
 /// carries no identifier, so the samples with a label are told apart by their words (CatalogAccessibilityAuditTests):
-/// "Edit" is a secondary on glass, over the stripes; "Open" a secondary on glass over the inverse band; a secondary
+/// "Edit" is a secondary on glass, over the stripes; "Open" a secondary on glass over the inverse band, the contract's
+/// recorded limitation (decisions/0015, Q5); a secondary
 /// before OS 26 says the name of the state it is in ("Rest", "Pressed", …); a primary says "New", or "Delete" with the
 /// destructive role.
 enum ButtonFloatingID {
@@ -703,7 +706,8 @@ enum FloatingGroundKind: Sendable {
     /// Diagonal stripes in four list colors' fills.
     case stripes
     /// `text.primary`'s color: dark in the light themes, light in the dark ones, the ground that makes glass turn
-    /// against its label (decisions/0015, Q5).
+    /// against its label: content of the tone opposite to the theme, where the contract records that the label can read
+    /// below 4.5:1 (decisions/0015, Q5).
     case inverse
 }
 
@@ -813,7 +817,7 @@ private struct ButtonFloatingPage: View {
     enum Part {
         /// The live buttons, the buttons over a pressable list, a group in the system's container, and on macOS focus.
         case live
-        /// Every size on glass, over the stripes and over the inverse band (Q5).
+        /// Every size on glass, over the stripes and over a band of the opposite tone, the recorded limitation (Q5).
         case sizes
         /// Each state but loading, on glass.
         case states
@@ -856,10 +860,22 @@ private struct ButtonFloatingPage: View {
         case .sizes:
             TokenPage(
                 title: "Button · floating, sizes",
-                summary: "Every size on the system's glass from OS 26, over stripes and over an inverse band."
+                summary: "Every size on the system's glass from OS 26, over stripes, then over content of the tone "
+                    + "opposite to the theme, where the contract promises no contrast for the label."
             ) {
                 section("Sizes, on glass from OS 26") { sizes(ground: .stripes, secondary: "Edit") }
-                section("Over an inverse band (Q5)") { sizes(ground: .inverse, secondary: "Open") }
+                section("Over the opposite tone: a recorded limitation") {
+                    Text(
+                        "On glass the label keeps westron's colors, which follow the theme, while the glass follows "
+                            + "what lies beneath. Over a light ground in the dark theme it can read below 4.5:1 "
+                            + "(3.8:1 on iOS 26.3): the contract records this and promises no ratio. Over content "
+                            + "whose tone it does not control, a product uses a floating primary or keeps the content "
+                            + "in the theme's tone (decisions/0015, Q5)."
+                    )
+                    .textRole(.footnote.regular)
+                    .foregroundStyle(.text.secondary)
+                    sizes(ground: .inverse, secondary: "Open")
+                }
             }
         case .states:
             TokenPage(
