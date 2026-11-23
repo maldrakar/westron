@@ -567,7 +567,7 @@ a tolerance measured on one OS was no rule. The contract changed first:
   without the effect left those 4 sheets the same). No sheet draws a glyph that needs fitting: the magnifier and the
   number sign fit at every size the sheets draw.
 
-### Revision: within a pixel, one gate
+### Revision: within a pixel, one gate (superseded by "One rule, by the edges" below)
 
 Decided on 2026-11-23 (#115) by the coordinating agent, after the pull request's CI on the runner's iOS 27: at
 `large` on `inline`, a line of body.regular is 61 pixels, 20.333333333333332 pt, at three pixels a point, and some
@@ -597,3 +597,38 @@ comparison sat on a boundary.
   test's gate says not fitted, so it expects 20.666666666666664 and the frame's height differs by 0, within 0.375;
   its width is its own. `fittingGate` pins these numbers on every OS: 20.666666666666664 in 20.333333333333332 at
   scale 3 is not fitted, 22 is, and the glyph a pixel taller placed from the room's top stands within it.
+
+### Revision: one rule, by the edges
+
+Decided on 2026-11-23 (#115) by the coordinating agent, after the pull request's CI on the runner's macOS, whose
+display is 1x where this Mac's is 2x: 72 failures, all the wrench on `inline`. Its frame, 18 pt in a 16 pt field,
+stands centred a point past each edge; at one pixel a point the slack is 1.125 pt, so the row, deciding by the edges,
+left it alone at 18 pt, while the test, asking the gate whether 18 is more than 16 + 1.125, expected 16. The gate was
+shared, but the row decided by the edges and the test by the height: two rules again.
+
+- **One rule.** `TextFieldGlyphFitting.place(natural:room:displayScale:)` takes the frame where the glyph would stand
+  and its room and returns the frame it is placed at and whether it was fitted. Each edge within a pixel of the room
+  (and the margin of an eighth of a pixel): left as it is. Otherwise, at most two pixels taller than the room: moved
+  the least that puts each edge within a pixel of it, at its own size. Otherwise scaled to the room's height and set
+  in the room. Moved or scaled, it is fitted. The row places every glyph with it, and the test computes the frame it
+  expects with it from the glyph's own size and baseline, measured alone, and where the field's first baseline or
+  first line would set it.
+- **At each scale** (a pixel is 1, 0.5 and 0.333 pt; the slack 1.125, 0.5625 and 0.375):
+  - a glyph two points taller than its room, centred, a point past each edge (the wrench on a Mac's inline field):
+    at 1x within the slack, left alone at 18 pt; at 2x and 3x past it, and more than two pixels taller (16 + 1 and
+    16 + 0.667 are less than 18), so scaled to 16 and set at the room's top;
+  - a glyph a pixel taller than its room, centred (half a pixel past each edge) or from the room's top (a pixel past
+    its bottom): left alone at every scale; two pixels above the room, moved a pixel down, to a pixel past its top,
+    at its own size;
+  - a glyph that fits but stands on its baseline 1.5 pt past the room's bottom (the new window on a Mac's inline
+    field): past the slack at every scale, moved up to a pixel past it, 1, 0.5 or 0.333 pt, at its own size;
+  - the iOS 27 glyph of 20.666666666666664 pt in a line of 20.333333333333332 from y = 1, from the line's top: a pixel
+    past its bottom at 3x, within the slack, left alone; at 1x and 2x so too, less than a pixel past.
+- **Every scale, here.** The row reads the environment's `displayScale`, which the tests set: `aGlyphStaysInItsRoom`
+  runs at 1x, 2x and 3x at each text size, `fittingRule` gives the rule the cases above at each scale, and the pixel
+  test draws at 1x, 2x, 3x and 4x, laid out at the scale it draws at. Both CI failures were a scale or a metric this
+  Mac never produced; now every scale runs on every machine. Set in the environment, the scale also sets SwiftUI's
+  pixel snapping, which moves each edge of a placed frame by up to half a pixel from the frame the rule returns, so
+  the test compares within the slack.
+- **Pixels.** TextField's sheets, rendered before and after, are the same on macOS and on iOS 26: no sheet draws a
+  glyph that the old and the new rule place differently.

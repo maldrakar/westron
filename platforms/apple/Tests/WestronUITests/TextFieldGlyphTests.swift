@@ -23,7 +23,9 @@ struct TextFieldGlyphTests {
     }
 
     /// Lays `field` out in a window, offered a width of 300.
-    static func layOut(_ field: some View, direction: LayoutDirection = .leftToRight) -> Laidout {
+    static func layOut(
+        _ field: some View, direction: LayoutDirection = .leftToRight, displayScale: CGFloat? = nil
+    ) -> Laidout {
         let box = Box()
         TextFieldStyleTests.show(
             Probe(box: box) {
@@ -36,7 +38,8 @@ struct TextFieldGlyphTests {
                     }
             }
             .frame(width: 300)
-            .environment(\.layoutDirection, direction))
+            .environment(\.layoutDirection, direction)
+            .transformEnvironment(\.displayScale) { scale in scale = displayScale ?? scale })
         return box.value
     }
 
@@ -242,18 +245,31 @@ struct TextFieldGlyphTests {
         #expect(scaled.size == plain.size)
     }
 
+    /// The screens a glyph is laid out for: a Mac's at one pixel a point and at two, an iPhone's at three. The row reads
+    /// the environment's `displayScale`, so each is set on the field whatever the screen running the tests.
+    nonisolated static let displayScales: [CGFloat] = [1, 2, 3]
+
     @Test(
-        "a glyph never draws past a framed field's fill nor an inline field's first line; one that fits keeps its size",
-        arguments: [DynamicTypeSize.large, .xxxLarge, .accessibility5])
-    func aGlyphStaysInItsRoom(size: DynamicTypeSize) throws {
-        // Every glyph of the registry at the size it is drawn at, at most xxxLarge, on its own.
+        "a glyph stands where it would within a pixel of its room, and is moved or fitted to it otherwise, at each scale",
+        arguments: [DynamicTypeSize.large, .xxxLarge, .accessibility5], displayScales)
+    func aGlyphStaysInItsRoom(size: DynamicTypeSize, displayScale: CGFloat) throws {
+        // Every glyph of the registry at the size it is drawn at, at most xxxLarge, on its own: its size and baseline.
         let glyphSize = min(size, TextFieldGlyph.largestTextSize)
         let natural = Self.layOutAll(
             Westron.Icon.allCases.map {
                 AnyView(Icon($0).imageScale(.medium).textRole(.body.regular).dynamicTypeSize(glyphSize))
-            })
+            }, displayScale: displayScale)
         // A line of the fields' text role, body.regular, framed's and inline's context here, at the text's size.
-        let line = Self.layOut(Text(verbatim: "A").textRole(.body.regular).dynamicTypeSize(size))
+        let line = Self.layOut(
+            Text(verbatim: "A").textRole(.body.regular).dynamicTypeSize(size), displayScale: displayScale)
+        #if os(macOS)
+            let centred = false
+        #else
+            let centred = size.isAccessibilitySize
+        #endif
+        // A pixel and the margin: the layout snaps each edge of a glyph's frame to the pixel, half a pixel at most, which
+        // the glyph's own size measured on its own is not; and what the rule allows past each edge of the room.
+        let slack = TextFieldGlyphFitting.slack(displayScale: displayScale)
         for variant in [TextFieldVariant.framed, .inline] {
             for fieldSize in TextFieldSize.allCases {
                 // Filled, and empty with the field's placeholder, on one line and on several.
@@ -269,47 +285,53 @@ struct TextFieldGlyphTests {
                             AnyView(
                                 Self.field(variant, size: fieldSize, axis: axis, text: text, leading: $0, trailing: $0)
                                     .dynamicTypeSize(size))
-                        })
+                        }, displayScale: displayScale)
                     for (index, icon) in Westron.Icon.allCases.enumerated() {
                         let field = fields[index]
-                        let glyph = natural[index].size
-                        // The fill of a framed field is the field's frame. An inline field's room is its first line:
-                        // a line of its text role on the field's first baseline (never above a line's at its top, as
-                        // an empty field of several lines gives on iOS), within the frame.
-                        let fill = CGRect(origin: .zero, size: field.size)
-                        let firstLine = CGRect(
-                            x: .zero, y: max(field.baseline, line.baseline) - line.baseline, width: fill.width,
-                            height: line.size.height)
-                        let room = variant == .framed ? fill : firstLine.intersection(fill)
-                        // A pixel of the window the field is laid out in, and the margin no comparison sits on: what
-                        // the row allows a glyph past its room (`TextFieldGlyphFitting`).
-                        let slack = TextFieldGlyphFitting.slack(displayScale: field.displayScale)
+                        let glyph = natural[index]
                         let name =
-                            "\(icon) on \(variant) \(fieldSize) \(axis) \(text.isEmpty ? "empty" : "filled") at \(size): "
-                            + "the fill \(fill), the room \(room), a line \(line.size.height) pt, the glyph's own size "
-                            + "\(glyph)"
+                            "\(icon) on \(variant) \(fieldSize) \(axis) \(text.isEmpty ? "empty" : "filled") at \(size), "
+                            + "\(displayScale)x: the fill \(CGRect(origin: .zero, size: field.size)), a line "
+                            + "\(line.size.height) pt, the glyph's own size \(glyph.size)"
+                        #expect(field.displayScale == displayScale, "\(name): laid out at \(field.displayScale)x")
                         // The row is the system field's height: a glyph adds none. (A field beside two glyphs may wrap
                         // to more lines than one without, at the accessibility sizes: that is its text, not a glyph.)
                         let system = try #require(field.parts[.field], "\(name): no field")
                         #expect(
                             abs(field.size.height - max(minimumHeight, system.height + 2 * padding)) < Self.tolerance,
                             "\(name): \(field.size), the system field \(system)")
+                        // The room: a framed field's fill, its frame; an inline field's first line, a line of its text
+                        // role on the field's first baseline (never above a line's at its top, as an empty field of
+                        // several lines gives on iOS), within the frame.
+                        let fill = CGRect(origin: .zero, size: field.size)
+                        let baseline = max(field.baseline, system.minY + line.baseline)
+                        let firstLine = CGRect(
+                            x: .zero, y: baseline - line.baseline, width: fill.width, height: line.size.height)
+                        let room = variant == .framed ? fill : firstLine.intersection(fill)
+                        // Where the glyph would stand: on the first baseline, or at the accessibility sizes centred on
+                        // the first line, on the pixel.
+                        let top =
+                            centred
+                            ? ((firstLine.midY - glyph.size.height / 2) * displayScale).rounded() / displayScale
+                            : baseline - glyph.baseline
+                        let standing = CGRect(x: .zero, y: top, width: glyph.size.width, height: glyph.size.height)
+                        let (expected, fitted) = TextFieldGlyphFitting.place(
+                            natural: standing, room: room, displayScale: displayScale)
                         for part in [TextFieldGlyphAnchors.Part.leading, .trailing] {
                             let frame = try #require(field.parts[part], "\(name): no \(part) glyph")
-                            // Never past its room by more than a pixel: a framed field's fill, an inline field's
-                            // first line, on several lines too.
+                            let what =
+                                "\(name), the room \(room): the \(part) glyph at \(frame), standing at \(standing), "
+                                + "placed at \(expected), fitted: \(fitted)"
+                            // Where the rule places it, from where it would stand.
                             #expect(
-                                frame.minY >= room.minY - slack && frame.maxY <= room.maxY + slack,
-                                "\(name): the \(part) glyph at \(frame)")
-                            // Its width is its own, so the field's text keeps its place; it is drawn at its own height
-                            // unless that is more than the room's by more than a pixel, and then at the room's. The
-                            // row decides that with the same gate.
-                            #expect(abs(frame.width - glyph.width) <= slack, "\(name): the \(part) glyph at \(frame)")
-                            let fitted = TextFieldGlyphFitting.isFitted(
-                                height: glyph.height, room: room.height, displayScale: field.displayScale)
-                            #expect(
-                                abs(frame.height - (fitted ? room.height : glyph.height)) <= slack,
-                                "\(name): the \(part) glyph at \(frame), fitted: \(fitted)")
+                                abs(frame.minY - expected.minY) <= slack
+                                    && abs(frame.height - expected.height) <= slack,
+                                "\(what)")
+                            // Never past its room by more than a pixel at an edge: a framed field's fill, an inline
+                            // field's first line, on several lines too.
+                            #expect(frame.minY >= room.minY - slack && frame.maxY <= room.maxY + slack, "\(what)")
+                            // Its width is its own, so the field's text keeps its place.
+                            #expect(abs(frame.width - glyph.size.width) <= slack, "\(what)")
                         }
                     }
                 }
@@ -317,76 +339,100 @@ struct TextFieldGlyphTests {
         }
     }
 
-    @Test("the gate of fitting: a glyph a pixel taller than its room is left alone, one taller by more is fitted")
-    func fittingGate() {
-        // iOS 27 at large: a line of body.regular is 61 pixels, 20.333333333333332 pt, at three pixels a point, and some
-        // glyphs are 62, 20.666666666666664 pt, a pixel taller, which floating point puts a hair past room + 1/3.
-        let room: CGFloat = 20.333333333333332
-        #expect(!TextFieldGlyphFitting.isFitted(height: 20.666666666666664, room: room, displayScale: 3))
-        #expect(TextFieldGlyphFitting.height(20.666666666666664, room: room, displayScale: 3) == 20.666666666666664)
-        #expect(TextFieldGlyphFitting.isFitted(height: 22, room: room, displayScale: 3))
-        #expect(TextFieldGlyphFitting.height(22, room: room, displayScale: 3) == room)
-        // Two pixels taller is fitted; as tall as the room is not.
-        #expect(TextFieldGlyphFitting.isFitted(height: room + 2.0 / 3, room: room, displayScale: 3))
-        #expect(!TextFieldGlyphFitting.isFitted(height: room, room: room, displayScale: 3))
-        // macOS at two pixels a point: the wrench, 18 pt, in a 16 pt field is fitted; the trash, 16.5, is left alone.
-        #expect(TextFieldGlyphFitting.isFitted(height: 18, room: 16, displayScale: 2))
-        #expect(!TextFieldGlyphFitting.isFitted(height: 16.5, room: 16, displayScale: 2))
-        // Placed from the room's top, the glyph a pixel taller is a pixel past its bottom, and stands within it.
-        let line = CGRect(x: 0, y: 1, width: 300, height: room)
+    @Test("the rule of a glyph in its room, at one, two and three pixels a point", arguments: displayScales)
+    func fittingRule(displayScale: CGFloat) {
+        let pixel = 1 / displayScale
+        let room = CGRect(x: 0, y: 0, width: 300, height: 16)
+        func place(_ top: CGFloat, _ height: CGFloat, in room: CGRect = room) -> (frame: CGRect, fitted: Bool) {
+            TextFieldGlyphFitting.place(
+                natural: CGRect(x: 0, y: top, width: 18, height: height), room: room, displayScale: displayScale)
+        }
+        // A glyph two points taller than its room, centred, a point past each edge, as the wrench on a Mac's inline
+        // field: within a pixel at 1x, left alone; at 2x and 3x scaled to the room, which it can no longer stand in.
+        let wrench = place(-1, 18)
+        if displayScale == 1 {
+            #expect(!wrench.fitted && wrench.frame == CGRect(x: 0, y: -1, width: 18, height: 18), "\(wrench)")
+        } else {
+            #expect(wrench.fitted && wrench.frame == CGRect(x: 0, y: 0, width: 18, height: 16), "\(wrench)")
+        }
+        // A glyph a pixel taller than its room: left alone centred, and from the room's top, a pixel past its bottom.
+        #expect(!place(-pixel / 2, 16 + pixel).fitted)
+        #expect(!place(0, 16 + pixel).fitted)
+        // Two pixels above, it is moved a pixel down, to a pixel past the top, at its own size.
+        let raised = place(-2 * pixel, 16 + pixel)
         #expect(
-            TextFieldGlyphFitting.standsWithin(top: 1, height: 20.666666666666664, room: line, displayScale: 3))
-        #expect(!TextFieldGlyphFitting.standsWithin(top: 1, height: 22, room: line, displayScale: 3))
-        #expect(
-            !TextFieldGlyphFitting.standsWithin(top: 1 - 2.0 / 3, height: room, room: line, displayScale: 3))
+            raised.fitted && abs(raised.frame.minY + pixel) < 1e-9 && raised.frame.height == 16 + pixel, "\(raised)")
+        // A glyph that fits but stands off its baseline 1.5 pt past the room's bottom, as the new window on a Mac's
+        // inline field: at 1x within no pixel, moved up to a pixel past it; so too at 2x and 3x.
+        let low = place(5.5, 12)
+        #expect(low.fitted && abs(low.frame.maxY - (16 + pixel)) < 1e-9 && low.frame.height == 12, "\(low)")
+        // Half a pixel past is within a pixel: left alone.
+        #expect(!place(4 + pixel / 2, 12).fitted)
+        // iOS 27 at large, three pixels a point: a line of 61 pixels, 20.333333333333332 pt, from y = 1, and glyphs of 62,
+        // 20.666666666666664 pt, which floating point puts a hair past room + 1/3. From the line's top the glyph is a
+        // pixel past its bottom: left alone at 3x, and so at 1x and 2x, where it is less than a pixel past.
+        let line = CGRect(x: 0, y: 1, width: 300, height: 20.333333333333332)
+        let sun = place(1, 20.666666666666664, in: line)
+        #expect(!sun.fitted && sun.frame.height == 20.666666666666664, "\(sun)")
+        // A glyph of 22 pt in that line, from its top: past its bottom by 1.67 pt, more than two pixels taller at 2x
+        // and 3x, scaled to the line; at 1x, 1.67 pt taller than the line, it stands at its own size from 0.67 pt
+        // above its top, a pixel past its bottom.
+        let tall = place(1, 22, in: line)
+        if displayScale == 1 {
+            #expect(tall.fitted && tall.frame.height == 22 && abs(tall.frame.maxY - (line.maxY + 1)) < 1e-9, "\(tall)")
+        } else {
+            #expect(tall.fitted && tall.frame == CGRect(x: 0, y: 1, width: 18, height: line.height), "\(tall)")
+        }
     }
 
-    @Test("a fitted glyph is drawn within the field, as its own drawing scaled into its frame")
-    func aFittedGlyphIsDrawnWithinItsRoom() throws {
+    @Test(
+        "a fitted glyph is drawn within the field, as its own drawing scaled into its frame",
+        arguments: [CGFloat(1), 2, 3, 4])
+    func aFittedGlyphIsDrawnWithinItsRoom(displayScale: CGFloat) throws {
         // The anchors the tests above read are the glyph's layout frame; `TextFieldGlyphFit` scales its drawing into
         // that frame in a visual effect, which no anchor sees. So the pixels: each glyph of the registry on an empty
-        // inline field of one line, whose room is the field. On macOS (no Dynamic Type) the wrench's frame, 18 pt, is
-        // taller than the field's 16; on iOS at xxxLarge so are some frames, the wrench's among them. A symbol's frame
-        // holds space above and below its ink, so a glyph drawn unscaled still inks within the field here: the test
-        // also holds the ink to the glyph's own ink, scaled by the frame's height to its own and centred in the frame.
+        // inline field of one line, whose room is the field, drawn and laid out at 1, 2, 3 and 4 pixels a point. On
+        // macOS (no Dynamic Type) the wrench's frame, 18 pt, is taller than the field's 16 by a point at each edge:
+        // within a pixel at 1x, scaled at 2x and more; on iOS at xxxLarge some frames outgrow the line, the wrench's
+        // among them. A symbol's frame holds space above and below its ink, so a glyph drawn unscaled still inks within
+        // the field here: the test also holds the ink to the glyph's own ink, scaled by the frame's height to its own
+        // and centred in the frame. That fails at 2x, 3x and 4x if the drawing is not scaled (the wrench 0.86 to
+        // 0.89 pt off at each edge); at 1x the wrench is left alone.
         #if os(macOS)
             let size = DynamicTypeSize.large
         #else
             let size = DynamicTypeSize.xxxLarge
         #endif
-        let pixel = 1 / Drawn.scale
-        // What the row, laid out at the renderer's scale, allows a glyph past its room.
-        let slack = TextFieldGlyphFitting.slack(displayScale: Drawn.scale)
-        var fitted: [Westron.Icon] = []
+        let pixel = 1 / displayScale
+        let slack = TextFieldGlyphFitting.slack(displayScale: displayScale)
+        var scaled: [Westron.Icon] = []
         for icon in Westron.Icon.allCases {
             // The glyph on its own, as the field draws it: its size and the rows its ink spans, from its top.
-            let own = try Self.draw(Icon(icon).imageScale(.medium).textRole(.body.regular).dynamicTypeSize(size))
+            let own = try Self.draw(
+                Icon(icon).imageScale(.medium).textRole(.body.regular).dynamicTypeSize(size), scale: displayScale)
             let ownSize = own.laidOut.size
-            let ownInk = try #require(own.ink(fromX: 0, toX: CGFloat(own.width) / Drawn.scale), "\(icon): no ink")
-            let drawn = try Self.draw(Self.field(.inline, text: "", leading: icon).dynamicTypeSize(size))
+            let ownInk = try #require(own.ink(fromX: 0, toX: CGFloat(own.width) / displayScale), "\(icon): no ink")
+            let drawn = try Self.draw(
+                Self.field(.inline, text: "", leading: icon).dynamicTypeSize(size), scale: displayScale)
+            #expect(drawn.laidOut.displayScale == displayScale, "\(icon): laid out at \(drawn.laidOut.displayScale)x")
             let frame = try #require(drawn.laidOut.parts[.leading], "\(icon): no glyph")
             let field = try #require(drawn.laidOut.parts[.field], "\(icon): no field")
-            if TextFieldGlyphFitting.isFitted(
-                height: ownSize.height, room: drawn.laidOut.size.height, displayScale: Drawn.scale)
-            {
-                fitted.append(icon)
-            }
+            if frame.height < ownSize.height - pixel / 2 { scaled.append(icon) }
             // The glyph's columns, from the image's edge to the middle of the gap before the field's text, so that
             // whatever the renderer draws for the system field is not read.
             let name =
-                "\(icon) at \(size): the field \(drawn.laidOut.size), the glyph's frame \(frame), its own size "
-                + "\(ownSize), its own ink from \(ownInk.lowerBound - Drawn.margin) to \(ownInk.upperBound - Drawn.margin)"
+                "\(icon) at \(size), \(displayScale)x: the field \(drawn.laidOut.size), the glyph's frame \(frame), its "
+                + "own size \(ownSize), its own ink from \(ownInk.lowerBound - Drawn.margin) to "
+                + "\(ownInk.upperBound - Drawn.margin)"
             let ink = try #require(
                 drawn.ink(fromX: 0, toX: Drawn.margin + (frame.maxX + field.minX) / 2), "\(name): no ink")
             let top = ink.lowerBound - Drawn.margin
             let bottom = ink.upperBound - Drawn.margin
-            // Within the field, to a pixel.
+            // Within the field, to a pixel at each edge.
             #expect(
-                top >= -slack && bottom <= drawn.laidOut.size.height + slack,
-                "\(name): drawn from \(top) to \(bottom)")
+                top >= -slack && bottom <= drawn.laidOut.size.height + slack, "\(name): drawn from \(top) to \(bottom)")
             // Its own ink, scaled about its centre into its frame, to a pixel and a half: an edge of either ink may round
-            // to the next pixel. (Drawn unscaled, the wrench on macOS is 0.85 pt, more than three pixels, off at each
-            // edge.)
+            // to the next pixel.
             let scale = frame.height / ownSize.height
             let expectedTop = frame.midY + (ownInk.lowerBound - Drawn.margin - ownSize.height / 2) * scale
             let expectedBottom = frame.midY + (ownInk.upperBound - Drawn.margin - ownSize.height / 2) * scale
@@ -394,14 +440,19 @@ struct TextFieldGlyphTests {
                 abs(top - expectedTop) <= 1.5 * pixel && abs(bottom - expectedBottom) <= 1.5 * pixel,
                 "\(name): drawn from \(top) to \(bottom), for \(expectedTop) to \(expectedBottom)")
         }
-        #expect(fitted.contains(.wrench), "the glyphs taller than the field: \(fitted)")
+        #if os(macOS)
+            // The wrench is scaled where a pixel is less than the point it reaches past each edge.
+            #expect(scaled.contains(.wrench) == (displayScale > 1), "scaled at \(displayScale)x: \(scaled)")
+        #else
+            if displayScale > 1 { #expect(scaled.contains(.wrench), "scaled at \(displayScale)x: \(scaled)") }
+        #endif
     }
 
     /// A view drawn by `ImageRenderer`, with a clear margin around it so that a glyph drawn past the view is in the image,
     /// and what it laid out, read from the same render.
     struct Drawn {
-        static let scale: CGFloat = 4
         static let margin: CGFloat = 8
+        let scale: CGFloat
         let laidOut: Laidout
         let width: Int
         let height: Int
@@ -409,17 +460,17 @@ struct TextFieldGlyphTests {
 
         /// The span, in points of the view's margin box, of the rows that hold a drawn pixel between two x positions.
         func ink(fromX minX: CGFloat, toX maxX: CGFloat) -> ClosedRange<CGFloat>? {
-            let columns =
-                max(0, Int((minX * Self.scale).rounded(.down)))..<min(width, Int((maxX * Self.scale).rounded(.up)))
+            let columns = max(0, Int((minX * scale).rounded(.down)))..<min(width, Int((maxX * scale).rounded(.up)))
             var rows: ClosedRange<Int>?
             for row in 0..<height where columns.contains(where: { alpha[row * width + $0] > 0 }) {
                 rows = rows.map { min($0.lowerBound, row)...max($0.upperBound, row) } ?? row...row
             }
-            return rows.map { CGFloat($0.lowerBound) / Self.scale...CGFloat($0.upperBound + 1) / Self.scale }
+            return rows.map { CGFloat($0.lowerBound) / scale...CGFloat($0.upperBound + 1) / scale }
         }
     }
 
-    static func draw(_ view: some View) throws -> Drawn {
+    /// Draws `view` at `scale` pixels a point, laid out at that scale too.
+    static func draw(_ view: some View, scale: CGFloat) throws -> Drawn {
         let box = ManyBox(count: 1)
         let renderer = ImageRenderer(
             content:
@@ -430,8 +481,9 @@ struct TextFieldGlyphTests {
                 }
                 .frame(width: 300)
                 .padding(Drawn.margin)
-                .environment(\.colorScheme, .light))
-        renderer.scale = Drawn.scale
+                .environment(\.colorScheme, .light)
+                .environment(\.displayScale, scale))
+        renderer.scale = scale
         let image = try #require(renderer.cgImage)
         var bytes = [UInt8](repeating: 0, count: image.width * image.height * 4)
         let space = try #require(CGColorSpace(name: CGColorSpace.sRGB))
@@ -441,7 +493,7 @@ struct TextFieldGlyphTests {
                 bytesPerRow: image.width * 4, space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
         context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
         let alpha = stride(from: 3, to: bytes.count, by: 4).map { bytes[$0] }
-        return Drawn(laidOut: box.values[0], width: image.width, height: image.height, alpha: alpha)
+        return Drawn(scale: scale, laidOut: box.values[0], width: image.width, height: image.height, alpha: alpha)
     }
 
     @Test(
@@ -464,8 +516,8 @@ struct TextFieldGlyphTests {
     }
 
     /// Lays each view out in one window, each offered a width of 300, and returns its size, its first baseline, its
-    /// glyphs and its field.
-    static func layOutAll(_ views: [AnyView]) -> [Laidout] {
+    /// glyphs and its field; at `displayScale` pixels a point where one is given, the window's otherwise.
+    static func layOutAll(_ views: [AnyView], displayScale: CGFloat? = nil) -> [Laidout] {
         let box = ManyBox(count: views.count)
         TextFieldStyleTests.show(
             ZStack(alignment: .topLeading) {
@@ -482,7 +534,8 @@ struct TextFieldGlyphTests {
                         }
                 }
             }
-            .frame(width: 300, alignment: .topLeading))
+            .frame(width: 300, alignment: .topLeading)
+            .transformEnvironment(\.displayScale) { scale in scale = displayScale ?? scale })
         return box.values
     }
 

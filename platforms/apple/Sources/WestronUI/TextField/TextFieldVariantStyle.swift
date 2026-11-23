@@ -342,16 +342,26 @@ private struct TextFieldBody: View {
         case firstLine
     }
 
-    /// The one gate of fitting a glyph to its room (decisions/0003, "A glyph fitted to its room"), which the row and
-    /// the tests both call, so that they cannot disagree. A glyph within a pixel of its room is left as it is: scaled
-    /// down by one pixel it would only blur, and a symbol's ink stops short of its frame. It is fitted, to the room's
-    /// height, only when it is taller than the room by more than a pixel.
+    /// The one rule that places a glyph in its room (decisions/0003, "A glyph fitted to its room", revision "One
+    /// rule, by the edges"), which the row and the tests both call, so that they cannot disagree. Everything follows
+    /// from where the glyph would stand, its natural frame, and the room, at the screen's scale:
+    /// - each edge within a pixel of the room: the glyph is left as it is, where it stands and at its own size (scaled
+    ///   down by a pixel it would only blur, and a symbol's ink stops short of its frame);
+    /// - otherwise, if it can stand within a pixel of each edge at its own size (it is at most two pixels taller than
+    ///   the room), it is moved the least that puts it there;
+    /// - otherwise it is scaled down, its proportions kept, to the room's height, and stands in the room.
+    /// A glyph moved or scaled is fitted; its width stays its own.
     enum TextFieldGlyphFitting {
         /// What a glyph may reach past its room, at each edge, and still be left alone: a pixel of the screen, and the
         /// margin no comparison sits on.
         static func slack(displayScale: CGFloat) -> CGFloat {
-            let pixel = 1 / max(displayScale, 1)
+            let pixel = pixel(displayScale: displayScale)
             return pixel + margin(pixel: pixel)
+        }
+
+        /// A pixel of the screen, in points.
+        static func pixel(displayScale: CGFloat) -> CGFloat {
+            1 / max(displayScale, 1)
         }
 
         /// Laid out on a screen, a glyph and its room stand on its pixels, so lengths that differ differ by a pixel;
@@ -362,21 +372,23 @@ private struct TextFieldBody: View {
             pixel / 8
         }
 
-        /// Whether a glyph of `height` is fitted to a room of `room`: whether it is taller by more than a pixel.
-        static func isFitted(height: CGFloat, room: CGFloat, displayScale: CGFloat) -> Bool {
-            height > room + slack(displayScale: displayScale)
-        }
-
-        /// The height a glyph of `height` is drawn at in a room of `room`: the room's if it is fitted, its own if not.
-        static func height(_ height: CGFloat, room: CGFloat, displayScale: CGFloat) -> CGFloat {
-            isFitted(height: height, room: room, displayScale: displayScale) ? room : height
-        }
-
-        /// Whether a glyph from `top` down `height` stands within `room`, to a pixel at each edge: then it is placed
-        /// where it stood.
-        static func standsWithin(top: CGFloat, height: CGFloat, room: CGRect, displayScale: CGFloat) -> Bool {
+        /// Where a glyph whose natural frame is `natural` is placed in `room`, and whether it was fitted: moved or
+        /// scaled from where it would stand.
+        static func place(natural: CGRect, room: CGRect, displayScale: CGFloat) -> (frame: CGRect, fitted: Bool) {
+            let pixel = pixel(displayScale: displayScale)
             let slack = slack(displayScale: displayScale)
-            return top >= room.minY - slack && top + height <= room.maxY + slack
+            if natural.minY >= room.minY - slack && natural.maxY <= room.maxY + slack {
+                return (natural, false)
+            }
+            var frame = natural
+            if natural.height <= room.height + 2 * slack {
+                // At its own size, a pixel past the room at most at each edge, from where it stood.
+                frame.origin.y = min(max(natural.minY, room.minY - pixel), room.maxY + pixel - natural.height)
+            } else {
+                frame.origin.y = room.minY
+                frame.size.height = room.height
+            }
+            return (frame, true)
         }
     }
 
@@ -384,10 +396,9 @@ private struct TextFieldBody: View {
     /// field's height, which a glyph does not change even where it reaches higher than the field's first line. A glyph
     /// stands on the field's first baseline; at the accessibility sizes, where it is smaller than its text, it is
     /// centred on the field's first line instead, the box of a line of the field's text role (decisions/0003, second
-    /// revision). A glyph that would then draw past its room (`TextFieldGlyphRoom`) by more than a pixel is fitted to
-    /// it (`TextFieldGlyphFitting`): scaled down, its proportions kept, to the room's height if it is taller by more
-    /// than a pixel, centred where it stood, and moved inside the room from its top; a glyph within its room, to a
-    /// pixel, is placed as it stood. The row's baselines are the field's. SwiftUI mirrors the places right to left.
+    /// revision). A glyph that would then reach past its room (`TextFieldGlyphRoom`) by more than a pixel at an edge
+    /// is fitted to it, moved or scaled down (`TextFieldGlyphFitting.place`); one within a pixel at each edge stands
+    /// where it would. The row's baselines are the field's. SwiftUI mirrors the places right to left.
     private struct TextFieldGlyphRow: Layout {
         /// What a view of the row is: the field, a glyph, or the line a glyph is centred on.
         enum Role: LayoutValueKey {
@@ -474,21 +485,16 @@ private struct TextFieldBody: View {
                     } else {
                         bounds.minY + baseline - dimensions[.firstTextBaseline]
                     }
-                // Within its room, to a pixel, the glyph stands where it stood, at its own size.
-                if TextFieldGlyphFitting.standsWithin(
-                    top: y, height: dimensions.height, room: room, displayScale: displayScale)
-                {
-                    glyph.place(at: CGPoint(x: x, y: y), anchor: anchor, proposal: .unspecified)
-                    continue
-                }
-                // Past it: at the room's height if it is taller by more than a pixel, centred where it stood, then
-                // moved inside the room, from its top where it is still a pixel taller. Its width stays its own, so
-                // the field's text keeps its place (`TextFieldGlyphFit` scales the drawing).
-                let height = TextFieldGlyphFitting.height(
-                    dimensions.height, room: room.height, displayScale: displayScale)
-                let top = max(min(y + (dimensions.height - height) / 2, room.maxY - height), room.minY)
+                // Left where it would stand, moved, or scaled to the room's height; its width stays its own, so the
+                // field's text keeps its place (`TextFieldGlyphFit` scales the drawing).
+                let natural = CGRect(
+                    x: anchor == .topLeading ? x : x - dimensions.width, y: y, width: dimensions.width,
+                    height: dimensions.height)
+                let (frame, fitted) = TextFieldGlyphFitting.place(
+                    natural: natural, room: room, displayScale: displayScale)
                 glyph.place(
-                    at: CGPoint(x: x, y: top), anchor: anchor, proposal: ProposedViewSize(width: nil, height: height))
+                    at: CGPoint(x: x, y: frame.minY), anchor: anchor,
+                    proposal: fitted ? ProposedViewSize(width: nil, height: frame.height) : .unspecified)
             }
         }
 
