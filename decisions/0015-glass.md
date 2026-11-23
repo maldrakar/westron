@@ -534,8 +534,10 @@ content.overlay(alignment: .bottomTrailing) {
             Menu { MenuItems(model.more, send: send) } label: { Label { Text("More") } icon: { Icon(.ellipsis) } }
         }
         ToolbarItem(placement: .bottomBar) {
-            TextField("Search", text: $query)
-                .textFieldStyle(.inline)  // with `magnifier` and `microphone` in #115's icon slots, not on main yet
+            TextField("Search", text: $query, prompt: Text("Search").foregroundStyle(.text.placeholder))
+                .textFieldStyle(.inline, leadingIcon: .magnifier)  // #115; the microphone, an action, waits for a slot
+                .accessibilityLabel("Search")
+                .accessibilityAddTraits(.isSearchField)
         }
         ToolbarItem(placement: .bottomBar) {
             Menu { MenuItems(model.add, send: send) } label: { Label { Text("New") } icon: { Icon(.plus) } }

@@ -27,12 +27,18 @@ paths:
   `tools/westron spec check` rejects it; the names per control are in
   `tools/Sources/WestronTools/Contracts/SystemStyles.swift`.
 - What exists, before you draw your own (each per `spec/components/<id>/`): `.buttonStyle(_:size:iconOnly:floating:)`
-  with `.loading(_:)` (`floating`: a button over content, on the system's glass from OS 26, decisions/0015), `.textFieldStyle(.framed|.inline, size:)`, `.toggleStyle(.check)` (Checkbox), `.toggleStyle(.chip)`,
-  `.buttonStyle(.chip)` and `.labelStyle(.chip)` (Chip), `.textRole(_:)`, `Icon(_:)` and `Icon(_:label:)`,
-  `IconTile(_:)` and `IconTile(_:label:)` (a list's tile in the `.category(_:)` of its context, neutral with none),
-  `ListRow(level:guides:action:) { title } subtitle: leading: trailing:` with `.selected(_:)`, `.dropTarget(_:)` and
-  `.insertionMark(_:level:)` (ListRow), `.surface(.raised|.dragged|.sunken, outlined:)`, `Rule(axis:purpose:)` and
-  `Rule("Label")`. A check beside a separate title draws no label: `Toggle(isOn: $task.isDone, accessibilityLabel:
+  with `.loading(_:)` (`floating`: a button over content, on the system's glass from OS 26, decisions/0015),
+  `.textFieldStyle(.framed|.inline, size:leadingIcon:trailingIcon:)` (decorative glyphs, each
+  optional, naming what the field is for and never an action: no microphone, clear mark or chevron; a search field is
+  `TextField("Search", text: $query, prompt: Text("Search").foregroundStyle(.text.placeholder))` with
+  `.textFieldStyle(.framed, leadingIcon: .magnifier)`, `.accessibilityLabel("Search")` and
+  `.accessibilityAddTraits(.isSearchField)`, or the system's `.searchable` where the system places it),
+  `.toggleStyle(.check)` (Checkbox), `.toggleStyle(.chip)`, `.buttonStyle(.chip)` and `.labelStyle(.chip)` (Chip),
+  `.textRole(_:)`, `Icon(_:)` and `Icon(_:label:)`, `IconTile(_:)` and `IconTile(_:label:)` (a list's tile in the
+  `.category(_:)` of its context, neutral with none), `ListRow(level:guides:action:) { title } subtitle: leading:
+  trailing:` with `.selected(_:)`, `.dropTarget(_:)` and `.insertionMark(_:level:)` (ListRow),
+  `.surface(.raised|.dragged|.sunken, outlined:)`, `Rule(axis:purpose:)` and `Rule("Label")`.
+  A check beside a separate title draws no label: `Toggle(isOn: $task.isDone, accessibilityLabel:
   task.title).toggleStyle(.check)`, not `.labelsHidden()`, which a custom style sees only from iOS 18, macOS 15 and
   watchOS 11, so on iOS 17 the label would be drawn (`spec/components/checkbox/decisions/0002`).
 

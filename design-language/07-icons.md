@@ -108,7 +108,9 @@ An icon is sized by text, not by a number of its own. Its size comes from a text
 - **Next to text, an icon takes that text's role.** It gets the role's size and weight, so it sits on the line like a
   letter and scales with Dynamic Type together with the text. An SF Symbol does this when it takes the role's font; a
   custom symbol does it because it is built from a template. Chrome glyphs share no weight of their own: each follows
-  the weight of its text (the Icon contract, #28, 2026-11-18).
+  the weight of its text (the Icon contract, #28, 2026-11-18). One named exception: a decorative glyph inside a text
+  field stops growing at the largest text size that is not an accessibility size, since there the width is what the
+  person types into (`spec/components/text-field/decisions/0003-icons-at-the-start-and-the-end.md`, #115).
 - **Without text, an icon takes its control's text role.** The glyph of an icon-only button is sized as that button's
   label would be. So a glyph in a larger control is larger, and every glyph grows with the person's text size.
 - **Inside a shape, an icon is sized by the shape.** A glyph in a check box or on a badge keeps its proportion to the

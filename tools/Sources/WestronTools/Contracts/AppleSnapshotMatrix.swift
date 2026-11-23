@@ -48,9 +48,11 @@ public struct AppleSnapshotMatrix: Generator {
     public func run() throws -> [GeneratedFile] {
         let checked = try AppleComponents.checkedContracts(
             directory: directory, schemaFile: schemaFile, resolverFile: resolverFile)
-        // The registry is read only when a contract that gives API takes its names.
+        // The registry is read only when a contract that gives API runs its names along an axis: an optional glyph is
+        // no axis (SnapshotMatrix).
         let needsIcons = checked.contracts.contains { item in
-            AppleComponents.givesAPI(item.contract) && item.contract.options.contains { $0.kind == .icons }
+            AppleComponents.givesAPI(item.contract)
+                && item.contract.options.contains { $0.kind == .icons(optional: false) }
         }
         let icons = needsIcons ? try IconRegistry.load(file: registryFile).icons.map(\.name) : nil
         return try Self.files(for: checked.contracts, tokens: checked.tokens, icons: icons)

@@ -214,6 +214,15 @@ struct OwnComponentTests {
         #expect(
             failure(ownYAML(options: "  glyph: { type: icons }"))?.contains(
                 "options.glyph: a modifier with an option whose values are icons: \(notYet)") == true)
+        // An optional glyph on an own view: `spec check` rejects the contract first (ContractRules.checkIconOptions),
+        // and the generator, given it anyway, says why on its own.
+        let optionalGlyph = viewYAML(
+            options: "  glyph: { type: icons, optional: true, description: The glyph, or none. }")
+        #expect(
+            failure(optionalGlyph, id: "rule")?.contains(
+                "options.glyph: an optional option whose values are icons: an own view's glyph is always named; "
+                    + notYet) == true)
+        #expect(specProblems(optionalGlyph, id: "rule").contains { $0.hasPrefix("options.glyph.optional: ") })
         #expect(
             failure(ownYAML(slots: "[content, footer]"))?.contains(
                 "slots: a modifier's content is the view it modifies") == true)

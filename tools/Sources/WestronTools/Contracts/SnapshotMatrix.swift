@@ -22,6 +22,9 @@
 ///   rows instead (`rowAxis`): Icon's 36 glyphs at rest would otherwise make sheets of three glyphs each, twelve to a
 ///   scale. Its sheets hold one value of every other axis but the column axis, which is then the variant, else the
 ///   first other option that is not a bool.
+/// - An optional option whose values are icons (`optional: true`, TextField's `leadingIcon`) is no axis: the matrix
+///   draws every combination without the glyph, and the component's hand-written supplements draw it, marked "not a
+///   contract option" as the other supplements are. A decoration would otherwise multiply every sheet.
 /// - A contract with forms (`forms`) has the form as its first axis, `formAxis`, never the columns: each form is drawn
 ///   at rest and in each state it enters alone, on sheets of its own (`form-selectable`), and a form that enters no
 ///   state is drawn at rest only (spec/conventions.md, "Forms").
@@ -181,7 +184,12 @@ public struct SnapshotMatrix: Equatable, Sendable {
                     Axis(
                         name: option.name, values: ["false", "true"], isBool: true,
                         systemType: systemOptions[option.name]))
-            case .icons:
+            case .icons(optional: true):
+                // An optional glyph is no axis: the matrix draws it absent, and hand-written supplements draw the
+                // glyphs (spec/conventions.md, "Option whose values are icons"). As an axis it would multiply every
+                // sheet for a decoration: TextField's two glyphs would take its 36 combinations to 144.
+                continue
+            case .icons(optional: false):
                 guard let icons, !icons.isEmpty else {
                     throw ContractProblem(
                         source: source, path: .root.key("options").key(option.name),
