@@ -90,6 +90,28 @@ struct TextRoleTests {
         }
     }
 
+    #if os(iOS)
+        @Test(
+            "the drawn size is the same at every display scale, so a 2x screen draws what a 3x one does (#133)",
+            arguments: DynamicTypeSize.allCases)
+        func drawnSizeAtEveryDisplayScale(size: DynamicTypeSize) {
+            for role in Westron.TextRole.all {
+                let atOne = role.drawnSize(at: size, displayScale: 1)
+                #expect(role.drawnSize(at: size) == atOne, "\(role.name) at \(size), this screen's scale")
+                for scale: CGFloat in [1, 2, 3] {
+                    let drawn = role.drawnSize(at: size, displayScale: scale)
+                    #expect(drawn == atOne, "\(role.name) at \(size), \(scale)x: \(drawn), at 1x \(atOne)")
+                }
+            }
+        }
+
+        @Test("the overline at accessibility5 is drawn at 38 points on a 2x screen, not 39 (#133)")
+        func overlineAtTwoX() {
+            // The caption's 12 points scale to 38.333 at accessibility5: pixel-rounded at 2x first, 38.5, then 39.
+            #expect(Westron.TextRole.heading.overline.drawnSize(at: .accessibility5, displayScale: 2) == 38)
+        }
+    #endif
+
     @Test("under Bold Text a role in Onest or Geist Mono takes the instance one weight up; the system font's do not")
     func boldTextStep() {
         for (role, font, bold) in Self.boldTextInstances {

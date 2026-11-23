@@ -232,7 +232,17 @@ extension Westron.TextRole {
     /// accessibility5); `TextRoleTests` holds both to what SwiftUI resolves. macOS has no Dynamic Type, so it is the
     /// Mac's size. watchOS reads it from SwiftUI where it can (watchOS 26), and before that takes the size the system
     /// gives the text style now, which an app's own `dynamicTypeSize` does not change.
-    func drawnSize(at dynamicTypeSize: DynamicTypeSize) -> CGFloat {
+    ///
+    /// The shipped font's size is the point size of `UIFontMetrics.scaledFont`, which rounds the scaled size once, as
+    /// SwiftUI does. `scaledValue(for:)` rounds to the screen's pixels first, to half points at 2x, and rounding that
+    /// again sends a size just under a half point up: the caption's 12 points at accessibility5 came out 38.5, so 39
+    /// where SwiftUI draws 38, on every 2x screen, iOS 17 and 26 alike (#133).
+    ///
+    /// `displayScale` is for tests only: on iOS it adds a display scale to the traits the size is computed with, so
+    /// that `TextRoleTests` can hold the size to be the same at 1x, 2x and 3x on any one device. UIKit takes the scale
+    /// from the screen, not from the current trait collection. Nil, as every caller passes, computes with the screen's.
+    /// macOS and watchOS ignore it.
+    func drawnSize(at dynamicTypeSize: DynamicTypeSize, displayScale: CGFloat? = nil) -> CGFloat {
         #if os(macOS)
             return platformSize
         #elseif os(watchOS)
@@ -243,11 +253,15 @@ extension Westron.TextRole {
             }
             return platformSize
         #else
-            let traits = UITraitCollection(preferredContentSizeCategory: UIContentSizeCategory(dynamicTypeSize))
+            var traits = UITraitCollection(preferredContentSizeCategory: UIContentSizeCategory(dynamicTypeSize))
+            if let displayScale {
+                traits = traits.modifyingTraits { $0.displayScale = displayScale }
+            }
             let style = UIFont.TextStyle(textStyle)
-            if shippedFont(boldText: false) != nil, BundledFonts.registered {
-                return UIFontMetrics(forTextStyle: style).scaledValue(for: platformSize, compatibleWith: traits)
-                    .rounded()
+            if let name = shippedFont(boldText: false), BundledFonts.registered,
+                let font = UIFont(name: name, size: platformSize)
+            {
+                return UIFontMetrics(forTextStyle: style).scaledFont(for: font, compatibleWith: traits).pointSize
             }
             return UIFont.preferredFont(forTextStyle: style, compatibleWith: traits).pointSize
         #endif
