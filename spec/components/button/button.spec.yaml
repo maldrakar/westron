@@ -1,9 +1,9 @@
 # westron's Button contract (#22), approved by the owner on 2026-11-16; the macOS hit area decided by the owner on
 # 2026-11-18 (#75) and the iOS one on 2026-11-21 (#102): decisions/0001-button-contract.md records the owner's answers and the bindings the owner confirmed
 # on top of them. Its look revised on 2026-11-20 (#85), the owner's choice from prototype renders, pending the owner's
-# review of this contract and its snapshot matrix together (decisions/0003-the-look-of-2026-11-20.md).
-# Proposed, not applied: the option floating for a button over content (#121), in decisions/0015-glass.md at the
-# repository's root as a patch to this file, applied with the code it needs.
+# review of this contract and its snapshot matrix together (decisions/0003-the-look-of-2026-11-20.md). The option
+# floating, a button over content, approved on 2026-11-23 (#121): the owner's answers and the coordinating agent's,
+# decisions/0015-glass.md at the repository's root.
 id: button
 status: approved
 description: >-
@@ -29,8 +29,20 @@ description: >-
   the button does not dim. The button is not meant for a width smaller than its label's longest word: the label wraps
   only between words, and the product provides the room, by stacking buttons, giving the button the full width, a
   shorter label, or icon-only. In a narrower container the label breaks inside a word; that is unsupported, not a
-  behavior of this contract (decisions/0001). Floating glass buttons over content are not this component: products
-  use the system's glass styles (chapter 09).
+  behavior of this contract (decisions/0001). A floating button stands over content, outside any bar, such as a way
+  back and a "…" over a list or a round "+" in a screen's corner (decisions/0015). A floating secondary is the one
+  exception to the flat fills: from iOS 26, macOS 26 and watchOS 26 it stands on the system's glass, regular and
+  interactive, in the button's capsule, with no fill, outline, shadow, hover or pressed tint and no press scale of
+  westron's, since the glass answers the pointer and the press itself. Before those versions it stands on
+  color.background.surface and casts shadow.overlay, tinted and scaled under the pointer and pressed as the bindings
+  say, and draws secondary's outline in the high-contrast themes. A floating primary keeps its opaque fill, its tints
+  and its scale on every version and casts shadow.overlay. tertiary has no ground to float on and does not take
+  floating. The bindings below are what is drawn where there is no glass; on glass the label and the icon keep their
+  colors and the disabled button its opacity.disabled, and the glass adapts its luminosity to what passes beneath it
+  and follows Reduce Transparency, Increase Contrast and the person's choice of the glass's look by itself, so the
+  contract promises no contrast ratio for a label on glass: what lies beneath is the product's content, which tokens
+  do not name. A button in a system bar, toolbar or tab bar never floats: the bar draws its own glass
+  (design-language/09).
 consumers: [todo-app/lists-screen, todo-app/list-screen]
 
 options:
@@ -61,9 +73,22 @@ options:
     description: >-
       The same button showing only its icon: a circle whose diameter equals its height; padding and gap do not apply.
       The label is still there as the accessible label.
+  floating:
+    type: bool
+    default: false
+    description: >-
+      The button stands over content, outside the layout and any bar, rather than among it: secondary on the system's
+      glass from OS 26 and on a raised surface before it, primary on its own fill with a shadow. Not for a button in a
+      system bar, toolbar or tab bar, whose glass is the bar's.
 
 slots: [label, icon]
 states: [hover, focus, pressed, disabled, loading]
+
+constraints:
+  - when: { floating: true }
+    require: { variant: [primary, secondary] }
+    severity: error
+    description: tertiary has no fill, so it has no ground to float on.
 
 tokens:
   container.height: { s: size.control.s, m: size.control.m, l: size.control.l }
@@ -75,6 +100,8 @@ tokens:
       # Disabled and loading come first: they exclude hover and pressed, so the resting fill holds.
       - { when: { variant: primary, role: destructive, state: [disabled, loading] }, token: color.status.danger.fill }
       - { when: { variant: primary, state: [disabled, loading] }, token: color.background.accent }
+      # A floating secondary where there is no glass, before OS 26 (decisions/0015); on glass it has no fill.
+      - { when: { variant: secondary, floating: true, state: [disabled, loading] }, token: color.background.surface }
       - { when: { variant: secondary, state: [disabled, loading] }, token: color.background.muted }
       - { when: { variant: tertiary, state: [disabled, loading] }, token: null }
       - { when: { variant: primary, role: destructive, state: pressed }, token: color.status.danger.fill-pressed }
@@ -84,7 +111,11 @@ tokens:
       - { when: { variant: primary, state: hover }, token: color.background.accent-hover }
       - { when: { variant: primary }, token: color.background.accent }
       # Under the danger words the muted fill darkens only as far as they still read; under text.primary it darkens
-      # more (the owner's decision of 2026-11-20, decisions/0003).
+      # more (the owner's decision of 2026-11-20, decisions/0003). A floating one stands on the surface, where the row
+      # tints read under both the danger words and text.primary (declared pairs, every theme).
+      - { when: { variant: secondary, floating: true, state: pressed }, token: color.background.pressed }
+      - { when: { variant: secondary, floating: true, state: hover }, token: color.background.hover }
+      - { when: { variant: secondary, floating: true }, token: color.background.surface }
       - { when: { variant: secondary, role: destructive, state: pressed }, token: color.background.muted-pressed-colored }
       - { when: { variant: secondary, role: destructive, state: hover }, token: color.background.muted-hover-colored }
       - { when: { variant: secondary, state: pressed }, token: color.background.muted-pressed }
@@ -95,6 +126,11 @@ tokens:
   container.opacity:
     cases:
       - { when: { state: disabled }, token: opacity.disabled }
+  # Over content: a floating primary on every OS version, a floating secondary where there is no glass. The glass
+  # casts the system's own shadow, and westron adds none to it (design-language/04, "Shadows").
+  container.shadow:
+    cases:
+      - { when: { floating: true }, token: shadow.overlay }
   container.pressMotion: motion.press
   container.hoverMotion: motion.fade
   label.font: { s: typography.footnote.strong, m: typography.subheadline.strong, l: typography.body.strong }
@@ -150,7 +186,15 @@ platforms:
       prototype the owner chose drew it; in icon-only's square frame it draws a circle.
       The icon beside the label is set to .imageScale(.small) and laid out with the label in an HStack aligned on
       .firstTextBaseline; icon-only draws the glyph at the same small scale. The high-contrast outline follows
-      colorSchemeContrast, as Surface's line does.
+      colorSchemeContrast, as Surface's line does. floating is a labeled argument too,
+      .buttonStyle(.secondary, size: .l, iconOnly: true, floating: true). A floating secondary's glass is
+      glassEffect(.regular.interactive(), in: Capsule()) inside if #available(iOS 26, macOS 26, watchOS 26, *),
+      applied after every other modifier of the drawn button, as glassEffect asks; the else branch draws the surface,
+      the shadow and the tints of the bindings. These two looks by OS version are one contract: the platforms block
+      has no field for an OS version, so this description is the record of the difference (decisions/0015). westron
+      adds no GlassEffectContainer, glassEffectID or glassEffectUnion: a product that sets floating buttons side by
+      side, or morphs one into another, writes the system's own around them from OS 26. The shadow is
+      View.shadow(_:), as Surface's.
     ios:
       description: >-
         Hover only with a pointer, on iPad; an iPhone never enters it. The hit area is the system's touch tolerance
@@ -188,13 +232,16 @@ platforms:
       focusRing.color and focusRing.width on :focus-visible. Hover only under a pointer, (hover: hover). A native
       <button> still matches :hover while disabled, and :hover and :active while aria-busy, so the CSS excludes them
       in those states and keeps the resting fill. The capsule is a border-radius of half the height or more, so its
-      ends stay round as the button grows.
+      ends stay round as the button grows. floating draws the bindings, the surface and box-shadow, on every
+      browser; whether a floating secondary takes a translucent fill with backdrop-filter, opaque again under
+      prefers-reduced-transparency and prefers-contrast: more, is decided in phase 6, as the web has no system glass.
   linux:
     strategy: style-on-system-control
     base: GtkButton
     description: >-
       Provisional until phase 7: how the variants and the role map to style classes is decided there. The focus ring
       is the system's, so the focusRing bindings do not apply. The capsule is a border-radius of half the height or
-      more, as on the web.
+      more, as on the web. floating draws the bindings; whether a floating secondary takes libadwaita's osd style
+      class, its own look for controls over content, is decided there.
   android:
     status: planned

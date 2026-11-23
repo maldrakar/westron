@@ -204,12 +204,14 @@ struct APIParityTests {
     @Test("the Button contract with iconOnly's default changed fails against the current generated file")
     func realContractChangedDefault() throws {
         let found = try realRepository {
-            $0.replacingOccurrences(of: "type: bool\n    default: false", with: "type: bool\n    default: true")
+            $0.replacingOccurrences(
+                of: "iconOnly:\n    type: bool\n    default: false", with: "iconOnly:\n    type: bool\n    default: true")
         }
         #expect(found.count == 1)
         #expect(
             found.first?.contains(
-                "expected `buttonStyle(_: ButtonVariant, size: ButtonSize? = nil, iconOnly: Bool = true) -> some View`")
+                "expected `buttonStyle(_: ButtonVariant, size: ButtonSize? = nil, iconOnly: Bool = true, "
+                    + "floating: Bool = false) -> some View`")
                 == true)
     }
 

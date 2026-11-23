@@ -1,8 +1,31 @@
 # 0015. Glass: a floating Button, and the system's glass everywhere else
 
-Date: 2026-11-23. Status: proposed (#121), for the coordinating agent's approval under the owner's delegation
-(decisions/0014), except the questions marked for the owner. Nothing here is implemented: this step is the contracts
-and this decision.
+Date: 2026-11-23. Status: approved on 2026-11-23 (#121): the owner answered the questions marked for him, and the
+coordinating agent the others under the owner's delegation (decisions/0014), each with its recommendation (A); see
+"Decision". Implemented on Apple in the same pull request ("Implementation: what was measured").
+
+## Decision
+
+The owner's answers, 2026-11-23:
+
+- **Scope: the floating button only.** The pilot's bars go to the system's toolbars, westron adds Button's option
+  `floating`, and there is no glass Surface. This revises decisions/0014's "a glass Surface" for #121 and the issue's
+  title; decisions/0014 says so and points here.
+- **Q3 (A).** A floating secondary is the system's glass from OS 26, `glassEffect(.regular.interactive(), in:
+  Capsule())` behind `if #available`, with no fill, shadow, outline, tint or press scale of westron's on it: a narrow
+  exception to the flat fills, the floating button only (decisions/0013, Button's decisions/0001 and 0003).
+- **Q2 (A).** Before OS 26, an opaque raised surface: `color.background.surface`, `shadow.overlay`, hover and pressed
+  from the existing row tints, and secondary's high-contrast outline. This answers design-language/09's open question 3
+  otherwise than the chapter's draft proposal, a material; the chapter says so.
+- **Q4 (A).** A floating primary is its opaque accent fill and `shadow.overlay` on every OS version.
+- **Q1** is the pilot's own decision. westron's contract serves both cases, the system's navigation bar and floating
+  buttons over a hidden one, and changes nothing in the pilot.
+
+The coordinating agent's answers, 2026-11-23, each (A): Q5, the label's colors are Button's tokens; Q6, pressed and
+hover on glass are the interactive glass's own response; Q7, disabled dims the whole button at `opacity.disabled`; Q8,
+no westron outline on glass under Increase Contrast; Q9, no glass Surface; Q10, the system's toolbars; Q11, tertiary
+cannot float, a constraint of severity `error`; Q12, the option is named `floating`; Q13, an icon-only floating glyph
+takes Button's own scale, and the pilot's larger glyphs are a recorded difference, not adopted.
 
 A shared decision rather than one under `spec/components/button/decisions/`: it answers for two contracts, Button and
 Surface (decisions/0014 names both for #121), answers design-language/09's open question 3, and scopes statements in
@@ -284,12 +307,10 @@ which matters on iOS, where a control within about 16 pt shares the touch tolera
 - **Android**: planned, as Button's block says; Material3's floating action button is the likely base of a floating
   primary.
 
-## The revision of Button, ready to apply
+## The revision of Button, applied
 
-Not applied to `spec/components/button/button.spec.yaml` on this branch: it adds an option, which the generator turns
-into an argument the hand-written style does not take, so `main` would not build (above, option B). It is applied in
-the implementation's pull request with the code. The contract file carries a comment pointing here. Validated on a copy
-with `tools/westron spec check` ("contracts: 1, all valid") and with `git apply --check` against this branch:
+Drafted as a patch, since the option it adds becomes an argument the hand-written style must take, and applied on
+2026-11-23 with the implementation, its header comment's date filled in. The diff as drafted:
 
 ```diff
 --- a/spec/components/button/button.spec.yaml
@@ -425,10 +446,12 @@ with `tools/westron spec check` ("contracts: 1, all valid") and with `git apply 
      status: planned
 ```
 
-When it is applied, Button's decisions/0001 gets a note under "Floating glass buttons" pointing here, and the
-implementation's pull request regenerates `Button+Contract.swift` and `Button+Matrix.swift`.
+Button's decisions/0001 has a note under "Floating glass buttons" pointing here, and `Button+Contract.swift` and
+`Button+Matrix.swift` are regenerated.
 
-## The revision of Surface, applied on this branch
+## The revision of Surface, applied
+
+There is no glass Surface (the owner's scope, Q9).
 
 Text only: no option, binding or code changes, so `tools/check.sh` passes with the current implementation. The
 sentence "a surface never takes glass" stays, with its reason and where a group's glass comes from:
@@ -553,7 +576,8 @@ if #available(iOS 26, macOS 26, watchOS 26, *) {
 
 ## Open questions
 
-Each has the recommendation first, with its reason; the contracts are drafted to the recommendations. Marked **owner**
+Answered on 2026-11-23, every one with (A) ("Decision"); kept as asked. Each has the recommendation first, with its
+reason; the contracts are drafted to the recommendations. Marked **owner**
 where the answer changes a statement the owner made or accepted, or a decision of the pilot's that the owner made;
 the others are the coordinating agent's to answer under decisions/0014.
 
@@ -672,7 +696,7 @@ Described, not built.
 
 ## After approval: what else changes
 
-Not edited on this branch, since each is an accepted text or the owner's (the questions above say which):
+Edited with the implementation, 2026-11-23:
 
 - decisions/0013: the flat fills' sentence scoped to buttons in a layout (Q3, Q4).
 - Button's decisions/0001, "Floating glass buttons", and decisions/0003, point 1: a note pointing here.

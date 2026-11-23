@@ -1,6 +1,7 @@
 # 0014. Core components and composition
 
-Date: 2026-11-22. Status: accepted. The owner's decision on #32, the component list of phase 4.
+Date: 2026-11-22. Status: accepted. The owner's decision on #32, the component list of phase 4. Revised 2026-11-23:
+#121 is the floating Button alone, with no glass Surface (the owner's answer, decisions/0015).
 
 ## Context
 
@@ -39,7 +40,7 @@ TextField, styled.
 | #118 | IconTile: a colored tile with an icon, its color from the context, as Checkbox takes the list's color. The owner keeps it a component rather than a composition of Surface and Icon | new |
 | #119 | ListRow: a leading slot, a title, a second line, a trailing slot; hover, pressed and selected; a nesting level with guide lines | new |
 | #120 | Disclosure: the collapse chevron, a style on the system `DisclosureGroup` | new, a style on a system control |
-| #121 | Glass: a floating Button and a glass Surface. The owner takes glass into this phase; what is drawn before iOS 26 is decided at the contracts | an extension of `spec/components/button/` and `spec/components/surface/` |
+| #121 | Glass: a floating Button and a glass Surface. The owner takes glass into this phase; what is drawn before iOS 26 is decided at the contracts. Revised 2026-11-23 (decisions/0015): the floating Button alone, Button's option `floating`; no glass Surface, since every bar takes the system's own glass | an extension of `spec/components/button/`; Surface's contract only says where a group's glass comes from |
 
 Also in the phase: #113, the line height of a one-line TextField on macOS, which SwiftUI can take from another font; the
 workaround goes into `WestronUI`. #115 starts after it, since both touch the same style.
@@ -90,10 +91,10 @@ the pilot.
 | Check (`CheckModel`, `CheckStyle`) | Checkbox; its pop and the tick that draws itself give way to Checkbox's `motion.check` | westron |
 | Text field (`TextFieldModel`, `FieldStyle`) | TextField: framed for a name typed in a row, inline for a card's title and notes | westron |
 | Search field (`SearchFieldModel`, `SearchFieldStyle`) | TextField, framed, with `magnifier` at the start and `microphone` at the end (#115) | westron's TextField |
-| Button (`ButtonModel`, `ButtonLabelModel`, `ButtonLabelStyle`, `ControlFillStyle`) | Button. `ControlFillStyle.color`, a fill of its own, is a variant; `.container`, the glass under a bar's controls, is #121 | westron |
-| Menu (`MenuModel`, `MenuButtonModel`, `GlassMenuButtonModel`) | `Menu` and `.contextMenu`; the button that opens one is a Button, on glass for "…" (#121) | system |
+| Button (`ButtonModel`, `ButtonLabelModel`, `ButtonLabelStyle`, `ControlFillStyle`) | Button. `ControlFillStyle.color`, a fill of its own, is a variant; `.container`, the glass under a bar's controls, is the system toolbar's own (decisions/0015) | westron |
+| Menu (`MenuModel`, `MenuButtonModel`, `GlassMenuButtonModel`) | `Menu` and `.contextMenu`; the button that opens one is a Button, a floating one for "…" over content (#121), or the bar's own item | system |
 | Confirmation (`ConfirmationModel`, `ChoiceModel`) | `.alert`, its choices the system's buttons | system |
-| Glass buttons (`GlassButtonModel`, `GlassButtonLabelModel`, `GlassControlStyle`, `GlassCapsuleStyle`) | the floating Button (#121); the Mac pane's "+" and "…" in one capsule are two of them on a glass Surface (#121) with a vertical Rule, or the window toolbar's own group | westron (#121) |
+| Glass buttons (`GlassButtonModel`, `GlassButtonLabelModel`, `GlassControlStyle`, `GlassCapsuleStyle`) | the floating Button (#121); the Mac pane's "+" and "…" in one capsule are the window toolbar's own group, on its glass from macOS 26 (decisions/0015) | westron (#121) |
 | Floating "+" (`FloatingButtonModel`, `FloatingButtonStyle`) | the floating Button (#121), primary, icon-only | westron (#121) |
 | List row (`ListRowModel`, `ListRowStyle`, `AccessoryModel`, `ChevronStyle`, `IndentStyle`) | ListRow (#119) at its nesting level with its guides: IconTile at the start, the title a Text, or a framed TextField while it is renamed; at the end the count a Text, the chevron a Disclosure (#120), the grip and the picker's check an Icon | pilot, on ListRow |
 | Area line (`AreaLineModel`, `AreaLineStyle`) | Rule with a label (#116); an inline TextField in the label's place while it is named; the grip and the check an Icon; a ListRow (#119) where it stands among rows | pilot |
@@ -107,7 +108,7 @@ the pilot.
 | Task card (`CardModel`, `CardStyle`, `EntranceStyle`) | a raised Surface: a Checkbox, inline TextFields for the title and the notes, an icon-only tertiary Button with `expand`, subtask rows, an add row, pills | pilot |
 | Column (`ColumnModel`, `ColumnStyle`, `CardHoverStyle`) | a sunken Surface; a block header with no chevron; its cards raised, outlined Surfaces with task rows on them | pilot |
 | Done strip (`DoneStripModel`, `DoneStripStyle`) | a secondary Button, the capsule, whose label is the list's Icon, a Text and the `chevron` Icon, and whose action opens the rows under it | pilot |
-| Bottom bar (`BarModel`, `BarStyle`) | a glass Surface (#121) or the system's bottom toolbar: glass Buttons (#121), the search TextField (#115), a group of Buttons parted by a vertical Rule | pilot |
+| Bottom bar (`BarModel`, `BarStyle`) | the system's bottom toolbar, its glass the bar's from iOS 26 (decisions/0015): the bar's items, the search TextField (#115), a group of items | pilot |
 | Empty screen (`EmptyScreenModel`, `EmptyScreenStyle`) | `ContentUnavailableView`: an IconTile (#118), a heading Text, a Text | system, with the pilot's content |
 | Move picker (`PickerModel`, `OptionPickerStyle`, `PickerTopLevelStyle`) | `.sheet`; its rows ListRows (#119) with IconTiles and the `check` Icon, an option that cannot be chosen at `opacity.disabled`; areas as labeled Rules (#116) | pilot, in a system sheet |
 | Swipe (`SwipeModel`, `SwipeStyle`) | `.swipeActions` with a destructive `Button` | system; open point 3 |
@@ -152,7 +153,7 @@ contract of this phase or in the pilot.
 - #121 changes two approved contracts at the contract first: Button's description says floating glass buttons are not
   that component, and Surface's that a surface never takes glass (`spec/components/button/button.spec.yaml`,
   `spec/components/surface/surface.spec.yaml`). Chapter 09's open question 3, the fallback before OS 26, is answered
-  there.
+  there. Revised 2026-11-23 (decisions/0015): Button gains the option `floating`; Surface keeps "never takes glass".
 - The pilot's move changes (decisions/0006, revision of 2026-11-22): it deletes the values and styles of
   `DesignSystemComponents` as westron covers them and keeps its compositions, built from westron's components.
 - The `consumers` field of each contract in this phase names the pilot screen its compositions stand on, as each issue

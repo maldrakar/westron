@@ -61,6 +61,10 @@ and the parity lint (#21) are proved on it before a second component starts. The
 
 - Considered: a glass variant for the pilot's floating back and "…" buttons over the task list; the system's styles.
 - **Chosen: not part of this contract.** Products use the system's `.glass` styles (chapter 09).
+- **Reversed on 2026-11-23** (#121, decisions/0015 at the repository's root): a button over content is this
+  contract's bool option `floating`, not a variant. A floating secondary stands on the system's glass from OS 26 and on
+  an opaque raised surface before it; a floating primary keeps its fill and casts `shadow.overlay`. Bars keep the
+  system's own glass.
 
 ### Sizes and shape
 

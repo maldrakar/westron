@@ -17,12 +17,15 @@ struct ButtonStyleTests {
         var token: String?
 
         /// Whether a button matches: every condition holds; `state` holds when the button is in any state it lists.
-        func matches(variant: ButtonVariant, destructive: Bool, states: Set<ButtonState>) -> Bool {
+        func matches(variant: ButtonVariant, destructive: Bool, states: Set<ButtonState>, floating: Bool = false)
+            -> Bool
+        {
             when.allSatisfy { key, values in
                 switch key {
                 case "variant": values.contains(variant.rawValue)
                 case "role": values.contains(destructive ? "destructive" : "default")
                 case "state": states.contains { values.contains($0.rawValue) }
+                case "floating": values.contains(String(floating))
                 default: false
                 }
             }
@@ -130,27 +133,38 @@ struct ButtonStyleTests {
         sets + sets.map { $0.union([state]) }
     }
 
+    /// The variants that float: the contract's constraint forbids a floating tertiary (`tertiaryDoesNotFloat`).
+    static let floatingVariants: [ButtonVariant] = [.primary, .secondary]
+
     @Test(
-        "every variant × role × combination of states draws the tokens the contract's cases give, first match winning",
+        "every variant × role × floating × combination of states draws the tokens the contract's cases give",
         arguments: ButtonVariant.allCases, [false, true])
     func tokensMatchTheContract(variant: ButtonVariant, destructive: Bool) throws {
+        for floating in Self.floatingVariants.contains(variant) ? [false, true] : [false] {
+            try tokensMatchTheContract(variant: variant, destructive: destructive, floating: floating)
+        }
+    }
+
+    func tokensMatchTheContract(variant: ButtonVariant, destructive: Bool, floating: Bool) throws {
         let bindings: [(name: String, cases: [Case], drawn: (ButtonTokens) -> String?)] = [
             ("container.background", try Self.cases("container.background"), { $0.background?.name }),
             ("container.opacity", try Self.cases("container.opacity"), { $0.opacity?.name }),
+            ("container.shadow", try Self.cases("container.shadow"), { $0.shadow?.name }),
             ("label.color", try Self.cases("label.color"), { $0.label.name }),
             ("icon.color", try Self.cases("icon.color"), { $0.icon.name }),
             ("progress.color", try Self.cases("progress.color"), { $0.progress.name }),
         ]
         #expect(Self.stateCombinations.count == 32)
         for states in Self.stateCombinations {
-            let tokens = ButtonTokens(variant: variant, destructive: destructive, states: states, highContrast: false)
+            let tokens = ButtonTokens(
+                variant: variant, destructive: destructive, states: states, highContrast: false, floating: floating)
             for binding in bindings {
                 let expected = binding.cases.first {
-                    $0.matches(variant: variant, destructive: destructive, states: states)
+                    $0.matches(variant: variant, destructive: destructive, states: states, floating: floating)
                 }?.token
                 #expect(
                     binding.drawn(tokens) == expected,
-                    "\(binding.name), \(variant) \(destructive ? "destructive" : "default"), states \(states.map(\.rawValue).sorted())"
+                    "\(binding.name), \(variant) \(destructive ? "destructive" : "default")\(floating ? " floating" : ""), states \(states.map(\.rawValue).sorted())"
                 )
             }
             // The contract binds no border (#85): in the standard themes no variant draws one.
@@ -241,6 +255,124 @@ struct ButtonStyleTests {
         #expect(ButtonMetrics.iconScale == .small)
         #expect(try Self.single("container.pressMotion") == Westron.Transition.press.name)
         #expect(try Self.single("container.hoverMotion") == Westron.Transition.fade.name)
+    }
+
+    // MARK: - Floating (decisions/0015)
+
+    @Test("the contract forbids a floating tertiary; one written anyway draws the tertiary of a layout, unchanged")
+    func tertiaryDoesNotFloat() throws {
+        let contract = try Self.contract()
+        #expect(contract.contains("- when: { floating: true }\n    require: { variant: [primary, secondary] }"))
+        #expect(!ButtonTokens.floats(.tertiary, floating: true))
+        #expect(!ButtonTokens.standsOnGlass(.tertiary, floating: true, glassAvailable: true))
+        for destructive in [false, true] {
+            for states in Self.stateCombinations {
+                for highContrast in [false, true] {
+                    #expect(
+                        ButtonTokens(
+                            variant: .tertiary, destructive: destructive, states: states, highContrast: highContrast,
+                            floating: true)
+                            == ButtonTokens(
+                                variant: .tertiary, destructive: destructive, states: states,
+                                highContrast: highContrast))
+                }
+            }
+        }
+    }
+
+    @Test("not floating, every variant draws what it drew before the option: no shadow, the same tokens")
+    func notFloatingIsUntouched() {
+        for variant in ButtonVariant.allCases {
+            for destructive in [false, true] {
+                for states in Self.stateCombinations {
+                    for highContrast in [false, true] {
+                        let tokens = ButtonTokens(
+                            variant: variant, destructive: destructive, states: states, highContrast: highContrast)
+                        #expect(tokens.shadow == nil)
+                        #expect(
+                            tokens
+                                == ButtonTokens(
+                                    variant: variant, destructive: destructive, states: states,
+                                    highContrast: highContrast, floating: false))
+                    }
+                }
+                #expect(!ButtonTokens.standsOnGlass(variant, floating: false, glassAvailable: true))
+            }
+        }
+    }
+
+    @Test("before OS 26 a floating secondary stands on the surface, tinted as a row, outlined in high contrast")
+    func floatingSecondaryWithoutGlass() {
+        for destructive in [false, true] {
+            func tokens(_ states: Set<ButtonState>, highContrast: Bool = false) -> ButtonTokens {
+                ButtonTokens(
+                    variant: .secondary, destructive: destructive, states: states, highContrast: highContrast,
+                    floating: true)
+            }
+            #expect(tokens([]).background == .background.surface)
+            #expect(tokens([.hover]).background == .background.hover)
+            #expect(tokens([.pressed]).background == .background.pressed)
+            #expect(tokens([.disabled, .pressed]).background == .background.surface)
+            #expect(tokens([.loading, .hover]).background == .background.surface)
+            #expect(tokens([]).shadow == .overlay)
+            #expect(tokens([]).label == (destructive ? .status.danger.text : .text.primary))
+            #expect(tokens([]).borderColor == nil)
+            #expect(
+                tokens([], highContrast: true).borderColor == (destructive ? .status.danger.border : .border.strong))
+            #expect(tokens([], highContrast: true).borderWidth == .stroke.thin)
+            #expect(tokens([.disabled]).opacity == .opacity.disabled)
+        }
+        #expect(!ButtonTokens.standsOnGlass(.secondary, floating: true, glassAvailable: false))
+    }
+
+    @Test("on glass a floating secondary draws no ground of westron's: no fill, outline or shadow; its ink stays")
+    func floatingSecondaryOnGlass() {
+        #expect(ButtonTokens.standsOnGlass(.secondary, floating: true, glassAvailable: true))
+        for destructive in [false, true] {
+            for states in Self.stateCombinations {
+                for highContrast in [false, true] {
+                    let surface = ButtonTokens(
+                        variant: .secondary, destructive: destructive, states: states, highContrast: highContrast,
+                        floating: true)
+                    let glass = surface.onGlass()
+                    #expect(glass.background == nil && glass.shadow == nil)
+                    #expect(glass.borderColor == nil && glass.borderWidth == nil)
+                    #expect(glass.label == surface.label && glass.icon == surface.icon)
+                    #expect(glass.progress == surface.progress)
+                    // Disabled dims the whole button, glass included, at opacity.disabled.
+                    #expect(glass.opacity == surface.opacity)
+                }
+            }
+        }
+    }
+
+    @Test("a floating primary keeps its fills and casts shadow.overlay, with or without glass")
+    func floatingPrimary() {
+        #expect(!ButtonTokens.standsOnGlass(.primary, floating: true, glassAvailable: true))
+        for destructive in [false, true] {
+            for states in Self.stateCombinations {
+                let floating = ButtonTokens(
+                    variant: .primary, destructive: destructive, states: states, highContrast: false, floating: true)
+                var flat = floating
+                flat.shadow = nil
+                #expect(floating.shadow == .overlay)
+                #expect(
+                    flat
+                        == ButtonTokens(
+                            variant: .primary, destructive: destructive, states: states, highContrast: false)
+                )
+            }
+        }
+    }
+
+    @Test("glass is the OS's from 26; the catalog's override draws the look before it on a newer OS")
+    func glassAvailability() {
+        if #available(iOS 26, macOS 26, watchOS 26, *) {
+            #expect(ButtonGlass.isAvailable)
+        } else {
+            #expect(!ButtonGlass.isAvailable)
+        }
+        #expect(EnvironmentValues().drawsButtonsWithoutGlass == false)
     }
 
     // MARK: - Size

@@ -243,7 +243,7 @@ extension CGFloat {
 
     /// The lengths `stroke.*` in points.
     public enum stroke {
-        /// The edge of glass and of a card on a fill.
+        /// The edge of a card on a fill. Glass is the system's and takes no edge of westron's (decisions/0015).
         public static var hairline: CGFloat {
             CGFloat(Westron.Dimension.stroke.hairline)
         }

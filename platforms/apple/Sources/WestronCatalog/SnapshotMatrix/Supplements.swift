@@ -8,6 +8,6 @@ extension ComponentMatrix.Supplement {
             .buttonLabelWithoutIcon, .iconBesideText, .iconColorRoles, .surfaceNesting, .checkboxListColors,
             .checkboxTextRoles, .textFieldCardNotes, .textFieldSecure, .textFieldOnSurface, .textFieldOnSunken,
             .ruleLabelled, .iconTileListColors, .iconTileBesideTitle, .iconTileEmptyScreen, .chipLitAccent,
-            .chipLongLabel,
+            .chipLongLabel, .buttonFloatingOverContent, .buttonFloatingBeforeGlass,
         ] + chipListColors + chipTextOnly + listRowAll
 }

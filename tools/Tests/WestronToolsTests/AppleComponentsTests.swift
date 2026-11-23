@@ -435,7 +435,8 @@ struct AppleComponentsTests {
         #expect(!contents.contains("enum ButtonRole"))
         #expect(
             contents.contains(
-                "public func buttonStyle(_ variant: ButtonVariant, size: ButtonSize? = nil, iconOnly: Bool = false)"))
+                "public func buttonStyle(\n        _ variant: ButtonVariant, size: ButtonSize? = nil, iconOnly: Bool = false, "
+                    + "floating: Bool = false\n    ) -> some View {"))
     }
 
     static let button = """

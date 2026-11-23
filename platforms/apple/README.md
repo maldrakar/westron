@@ -217,10 +217,15 @@ still drives every generated sheet and combination:
   `columnsPerPicture` caps a picture's columns where the cells are wide. `ComponentMatrix.rowsAtLimit` caps the
   generated sheets of a component whose cells grow tall at the splitting size (ListRow, one row a picture). A
   supplement whose render on one OS is not worth reading, or not the same twice, names the OSes it is drawn on
-  (`onlyOn`), and its note says why. There are thirty (`SnapshotMatrix/Supplements.swift`, `Supplement.all`):
+  (`onlyOn`), and its note says why. There are thirty-two (`SnapshotMatrix/Supplements.swift`, `Supplement.all`):
   - Button, `label-without-icon`: its generated cells have an icon and a label or are icon-only, so a label without an
     icon, which while loading has the indicator before the label and widens the button (P13), is shown on the sheets
-    with iconOnly false: every variant, size and role, at rest and in each state, 108 combinations on 6 sheets.
+    with iconOnly false: every variant, size and role, floating or not, at rest and in each state, 180 combinations
+    on 12 sheets. `floating-over-content` and `floating-before-26` (#121, decisions/0015): the floating sheets of size
+    m over a fixed busy ground of four list colors' stripes, on the system's glass and in the look before OS 26, which
+    the catalog forces on a newer OS (`drawingButtonsWithoutGlass()`, `package` in WestronUI), three rows to a picture
+    at every text size. Glass renders in-process on both platforms, the same pixels on every render (measured three
+    times on each, 2026-11-23).
   - Icon, `beside-text`: three glyphs, each beside text in four roles (one row to a picture at `accessibility5`); and
     `color-roles`: six glyphs in the color roles of design-language/07 (three rows to a picture there).
   - Surface, `nesting`, on the sheet with outlined true: for raised and dragged, two outlined cards of the kind in a

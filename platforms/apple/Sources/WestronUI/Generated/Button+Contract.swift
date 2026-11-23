@@ -43,8 +43,13 @@ extension View {
     ///   - size: The size; without it, the size comes from `controlSize` (`ButtonSize.init(_:)`).
     ///   - iconOnly: The same button showing only its icon: a circle whose diameter equals its height; padding and gap
     ///     do not apply. By default `false`.
-    public func buttonStyle(_ variant: ButtonVariant, size: ButtonSize? = nil, iconOnly: Bool = false) -> some View {
-        buttonStyle(ButtonVariantStyle(variant: variant, size: size, iconOnly: iconOnly))
+    ///   - floating: The button stands over content, outside the layout and any bar, rather than among it: secondary on
+    ///     the system's glass from OS 26 and on a raised surface before it, primary on its own fill with a shadow. By
+    ///     default `false`.
+    public func buttonStyle(
+        _ variant: ButtonVariant, size: ButtonSize? = nil, iconOnly: Bool = false, floating: Bool = false
+    ) -> some View {
+        buttonStyle(ButtonVariantStyle(variant: variant, size: size, iconOnly: iconOnly, floating: floating))
     }
 }
 

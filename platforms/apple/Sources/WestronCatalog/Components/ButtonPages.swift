@@ -175,6 +175,7 @@ private struct SampleButton: View {
     let variant: ButtonVariant
     var size: ButtonSize? = nil
     let destructive: Bool
+    var floating = false
     var action: () -> Void = {}
 
     var body: some View {
@@ -183,17 +184,17 @@ private struct SampleButton: View {
             switch kind {
             case .label:
                 Button(sample.title, role: destructive ? .destructive : nil, action: action)
-                    .buttonStyle(variant, size: size)
+                    .buttonStyle(variant, size: size, floating: floating)
             case .iconAndLabel:
                 Button(role: destructive ? .destructive : nil, action: action) {
                     Label(sample.title, icon: sample.icon)
                 }
-                .buttonStyle(variant, size: size)
+                .buttonStyle(variant, size: size, floating: floating)
             case .iconOnly:
                 Button(role: destructive ? .destructive : nil, action: action) {
                     Label(sample.title, icon: sample.icon)
                 }
-                .buttonStyle(variant, size: size, iconOnly: true)
+                .buttonStyle(variant, size: size, iconOnly: true, floating: floating)
             }
         }
     }
@@ -214,12 +215,12 @@ struct ButtonMatrixCell: View {
 
     var body: some View {
         // Every option at once: an option added to the contract changes `fields` and fails the build here.
-        let (variant, size, role, iconOnly, stateName) = values.fields
+        let (variant, size, role, iconOnly, floating, stateName) = values.fields
         let state = stateName.flatMap(ButtonCatalogState.init(named:))
         SampleButton(
             kind: iconOnly ? .iconOnly : withoutIcon ? .label : .iconAndLabel, variant: variant, size: size,
             // The style draws any role other than destructive as default (the contract's platforms.apple).
-            destructive: role == "destructive"
+            destructive: role == "destructive", floating: floating
         )
         .forcingButtonStates(state.map { $0.isForced ? [$0] : [] } ?? [])
         .disabled(state?.isDisabled ?? false)

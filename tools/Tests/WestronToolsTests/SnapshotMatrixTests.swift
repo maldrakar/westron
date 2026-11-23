@@ -71,33 +71,42 @@ struct SnapshotMatrixTests {
         #expect(!contract.constraints[0].isBroken(by: ["variant": "primary", "size": "l", "iconOnly": "false"]))
     }
 
-    @Test("westron's Button: 3 variants × 3 sizes × 2 roles × 2 iconOnly × (rest + 5 states) = 216, on 12 sheets")
+    @Test(
+        "westron's Button: 3 variants × 3 sizes × 2 roles × 2 iconOnly × 2 floating × (rest + 5 states) = 432, less "
+            + "the 72 of a floating tertiary = 360, on 24 sheets")
     func button() throws {
         let matrix = try SnapshotMatrix(try buttonContract(), source: buttonSource)
-        #expect(matrix.axes.map(\.name) == ["variant", "size", "role", "iconOnly"])
-        #expect(matrix.axes.map(\.values.count) == [3, 3, 2, 2])
+        #expect(matrix.axes.map(\.name) == ["variant", "size", "role", "iconOnly", "floating"])
+        #expect(matrix.axes.map(\.values.count) == [3, 3, 2, 2, 2])
         #expect(matrix.axes[2].systemType == "SwiftUI.ButtonRole", "role is the system's, and still an axis")
         #expect(matrix.axes[3].isBool && matrix.axes[3].values == ["false", "true"])
+        #expect(matrix.axes[4].isBool && matrix.axes[4].values == ["false", "true"])
         #expect(matrix.states == ["hover", "focus", "pressed", "disabled", "loading"])
-        #expect(matrix.excluded.isEmpty && matrix.advisedAgainst.isEmpty, "Button has no constraints")
-        #expect(matrix.combinations.count == 3 * 3 * 2 * 2 * 6)
-        #expect(Set(matrix.combinations).count == 216, "each combination once")
-        #expect(matrix.combinations.first == .init(["primary", "s", "default", "false"], state: nil))
-        #expect(matrix.combinations[1] == .init(["primary", "s", "default", "false"], state: "hover"))
+        // The one constraint, of severity error (decisions/0015): a tertiary does not float.
+        #expect(matrix.advisedAgainst.isEmpty)
+        #expect(matrix.excluded.count == 3 * 2 * 2, "tertiary × size × role × iconOnly, floating")
+        #expect(matrix.excluded.allSatisfy { $0.values[0] == "tertiary" && $0.values[4] == "true" })
+        #expect(matrix.combinations.count == 3 * 3 * 2 * 2 * 2 * 6 - 72)
+        #expect(Set(matrix.combinations).count == 360, "each combination once")
+        #expect(matrix.combinations.first == .init(["primary", "s", "default", "false", "false"], state: nil))
+        #expect(matrix.combinations[1] == .init(["primary", "s", "default", "false", "false"], state: "hover"))
         #expect(matrix.columnAxis == "variant")
-        #expect(matrix.sheets.count == 12)
-        #expect(matrix.sheets[0].id == "size-s_role-default_iconOnly-false")
+        #expect(matrix.sheets.count == 24)
+        #expect(matrix.sheets[0].id == "size-s_role-default_iconOnly-false_floating-false")
+        #expect(matrix.sheets[1].id == "size-s_role-default_iconOnly-false_floating-true")
         #expect(matrix.sheets[0].columns == ["primary", "secondary", "tertiary"])
         #expect(matrix.sheets[0].rows == [nil, "hover", "focus", "pressed", "disabled", "loading"])
-        #expect(matrix.sheets.map { $0.columns.count * $0.rows.count }.reduce(0, +) == 216, "every cell on a sheet")
+        // The floating sheets keep the tertiary column, whose cells say they are excluded.
+        #expect(matrix.sheets.map { $0.columns.count * $0.rows.count }.reduce(0, +) == 432, "every cell on a sheet")
         // iOS and macOS draw everything; a watch draws size m only and never enters hover.
         #expect(matrix.platforms.map(\.os) == ["watchos"])
         #expect(matrix.platforms[0].drawn.map(\.option) == ["size"])
         #expect(matrix.platforms[0].drawn[0].map.map { "\($0.value)→\($0.drawn)" } == ["s→m", "l→m"])
         #expect(matrix.platforms[0].notEntered == ["hover"])
-        #expect(matrix.combinations(on: "ios").count == 216)
-        #expect(matrix.combinations(on: "macos").count == 216)
-        #expect(matrix.combinations(on: "watchos").count == 216 - 36)
+        #expect(matrix.combinations(on: "ios").count == 360)
+        #expect(matrix.combinations(on: "macos").count == 360)
+        // A watch never enters hover: one state in six of each combination.
+        #expect(matrix.combinations(on: "watchos").count == 360 - 60)
     }
 
     @Test("a constraint of severity error leaves its combinations out with every state; a warning only marks them")
@@ -235,18 +244,16 @@ struct SnapshotMatrixTests {
         #expect(
             swift.contains(
                 #"platforms: [Platform("watchos", drawn: ["size": ["s": "m", "l": "m"]], notEntered: ["hover"])],"#))
-        #expect(swift.components(separatedBy: "\n            Combination(").count - 1 == 216)
-        #expect(swift.components(separatedBy: "\n            Sheet(").count - 1 == 12)
+        #expect(swift.components(separatedBy: "\n            Combination(").count - 1 == 360)
+        #expect(swift.components(separatedBy: "\n            Sheet(").count - 1 == 24)
         #expect(swift.contains("    ) { ButtonMatrixCell(ButtonMatrixValues($0)) }\n"))
         #expect(swift.contains("        unbound: [\"focus\"],\n"), "no token binding names focus")
         // The values are private; the cell takes them all through one tuple, whose arity an added option changes.
         #expect(swift.contains("    private let variant: ButtonVariant\n    private let size: ButtonSize\n"))
         #expect(swift.contains("    private let role: String\n"))
-        #expect(
-            swift.contains(
-                "    typealias Fields = (variant: ButtonVariant, size: ButtonSize, role: String, iconOnly: Bool, "
-                    + "state: String?)\n"))
-        #expect(swift.contains("    var fields: Fields { (variant, size, role, iconOnly, state) }\n"))
+        #expect(swift.contains("        iconOnly: Bool,\n        floating: Bool,\n        state: String?\n    )\n"))
+        #expect(swift.contains("    var fields: Fields { (variant, size, role, iconOnly, floating, state) }\n"))
+        #expect(swift.contains("        self.floating = combination.values[4] == \"true\"\n"))
         #expect(swift.contains("        self.size = ButtonSize(rawValue: combination.values[1])!\n"))
         #expect(swift.contains("        self.iconOnly = combination.values[3] == \"true\"\n"))
         #expect(files[1].contents.contains("    public static let all: [ComponentMatrix] = [.button]\n"))

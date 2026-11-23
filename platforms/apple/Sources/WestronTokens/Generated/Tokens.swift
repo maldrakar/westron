@@ -2728,7 +2728,7 @@ extension Westron.Dimension {
 
     /// The lengths `stroke.*`.
     public enum stroke {
-        /// The edge of glass and of a card on a fill.
+        /// The edge of a card on a fill. Glass is the system's and takes no edge of westron's (decisions/0015).
         public static let hairline = Westron.Dimension(name: "stroke.hairline", value: 0.5)
 
         /// Rules, dividers, tree guides in a sidebar.

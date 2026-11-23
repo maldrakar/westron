@@ -12,6 +12,7 @@ public enum Catalog {
         .buttonStatesDestructive,
         .buttonStatesDestructiveDisabled,
         .buttonBehavior,
+        .buttonFloating,
         .text,
         .icon,
         .iconTile,

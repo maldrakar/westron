@@ -534,6 +534,9 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         var enabled: Bool? = nil
         /// Text the issue's `detailedDescription` must contain, if any, such as the class of a system view.
         var detail: String? = nil
+        /// The start of the element's accessibility identifier, if any: a sample the catalog marks as one of a kind,
+        /// such as a floating button on glass.
+        var identifierPrefix: String? = nil
         /// Whether the element must reach below the top of the system keyboard, which must be up: an element the
         /// keyboard covers is measured on the keyboard's pixels.
         var underKeyboard = false
@@ -543,7 +546,8 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         init(
             _ scope: Scope, type: XCUIAccessibilityAuditType, reason: String, description: String? = nil,
             appearance: Configuration.Appearance? = nil, value: String? = nil, enabled: Bool? = nil,
-            detail: String? = nil, underKeyboard: Bool = false, label: @escaping @Sendable (String?) -> Bool
+            detail: String? = nil, identifierPrefix: String? = nil, underKeyboard: Bool = false,
+            label: @escaping @Sendable (String?) -> Bool
         ) {
             self.scope = scope
             self.type = type
@@ -553,6 +557,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             self.value = value
             self.enabled = enabled
             self.detail = detail
+            self.identifierPrefix = identifierPrefix
             self.underKeyboard = underKeyboard
             self.label = label
         }
@@ -570,6 +575,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             if let value, issue.element?.value.map({ "\($0)" }) != value { return false }
             if let enabled, issue.element?.isEnabled != enabled { return false }
             if let detail, !issue.detailedDescription.contains(detail) { return false }
+            if let identifierPrefix, !(issue.element?.identifier.hasPrefix(identifierPrefix) ?? false) { return false }
             if underKeyboard {
                 let keyboard = XCUIApplication().keyboards.firstMatch
                 guard keyboard.exists, let frame = issue.element?.frame, !frame.isEmpty,
@@ -624,6 +630,20 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             }
         }
         suppressions += [
+            // Contrast on the floating secondary buttons that stand on the system's glass, over the entry's busy
+            // ground: the glass is the system's, and what shows through it is the product's content, so westron
+            // cannot promise its contrast and the contract says so (decisions/0015; Button's description). Only the
+            // samples the catalog marks as on glass match, by their identifier; the floating primary and the look
+            // before OS 26, whose pairs `tools/westron tokens contrast` checks, are audited as usual.
+            Suppression(
+                .entry("button-floating"), type: .contrast, reason: "contrast on the system's glass",
+                identifierPrefix: "button.floating.glass."
+            ) { _ in true },
+            // Contrast on the disabled floating samples before OS 26 and the disabled primary, drawn whole at
+            // opacity.disabled by the contract: WCAG exempts an inactive control (design-language chapter 08).
+            Suppression(.entry("button-floating"), type: .contrast, reason: "an inactive control", enabled: false) {
+                ["Back", "Edit", "Delete", "Add"].contains($0 ?? "")
+            },
             // Contrast on the disabled Checkbox sample, drawn whole at opacity.disabled by the contract: WCAG exempts
             // an inactive control (design-language chapter 08). Only an element that is not enabled matches.
             Suppression(.entry("checkbox"), type: .contrast, reason: "an inactive control", enabled: false) {

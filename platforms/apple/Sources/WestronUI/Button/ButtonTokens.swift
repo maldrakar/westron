@@ -4,9 +4,10 @@
 
 import SwiftUI
 
-/// The tokens a Button draws with, for one variant, role and set of states: the contract's `cases` bindings, each one
-/// resolved as the contract resolves it, by the first case that matches; and in the high-contrast themes the outline
-/// the contract's description adds to a secondary button.
+/// The tokens a Button draws with, for one variant, role, set of states and `floating`: the contract's `cases` bindings,
+/// each one resolved as the contract resolves it, by the first case that matches; and in the high-contrast themes the
+/// outline the contract's description adds to a secondary button. A floating secondary's bindings are what it draws
+/// where there is no glass, before OS 26; on glass it draws none of its ground (`onGlass()`, decisions/0015).
 struct ButtonTokens: Equatable, Sendable {
     /// `container.background`; nil: no fill.
     var background: Westron.Color?
@@ -16,6 +17,8 @@ struct ButtonTokens: Equatable, Sendable {
     var borderWidth: Westron.Dimension?
     /// `container.opacity`; nil: drawn whole.
     var opacity: Westron.Number?
+    /// `container.shadow`; nil: none.
+    var shadow: Westron.Shadow?
     /// `label.color`.
     var label: Westron.Color
     /// `icon.color`.
@@ -25,10 +28,14 @@ struct ButtonTokens: Equatable, Sendable {
 
     /// The tokens of a button in `states`, which hold at once. A state the current OS never enters is ignored
     /// (`ButtonState.isEntered`). `destructive` is SwiftUI's `ButtonRole.destructive`; any other role draws as default.
-    /// `highContrast`: one of the high-contrast themes, `colorSchemeContrast == .increased`.
-    init(variant: ButtonVariant, destructive: Bool, states: Set<ButtonState>, highContrast: Bool) {
+    /// `highContrast`: one of the high-contrast themes, `colorSchemeContrast == .increased`. `floating`: the contract's
+    /// option, which tertiary does not take (`floats(_:floating:)`).
+    init(
+        variant: ButtonVariant, destructive: Bool, states: Set<ButtonState>, highContrast: Bool, floating: Bool = false
+    ) {
         let states = states.filter(\.isEntered)
         let variant = variant.offered
+        let floating = Self.floats(variant, floating: floating)
         // The cases of container.background, in the contract's order: disabled and loading first, so that they
         // exclude hover and pressed and the resting fill holds.
         let excludesTint = !states.isDisjoint(with: [.disabled, .loading])
@@ -46,6 +53,16 @@ struct ButtonTokens: Equatable, Sendable {
                     states.contains(.pressed)
                     ? .background.accentPressed
                     : states.contains(.hover) ? .background.accentHover : .background.accent
+            }
+        case .secondary where floating:
+            // A floating one stands on the surface where there is no glass, tinted as a row is, under the danger
+            // words and text.primary alike (decisions/0015).
+            if excludesTint {
+                background = .background.surface
+            } else {
+                background =
+                    states.contains(.pressed)
+                    ? .background.pressed : states.contains(.hover) ? .background.hover : .background.surface
             }
         case .secondary:
             if excludesTint {
@@ -83,6 +100,8 @@ struct ButtonTokens: Equatable, Sendable {
         }
 
         opacity = states.contains(.disabled) ? .opacity.disabled : nil
+        // Over content: a floating primary always, a floating secondary where there is no glass (`onGlass()`).
+        shadow = floating ? .overlay : nil
 
         // label.color, icon.color and progress.color bind the same cases (P5).
         let ink: Westron.Color =
@@ -94,6 +113,30 @@ struct ButtonTokens: Equatable, Sendable {
         label = ink
         icon = ink
         progress = ink
+    }
+
+    /// Whether the button floats: the contract's `floating`, which tertiary does not take. The contract forbids a
+    /// floating tertiary with a constraint of severity error; a product that writes one anyway gets the tertiary
+    /// button of a layout, unchanged (ButtonStyleTests).
+    static func floats(_ variant: ButtonVariant, floating: Bool) -> Bool {
+        floating && variant.offered != .tertiary
+    }
+
+    /// Whether the button stands on the system's glass: a floating secondary, where the OS has glass
+    /// (`glassAvailable`, OS 26 and later unless the catalog forces the look before it).
+    static func standsOnGlass(_ variant: ButtonVariant, floating: Bool, glassAvailable: Bool) -> Bool {
+        glassAvailable && floats(variant, floating: floating) && variant.offered == .secondary
+    }
+
+    /// The tokens on glass: the glass is the ground, so no fill, no outline and no shadow of westron's; the label, the
+    /// icon, the progress indicator and the disabled opacity stay (decisions/0015).
+    func onGlass() -> ButtonTokens {
+        var tokens = self
+        tokens.background = nil
+        tokens.borderColor = nil
+        tokens.borderWidth = nil
+        tokens.shadow = nil
+        return tokens
     }
 
     /// Whether a press scales the button down (`container.pressMotion`, chapter 05): pressed, and neither disabled nor

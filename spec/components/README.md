@@ -26,7 +26,9 @@ delegation) is the first with a drawn text label on a view, a constraint on a sl
 owner's delegation (decisions/0014), is an own view with Icon's shape whose nil list color is its own default, a
 neutral tile, and whose fill of a list's color is solid, as the owner chose. Chip ([`chip/`](chip/chip.spec.yaml),
 #117), approved on 2026-11-22 by the coordinating agent under the owner's delegation, is the first in several forms,
-each on its own system control, and the first with a case over several states at once.
+each on its own system control, and the first with a case over several states at once. Button's revision of
+2026-11-23 (#121, the owner's answers and the coordinating agent's, decisions/0015 at the repository's root) adds the
+option `floating`, the first look that stands on the system's glass and the first `container.shadow` on a control.
 
 ## Format
 

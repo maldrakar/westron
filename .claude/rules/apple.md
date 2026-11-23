@@ -26,8 +26,8 @@ paths:
   compile and silently take westron's overload, which shadows the system style (decisions/0003, note of 2026-11-18).
   `tools/westron spec check` rejects it; the names per control are in
   `tools/Sources/WestronTools/Contracts/SystemStyles.swift`.
-- What exists, before you draw your own (each per `spec/components/<id>/`): `.buttonStyle(_:size:iconOnly:)` with
-  `.loading(_:)`, `.textFieldStyle(.framed|.inline, size:)`, `.toggleStyle(.check)` (Checkbox), `.toggleStyle(.chip)`,
+- What exists, before you draw your own (each per `spec/components/<id>/`): `.buttonStyle(_:size:iconOnly:floating:)`
+  with `.loading(_:)` (`floating`: a button over content, on the system's glass from OS 26, decisions/0015), `.textFieldStyle(.framed|.inline, size:)`, `.toggleStyle(.check)` (Checkbox), `.toggleStyle(.chip)`,
   `.buttonStyle(.chip)` and `.labelStyle(.chip)` (Chip), `.textRole(_:)`, `Icon(_:)` and `Icon(_:label:)`,
   `IconTile(_:)` and `IconTile(_:label:)` (a list's tile in the `.category(_:)` of its context, neutral with none),
   `ListRow(level:guides:action:) { title } subtitle: leading: trailing:` with `.selected(_:)`, `.dropTarget(_:)` and
