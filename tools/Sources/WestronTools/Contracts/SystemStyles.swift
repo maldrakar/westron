@@ -48,6 +48,10 @@ public enum SystemStyles {
         /// `SwiftUI.Toggle`, as in `Toggle(isOn:label:)`. nil where no contract has needed one yet: a contract with
         /// `accessibility.hiddenLabel` on such a base fails `spec check` as not derived yet.
         public var hiddenLabelParameters: [SwiftDeclarations.Parameter]? = nil
+        /// The Apple OSes where SwiftUI has neither the control nor its style (`@available(watchOS, unavailable)`), as
+        /// `ComponentContract.appleOSes` names them: a contract on the base says its component is unavailable there
+        /// (`platforms.apple.<os>.status: unavailable`), so that nothing of it is compiled for them.
+        public var unavailableOn: [String] = []
     }
 
     public static let byBase: [String: Base] = [
@@ -83,5 +87,15 @@ public enum SystemStyles {
             modifier: "labelStyle", protocols: ["LabelStyle"],
             styles: ["automatic", "iconOnly", "titleAndIcon", "titleOnly"],
             states: []),
+        // A group that folds and unfolds (Disclosure, #120). iOS 16 and macOS 13; neither the control nor its style
+        // exists on watchOS, so a contract on it says its component is unavailable there.
+        "SwiftUI.DisclosureGroup": Base(
+            modifier: "disclosureGroupStyle", protocols: ["DisclosureGroupStyle"],
+            styles: ["automatic"],
+            // configuration.isExpanded; a press, hover and focus, which the style follows through the Button it
+            // draws its chevron's cell with, since DisclosureGroupStyleConfiguration has no isPressed;
+            // @Environment(\.isEnabled).
+            states: ["expanded", "pressed", "hover", "focus", "disabled"],
+            unavailableOn: ["watchos"]),
     ]
 }

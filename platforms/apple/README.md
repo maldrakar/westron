@@ -110,7 +110,8 @@ fail or stall each other, as a macOS UI test captures whatever window is on top 
 alone, the simulator (by its UDID) or, on macOS, the Mac's screen, after their build and until they exit (`package-ios`
 until its tests end, so that `all` goes on without it; `tools/apple/lock.sh`). A run that finds it held prints once whom
 it waits for (pid, command and folder, since when) and waits, at most `WESTRON_LOCK_TIMEOUT` seconds (default 5400, 90
-minutes: above the longest CI job, 55, with room for a longer local audit), then fails saying who still holds it. With
+minutes: above the longest CI limit on work that takes the lock, the pull request audit's 55 (the iOS render's step
+has 45), with room for a longer local audit), then fails saying who still holds it. With
 nobody else running it waits for nothing. A lock whose process died is taken over at once: one killed with SIGKILL, or
 stopped by Ctrl-C while bash 3.2 waited for a foreground command, which ends it without its EXIT trap. A script under
 one that holds the lock goes on. The macOS render of the snapshot matrix draws in a window that is never ordered in, so
@@ -251,7 +252,12 @@ still drives every generated sheet and combination:
     truncated at level 4; `drag`, the insertion mark at a level, drawn above the next row's highlight, and a drop
     target; `right-to-left`, the slots, indent, guides and bar mirrored; and `accessibility5`, the trailing slot under
     the text at level 0. Every one is drawn at every text size of the sheet, accessibility5 included, where the row's
-    horizontal spacing stops at its xxxLarge width (spec/components/list-row, decisions/0001, D2).
+    horizontal spacing stops at its xxxLarge width (spec/components/list-row, decisions/0001, D2). The branches in
+    `slots`, `right-to-left` and `accessibility5` draw the real Disclosure chevron (#120).
+  - Disclosure, five, on iOS and macOS only (SwiftUI has no DisclosureGroup on watchOS): `expanded`, expanded in each
+    state; `right-to-left`, collapsed and expanded; `tree`, three levels of ListRows with `.disclosureAlignsLeaves()`;
+    `block-header`, a title with its date over two rows with checks; and `accessibility5`, a label that wraps at
+    accessibility5, the chevron on its first line.
 
   Like the matrix, supplements are not catalog entries, so the accessibility audit does not walk them.
 
@@ -383,16 +389,20 @@ no references, or references from another runner image, pass on a pull request w
 recording, and fail a push to `main`. Every run
 uploads `snapshot-matrix`, the full page of both platforms. A look that changes on purpose is recorded with the label
 `record-snapshots` on the pull request; the workflow commits the references to its branch and comments how to run the
-checks again (a commit pushed by a workflow starts none).
+checks again (a commit pushed by a workflow starts none). In both workflows the macOS render has a step timeout of 40
+minutes and the iOS one 45, and the jobs 100 (`snapshots`) and 105 (the recording); the render costs about 1 s an image
+on macOS on the runner (636 images in 771 s after a 117 s build, 2026-11-23) and about 0.4 s on iOS, so raise a step's
+timeout when its build and images come within about two thirds of it (the arithmetic is in `ci.yml`'s comment).
 
 ### Behaviour UI tests
 
 `ButtonBehaviorTests`, `CheckboxBehaviorTests`, `TextFieldBehaviorTests`, `IconAccessibilityTests`,
-`IconTileAccessibilityTests`, `ChipBehaviorTests` and `ListRowBehaviorTests`, in `Catalog/CatalogUITests`, check on
+`IconTileAccessibilityTests`, `ChipBehaviorTests`, `ListRowBehaviorTests` and `DisclosureBehaviorTests`, in
+`Catalog/CatalogUITests`, check on
 the catalog's entries what a unit test cannot reach: presses, hit areas and hover, the accessibility hierarchy, the
 keyboard. Each class has branches of its own for iOS and macOS where the platforms differ. `tools/apple/check.sh
 behavior` runs them, like the audit: the build first, a step of its own, then one `xcodebuild test-without-building`
-for the classes named (all seven by default); it prints each failure with its message, each skip with its reason, the
+for the classes named (all eight by default); it prints each failure with its message, each skip with its reason, the
 test cases and the totals, and stops the simulator's test daemon afterwards. The log goes to
 `.build/logs/behavior-<platform>[-<classes>].log`, the result bundle to `.build/xcode/results/`.
 
@@ -472,7 +482,10 @@ generated `<Name>+Contract.swift` or `<Name>+Matrix.swift`, its catalog page `Co
 contract `spec/components/<id>/`, and gives the entries that page declares; a Foundations page that shares nothing
 with other files gives its own entries. Everything else gives nothing: shared paths (tokens, the shared files of
 WestronUI, the catalog's host, the audit test, the scripts) touch every entry and wait for the nightly run, or for a
-run by hand on the branch. The audit is skipped when there is nothing to audit, and on a push to `main`.
+run by hand on the branch. The audit is skipped when there is nothing to audit, and on a push to `main`. The script
+reads the registry, `Catalog.entries` in `Catalog.swift`, from its array literals and its `append(.<name>)` lines (an
+entry some OS lacks); a registry it reads nothing from fails the job, and `tools/check.sh audit-scope`
+(`tools/apple/audit-scope-test.sh`) checks that it reads every entry the catalog declares.
 
 ```sh
 git diff --name-only main...HEAD | tools/apple/audit-scope.sh   # the entries a pull request from this branch audits:

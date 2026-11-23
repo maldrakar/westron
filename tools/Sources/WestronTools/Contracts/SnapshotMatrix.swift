@@ -145,6 +145,9 @@ public struct SnapshotMatrix: Equatable, Sendable {
     public let advisedAgainst: [Exclusion]
     /// The Apple OSes that differ from the contract, in `ComponentContract.appleOSes` order.
     public let platforms: [Platform]
+    /// The Swift condition the matrix compiles under, `!os(watchOS)` for a component some Apple OS lacks
+    /// (`ComponentContract.Apple.availabilityCondition`); nil when every Apple OS has it.
+    public let availabilityCondition: String?
     public let sheets: [Sheet]
     /// Whether the forms are an own view's initializers rather than system controls (`own-component`).
     public let ownForms: Bool
@@ -255,7 +258,8 @@ public struct SnapshotMatrix: Equatable, Sendable {
         var platforms: [Platform] = []
         if let apple = contract.apple {
             let applePath = DocumentPath.root.key("platforms").key("apple")
-            for os in ComponentContract.appleOSes {
+            // An OS where the component is unavailable has no matrix at all, rather than one that differs.
+            for os in apple.availableOSes {
                 var drawn: [(option: String, map: [(value: String, drawn: String)])] = []
                 // A token or icons option has no platform restriction: spec check rejects one that names it; the
                 // forms are not an option.
@@ -277,6 +281,7 @@ public struct SnapshotMatrix: Equatable, Sendable {
             }
         }
         self.platforms = platforms
+        availabilityCondition = contract.apple?.availabilityCondition
 
         let rowIndex = contract.states.isEmpty ? axes.firstIndex(where: \.isIcons) : nil
         rowAxis = rowIndex.map { axes[$0].name }

@@ -47,8 +47,11 @@ jobs:
       || (github.event.label.name == 'record-snapshots'
         && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: xcode-27
-    # The renders as in ci.yml's `snapshots` (about 22 min), the commit and a second check: 55 min.
-    timeout-minutes: 55
+    # The renders as in ci.yml's `snapshots`, with the same step timeouts, 40 and 45 min (the measured times and when
+    # to raise them are in ci.yml's comment: about 1 s an image on macOS on the runner); the job's 105 min are the two
+    # (85) plus 20 for the checkout, the LFS pull, the check before recording, the commit and push, the second check
+    # and the upload, so a step's own timeout fires before the job's.
+    timeout-minutes: 105
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
       # The branch to record on: the pull request's head branch, not its merge commit; or the branch dispatched on.
@@ -84,10 +87,10 @@ jobs:
       - name: References from Git LFS
         run: git lfs pull --include 'platforms/apple/Snapshots/**' --exclude ''
       - name: Render (macOS)
-        timeout-minutes: 15
+        timeout-minutes: 40
         run: tools/apple/snapshot-matrix.sh macos
       - name: Render (iOS)
-        timeout-minutes: 30
+        timeout-minutes: 45
         run: tools/apple/snapshot-matrix.sh ios
       - name: What the recording changes
         # Against the references before it; a difference (1), no references (3) or another environment (4) is what a

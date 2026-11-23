@@ -65,7 +65,7 @@ public struct AppleSnapshotMatrix: Generator {
         icons: [String]? = nil
     ) throws -> [GeneratedFile] {
         var files: [GeneratedFile] = []
-        var registered: [String] = []
+        var registered: [(name: String, condition: String?)] = []
         for (contract, source) in contracts where AppleComponents.givesAPI(contract) {
             let matrix = try SnapshotMatrix(contract, source: source, tokens: tokens, icons: icons)
             let component = AppleComponents.typeName(contract.id)
@@ -73,7 +73,7 @@ public struct AppleSnapshotMatrix: Generator {
                 GeneratedFile(
                     path: "\(outputDirectory)/\(component)+Matrix.swift",
                     contents: try swift(matrix, component: component, source: source)))
-            registered.append(memberName(contract.id))
+            registered.append((memberName(contract.id), matrix.availabilityCondition))
         }
         files.append(GeneratedFile(path: registryFile, contents: registry(registered)))
         return files
@@ -138,8 +138,6 @@ public struct AppleSnapshotMatrix: Generator {
     }
 
     static func swift(_ matrix: SnapshotMatrix, component: String, source: String) throws -> String {
-        let member = memberName(matrix.component)
-        let values = "\(component)MatrixValues"
         let cell = "\(component)MatrixCell"
         var out = header(
             "Generated from \(source) by `tools/westron generate`. Do not edit: change the contract and generate "
@@ -148,6 +146,21 @@ public struct AppleSnapshotMatrix: Generator {
                 + "what each Apple OS draws differently, and the sheets `tools/apple/snapshot-matrix.sh` captures. "
                 + "The hand-written `\(cell)` draws each cell.")
         out += ["", "import WestronUI", ""]
+        guard let condition = matrix.availabilityCondition else {
+            return (out + (try declarations(matrix, component: component))).joined(separator: "\n") + "\n"
+        }
+        // Where the component does not exist, neither does its matrix (the contract's `platforms` block).
+        let body = try AppleTokensSwift.$nesting.withValue(4) { try declarations(matrix, component: component) }
+        out += AppleTokensSwift.conditional(condition, body)
+        return out.joined(separator: "\n") + "\n"
+    }
+
+    /// The matrix's declarations, the extension of `ComponentMatrix` first.
+    private static func declarations(_ matrix: SnapshotMatrix, component: String) throws -> [String] {
+        let member = memberName(matrix.component)
+        let values = "\(component)MatrixValues"
+        let cell = "\(component)MatrixCell"
+        var out: [String] = []
 
         let hasForms = matrix.axes.contains(where: \.isForm)
         let sizes =
@@ -346,24 +359,67 @@ public struct AppleSnapshotMatrix: Generator {
             out += ["    ]"]
         }
         out += ["}"]
-        return out.joined(separator: "\n") + "\n"
+        return out
     }
 
-    static func registry(_ members: [String]) -> String {
+    /// The registry of `members`, each with the condition it compiles under (nil: every Apple OS). With no condition,
+    /// one array literal; otherwise, since an array literal cannot hold `#if`, the array built in order, each run of
+    /// members under one condition appended inside its `#if`.
+    static func registry(_ members: [(name: String, condition: String?)]) -> String {
         var out = header(
             "Generated from the contracts in \(ContractCheck.defaultDirectory) by `tools/westron generate`. Do not "
                 + "edit: change the contracts and generate again (spec/conventions.md).",
             "Every component's snapshot matrix (#24), which `tools/apple/snapshot-matrix.sh` captures.")
         out += ["", "extension ComponentMatrix {"]
-        out += doc(["Every component's snapshot matrix, in the order of the contracts' ids."], indent: 1)
-        let items = members.map { "." + $0 }
-        let line = "    public static let all: [ComponentMatrix] = " + list(items)
-        if line.count <= AppleTokensSwift.lineLength {
-            out.append(line)
-        } else {
-            out += ["    public static let all: [ComponentMatrix] = ["] + items.map { "        \($0)," } + ["    ]"]
+        let declaration = "    public static let all: [ComponentMatrix]"
+        guard members.contains(where: { $0.condition != nil }) else {
+            out += doc(["Every component's snapshot matrix, in the order of the contracts' ids."], indent: 1)
+            let items = members.map { "." + $0.name }
+            let line = declaration + " = " + list(items)
+            if line.count <= AppleTokensSwift.lineLength {
+                out.append(line)
+            } else {
+                out += [declaration + " = ["] + items.map { "        \($0)," } + ["    ]"]
+            }
+            out += ["}"]
+            return out.joined(separator: "\n") + "\n"
         }
-        out += ["}"]
+        out += doc(
+            [
+                "Every component's snapshot matrix on the current OS, in the order of the contracts' ids: a component "
+                    + "an OS lacks has no matrix there."
+            ], indent: 1)
+        out += [declaration + " = {", "        var all: [ComponentMatrix] = []"]
+        var runs: [(condition: String?, names: [String])] = []
+        for member in members {
+            if let last = runs.last, last.condition == member.condition {
+                runs[runs.count - 1].names.append(member.name)
+            } else {
+                runs.append((member.condition, [member.name]))
+            }
+        }
+        for run in runs {
+            let items = run.names.map { "." + $0 }
+            let indent = run.condition == nil ? 2 : 3
+            let pad = String(repeating: "    ", count: indent)
+            var lines: [String]
+            if items.count == 1 {
+                lines = [pad + "all.append(\(items[0]))"]
+            } else {
+                // `all += [.icon, …]` does not type-check: `+=` takes the implicit members for a stride.
+                let line = pad + "all.append(contentsOf: " + list(items) + ")"
+                lines =
+                    line.count <= AppleTokensSwift.lineLength
+                    ? [line]
+                    : [pad + "all.append(contentsOf: ["] + items.map { pad + "    " + $0 + "," } + [pad + "])"]
+            }
+            if let condition = run.condition {
+                out += ["        #if \(condition)"] + lines + ["        #endif"]
+            } else {
+                out += lines
+            }
+        }
+        out += ["        return all", "    }()", "}"]
         return out.joined(separator: "\n") + "\n"
     }
 }

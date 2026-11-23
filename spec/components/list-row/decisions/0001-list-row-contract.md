@@ -394,6 +394,18 @@ leaf rows keep the cell empty. A row in a list of leaves alone, the common case,
 column. How a product asks for that frame, a public empty cell or a Disclosure option, is decided with Disclosure
 (#120).
 
+**Revision with Disclosure (#120), 2026-11-22.** Disclosure's style now sets the hook, and the stand-ins are gone:
+the catalog draws the real Disclosure (`ListRowBranch`), `ListRowEmptyCell` is removed, and
+`listRowDisclosureCell(_:)` stays for the unit tests alone, which measure the cell's place with a frame of their own.
+A leaf lines up through Disclosure's context `alignsLeaves`, `.disclosureAlignsLeaves()` on the tree: it sets a
+second package-internal value, `listRowLeafCell`, a hidden copy of the real cell, which a row with no
+`listRowDisclosureCell` draws in the same place (the Disclosure contract's decisions/0001, "Leaf alignment"). The row
+also tells the style that it drew the cell (the preference `ListRowTookDisclosureCell`), so that the style draws none
+after it, and names the cell by its title for assistive technology (`listRowDisclosureCellName`). What XCUITest reads
+of the real cell: a Button named by the title, 44 × 44, on iOS; a disclosure triangle named by the title, 28 × 28,
+valued 1 or 0, on macOS, where the row itself becomes a disclosure triangle with the group's value, the system's doing
+(the Disclosure decision's "Measured"). The table under "Measured" below is the stand-in's, as measured then.
+
 ## What the tools now express
 
 Closed, with tests in `tools/Tests/WestronToolsTests/OwnViewSlotsTests.swift` and the updated `OwnComponentTests`,

@@ -1,6 +1,6 @@
 // Hand-written. CATALOG ONLY: what the westron catalog (WestronCatalog, in this package) needs to show ListRow's
-// states that a screenshot cannot produce, hover, focus and pressed, and to show where the Disclosure chevron's cell
-// stands before Disclosure exists (#120). Everything here is `package`, visible to the targets of this Swift package
+// states that a screenshot cannot produce, hover, focus and pressed; and for the unit tests, a view in the Disclosure
+// chevron's place (#120). Everything here is `package`, visible to the targets of this Swift package
 // and never to a product that imports WestronUI: it is not public API, and the parity lint (#21) does not see it.
 
 import SwiftUI
@@ -71,8 +71,9 @@ extension View {
             .disabled(state?.isDisabled ?? false)
     }
 
-    /// Hands the westron row in this view the Disclosure chevron's cell, as westron's chevron style on a
-    /// `DisclosureGroup` will (#120): a stand-in until Disclosure exists. Catalog only.
+    /// Hands the westron row in this view a view in the Disclosure chevron's place, as westron's chevron style on a
+    /// `DisclosureGroup` hands it its cell (#120), so that a unit test measures the place with a frame of its own.
+    /// Tests only.
     package func listRowDisclosureCell<Cell: View>(@ViewBuilder _ cell: () -> Cell) -> some View {
         environment(\.listRowDisclosureCell, AnyView(cell()))
     }
@@ -82,19 +83,5 @@ extension View {
     /// Catalog only.
     package func listRowPressObserver(_ observer: @escaping @MainActor @Sendable (Bool) -> Void) -> some View {
         environment(\.listRowPressObserver, observer)
-    }
-}
-
-/// A leaf's empty chevron cell, a stand-in until Disclosure (#120) decides how a product asks for it: at the end of a
-/// leaf's trailing slot, as wide as the chevron's cell, `size.target.minimum`, and the trailing gap the row puts before
-/// the cell, scaled as the row scales it, so that the leaf's trailing slot stands in its branches' column. Catalog
-/// only.
-package struct ListRowEmptyCell: View {
-    package init() {}
-
-    package var body: some View {
-        ListRowSpacingReader { spacing in
-            Color.clear.frame(width: spacing.trailingGap + .size.target.minimum, height: 0)
-        }
     }
 }

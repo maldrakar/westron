@@ -119,6 +119,16 @@ extension EnvironmentValues {
     /// chevron's place").
     @Entry var listRowDisclosureCell: AnyView? = nil
 
+    /// A leaf's empty chevron cell, which Disclosure's `.disclosureAlignsLeaves()` sets on a tree (#120, the contract's
+    /// `context`): a row with no `listRowDisclosureCell` draws it in the same place, so that its trailing slot stands in
+    /// its branches' column. The row clears it for its own slots. Package-internal: the product sets it only through
+    /// Disclosure's modifier.
+    @Entry var listRowLeafCell: AnyView? = nil
+
+    /// What names the Disclosure chevron's cell for assistive technology when a row draws it: the row's title, which the
+    /// row sets around the cell. Package-internal.
+    @Entry var listRowDisclosureCellName: AnyView? = nil
+
     /// Told when the pressable row's system Button begins and ends a press: the catalog counts the presses, so that a
     /// UI test can see whether a press on a control in a slot also presses the row. Package-internal.
     @Entry var listRowPressObserver: (@MainActor @Sendable (Bool) -> Void)? = nil
@@ -134,11 +144,14 @@ private struct ListRowBody: View {
     let action: (() -> Void)?
     let parts: ListRowParts
 
-    @Environment(\.listRowDisclosureCell) private var cell
+    @Environment(\.listRowDisclosureCell) private var disclosureCell
+    @Environment(\.listRowLeafCell) private var leafCell
     @Environment(\.isSelected) private var isSelected
     @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
+        // A branch's chevron; otherwise, in a tree whose leaves line up, a leaf's empty cell.
+        let cell = disclosureCell ?? leafCell
         let content = ListRowContent(level: level, guides: guides, parts: parts, cell: cell)
         // The representation lays the title out in the role the drawn row draws it in, strong while selected, so
         // that each element's frame is where its words are drawn.
@@ -173,6 +186,27 @@ private struct ListRowBody: View {
         .fixedSize(horizontal: false, vertical: true)
         // The cell is this row's: a row inside one of its slots draws none.
         .environment(\.listRowDisclosureCell, nil)
+        .environment(\.listRowLeafCell, nil)
+        // Tells the Disclosure style whose label this row is that the row drew its chevron, so that the style draws no
+        // second one after the label.
+        .preference(key: ListRowTookDisclosureCell.self, value: disclosureCell != nil)
+        // And tells the style's header layout in the same pass, so that it keeps no place for a second cell.
+        .layoutValue(key: ListRowTakesDisclosureCell.self, value: disclosureCell != nil)
+    }
+}
+
+/// The same as `ListRowTookDisclosureCell`, as a layout value: the Disclosure style's header reads it on its label's
+/// views while it lays them out, in the same pass. Package-internal.
+struct ListRowTakesDisclosureCell: LayoutValueKey {
+    static let defaultValue = false
+}
+
+/// Whether a ListRow drew the Disclosure chevron's cell it was handed (`listRowDisclosureCell`): the Disclosure style
+/// reads it on its label, and draws the cell after a label that is no such row. Package-internal.
+struct ListRowTookDisclosureCell: PreferenceKey {
+    static let defaultValue = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) {
+        value = value || nextValue()
     }
 }
 
@@ -374,7 +408,13 @@ private struct ListRowLayout: View {
             }
             wordsElement(stacks: stacks)
             if let cell {
-                cell.padding(.leading, spacing.trailingGap)
+                // In the slots' role, so that the chevron sizes from the row's text as an Icon at the end does.
+                cell
+                    // The cell is named by the row's title, read here in the row's own tree: the group's label view,
+                    // drawn again inside the cell's representation, would resolve to the outermost group's in a tree.
+                    .environment(\.listRowDisclosureCellName, parts.title)
+                    .textRole(ListRowMetrics.slotRole)
+                    .padding(.leading, spacing.trailingGap)
             }
         }
         .padding(.leading, ListRowMetrics.slotStart(level: level, indent: spacing.indent, padding: spacing.padding))
