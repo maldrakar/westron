@@ -396,13 +396,13 @@ timeout when its build and images come within about two thirds of it (the arithm
 
 ### Behaviour UI tests
 
-`ButtonBehaviorTests`, `CheckboxBehaviorTests`, `TextFieldBehaviorTests`, `IconAccessibilityTests`,
-`IconTileAccessibilityTests`, `ChipBehaviorTests`, `ListRowBehaviorTests` and `DisclosureBehaviorTests`, in
-`Catalog/CatalogUITests`, check on
+`ButtonBehaviorTests`, `CheckboxBehaviorTests`, `TextFieldBehaviorTests`, `TextFieldAccessibilityFrameTests`,
+`IconAccessibilityTests`, `IconTileAccessibilityTests`, `ChipBehaviorTests`, `ListRowBehaviorTests` and
+`DisclosureBehaviorTests`, in `Catalog/CatalogUITests`, check on
 the catalog's entries what a unit test cannot reach: presses, hit areas and hover, the accessibility hierarchy, the
 keyboard. Each class has branches of its own for iOS and macOS where the platforms differ. `tools/apple/check.sh
 behavior` runs them, like the audit: the build first, a step of its own, then one `xcodebuild test-without-building`
-for the classes named (all eight by default); it prints each failure with its message, each skip with its reason, the
+for the classes named (all nine by default); it prints each failure with its message, each skip with its reason, the
 test cases and the totals, and stops the simulator's test daemon afterwards. The log goes to
 `.build/logs/behavior-<platform>[-<classes>].log`, the result bundle to `.build/xcode/results/`.
 
@@ -424,7 +424,7 @@ still uploads its logs. Run the class of a component after a change to it; macOS
 takes over the screen.
 
 ```sh
-tools/apple/check.sh behavior                            # all four on the iOS simulator
+tools/apple/check.sh behavior                            # every class on the iOS simulator
 tools/apple/check.sh behavior ios CheckboxBehaviorTests  # one class or more, by name
 tools/apple/check.sh behavior macos                      # on the Mac
 ```
