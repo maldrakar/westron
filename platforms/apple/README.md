@@ -511,7 +511,16 @@ one job runs all five tests for them (`WESTRON_ENTRY`), 55 minutes with a retry 
 entries when there are more. A path counts for a component when it is in the component's WestronUI directory, its
 generated `<Name>+Contract.swift` or `<Name>+Matrix.swift`, its catalog page `Components/<Name>Pages.swift` or its
 contract `spec/components/<id>/`, and gives the entries that page declares; a Foundations page that shares nothing
-with other files gives its own entries. Everything else gives nothing: shared paths (tokens, the shared files of
+with other files gives its own entries. A component's change also gives the entries that draw it, since components
+draw each other: the script derives who uses whom from the sources on every run, with no list to keep (its header,
+"Use"). It splits WestronUI and the catalog's pages into units (top-level declarations, extension members, each
+entry) and follows names from unit to unit, so ListRow's change also gives `disclosure` and the floating Button
+entries, Rule's gives `list-row`, `list-row-in-list` and `color-in-use`, and a page's code other pages use
+(`FlowLayout` in ButtonPages.swift) gives theirs. The cut: a change that would add more than 5 entries beyond its
+component's own, one leg, adds none, says so in the job's log, and leaves them to the nightly run; on 2026-11-24 only
+Icon is past it (13 other entries), and the search does not go on through it. The largest scope is then Button's,
+its 10 entries and 5 more, 3 legs. `tools/apple/audit-scope.sh --uses` prints what each component's change adds, and
+through which units. Everything else gives nothing: shared paths (tokens, the shared files of
 WestronUI, the catalog's host, the audit test, the scripts) touch every entry and wait for the nightly run, or for a
 run by hand on the branch. The audit is skipped when there is nothing to audit, and on a push to `main`. The script
 reads the registry, `Catalog.entries` in `Catalog.swift`, from its array literals and its `append(.<name>)` lines (an
