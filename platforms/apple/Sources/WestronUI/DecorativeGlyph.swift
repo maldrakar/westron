@@ -3,7 +3,7 @@
 import SwiftUI
 
 /// Hides a decorative glyph, such as a control's icon, its check or its progress indicator, from assistive technology:
-/// hidden, then represented by nothing.
+/// on iOS and watchOS hidden, then represented by nothing; on macOS hidden alone.
 ///
 /// Inside a button's label on iOS, `.accessibilityHidden(true)` alone left the glyph an element of its own under the
 /// button: an image named after its symbol, the check with the trait selected, a progress indicator an activity
@@ -19,12 +19,25 @@ import SwiftUI
 ///   symbol;
 /// - hidden, with `.accessibilityElement(children: .combine)` around the label: the image, selected.
 /// Outside a button, a Label in a label style that hides its icon so is read as its words alone.
+///
+/// On macOS 26.7 nothing is listed under a westron Button or Chip with the glyph hidden alone, hidden then represented
+/// by nothing, or represented then hidden; but with the empty representation last, a loading Button's value is read
+/// twice there, "Loading, Loading" (#131, ButtonBehaviorTests' `testLoadingButtonRefusesTouchAndPointerAndStaysEnabled`).
+/// The cause is the progress indicator before the label, which the style's body lays out beside the button's label in
+/// every loading button, with or without an icon: a progress view in it gave the button's value twice, a plain view in
+/// its place once, and hidden alone, as Button's glyphs were before #131, or represented then hidden, once (read
+/// in-process from the hosting view's NSAccessibility tree).
 struct DecorativeGlyph: ViewModifier {
     func body(content: Content) -> some View {
-        content
-            .accessibilityHidden(true)
-            .accessibilityRepresentation {
-                EmptyView()
-            }
+        #if os(macOS)
+            content
+                .accessibilityHidden(true)
+        #else
+            content
+                .accessibilityHidden(true)
+                .accessibilityRepresentation {
+                    EmptyView()
+                }
+        #endif
     }
 }

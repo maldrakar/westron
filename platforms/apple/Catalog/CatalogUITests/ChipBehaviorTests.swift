@@ -154,8 +154,9 @@ final class ChipBehaviorTests: XCTestCase {
         // The icon and the check are no element under the button: with `.accessibilityHidden(true)` alone each was an
         // image named after its symbol, the check with the trait selected (measured on iOS 26.3, 2026-11-22), and
         // with an empty representation before it an element of type other with nothing in it. Hidden, then
-        // represented by nothing (`DecorativeGlyph`, #131), nothing is under the button, not even its words as a
-        // text, as under a westron Button with a Label; a text with its words is allowed, as XCUITest listed one.
+        // represented by nothing (`DecorativeGlyph`, #131; on macOS hidden alone), nothing is under the button, not
+        // even its words as a text, as under a westron Button with a Label; a text with its words is allowed, as
+        // XCUITest listed one.
         let inside = day.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Tue")).count
         XCTAssertEqual(named("Tue").count - inside, 1, "the pressable chip's name is read more than once")
         XCTAssertEqual(day.descendants(matching: .image).count, 0, "the pressable chip's icon is an element of its own")

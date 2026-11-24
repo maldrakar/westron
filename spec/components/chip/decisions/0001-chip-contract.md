@@ -421,3 +421,8 @@ modifiers the other way round: hidden, then represented by nothing. In that orde
 pressable chip, neither the empty elements of type other of the table above nor the words as a text, as under a
 button whose label is only text; the button's own element is what it was (iOS 26.3, `ButtonBehaviorTests`'
 `testIconIsNoElement` and `ChipBehaviorTests`). What VoiceOver speaks is not measured.
+
+On macOS the glyphs are hidden alone, as Button's were before #131: there the empty representation last made a loading
+Button's value read twice, "Loading, Loading", through the progress indicator before its label, and hidden alone lists
+nothing under the pressable chip or a westron Button either (macOS 26.7, the same tests; `DecorativeGlyph` records
+the measurement).
