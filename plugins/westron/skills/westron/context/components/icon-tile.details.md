@@ -1,0 +1,67 @@
+<!-- Generated from spec/components/icon-tile/icon-tile.spec.yaml by `tools/westron generate`. Do not edit: change the
+source and generate again (decisions/0016). -->
+
+# IconTile: details
+
+The prose of westron's contract for `icon-tile`, for the cases its card (`icon-tile.md`) does not settle. A reference
+such as "decisions/0001" or "#120" here points into westron's repository: to the component's own decisions, westron's
+decisions or an issue, none of which is in this bundle. Names such as `container.gap` are the contract's bindings of
+westron's tokens, how WestronUI draws the component; a product never sets them.
+
+## Accessibility
+
+A tile without a label is decorative and hidden from assistive technology, as an icon without one is: beside its list's
+title, in a row, a header, a picker or an empty screen's title, it would only repeat it, and neither the system's name
+for the glyph nor the color name says what the list is. A tile that stands without its list's name is made with a label,
+the list's name, and is announced as an image with that label. Color is never the only signal of a list: it has a glyph
+and a name too (design-language/02, 08).
+
+## Behavior
+
+Its color comes from the context, as the checked Checkbox's does: with a list's color in its context the tile is
+color.category.<name>.fill and its glyph color.category.<name>.on-fill, for each of the twelve list colors, the glyph
+meeting the text contrast on the fill, 4.5:1 and 7:1 in high contrast (the declared pairs of decisions/0012); tags,
+tiles and statuses keep fill, which is not held to the non-text contrast on the ground, since the glyph and the list's
+name carry the meaning (design-language/02; the owner's choice, decisions/0001, question 3). With no list color in its
+context the tile is neutral, color.background.muted with its glyph in color.text.secondary, the colors of a tag or a
+badge without a color; it never takes the accent, which marks the primary action and the selection, not a thing a person
+named (design-language/00, principle 3). The bindings below are the neutral tile's, since the list's color is the
+context's and not an option of the contract; this text is the contract for a list's color. It is a rounded square, not a
+circle, so a solid tile is not read as a checked check, a disc in the list's control color. It draws no line in any
+theme: the glyph carries the tile's meaning, and its color pair holds in high contrast on the same ground. The tile has
+no size of its own: it is sized by the text role of its context, as an icon and the check are, and grows with the
+person's text size. Its side is 1.5 times the line height of that role; its glyph is fitted into a square of 0.6 of the
+side, in the role's weight; its corner is a quarter of the side, westron's ratio of a corner to a height
+(design-language/04), and scales with it: an off-ladder corner that belongs to this component, so no radius token is
+bound; continuous on Apple, circular elsewhere (design-language/07, "Inside a shape, an icon is sized by the shape").
+Where it must be smaller or larger than its text, it takes the platform's relative scale, which scales the tile and its
+glyph together by the steps the platform scales a symbol by. The bindings below cannot say the side, the glyph's size or
+the corner, so this text is the contract for them, as Checkbox's is for its diameter. It has no states and no motion: a
+row that cannot be chosen dims the tile with the rest of the row.
+
+## On Apple
+
+IconTile(.tray) draws a decorative tile, hidden from assistive technology; IconTile(.folder, label: list.title) is one
+element announced as an image labeled with the list's name, with a localized twin, IconTile(.sun, label: "Today"), as
+Icon takes its label. An empty label that is not localized, a list's title not given yet, is no label: the tile is
+decorative and hidden. The list's color reaches it through the environment, from the shared .category(_:) modifier
+Checkbox reads (spec/conventions.md, "Context a style reads"): set once around a list's rows or a screen,
+.category(Westron.Category(rawValue: list.color)), the closest one winning; nil, the default, is the neutral tile,
+IconTile's own default under the conventions' "nil being the contract's default", where a checked check draws the
+accent. IconTile adds no modifier and no initializer argument for the color. The glyph is the registry's SF Symbol,
+resizable and fitted into its square, drawn monochrome in the glyph color, whatever foregroundStyle the context sets; a
+resizable symbol keeps the weight of the font in the environment. The side follows the line height of the font in the
+environment, measured on a hidden line of text as Checkbox measures its circle, so the tile follows .textRole(_:) and
+Dynamic Type; scale is SwiftUI's own Image.Scale, which the product sets with .imageScale(_:) on the tile or its
+container, and the tile takes the step from the ratio of one reference symbol's height at that scale to its height at
+medium, the same symbol for every tile so that tiles of different glyphs in a column keep one side, measured on two
+hidden symbols, so IconTile takes no scale argument and no enum is generated. The tile's text baseline is that of the
+hidden line centered in it, so in a row aligned on the first text baseline its center sits on the middle of the title's
+first line. Inside ContentUnavailableView, the empty screen's system view (decisions/0014), the tile stands in the
+label's icon and takes the font the system gives that icon. The shape is a continuous rounded rectangle. The name is no
+SwiftUI type; SwiftUI has no tile, so westron builds its own view, as it does Icon (decisions/0003, point 2).
+
+### watchOS
+
+Drawn as on the other OSes, always in the dark themes; nothing restricted, since an own component takes no restriction
+yet. What a list's tile is on the watch is part of the watchOS subset, decided separately (#34).

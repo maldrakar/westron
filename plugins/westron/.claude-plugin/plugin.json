@@ -1,0 +1,9 @@
+{
+  "name": "westron",
+  "description": "The westron design system for agents that build UI in a product that uses it: the rules, and a reference generated from westron's contracts, tokens, icons and design language (one card per component, token and icon tables, the design-language chapters).",
+  "author": {
+    "name": "maldrakar"
+  },
+  "repository": "https://github.com/maldrakar/westron",
+  "keywords": ["design-system", "swiftui", "ui"]
+}

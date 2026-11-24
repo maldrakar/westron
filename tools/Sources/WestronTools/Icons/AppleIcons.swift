@@ -20,6 +20,10 @@ public struct AppleIcons: Generator {
     /// The Swift type of an icon, which `tokens(_:source:)` declares: an option whose values are the registry's names
     /// takes it as its type (`AppleComponents.Own`), as a token option takes its group's accessor.
     public static let iconType = "Westron.Icon"
+    /// The member that names the icon drawn for an unknown name, and the one that gives an icon's SF Symbol; the agent
+    /// context names them too (`ContextNames`).
+    static let fallbackMember = "fallback"
+    static let systemNameMember = "systemName"
 
     public static let tokensFile = "platforms/apple/Sources/WestronTokens/Generated/Icons.swift"
     public static let swiftUIFile = "platforms/apple/Sources/WestronUI/Generated/Icons+SwiftUI.swift"
@@ -86,7 +90,7 @@ public struct AppleIcons: Generator {
                 description:
                     "The icon to draw for a name this version does not know: `\(registry.fallback)`."),
             indent: 2)
-        out.append("        public static let fallback = \(iconType).\(registry.fallback)")
+        out.append("        public static let \(fallbackMember) = \(iconType).\(registry.fallback)")
         out += ["    }", "}"]
         return out.joined(separator: "\n") + "\n"
     }
@@ -103,7 +107,7 @@ public struct AppleIcons: Generator {
                     + "as `Button(_:systemImage:action:)`. Each symbol exists on iOS 17, macOS 14 and watchOS 10 "
                     + "(decisions/0011)."),
             indent: 1)
-        out += ["    public var systemName: String {", "        switch self {"]
+        out += ["    public var \(systemNameMember): String {", "        switch self {"]
         for icon in registry.icons {
             out.append("        case .\(icon.name): \(AppleTokensSwift.literal(icon.apple))")
         }
