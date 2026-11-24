@@ -405,6 +405,11 @@ screen, locked when the revision was made, could run the catalog again:
   pointer in the margin and in the corner leaves the chip at rest, inside the capsule it is hovered, and leaving for
   the margin or the corner ends the hover. Button's style, whose comment says that its interaction shape holds hover
   to its drawn edge, uses the same `onHover`; it is outside this change.
+
+  Note of 2026-11-24 (#130): `ChipHover` moved to WestronUI as `ShapeHover`, which Chip and Button now share. Measured
+  on macOS with Button's `onHover` before that change, Button's comment held for its buttons on the `button-behavior`
+  page, which read no hover in their frames' corners; only its floating buttons were hovered there, and why is not
+  established. The record above is left as it was.
 - **Keyboard focus** is not measured: `testKeyboardFocusAndSpace` is skipped on a Mac with keyboard navigation off,
   as this one has it, as it was before.
 - **The screenshot** of the `chip` entry (`tools/apple/catalog-screenshot.sh macos --entry chip`, dark) draws each

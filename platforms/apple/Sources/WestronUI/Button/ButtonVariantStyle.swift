@@ -135,9 +135,11 @@ private struct ButtonBody: View {
         .scaleEffect(scalesDown ? ButtonTokens.pressScale : 1)
         .animation(.press, value: scalesDown)
         // Hover over the drawn capsule or circle, in the drawn button's frame, not over the corners of that frame
-        // beyond its round ends (`ShapeHover`, #130): SwiftUI's `onHover` reports the whole frame whatever the content
-        // shape (measured for Chip on macOS 26), and the button had it here, around its whole frame. The press's
-        // scale moves no layout, so the frame here is the drawn button's, and the shape `ButtonSurface`'s. Here, not
+        // beyond its round ends (`ShapeHover`, #130). With `onHover` here, as before #130, on macOS the floating
+        // buttons were hovered in their frames' corners, outside the capsule, on glass and on their fill alike, while
+        // the other buttons, whose interaction shape is the capsule (`ButtonSurface`), already were not
+        // (ButtonBehaviorTests, measured in the review of #146). Why the floating ones differ is not established. iPad,
+        // where the button has no interaction shape, was not measured. The press's scale moves no layout, so the frame here is the drawn button's, and the shape `ButtonSurface`'s. Here, not
         // inside `ButtonSurface` after its glass: there it moved disabled buttons of size s by a pixel on iOS 26.3
         // (the snapshot matrix, rendered before and after).
         .modifier(
@@ -235,8 +237,8 @@ private struct ButtonSurface<Label: View>: View {
         //   decision of 2026-11-18, #75), so size s takes clicks in its 24 pt, below the recommended 28. Without a
         //   content shape the system takes clicks only where the button paints: on tertiary its label (#75). The
         //   interaction shape is the drawn capsule, so every click inside what is drawn reaches the button and none
-        //   outside does. Hover is held to it by `ShapeHover` in `ButtonBody`, not by the interaction shape (#130). A click
-        //   outside the frame misses whatever the content shape, and growing the frame does reach the target: padding
+        //   outside does. With `onHover`, this shape held hover to the capsule too, but not on a floating button;
+        //   `ShapeHover` in `ButtonBody` holds it on every button (#130). A click outside the frame misses whatever the content shape, and growing the frame does reach the target: padding
         //   the look by 2 pt inside the system button and taking it back outside with a negative padding kept the
         //   drawn and laid out size, and a click 1.5 pt below the drawn button reached it. But the grown frame
         //   overlaps a neighbor closer than 4 pt, and the later sibling wins there, inside the neighbor's drawn area:
