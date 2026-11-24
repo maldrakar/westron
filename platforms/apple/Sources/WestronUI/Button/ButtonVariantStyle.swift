@@ -96,6 +96,7 @@ private struct ButtonBody: View {
     @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.forcedButtonStates) private var forcedStates
     @Environment(\.drawsButtonsWithoutGlass) private var drawsWithoutGlass
+    @Environment(\.buttonHoverObserver) private var hoverObserver
     @State private var isHovered = false
 
     /// Whether the button is in a state of its contract, read where the system or westron's modifier keeps it, or
@@ -133,15 +134,27 @@ private struct ButtonBody: View {
         )
         .scaleEffect(scalesDown ? ButtonTokens.pressScale : 1)
         .animation(.press, value: scalesDown)
-        #if !os(watchOS)
-            .onHover { hovering in
+        // Hover over the drawn capsule or circle, in the drawn button's frame, not over the corners of that frame
+        // beyond its round ends (`ShapeHover`, #130). With `onHover` here, as before #130, on macOS the floating
+        // buttons were hovered in their frames' corners, outside the capsule, on glass and on their fill alike, while
+        // the other buttons, whose interaction shape is the capsule (`ButtonSurface`), already were not
+        // (ButtonBehaviorTests, measured in the review of #146). Why the floating ones differ is not established. iPad,
+        // where the button has no interaction shape, was not measured. The press's scale moves no layout, so the frame here is the drawn button's, and the shape `ButtonSurface`'s. Here, not
+        // inside `ButtonSurface` after its glass: there it moved disabled buttons of size s by a pixel on iOS 26.3
+        // (the snapshot matrix, rendered before and after).
+        .modifier(
+            ShapeHover(shape: Capsule()) { hovering in
                 isHovered = hovering && ButtonState.hover.isEntered
             }
-        #endif
+        )
         // A disabled view may receive no hover events, so a pointer that leaves while the button is disabled would
         // leave it hovered, and the tint would come back when it is enabled again with the pointer away.
         .onChange(of: isEnabled) { _, enabled in
             if !enabled { isHovered = false }
+        }
+        // The catalog's readout of hover (`onButtonHover`); nil in a product.
+        .onChange(of: isHovered) { _, hovered in
+            hoverObserver?(hovered)
         }
     }
 }
@@ -224,8 +237,8 @@ private struct ButtonSurface<Label: View>: View {
         //   decision of 2026-11-18, #75), so size s takes clicks in its 24 pt, below the recommended 28. Without a
         //   content shape the system takes clicks only where the button paints: on tertiary its label (#75). The
         //   interaction shape is the drawn capsule, so every click inside what is drawn reaches the button and none
-        //   outside does; hover, too, starts and ends at the drawn edge. A click
-        //   outside the frame misses whatever the content shape, and growing the frame does reach the target: padding
+        //   outside does. With `onHover`, this shape held hover to the capsule too, but not on a floating button;
+        //   `ShapeHover` in `ButtonBody` holds it on every button (#130). A click outside the frame misses whatever the content shape, and growing the frame does reach the target: padding
         //   the look by 2 pt inside the system button and taking it back outside with a negative padding kept the
         //   drawn and laid out size, and a click 1.5 pt below the drawn button reached it. But the grown frame
         //   overlaps a neighbor closer than 4 pt, and the later sibling wins there, inside the neighbor's drawn area:
