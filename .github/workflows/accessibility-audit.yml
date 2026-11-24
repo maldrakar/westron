@@ -149,8 +149,8 @@ jobs:
   behavior:
     name: Behaviour UI tests (${{ matrix.platform }})
     # The catalog's behaviour UI tests (`tools/apple/check.sh behavior`): ButtonBehaviorTests, CheckboxBehaviorTests,
-    # TextFieldBehaviorTests, IconAccessibilityTests, IconTileAccessibilityTests, ChipBehaviorTests,
-    # ListRowBehaviorTests and DisclosureBehaviorTests, each with
+    # TextFieldBehaviorTests, TextFieldAccessibilityFrameTests, IconAccessibilityTests, IconTileAccessibilityTests,
+    # ChipBehaviorTests, ListRowBehaviorTests and DisclosureBehaviorTests, each with
     # branches of its own for iOS and macOS where the platforms differ, so one leg on each, gated by `audit-needed` as
     # the audit is.
     #
