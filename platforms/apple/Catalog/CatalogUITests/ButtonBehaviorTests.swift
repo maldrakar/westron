@@ -290,6 +290,17 @@ final class ButtonBehaviorTests: XCTestCase {
         return text(id)
     }
 
+    /// Moves the pointer onto `away` and waits until the readout `id` says "hover: none", within 5 s; returns what it
+    /// reads then. A hover test starts here, not from wherever the test before it left the pointer: one that ends with
+    /// a click at the centre of a button, on an entry the next test relaunches with the same layout, leaves the pointer
+    /// on that button (the nightly run 45397745713: "hover: add" after `testFloatingButtonsAreButtonsWithTheirNames`).
+    @MainActor
+    private func pointerAway(on away: XCUIElement, readout id: String) -> String {
+        hover(
+            away.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)), readout: id, name: "none", expected: true
+        )
+    }
+
     /// Hovers one button, `element`, named `name` in the readout `id`, with the pointer: away from it (on `away`); in
     /// its frame's top-left and bottom-right corners, 2 pt in from the side and 1 pt in from the top or bottom, outside
     /// the drawn shape's round end; 1.5 pt inside the round end, on the diagonal toward the top-left corner; back in a
@@ -346,7 +357,8 @@ final class ButtonBehaviorTests: XCTestCase {
     func testHoverAtTheDrawnShape() throws {
         #if os(macOS)
             let away = app.staticTexts[ID.count]
-            XCTAssertEqual(text(ID.hover), "hover: none", "a button is hovered with the pointer away")
+            XCTAssertEqual(
+                pointerAway(on: away, readout: ID.hover), "hover: none", "a button is hovered with the pointer away")
             var outcomes: [(name: String, outcomes: [HoverOutcome])] = []
             for (id, name) in [
                 (ID.small, "small"), (ID.rest, "rest"), (ID.large, "large"), (ID.firstNeighbor, "neighbor-first"),
@@ -422,7 +434,9 @@ final class ButtonBehaviorTests: XCTestCase {
         #if os(macOS)
             launchFloating()
             let away = app.staticTexts[FloatingID.count]
-            XCTAssertEqual(text(FloatingID.hover), "hover: none", "a button is hovered with the pointer away")
+            XCTAssertEqual(
+                pointerAway(on: away, readout: FloatingID.hover), "hover: none",
+                "a button is hovered with the pointer away")
             var outcomes: [(name: String, outcomes: [HoverOutcome])] = []
             for (id, name) in [
                 (FloatingID.back, "back"), (FloatingID.add, "add"), (FloatingID.overList("s"), "over-list-s"),
