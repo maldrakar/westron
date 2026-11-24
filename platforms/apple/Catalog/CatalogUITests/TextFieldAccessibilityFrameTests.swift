@@ -122,7 +122,8 @@ final class TextFieldAccessibilityFrameTests: XCTestCase {
     }
 
     /// The inline fields' frames against the room they are laid out in, the card's inside: across within a point on
-    /// both platforms, the title's top and the notes' bottom within a point of the inside's top and bottom. Between the
+    /// both platforms, the title's top and the notes' bottom within a point of the inside's top and bottom on iOS and
+    /// within two on macOS, where each was measured a point outside (#135). Between the
     /// title and the notes, whose lines are `space.100` apart, the frames are as far apart within a point on iOS; on
     /// macOS they are 2 pt closer, 6 pt apart (measured on macOS 26.7.1 in #135), as the contract's
     /// `platforms.apple.macos` records.
@@ -137,8 +138,19 @@ final class TextFieldAccessibilityFrameTests: XCTestCase {
             XCTAssertEqual(frame.maxX, inside.maxX, accuracy: tolerance, "\(name): \(frame), card's inside \(inside)")
             XCTAssertGreaterThan(frame.height, 10, "\(name): \(frame)")
         }
-        XCTAssertEqual(title.minY, inside.minY, accuracy: tolerance, "title: \(title), card's inside \(inside)")
-        XCTAssertEqual(notes.maxY, inside.maxY, accuracy: tolerance, "notes: \(notes), card's inside \(inside)")
+        // Up and down, macOS measured the title's top a point above the inside's top (414 against 415) and the notes'
+        // bottom a point below its bottom (455 against 454) in #135: exactly at a 1 pt tolerance, so a half-point
+        // change in AppKit's text view would fail the nightly run. macOS gets 2 pt, iOS keeps 1.
+        #if os(macOS)
+            let outer: CGFloat = 2
+        #else
+            let outer = tolerance
+        #endif
+        let entry = "the contract's platforms.apple entry for the inline fields' frames no longer holds"
+        XCTAssertEqual(
+            title.minY, inside.minY, accuracy: outer, "title: \(title), card's inside \(inside); \(entry)")
+        XCTAssertEqual(
+            notes.maxY, inside.maxY, accuracy: outer, "notes: \(notes), card's inside \(inside); \(entry)")
         #if os(macOS)
             let closer: CGFloat = 2
         #else

@@ -66,8 +66,9 @@ x 516 to 1212, 696 pt wide.
 
 The contract records the difference as the system's behaviour, in `platforms.apple.macos`: a framed field's frame is
 the system field's, without westron's padding and glyphs, for every framed field; on iOS it is the whole drawn field;
-an inline field's frame is as wide as its room within a point on both, and on macOS within two points of its lines up
-and down. westron does not work around it.
+an inline field's frame is as wide as its room within a point on both, and on macOS up and down within a point of its
+lines as measured, the title's a point above its line and the notes' a point below theirs; the test allows two, since
+both were measured exactly at a point. westron does not work around it.
 
 The catalog's `TextFieldAccessibilityFrameTests` holds both sides on the `text-field-behavior` page, against the drawn
 fields computed from the page's geometry, with nothing added to the tree: the page's padding, the fields' heights at

@@ -345,7 +345,8 @@ platforms:
         hit area. On iOS the frame is the whole drawn field (the ios block). An inline field, which has neither
         padding nor glyphs, has a frame as wide as the room it is laid out in within a point on both; on macOS the
         card's title and notes report frames whose outer edges, the title's top and the notes' bottom, are within a
-        point of their lines (the notes' a point below its line), and which are 6 pt apart where their lines are 8 pt
+        point of their lines as measured (the title's a point above its line, the notes' a point below theirs; the
+        test allows two), and which are 6 pt apart where their lines are 8 pt
         apart: the frames together are 4 pt taller than the lines, and how the 2 pt between them divide between the
         title and the notes is not known. This is the system's behaviour, measured with Xcode 27.1 on macOS 26.7.1 on
         the catalog's text-field-behavior page (TextFieldAccessibilityFrameTests, #135): a field at s 666 × 18 pt of
