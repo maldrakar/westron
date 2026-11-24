@@ -516,16 +516,37 @@ draw each other: the script derives who uses whom from the sources on every run,
 "Use"). It splits WestronUI and the catalog's pages into units (top-level declarations, extension members, each
 entry) and follows names from unit to unit, so ListRow's change also gives `disclosure` and the floating Button
 entries, Rule's gives `list-row`, `list-row-in-list` and `color-in-use`, and a page's code other pages use
-(`FlowLayout` in ButtonPages.swift) gives theirs. The cut: a change that would add more than 5 entries beyond its
-component's own, one leg, adds none, says so in the job's log, and leaves them to the nightly run; on 2026-11-24 only
-Icon is past it (13 other entries), and the search does not go on through it. The largest scope is then Button's,
-its 10 entries and 5 more, 3 legs. `tools/apple/audit-scope.sh --uses` prints what each component's change adds, and
-through which units. Everything else gives nothing: shared paths (tokens, the shared files of
-WestronUI, the catalog's host, the audit test, the scripts) touch every entry and wait for the nightly run, or for a
-run by hand on the branch. The audit is skipped when there is nothing to audit, and on a push to `main`. The script
+(`FlowLayout` in ButtonPages.swift) gives theirs. The cut is declared: a base component, listed with its reason in
+the script's `base_components` (on 2026-11-24 Icon alone, drawn on 13 other entries), gives its own entries only, says
+so in the job's log, and leaves the rest to the nightly run; the search does not go on through it. The limit is a
+tripwire, not a switch: a change that would add more than 5 entries beyond its component's own (one leg) fails the
+scope job, naming the component, its count and the choices (declare it base, move a page's shared code out of the
+page, or raise the limit), and so does a declared base component back within the limit. The scan runs on every pull
+request, so the one that adds the crossing use fails its own job. Four counts stand at the limit exactly (Button's
+implementation and page, ListRow, Surface), with no headroom on purpose: the next use of any of them asks for the
+decision. `tools/apple/audit-scope-test.sh` pins every count; `tools/apple/audit-scope.sh --uses` prints them with the
+units each entry reaches the change through. Everything else gives nothing: shared paths (tokens, the shared files
+of WestronUI, the catalog's host, the audit test, the scripts) touch every entry and wait for the nightly run, or for
+a run by hand on the branch. The audit is skipped when there is nothing to audit, and on a push to `main`. The script
 reads the registry, `Catalog.entries` in `Catalog.swift`, from its array literals and its `append(.<name>)` lines (an
 entry some OS lacks); a registry it reads nothing from fails the job, and `tools/check.sh audit-scope`
 (`tools/apple/audit-scope-test.sh`) checks that it reads every entry the catalog declares.
+
+What a change to one file of each component directory selects, before (main at 48c2213) and after (2026-11-24):
+
+| WestronUI/ | before | after |
+|---|---|---|
+| Button/ | its 10 entries | + text-field-behavior, text-field-focus-framed, text-field-focus-inline, color-in-use, controls (15) |
+| Checkbox/ | checkbox, checkbox-in-list | + list-row, list-row-in-list, disclosure (5) |
+| Disclosure/ | disclosure | + list-row (2) |
+| ListRow/ | list-row, list-row-in-list | + the four button-floating entries, disclosure (7) |
+| Rule/ | rule | + list-row, list-row-in-list, color-in-use (4) |
+| Surface/ | surface | + rule, text-field-behavior, text-field-focus-framed, text-field-focus-inline, color-in-use (6) |
+| Chip/, Icon/ (base), IconTile/, TextField/ | their own | their own, unchanged |
+
+A change to ButtonPages.swift also gives checkbox, chip, color-categories, color-in-use and controls (15); the other
+pages give their own entries only. The largest scope is Button's, 15 entries in 3 legs (about 1.9 runner-hours, from
+1.3).
 
 ```sh
 git diff --name-only main...HEAD | tools/apple/audit-scope.sh   # the entries a pull request from this branch audits:

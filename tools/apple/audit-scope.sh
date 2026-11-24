@@ -31,32 +31,47 @@
 # sources on every run, not from a list: there is no map to keep. It reads every Swift file of WestronUI, the catalog's
 # pages (Components/, Foundations/) and its root files that declare entries, without comments and string literals,
 # and splits them into units: each top-level declaration; each extension of a type they declare, under that type's
-# name; and each member of an extension of a type they do not declare (View, EnvironmentValues, CatalogEntry), under
-# the member's name, so that every entry, `static let <name> = CatalogEntry(…)`, is a unit of its own. A unit uses
-# another when its code names it: a type by its name, unqualified (`ListRow`, not `Westron.Icon`); an extension's
-# member as `.<name>` (`.insertionMark(…)`, `\.listRowLevel`), a function also by a call of its name alone; a style
-# modifier whose first parameter is a component's enum, only by a call with one of that enum's cases
-# (`.toggleStyle(.check)`, `.buttonStyle(.primary)`), since the system and the other components overload it. A
-# private declaration is used only from its own file. Then:
+# name; and each member of an extension of a type they do not declare (View, EnvironmentValues, Toggle, CatalogEntry),
+# so that every entry, `static let <name> = CatalogEntry(…)`, is a unit of its own. A unit uses another when its code
+# names it: a type by its name, unqualified (`ListRow`, not `Westron.Icon`); a top-level `var` or `let` by its name; an
+# extension's property as `.<name>` (`\.forcedChipStates`); a function by a call, `.<name>(…)` or `<name>(…)`, or
+# with a trailing closure (`.surface(variant)`, `.onChipHover { … }`); an initializer added to a system type by a call
+# of that type with its labels, in order (`Toggle(isOn: …, accessibilityLabel: …)`); and a style modifier, a function
+# named `…Style` whose first parameter is a component's enum, only by a call with one of that enum's cases written
+# out (`.toggleStyle(.check)`, `.buttonStyle(.primary)`), since the system and other components overload it:
+# `.buttonStyle(.plain)` is the system's, `.toggleStyle(.chip)` is Chip's, not Checkbox's. A private declaration is
+# used only from its own file. Then:
 #   - a change to a component's implementation (its WestronUI directory, its generated `<Name>+Contract.swift`, its
 #     contract) also selects every entry whose unit reaches a unit of that implementation through uses, at any depth:
 #     ListRow's change selects `disclosure` (DisclosurePage → ListRow) and the floating Button entries
-#     (ButtonFloatingPage → ListRow); Rule's selects `list-row` (ListRowPage → ListRowDragSamples → `.insertionMark` →
-#     ListRowInsertionMark → Rule);
+#     (ButtonFloatingPage → ListRow); Rule's selects `list-row` (ListRowPage → ListRowDragSamples →
+#     `.insertionMark` → ListRowInsertionMark → Rule);
 #   - a change to a component's page also selects every entry that reaches a unit of the page: `FlowLayout` in
 #     ButtonPages.swift is used by the Checkbox, Chip and color pages;
-#   - the cut: a change that would select more than 5 entries (fan_out_limit) beyond its component's own (one leg of the
-#     audit, ci.yml) selects only its own, and says so: the others wait for the nightly run, as a shared file's do. A
-#     component whose implementation is past it is a base component (Icon, drawn on 13 other entries on 2026-11-24),
-#     and the search does not go on through its units for the others: a change to something a base component draws
-#     does not select every entry that draws the base component. Text has no directory of its own (its code is in the
-#     shared TokenAdapters.swift), so it is shared, as before.
+#   - the cut, declared: a base component (`base_components` below, each with its reason) is drawn on so many entries
+#     that auditing them all on its pull requests would cost as much as the nightly full audit. A change to it selects
+#     its own entries only and says so; the others wait for the nightly run, as a shared file's do. The search does not
+#     go on through a base component's units: a change to something it draws does not select every entry that draws
+#     the base component (nor the base component's own entries), and every count below is taken with that stop;
+#   - the limit, a tripwire, not a switch: a change that would select more than 5 entries (fan_out_limit, one leg of
+#     the audit in ci.yml) beyond its component's own, for a component not declared base, fails the script, naming the
+#     component, its count and the choices: declare it base (its changes then audit its own entries only), move a
+#     page's shared code out of the page, or raise the limit and accept larger audits. A declared base component whose
+#     change would select no more than the limit fails it too: the declaration is stale and would skip entries that
+#     fit. The scan runs on every call, whatever the paths, so the pull request that adds the use that crosses the
+#     limit fails its own scope job, even when it changes only a shared file. On 2026-11-24 four counts stand at the
+#     limit exactly (Button's implementation and page, ListRow, Surface: 5 each), with no headroom on purpose: the next
+#     use of any of them asks for the decision. The counts are in tools/apple/audit-scope-test.sh, which pins them.
+#   - Text has no directory of its own (its code is in the shared TokenAdapters.swift), so it is shared, as before.
 # The snapshot matrix (WestronCatalog/Generated/, SnapshotMatrix/) and the catalog's host (the root files that declare
 # no entry) are not read: they render the pages, and no entry draws them. A unit is the finest grain: an entry that
 # draws a page struct reaches all it uses, so the four floating Button entries, one struct with a `part`, come
-# together. What the scan cannot see (a type named only through a generic parameter or a string) is not followed; the
-# nightly full audit stays the net. A catalog entry the scan does not read as a unit, or a component whose
-# implementation it reads nothing from, fails the script, as an unreadable registry does.
+# together. What the scan cannot see is not followed, and the nightly full audit stays the net: a type named only
+# through a generic parameter, a type alias or a string; a style modifier called with a variable, not a case
+# (`.toggleStyle(style)`; the variable's type, named where it is declared, is usually followed instead); an
+# initializer added to a system type with no labels (`init(_:)`); a name qualified by its module (`WestronUI.ListRow`).
+# A catalog entry the scan does not read as a unit, or a component whose implementation it reads nothing from, fails
+# the script, as an unreadable registry does.
 #
 #   tools/apple/audit-scope.sh --registry   prints the registry's entry names, one per line, as the script reads them
 #   tools/apple/audit-scope.sh --uses       prints, for each component, what a change to its implementation and to its
@@ -69,8 +84,13 @@ cd "$root"
 ui=platforms/apple/Sources/WestronUI
 catalog=platforms/apple/Sources/WestronCatalog
 registry="$catalog/Catalog.swift"
-# The cut (see "Use" above): at most this many entries beyond a component's own, one leg of the audit.
+# The limit (see "Use" above): at most this many entries beyond a component's own, one leg of the audit.
 fan_out_limit=5
+# The base components (see "Use" above), "<Name>: <reason>" per line.
+base_components="
+Icon: every glyph of the catalog is an Icon, drawn on 13 other entries on 2026-11-24 (Chip, Disclosure, ListRow,
+  TextField's glyphs, the color and status pages)
+"
 
 note() { echo "audit-scope: $*" >&2; }
 
@@ -121,10 +141,14 @@ self_contained() {
   done < <(sed -nE 's/^(public |internal )?(final )?(struct|enum|class|actor|protocol) ([A-Za-z0-9_]+).*/\4/p' "$file")
 }
 
+# The names of the declared base components, one per line.
+base_names() { sed -nE 's/^([A-Za-z0-9_]+):.*/\1/p' <<< "$base_components"; }
+
 # What a change to each component selects beyond its own entries (see "Use" above), one line per component and kind
-# of change, tab-separated: <Name>, impl or page, 1 when past the cut, the number of other entries it reaches before
-# the cut, the entries it selects as "<name>:<id>" separated by spaces, and for each "<id>: <unit> -> … -> <unit>"
-# separated by "; " (both "-" when none). Fails when the sources are not in the shape it reads.
+# of change, tab-separated: <Name>, impl or page, 1 for a base component (cut), the number of other entries it reaches,
+# the entries it selects as "<name>:<id>" separated by spaces, and for each "<id>: <unit> -> … -> <unit>" separated by
+# "; " (both "-" when none). Fails when the sources are not in the shape it reads, and at the tripwire: a component
+# not declared base past the limit, or a declared one within it.
 uses_table() {
   local components files
   components="$(find "$catalog/Components" -name '*Pages.swift' | sed -E 's|.*/([^/]+)Pages\.swift$|\1|' | sort)"
@@ -135,11 +159,11 @@ uses_table() {
     done
   } | sort)"
   # shellcheck disable=SC2086 # the names and paths have no spaces
-  perl - "$ui" "$catalog" "$fan_out_limit" $components -- $files << 'PERL'
+  perl - "$ui" "$catalog" "$fan_out_limit" "$(base_names | paste -sd, -)" $components -- $files << 'PERL'
 use strict;
 use warnings;
 
-my ($ui, $catalog, $limit, @rest) = @ARGV;
+my ($ui, $catalog, $limit, $base_list, @rest) = @ARGV;
 my (@components, @files);
 my $list = \@components;
 for (@rest) {
@@ -159,6 +183,20 @@ sub strip {
 my $mods = qr/(?:(?:\@\w+(?:\([^()]*\))?|public|package|internal|private|fileprivate|open|static|final|nonisolated|
   mutating|indirect|override|lazy|convenience|required|dynamic|class(?=\s+(?:func|var|let)\b))\s+)*/x;
 my $typekw = qr/^(?:struct|enum|class|actor|protocol|typealias)$/;
+# Code inside parentheses, with parentheses nested two deep.
+my $balanced = qr/(?:[^()]|\((?:[^()]|\([^()]*\))*\))/;
+
+# A parameter list split at its top-level commas.
+sub split_top {
+  my ($s) = @_;
+  my ($depth, $part, @parts) = (0, '');
+  for my $ch (split //, $s) {
+    $depth++ if $ch =~ /[(<\[]/;
+    $depth-- if $ch =~ /[)>\]]/;
+    if ($ch eq ',' && $depth == 0) { push @parts, $part; $part = '' } else { $part .= $ch }
+  }
+  (@parts, $part);
+}
 
 # Walks a file's code, calling back on each declaration, brace and other word.
 sub walk {
@@ -168,7 +206,8 @@ sub walk {
     my $at = pos $code;
     if ($code =~ /\G([{}])/gc) {
       $on->{brace}->($1, $at);
-    } elsif ($code =~ /\G($mods)(struct|enum|class|actor|protocol|extension|typealias|func|var|let|case)\s+([A-Za-z_][\w.]*)/gc) {
+    } elsif ($code =~ /\G($mods)(struct|enum|class|actor|protocol|extension|typealias|func|var|let|case)
+      \s+([A-Za-z_][\w.]*)/gcx) {
       my ($m, $kw, $name) = ($1, $2, $3);
       my %d = (kw => $kw, name => $name, private => ($m =~ /\b(?:private|fileprivate)\b/ ? 1 : 0), at => $at);
       if ($kw eq 'func' && $code =~ /\G\s*(?:<[^{>]*>)?\s*\(\s*(?:\w+\s+)?\w+\s*:\s*(?:\@\w+\s+)?(\w+)/gc) {
@@ -204,7 +243,11 @@ for my $file (@files) {
   my $code = $code{$file};
   my (@stack, $pending, $cur);
   my $last = 0;
-  my $flush = sub { my ($to) = @_; $units[$cur]{text} .= substr($code, $last, $to - $last) if defined $cur; $last = $to };
+  my $flush = sub {
+    my ($to) = @_;
+    $units[$cur]{text} .= substr($code, $last, $to - $last) if defined $cur;
+    $last = $to;
+  };
   my $unit = sub {
     my ($name, $kind, $private, $at, $member) = @_;
     $flush->($at);
@@ -225,7 +268,9 @@ for my $file (@files) {
         $scope = { kind => $pending->{kw}, unit => $pending->{unit} };
       } elsif ($pending && $pending->{kw} eq 'extension') {
         my $type = $pending->{name} =~ s/\..*//r;
-        $scope = { kind => 'extension', foreign => !$own{$type}, private => $pending->{private}, name => $pending->{name} };
+        $scope = {
+          kind => 'extension', foreign => !$own{$type}, private => $pending->{private}, name => $pending->{name},
+        };
         if (!@stack) {
           # The extension's header belongs to no unit: `extension ListRowBranch` is not a use of ListRowBranch.
           $flush->($pending->{at});
@@ -256,10 +301,20 @@ for my $file (@files) {
     },
     word => sub {
       my ($word, $at) = @_;
-      if (($word eq 'init' || $word eq 'subscript') && @stack == 1 && $stack[0]{kind} eq 'extension' && $stack[0]{foreign}) {
-        $flush->($at);
-        $cur = undef;
+      return unless ($word eq 'init' || $word eq 'subscript') && @stack == 1 && $stack[0]{kind} eq 'extension'
+        && $stack[0]{foreign};
+      # An initializer added to a system type is a unit named by the type and the labels a call must write.
+      my $type = $stack[0]{name} =~ s/.*\.//r;
+      if ($word eq 'init' && substr($code, $at) =~ /^init\s*[?!]?\s*(?:<[^{>]*>)?\s*\(($balanced*)\)/) {
+        my @labels = map { /^\s*(\w+)(?:\s+\w+)?\s*:[^=]*$/ && $1 ne '_' ? $1 : () } split_top($1);
+        if (@labels) {
+          $unit->("$type(" . join('', map { "$_:" } @labels) . ')', 'init', $stack[0]{private}, $at, $stack[0]{name});
+          @{$units[$cur]}{qw(type labels)} = ($type, \@labels);
+          return;
+        }
       }
+      $flush->($at);
+      $cur = undef;
     },
   });
   $flush->(length $code);
@@ -271,7 +326,9 @@ for my $file (@files) {
   my $raw = slurp($file);
   while ($raw =~ /static\s+let\s+(\w+)\s*=\s*CatalogEntry\(\s*id:\s*"([^"]+)"/g) { $entry_id{"$file $1"} = $2 }
 }
-my @entries = grep { ($units[$_]{member} // '') eq 'CatalogEntry' && exists $entry_id{"$units[$_]{file} $units[$_]{name}"} } 0 .. $#units;
+my @entries = grep {
+  ($units[$_]{member} // '') eq 'CatalogEntry' && exists $entry_id{"$units[$_]{file} $units[$_]{name}"}
+} 0 .. $#units;
 my %is_entry = map { $_ => 1 } @entries;
 my %found = map { ("$units[$_]{file} $units[$_]{name}" => 1) } @entries;
 for (sort keys %entry_id) {
@@ -295,13 +352,18 @@ for my $c (@components) {
 # How code names each unit (an entry is named by the registry alone).
 my %enum_cases;
 for my $u (@units) { $enum_cases{$u->{name}} = $u->{cases} if $u->{cases} }
-my (%named, @by_case);
+my (%named, @by_pattern);
 for my $i (0 .. $#units) {
   next if $is_entry{$i};
   my $u = $units[$i];
-  if ($u->{kind} eq 'func' && $u->{param} && $enum_cases{$u->{param}}) {
+  if ($u->{kind} eq 'init') {
+    my $labels = join '', map { "$balanced*?\\b\Q$_\E\\s*:" } @{$u->{labels}};
+    push @by_pattern, [$i, qr/(?<![\w.])\Q$u->{type}\E\s*\($labels/];
+    next;
+  }
+  if ($u->{kind} eq 'func' && $u->{name} =~ /Style$/ && $u->{param} && $enum_cases{$u->{param}}) {
     my $cases = join '|', @{$enum_cases{$u->{param}}};
-    push @by_case, [$i, qr/\b\Q$u->{name}\E\s*\(\s*(?:\Q$u->{param}\E)?\.(?:$cases)\b/];
+    push @by_pattern, [$i, qr/\b\Q$u->{name}\E\s*\(\s*(?:\Q$u->{param}\E)?\.(?:$cases)\b/];
     next;
   }
   my $kind = $u->{kind} eq 'var' && defined $u->{member} ? 'member' : $u->{kind};
@@ -326,7 +388,7 @@ for my $i (0 .. $#units) {
   for my $kind (sort keys %pattern) {
     $uses{$_} = 1 for map { @{$named{$kind}{$_}} } ($u->{text} =~ /$pattern{$kind}/g);
   }
-  for (@by_case) { $uses{$_->[0]} = 1 if $u->{text} =~ $_->[1] }
+  for (@by_pattern) { $uses{$_->[0]} = 1 if $u->{text} =~ $_->[1] }
   for my $j (sort { $a <=> $b } keys %uses) {
     next if $j == $i || ($units[$j]{private} && $units[$j]{file} ne $u->{file});
     push @{$users[$j]}, $i;
@@ -356,43 +418,70 @@ sub reach {
   \%path;
 }
 
-my (%seeds, %own_entries, %fan);
+# The declared base components cut; past the limit, any other fails the script with the decision to make.
+my %base = map { $_ => 1 } grep { $_ ne '' } split /,/, $base_list;
+my %is_component = map { $_ => 1 } @components;
+my @errors;
+for (sort keys %base) {
+  push @errors, "audit-scope: $_ is declared a base component (base_components) but has no catalog page; remove it"
+    unless $is_component{$_};
+}
+my $id = sub { $entry_id{"$units[$_[0]]{file} $units[$_[0]]{name}"} };
 for my $c (@components) {
   my $page = "$catalog/Components/${c}Pages.swift";
-  $seeds{$c}{impl} = [grep { impl_of($units[$_]{file}) eq $c } 0 .. $#units];
-  $seeds{$c}{page} = [grep { $units[$_]{file} eq $page } 0 .. $#units];
-  $own_entries{$c} = { map { $_ => 1 } grep { $units[$_]{file} eq $page } @entries };
-  for my $kind (qw(impl page)) {
-    $fan{$c}{$kind} = grep { !$own_entries{$c}{$_} } keys %{reach($seeds{$c}{$kind}, {})};
-  }
-}
-my %base = map { $_ => 1 } grep { $fan{$_}{impl} > $limit } @components;
-for my $c (@components) {
+  my %seeds = (
+    impl => [grep { impl_of($units[$_]{file}) eq $c } 0 .. $#units],
+    page => [grep { $units[$_]{file} eq $page } 0 .. $#units],
+  );
+  my %own = map { $_ => 1 } grep { $units[$_]{file} eq $page } @entries;
   my %stop = map { $_ => 1 } grep { $_ ne $c } keys %base;
   for my $kind (qw(impl page)) {
-    my $past = $fan{$c}{$kind} > $limit ? 1 : 0;
-    my $path = $past ? {} : reach($seeds{$c}{$kind}, \%stop);
-    my @extra = grep { exists $path->{$_} && !$own_entries{$c}{$_} } @entries;
-    my $id = sub { $entry_id{"$units[$_[0]]{file} $units[$_[0]]{name}"} };
-    print join("\t", $c, $kind, $past, $fan{$c}{$kind},
+    my $path = reach($seeds{$kind}, \%stop);
+    my @extra = grep { exists $path->{$_} && !$own{$_} } @entries;
+    my $fan = @extra;
+    my $ids = join ',', map { $id->($_) } @extra;
+    if ($base{$c}) {
+      push @errors, "audit-scope: $c is declared a base component (base_components), but a change to it would select"
+        . " only $fan entries beyond its own (" . ($ids || "none") . "), within the limit of $limit: the"
+        . " declaration is stale and skips entries that fit; remove $c from base_components in"
+        . " tools/apple/audit-scope.sh"
+        if $kind eq 'impl' && $fan <= $limit;
+      @extra = ();
+    } elsif ($fan > $limit && $kind eq 'impl') {
+      push @errors, "audit-scope: a change to $c would select $fan entries beyond its own, more than the limit of"
+        . " $limit (fan_out_limit, one leg of the audit): $ids. Decide, in tools/apple/audit-scope.sh: declare $c a"
+        . " base component (base_components, with its reason), so that its changes audit its own entries only and the"
+        . " others wait for the nightly run; or raise fan_out_limit and accept larger audits on its pull requests";
+    } elsif ($fan > $limit) {
+      push @errors, "audit-scope: a change to the page ${c}Pages.swift would select $fan entries beyond its own,"
+        . " which use its code, more than the limit of $limit (fan_out_limit, one leg of the audit): $ids. Decide:"
+        . " move the code they share out of the page into a shared file of the catalog (Foundations/), whose changes"
+        . " wait for the nightly run; declare $c a base component (base_components in tools/apple/audit-scope.sh);"
+        . " or raise fan_out_limit and accept larger audits";
+    }
+    print join("\t", $c, $kind, $base{$c} ? 1 : 0, $fan,
       (join(' ', map { "$units[$_]{name}:" . $id->($_) } @extra) || '-'),
       (join('; ', map { $id->($_) . ": $path->{$_}" } @extra) || '-')), "\n";
   }
 }
+die join("\n", @errors) . "\n" if @errors;
 PERL
 }
 
+# The scan runs on every call, whatever the paths, so that the tripwire fires on the pull request that crosses it.
+if ! table="$(uses_table)"; then exit 1; fi
+
 if [ "${1:-}" = --uses ]; then
-  uses_table | while IFS=$'\t' read -r name kind past fan entries paths; do
-    if [ "$past" = 1 ]; then
-      echo "$name $kind: drawn on $fan other entries, more than $fan_out_limit: its own entries only (nightly for the rest)"
+  while IFS=$'\t' read -r name kind cut fan entries paths; do
+    if [ "$cut" = 1 ]; then
+      echo "$name $kind: 0 (base component; $fan other entries draw it, nightly only)"
     elif [ "$entries" = - ]; then
-      echo "$name $kind: nothing beyond its own entries"
+      echo "$name $kind: 0"
     else
-      echo "$name $kind: $(tr ' ' '\n' <<< "$entries" | cut -d: -f2 | paste -sd, -)"
+      echo "$name $kind: $fan: $(tr ' ' '\n' <<< "$entries" | cut -d: -f2 | paste -sd, -)"
       tr ';' '\n' <<< "$paths" | sed -E 's/^ *(.*)/    \1/'
     fi
-  done
+  done <<< "$table"
   exit
 fi
 
@@ -451,14 +540,13 @@ done
 drawn=""
 uses="$(sort -u <<< "$uses" | sed '/^$/d')"
 if [ -n "$uses" ]; then
-  if ! table="$(uses_table)"; then exit 1; fi
   while read -r name kind; do
     what="$name is" verb="drawn on"
     [ "$kind" = impl ] || what="the code of ${name}Pages.swift is" verb="used by"
-    while IFS=$'\t' read -r _ _ past fan entries _; do
-      if [ "$past" = 1 ]; then
-        note "$what $verb $fan other entries, more than $fan_out_limit (the cut): only its own entries here;" \
-          "the others wait for the nightly run"
+    while IFS=$'\t' read -r _ _ cut fan entries _; do
+      if [ "$cut" = 1 ]; then
+        note "$name is a base component (base_components in this script): only its own" \
+          "entries here; the others wait for the nightly run"
       elif [ "$entries" != - ]; then
         note "$what also $verb $(tr ' ' '\n' <<< "$entries" | cut -d: -f2 | paste -sd, -)"
         drawn+="$(tr ' ' '\n' <<< "$entries" | tr ':' ' ')"$'\n'
