@@ -520,18 +520,19 @@ contract `spec/components/<id>/`, and gives the entries that page declares; a Fo
 with other files gives its own entries. A component's change also gives the entries that draw it, since components
 draw each other: the script derives who uses whom from the sources on every run, with no list to keep (its header,
 "Use"). It splits WestronUI and the catalog's pages into units (top-level declarations, extension members, each
-entry) and follows names from unit to unit, so ListRow's change also gives `disclosure` and the floating Button
-entries, Rule's gives `list-row`, `list-row-in-list` and `color-in-use`, and a page's code other pages use
-(`FlowLayout` in ButtonPages.swift) gives theirs. The cut is declared: a base component, listed with its reason in
-the script's `base_components` (on 2026-11-24 Icon alone, drawn on 13 other entries), gives its own entries only, says
-so in the job's log, and leaves the rest to the nightly run; the search does not go on through it. The limit is a
-tripwire, not a switch: a change that would add more than 5 entries beyond its component's own (one leg) fails the
-scope job, naming the component, its count and the choices (declare it base, move a page's shared code out of the
-page, or raise the limit), and so does a declared base component back within the limit. The scan runs on every pull
-request, so the one that adds the crossing use fails its own job. Four counts stand at the limit exactly (Button's
-implementation and page, ListRow, Surface), with no headroom on purpose: the next use of any of them asks for the
-decision. `tools/apple/audit-scope-test.sh` pins every count; `tools/apple/audit-scope.sh --uses` prints them with the
-units each entry reaches the change through. Everything else gives nothing: shared paths (tokens, the shared files
+entry) and follows names from unit to unit, so Checkbox's change also gives `list-row`, `list-row-in-list` and
+`disclosure`, Rule's gives `color-in-use`, and a page's code other pages use (`FlowLayout` in ButtonPages.swift) gives
+theirs. The cut is declared: a base component, listed with its reason in the script's `base_components` (on 2026-11-24
+Icon, drawn on 13 other entries, and ListRow, drawn on 7 since #147), gives its own entries only, says so in the job's
+log, and leaves the rest to the nightly run; the search does not go on through it, so Rule's change no longer gives
+`list-row`, which draws Rule only inside ListRow (its insertion mark). The limit is a tripwire, not a switch: a
+change that would add more than 5 entries beyond its component's own (one leg) fails the scope job, naming the
+component, its count and the choices (declare it base, move a page's shared code out of the page, or raise the
+limit), and so does a declared base component back within the limit. The scan runs on every pull request, so the one
+that adds the crossing use fails its own job. Three counts stand at the limit exactly (Button's implementation and
+page, Surface), with no headroom on purpose: the next use of any of them asks for the decision. ListRow stood there
+too, until #147 took it to 7 and the owner declared it base (2026-11-24). `tools/apple/audit-scope-test.sh` pins
+every count; `tools/apple/audit-scope.sh --uses` prints them with the units each entry reaches the change through. Everything else gives nothing: shared paths (tokens, the shared files
 of WestronUI, the catalog's host, the audit test, the scripts) touch every entry and wait for the nightly run, or for
 a run by hand on the branch. The audit is skipped when there is nothing to audit, and on a push to `main`. The script
 reads the registry, `Catalog.entries` in `Catalog.swift`, from its array literals and its `append(.<name>)` lines (an
@@ -545,8 +546,8 @@ What a change to one file of each component directory selects, before (main at 4
 | Button/ | its 10 entries | + text-field-behavior, text-field-focus-framed, text-field-focus-inline, color-in-use, controls (15) |
 | Checkbox/ | checkbox, checkbox-in-list | + list-row, list-row-in-list, disclosure (5) |
 | Disclosure/ | disclosure | + list-row (2) |
-| ListRow/ | list-row, list-row-in-list | + the four button-floating entries, disclosure (7) |
-| Rule/ | rule | + list-row, list-row-in-list, color-in-use (4) |
+| ListRow/ | list-row, list-row-in-list | + the four button-floating entries, disclosure (7); since #147, base: its own (2) |
+| Rule/ | rule | + list-row, list-row-in-list, color-in-use (4); since #147, ListRow base: + color-in-use (2) |
 | Surface/ | surface | + rule, text-field-behavior, text-field-focus-framed, text-field-focus-inline, color-in-use (6) |
 | Chip/, Icon/ (base), IconTile/, TextField/ | their own | their own, unchanged |
 
