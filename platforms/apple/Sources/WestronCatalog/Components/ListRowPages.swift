@@ -592,13 +592,12 @@ extension ComponentMatrix.Supplement {
         .matrixCellTakesOfferedWidth()
     }
 
-    /// A long title on one line, at level 4, given less width than it needs. On a phone a picture holds one column: in
-    /// half its width the indent, the Icon and the count keep their size and leave the title no room to show.
+    /// A long title on one line, at level 4, given less width than it needs.
     static let listRowLongTitle = ComponentMatrix.Supplement(
         component: "list-row", id: "long-title", title: "a long title at level 4",
         note: "The product sets one line; the row is given less width than the title needs at level 4: the indent and "
             + "the slots keep their size, the title truncates at its end with an ellipsis.",
-        keeps: ["form": "pressable"], columnsPerPicture: longTitleColumns
+        keeps: ["form": "pressable"]
     ) { combination in
         ListRow(level: 4, guides: guides(combination), action: {}) {
             Text(verbatim: ListRowSample.long).lineLimit(1)
@@ -609,15 +608,6 @@ extension ComponentMatrix.Supplement {
         }
         .listRowCatalogState(state(combination))
         .matrixCellTakesOfferedWidth()
-    }
-
-    /// The columns a picture of `long-title` holds: one on a phone, all of them elsewhere.
-    private static var longTitleColumns: Int? {
-        #if os(iOS)
-            1
-        #else
-            nil
-        #endif
     }
 
     /// The largest text size, on every platform: the trailing slot under the title and the second line.

@@ -35,7 +35,7 @@ composes its rows from (decisions/0014): the first own view in two forms, with a
 a mark (`marks: insertion`, Rule's insertion point over its edge) and the first that holds other components in its
 slots; its revision of 2026-11-24, after the review of phase 4, says that a disabled row dims what it holds once and
 leaves its branch's fold to the chevron's group, and that the trailing slot stands in the row's padding as the
-leading one does and keeps its own width, up to half the row's, beside the title. Disclosure
+leading one does. Disclosure
 ([`disclosure/`](disclosure/disclosure.spec.yaml), #120), approved on 2026-11-22 by the coordinating agent under the
 owner's delegation, is the first component an Apple OS lacks (`watchos: { status: unavailable }`, as SwiftUI has no
 DisclosureGroup there), the first with the role `disclosure`, and the first that sets a context for other components

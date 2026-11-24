@@ -405,10 +405,6 @@ private struct ListRowLayout: View {
     @ScaledMetric(relativeTo: ListRowMetrics.textStyle) private var paddingVertical = CGFloat(
         ListRowMetrics.paddingVertical)
     @ScaledMetric(relativeTo: ListRowMetrics.textStyle) private var subtitleGap = CGFloat(ListRowMetrics.subtitleGap)
-    /// The row's width, once laid out: the trailing slot keeps its own width up to half of it. nil until the first
-    /// layout, when the slot is held only to the width beside the title, which differs only for a slot wider than half
-    /// the row.
-    @State private var rowWidth: CGFloat?
 
     private var compact: Bool {
         #if os(iOS)
@@ -448,11 +444,6 @@ private struct ListRowLayout: View {
         .padding(.leading, ListRowMetrics.slotStart(level: level, indent: spacing.indent, padding: spacing.padding))
         .padding(.trailing, spacing.padding)
         .frame(maxWidth: .infinity, minHeight: ListRowMetrics.minHeight, alignment: .leading)
-        .onGeometryChange(for: CGFloat.self) {
-            $0.size.width
-        } action: {
-            rowWidth = $0
-        }
         .backgroundPreferenceValue(ListRowLeadingBounds.self) { leading in
             if guides && level > 0 {
                 GeometryReader { proxy in
@@ -472,14 +463,9 @@ private struct ListRowLayout: View {
     /// slot at the end. Together they are the row's words: one element to assistive technology. The text is padded
     /// vertically, and the trailing slot at the end stands beside that padding, on the title's first line, as the
     /// leading slot does: a frame taller than the line, such as a static Chip's, stands in the padding and grows the
-    /// row only where it would cross the row's edge. The trailing slot keeps its own width, up to half the row's, and
-    /// the title takes the rest (`ListRowWordsLine`). Stacked, the column stands alone in a stack, as it always has.
+    /// row only where it would cross the row's edge.
     @ViewBuilder private func wordsElement(stacks: Bool) -> some View {
-        let line =
-            stacks
-            ? AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 0))
-            : AnyLayout(ListRowWordsLine(trailingLimit: rowWidth.map(ListRowMetrics.trailingLimit(rowWidth:))))
-        let column = line {
+        let column = HStack(alignment: .firstTextBaseline, spacing: 0) {
             VStack(alignment: .leading, spacing: subtitleGap) {
                 parts.title
                     .textRole(titleFont)
@@ -528,68 +514,6 @@ private struct ListRowLayout: View {
                 .accessibilityAddTraits(selected ? .isSelected : [])
                 .modifier(ListRowLevelContent(level: level))
         }
-    }
-}
-
-/// The words' line: the column of the title and the second line, and the trailing slot beside it on the title's first
-/// line, by their first text baselines. The trailing slot keeps its own width, up to `trailingLimit`, half the row's
-/// width, and never more than the line has; the column takes the rest, where the title truncates or wraps. A slot wider
-/// than that is offered the limit and is the one that truncates or wraps (the contract's slots). An HStack would split
-/// the width by how flexible each side is, so a column that can always take more left the slot less than its own width,
-/// and the slot truncated or wrapped before the title did.
-private struct ListRowWordsLine: Layout {
-    /// Half the row's width; nil before the row is first laid out, when the slot is held to the line alone.
-    let trailingLimit: CGFloat?
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        line(proposal, subviews).size
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let line = line(ProposedViewSize(width: bounds.width, height: proposal.height), subviews)
-        for (subview, frame) in zip(subviews, line.frames) {
-            subview.place(
-                at: CGPoint(x: bounds.minX + frame.minX, y: bounds.minY + frame.minY), anchor: .topLeading,
-                proposal: ProposedViewSize(frame.size))
-        }
-    }
-
-    func explicitAlignment(
-        of guide: VerticalAlignment, in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
-    ) -> CGFloat? {
-        guard guide == .firstTextBaseline else { return nil }
-        return bounds.minY + line(ProposedViewSize(width: bounds.width, height: proposal.height), subviews).baseline
-    }
-
-    /// The frames of the column and of the trailing slot, if there is one, from the line's top leading corner, the
-    /// line's size and its first baseline from its top.
-    private func line(_ proposal: ProposedViewSize, _ subviews: Subviews) -> (
-        frames: [CGRect], size: CGSize, baseline: CGFloat
-    ) {
-        guard let column = subviews.first else { return ([], .zero, 0) }
-        var trailingSize = CGSize.zero
-        var trailingBaseline: CGFloat?
-        if subviews.count > 1 {
-            let trailing = subviews[1]
-            let own = trailing.sizeThatFits(ProposedViewSize(width: nil, height: proposal.height)).width
-            let width = proposal.width.map { min(own, $0, trailingLimit ?? $0) } ?? own
-            let offer = ProposedViewSize(width: width, height: proposal.height)
-            let dimensions = trailing.dimensions(in: offer)
-            trailingSize = CGSize(width: dimensions.width, height: dimensions.height)
-            trailingBaseline = dimensions[.firstTextBaseline]
-        }
-        let columnWidth = proposal.width.map { max(0, $0 - trailingSize.width) }
-        let words = column.dimensions(in: ProposedViewSize(width: columnWidth, height: proposal.height))
-        let columnBaseline = words[.firstTextBaseline]
-        let baseline = max(columnBaseline, trailingBaseline ?? columnBaseline)
-        let columnFrame = CGRect(x: 0, y: baseline - columnBaseline, width: words.width, height: words.height)
-        guard let trailingBaseline else { return ([columnFrame], columnFrame.size, baseline) }
-        let trailingFrame = CGRect(
-            origin: CGPoint(x: columnFrame.maxX, y: baseline - trailingBaseline), size: trailingSize)
-        return (
-            [columnFrame, trailingFrame],
-            CGSize(width: trailingFrame.maxX, height: max(columnFrame.maxY, trailingFrame.maxY)), baseline
-        )
     }
 }
 

@@ -128,13 +128,6 @@ enum ListRowMetrics {
         size.isAccessibilitySize
     }
 
-    /// The most the trailing slot at the end is offered: half the row's width. A slot wider than that truncates or wraps
-    /// in it, so that it never takes the title's whole width; within it the slot keeps its own width and the title
-    /// takes what is left (the contract's slots).
-    static func trailingLimit(rowWidth: CGFloat) -> CGFloat {
-        rowWidth / 2
-    }
-
     /// The leading edge of the level's leading slot from the row's leading edge: the padding and an indent per level.
     static func slotStart(level: Int, indent: CGFloat, padding: CGFloat) -> CGFloat {
         padding + CGFloat(max(0, level)) * indent

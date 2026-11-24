@@ -40,11 +40,8 @@ description: >-
   line limit of the row's own: both wrap, and a product that wants one line sets it below the accessibility text sizes
   only, so that at those sizes the title wraps instead of shrinking to a few letters; on one line the title is
   truncated at its end with an ellipsis and the whole title kept as the accessible name. The leading and trailing slots
-  stand on the title's first line, centred on it, and keep their own sizes; the title takes the width they leave,
-  truncated or wrapped as above. A trailing slot wider than half the row's width is given half the row's width and is
-  the one that truncates or wraps there, so that words at the end never take the title's place; only a row whose
-  indent and slots themselves take more than half its width, a deep level on a narrow width, can leave its title
-  little or no room (decisions/0001, "Revision after the review of phase 4"). At the accessibility text sizes (accessibility1 and larger) the trailing slot moves under the title and the second line,
+  stand on the title's first line, centred on it, and keep their own sizes; the title takes the width they leave. At
+  the accessibility text sizes (accessibility1 and larger) the trailing slot moves under the title and the second line,
   from the title's leading edge, so that the title keeps the row's width (design-language/08, "a row that runs out of
   width stacks its parts"); the chevron's cell stays on the first line at the end. The row is at least
   size.target.minimum high, 44 pt on iOS and watchOS and 28 on macOS, and grows with its text: its text is padded
@@ -285,12 +282,9 @@ platforms:
       localized "Level". The horizontal spacing scales with @ScaledMetric relative to the title's text style, read under
       a dynamicTypeSize of at most xxxLarge; the vertical spacing at the person's size. The leading and trailing slots
       stand on the title's first line by the first text baseline, which IconTile and the check give at their centre
-      line. The title's column and the trailing slot beside it are laid out by a Layout of the row's own: the slot is
-      offered its own width, up to half the row's, which the row reads from its own frame once laid out, and the column
-      the rest; an HStack, which splits its width by how flexible each child is, left a short title room to spare
-      while it truncated a Chip at the end. The focus ring is the system's, on the highlight's shape (contentShape
-      .focusEffect at container.radius), as Button's is; the drawn row's accessibility shape is the highlight's, and
-      the words' element's its own rectangle at the row's height. The chevron's cell reaches the row through the environment, package-internal: the Disclosure
+      line. The focus ring is the system's, on the highlight's shape (contentShape .focusEffect at container.radius), as
+      Button's is; the drawn row's accessibility shape is the highlight's, and the words' element's its own rectangle at
+      the row's height. The chevron's cell reaches the row through the environment, package-internal: the Disclosure
       style sets it on its label, and the row reads it and clears it for its own slots, so a row inside a slot draws
       none, tells the style it drew it through a preference, and names it by its title; a leaf's hidden cell reaches
       it the same way from Disclosure's .disclosureAlignsLeaves(); no public API of ListRow's (decisions/0001, "The
