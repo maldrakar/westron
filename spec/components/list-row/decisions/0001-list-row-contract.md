@@ -656,7 +656,13 @@ decided the fold. The rule now in this contract and in Disclosure's and Checkbox
   (`listRowDimsContent`, package-internal), so that a Checkbox at its start draws no opacity of its own for disabled;
   the check keeps every other part of being disabled. A row inside a disabled row's slot does not dim again either.
   Since SwiftUI's opacity reaches each layer drawn, the parts dimmed one by one draw the same pixels as the whole
-  dimmed at once: no sheet without a chevron changes.
+  dimmed at once: the only sheets this rule changes are those that draw a chevron or a Checkbox in a disabled row. The
+  chevron's are `list-row.slots`, `list-row.accessibility5`, `list-row.right-to-left` and `disclosure.tree`, the
+  chevron of a row disabled alone now whole; the Checkbox's are `list-row.task` and `disclosure.block-header`, whose
+  disabled samples hold task rows with a check at the start, now at `opacity.disabled` once instead of twice. The
+  dimming applies to the Checkbox alone: another control put in a slot against the contract, a Button, a selectable
+  or pressable Chip or a TextField, still dims itself inside the row's dimming (the contract's disabled); a static
+  Chip, an Icon and an IconTile have no disabled look of their own.
 - Disabling a row does not lock its branch's fold. A disabled row is not pressable, but folding a branch is
   navigation, and the reviewer's case is the same call, `.disabled(true)` on the label, doing two things to the
   chevron depending on the label. The cell takes its enabled state and its look from its DisclosureGroup (Disclosure's
@@ -666,11 +672,12 @@ decided the fold. The rule now in this contract and in Disclosure's and Checkbox
   folding, which would leave an operable control below its contrast.
 
 Measured after, on iOS (iPhone 17 simulator, iOS 26) and macOS alike: the check in a disabled row 0.4, as alone
-disabled; the chevron in a row disabled alone 1.0, as after a disabled text label, and in a disabled group's row 0.4,
-as a disabled group's after a text label (`ListRowTests.disabledRowDimsTheCheckOnce` and
-`disabledRowDimsTheChevronOnce`; `DisabledRowPixelTests` on macOS with Core Animation's renderer). The fold:
-`DisclosureStyleTests.disabledLabelKeepsTheFold` (and once, on the iOS simulator, a behaviour test on a live sample
-the catalog does not keep: Disclosure's decisions/0001, its revision).
+disabled; the chevron in a row disabled alone 1.0, as after a disabled text label, and in a disabled group's row 0.4, as
+a disabled group's after a text label (`ListRowTests.disabledRowDimsTheCheckOnce` and `disabledRowDimsTheChevronOnce`;
+`DisabledRowPixelTests` on macOS with Core Animation's renderer). The fold:
+`DisclosureStyleTests.disabledLabelKeepsTheFold`, and `DisclosureFoldClickTests`, which clicks the chevron in-process on
+macOS (and once, on the iOS simulator, a behaviour test on a live sample the catalog does not keep: Disclosure's
+decisions/0001, its revision).
 
 **A static Chip at the end made a row taller.** The trailing slot stood inside the words' column, which was padded by
 `container.paddingVertical`, so its frame could not stand in that padding as the leading slot's does, which the

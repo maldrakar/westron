@@ -199,8 +199,8 @@
         /// Disabled is the group's (the contract's disabled): the cell takes its enabled state from the group, so a label
         /// disabled alone leaves the fold available whatever the label is, a ListRow, pressable or static, or a text;
         /// a disabled group disables its cell whatever the label is. The cells drawn enabled are counted
-        /// (`DisclosureCellsEnabled`); that the enabled cell inside a disabled row takes a press is
-        /// DisclosureBehaviorTests.testDisabledRowStillFolds.
+        /// (`DisclosureCellsEnabled`); that a click on that cell folds the branch, and on a disabled group's does not, is
+        /// DisclosureFoldClickTests.
         @Test("a label disabled alone leaves the chevron enabled, a ListRow as any other; a disabled group disables it")
         func disabledLabelKeepsTheFold() {
             func enabledCells(groupDisabled: Bool = false, @ViewBuilder _ label: () -> some View) -> Int {

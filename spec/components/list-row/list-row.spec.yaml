@@ -87,15 +87,18 @@ description: >-
   it. The ring means a drop target only, in every theme. A pressed row is drawn pressed also when it is selected; a
   selected row keeps its highlight under the pointer. A disabled row never enters hover, pressed or dropTarget: it is
   drawn whole at opacity.disabled, its slots and its highlight with it, with no colors of its own, and takes no press.
-  A disabled row dims what it holds once: a control in its slots, such as the Checkbox at its start, is not dimmed
-  again by its own disabled state while it is inside a disabled row, so that it stands at opacity.disabled as the same
-  control disabled alone does, and keeps its other disabled behaviour, no hover, no press and announced as
-  unavailable. Disabling a row does not lock its branch's fold: a disabled row is not pressable, but folding a branch
+  A disabled row dims what it holds once: the Checkbox at its start, the one control this contract allows in a slot,
+  is not dimmed again by its own disabled state while it is inside a disabled row, so that it stands at
+  opacity.disabled as the same control disabled alone does, and keeps its other disabled behaviour, no hover, no press
+  and announced as unavailable; a row inside a disabled row's slot is not dimmed again either. What else the slots
+  hold, an IconTile, an Icon, words or a static Chip, has no disabled look of its own. Disabling a row does not lock its branch's fold: a disabled row is not pressable, but folding a branch
   is navigation. The Disclosure chevron's cell, which is not a slot, takes its enabled state and its look from its
   DisclosureGroup, not from the row, as it does after any other label: a row disabled while its group is not keeps a
   chevron that folds and unfolds the branch, drawn whole, as an enabled control meets its contrast; a disabled group
   disables its chevron, which then dims itself once at opacity.disabled while the row dims the rest (the Disclosure
-  contract's disabled). Neither the cell nor a control in a slot is ever dimmed twice.
+  contract's disabled). So neither the chevron's cell nor a Checkbox at the start is ever dimmed twice. Another
+  control put in a slot against this contract, a Button, a selectable or pressable Chip or a TextField, dims itself as
+  it does alone, inside the row's dimming: twice.
   A selected row draws a bar at its highlight's leading edge, inside it: bar.width wide, in bar.color, from the
   highlight's top to its bottom each inset by container.radius, so that it reads as a bar on the highlight's straight
   side, with round ends, in every theme. Selection is so shown by a mark that is neither the tint, which stands 1.16:1

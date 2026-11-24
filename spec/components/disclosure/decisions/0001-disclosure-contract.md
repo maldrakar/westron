@@ -415,12 +415,16 @@ revision, written into both contracts:
 Measured after the revision, macOS (`ListRowTests.disabledRowDimsTheChevronOnce` by `ImageRenderer` on iOS and macOS,
 `DisabledRowPixelTests.chevronDimmedOnce` by Core Animation's renderer on macOS): enabled 1.0; in a row disabled alone,
 pressable or static, 1.0, as after a disabled text label; in a disabled group's row 0.4, as a disabled group's after a
-text label. `DisclosureStyleTests.disabledLabelKeepsTheFold` counts the cells drawn enabled (`DisclosureCellsEnabled`,
-a package-internal preference beside `DisclosureCellsDrawn`). A behaviour test pressed such a chevron on the iOS
-simulator while the revision was made, on a live sample, a row disabled alone: the row was announced as unavailable
-and took no press, the cell was enabled and folded and unfolded the branch. The sample is not kept: a disabled row on
-an audited page fails the contrast audit as an inactive control, which only a new suppression would excuse, so the
-ListRow supplement `composition`, which the audit does not walk, draws such a row instead.
+text label. `DisclosureStyleTests.disabledLabelKeepsTheFold` counts the cells drawn enabled (`DisclosureCellsEnabled`, a
+package-internal preference beside `DisclosureCellsDrawn`), and `DisclosureFoldClickTests` (macOS, in-process: mouse
+events sent to a window, as `ButtonHitAreaTests` sends them) clicks the chevron: it folds the branch after an enabled
+row, a disabled pressable row and a disabled static row, and not in a disabled group, and a click on the disabled row's
+title runs its action 0 times; on the code before the revision the disabled rows' chevrons folded nothing. A behaviour
+test pressed such a chevron on the iOS simulator while the revision was made, on a live sample, a row disabled alone:
+the row was announced as unavailable and took no press, the cell was enabled and folded and unfolded the branch. The
+sample is not kept: a disabled row on an audited page fails the contrast audit as an inactive control, which only a new
+suppression would excuse, so the ListRow supplement `composition`, which the audit does not walk, draws such a row
+instead.
 
 ## Pilot files read
 
