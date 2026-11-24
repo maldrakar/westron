@@ -362,7 +362,9 @@ private struct ChipSurface<Content: View>: View {
                 // The capsule's size follows the content's, in the chip's transaction (`motion.resize`), not the tint's.
                 .geometryGroup()
             }
-            .modifier(ChipHover(shape: shape, onHover: onHover))
+            // Hover over the drawn capsule, in the drawn chip's frame, not over the hit area around it nor the corners
+            // of the capsule's frame (`ShapeHover`); the click is still taken in the whole hit area (`ChipHitArea`).
+            .modifier(ShapeHover(shape: shape, onHover: onHover))
             // The accessibility shape is the drawn capsule, not the hit area around it, as Button's is.
             .contentShape(.accessibility, shape)
             #if os(macOS) || os(watchOS)
@@ -375,43 +377,6 @@ private struct ChipSurface<Content: View>: View {
             .modifier(ChipHitArea(minSide: hitSide))
             // The size of a text-only chip as the check comes in or goes: with the fill, or at once under Reduce Motion.
             .animation(motion.resize, value: tokens.mark)
-    }
-}
-
-/// Tracks the pointer over the drawn capsule, not over the hit area around it nor the corners of the capsule's frame
-/// beyond its round ends: the pointer's location in the drawn chip's frame is tested against the capsule. `onHover`
-/// reports the whole frame whatever the content shape: with `.contentShape(.interaction, capsule)` before it, the
-/// pointer 1 pt inside the frame's corner, outside the capsule, still hovered the chip (macOS 26, ChipBehaviorTests).
-/// The click is still taken in the whole hit area (`ChipHitArea`).
-private struct ChipHover<S: Shape>: ViewModifier {
-    let shape: S
-    let onHover: ((Bool) -> Void)?
-
-    @State private var size = CGSize.zero
-
-    func body(content: Content) -> some View {
-        #if os(watchOS)
-            content
-        #else
-            if let onHover {
-                content
-                    .onGeometryChange(for: CGSize.self) { proxy in
-                        proxy.size
-                    } action: { newSize in
-                        size = newSize
-                    }
-                    .onContinuousHover(coordinateSpace: .local) { phase in
-                        switch phase {
-                        case .active(let location):
-                            onHover(shape.path(in: CGRect(origin: .zero, size: size)).contains(location))
-                        case .ended:
-                            onHover(false)
-                        }
-                    }
-            } else {
-                content
-            }
-        #endif
     }
 }
 
