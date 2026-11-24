@@ -1,0 +1,1697 @@
+Binary files /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/.DS_Store and /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/.DS_Store differ
+diff -ruN -x .build -x .swiftpm -x .git -x *.png -x *.xcresult /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Apps/Apple/Package.swift /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Apps/Apple/Package.swift
+--- /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Apps/Apple/Package.swift	2026-11-09 11:01:48
++++ /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Apps/Apple/Package.swift	2026-11-24 23:14:40
+@@ -21,6 +21,9 @@
+         // home of `xcprojformatter`, which keeps that file canonical when run from here through `swift run`
+         // (ADR-0008, amended 2026-10-14). Exact, because the format and the library are weeks old.
+         .package(url: "https://github.com/apple/xcode-project-format", exact: "0.1.0"),
++        // westron's SwiftUI library, which the views of a screen that moves to westron draw with; the same package the
++        // core takes `WestronTokens` from, under the same name, so that SwiftPM resolves it once. SPIKE: a local path.
++        .package(name: "Westron", path: "/Users/aabanschikov/westron-design-system/.claude/worktrees/spike-westron"),
+     ],
+     targets: [
+         .target(name: "TodoAppleUI", dependencies: [
+@@ -34,6 +37,7 @@
+             .product(name: "TaskScreenFeature", package: "todo-core"),
+             .product(name: "TaskViewListFeature", package: "todo-core"),
+             .product(name: "TodoCore", package: "todo-core"),
++            .product(name: "WestronUI", package: "Westron"),
+         ]),
+         // The `@main`, and the activation an executable without a bundle needs: the app is `TodoAppleUI`, and the
+         // iOS app target of `Todo.xcodeproj`, whose `@main` is `Sources/todo-ios`, outside every target here,
+diff -ruN -x .build -x .swiftpm -x .git -x *.png -x *.xcresult /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Apps/Apple/Sources/TodoAppleUI/ListsScreen/ListsDialogs.swift /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Apps/Apple/Sources/TodoAppleUI/ListsScreen/ListsDialogs.swift
+--- /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Apps/Apple/Sources/TodoAppleUI/ListsScreen/ListsDialogs.swift	2026-11-01 11:23:07
++++ /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Apps/Apple/Sources/TodoAppleUI/ListsScreen/ListsDialogs.swift	2026-11-24 23:14:43
+@@ -11,12 +11,12 @@
+ struct ListsDialogs<PickerContent: View>: ViewModifier {
+     private let model: TaskViewList.Model
+     private let send: (TaskViewList.UserAction) -> Void
+-    private let picker: (PickerModel<TaskViewList.Model.Kind, TaskViewList.UserAction>) -> PickerContent
++    private let picker: (TaskViewList.Model.MovePicker) -> PickerContent
+ 
+     /// The dialogs of the model, which send their actions, the picker drawn by `picker` while it is up.
+     init(
+         model: TaskViewList.Model, send: @escaping (TaskViewList.UserAction) -> Void,
+-        @ViewBuilder picker: @escaping (PickerModel<TaskViewList.Model.Kind, TaskViewList.UserAction>) -> PickerContent
++        @ViewBuilder picker: @escaping (TaskViewList.Model.MovePicker) -> PickerContent
+     ) {
+         self.model = model
+         self.send = send
+diff -ruN -x .build -x .swiftpm -x .git -x *.png -x *.xcresult /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Apps/Apple/Sources/TodoAppleUI/ListsScreen/MovePickerSheet.swift /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Apps/Apple/Sources/TodoAppleUI/ListsScreen/MovePickerSheet.swift
+--- /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Apps/Apple/Sources/TodoAppleUI/ListsScreen/MovePickerSheet.swift	2026-11-07 12:08:24
++++ /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Apps/Apple/Sources/TodoAppleUI/ListsScreen/MovePickerSheet.swift	2026-11-24 23:20:50
+@@ -1,30 +1,34 @@
+ // Apps/Apple/Sources/TodoAppleUI/ListsScreen/MovePickerSheet.swift
+-import DesignSystemComponents
+ import SwiftUI
+ import TaskViewListFeature
++import WestronUI
+ 
+-/// The picker of Move to… as its model describes it (`PickerModel`; `Phone.dc.html`, the Move to… sheet): its title,
+-/// which names the list being moved, and Cancel in its bar; the hint under the title; "Top level" first, a row of its
+-/// own; then the whole tree drawn with the screen's own rows, `ListRowView` with its end and `AreaLine`, picked by the
+-/// one switch over a row's kind (`docs/style.md`, "Views"), each at least as high as the model's least; the rows that
+-/// cannot take the list dimmed as the model says and disabled. Every row, "Top level" among them, ends in what its
+-/// model puts at its right, the check on the list's present parent and the room for it on every other row, so that the
+-/// rows end in one column (Lists screen spec, section 6; the owner, on #163's thread r4431052930). A row's tap sends
+-/// the action its model holds, `movePickerRowTapped`, and Cancel its own, `movePickerCancelled`; what a tap moves, and
+-/// that the picker closes, is the module's. The sheet is the platform's container, on the paper.
++/// The picker of Move to…, the first part of the Lists screen drawn with westron (the spike of 2026-11-24). The sheet,
++/// its navigation bar with the title, which names the list being moved, and Cancel are the platform's, as SwiftUI gives
++/// them; what stands in the sheet is westron's: the hint under the title in westron's role for a hint, then "Top level"
++/// and the tree's rows, each a `ListRow` at its option's nesting level with no guides, as westron's row leaves them out
++/// in a picker. A list's row, and "Top level"'s, has its `IconTile` at its start, in the list's colour through
++/// `.category(_:)`, and westron's neutral tile for the top level; an area's row has its labelled `Rule` for its title,
++/// the line alone for an unnamed area. The present parent has the check `Icon` at its end, read as the model's word,
++/// and every other row the check hidden in its room, so that the rows end in one column (the owner, on #163's thread
++/// r4431052930). A row that cannot take the list is disabled, which `ListRow` dims itself. A row's tap sends the action
++/// its option holds, `movePickerRowTapped`, and Cancel its own, `movePickerCancelled`; what a tap moves, and that the
++/// picker closes, is the module's. Every size, gap, colour and font is westron's: the rows' own, and the page's margin
++/// for the window's size class, which westron's margin tokens are chosen by.
+ ///
+-/// A row here has none of the guides or the pinning the tree gives it, as the canvas's picker has none: a list is
+-/// picked here and not opened or folded, and the module builds the rows with no menu, count, chevron, grip or highlight
+-/// (Task 7; the Lists screen plan, Task 8, the picker's options). A list's row stands on its background whole, as in
+-/// the tree.
++/// `Icon` and `Rule` are written with their module's name: this module has views of its own under both names, which
++/// shadow westron's here.
+ struct MovePickerSheet: View {
+-    private let model: PickerModel<TaskViewList.Model.Kind, TaskViewList.UserAction>
++    private typealias Option = TaskViewList.Model.MovePicker.Option
++
++    private let model: TaskViewList.Model.MovePicker
+     private let send: (TaskViewList.UserAction) -> Void
+ 
+-    init(
+-        model: PickerModel<TaskViewList.Model.Kind, TaskViewList.UserAction>,
+-        send: @escaping (TaskViewList.UserAction) -> Void
+-    ) {
++    #if !os(macOS)
++    @Environment(\.horizontalSizeClass) private var sizeClass
++    #endif
++
++    init(model: TaskViewList.Model.MovePicker, send: @escaping (TaskViewList.UserAction) -> Void) {
+         self.model = model
+         self.send = send
+     }
+@@ -33,23 +37,22 @@
+         NavigationStack {
+             ScrollView {
+                 LazyVStack(alignment: .leading, spacing: 0) {
+-                    topLevelRow
++                    Text(model.hint)
++                        .textRole(.footnote.regular)
++                        .foregroundStyle(.text.secondary)
++                        .frame(maxWidth: .infinity)
++                        .padding(.bottom, .space.withinGroup)
++                    row(model.topLevel)
+                     ForEach(model.options.indices, id: \.self) { index in
+-                        option(model.options[index])
++                        row(model.options[index])
+                     }
+                 }
++                .padding(.horizontal, pageMargin)
+             }
+-            // The canvas's line under the title, on the sheet's paper.
+-            .safeAreaInset(edge: .top, spacing: 0) {
+-                Text(model.hint)
+-                    .frame(maxWidth: .infinity)
+-                    .padding(.bottom, model.style.hintGap)
+-                    .background(Color(.paper))
+-            }
+             .navigationTitle(model.title)
+             #if !os(macOS)
+-            // The title in the bar beside Cancel, as the canvas's, where iOS would otherwise draw it large under the
+-            // bar; the modifier is unavailable on macOS.
++            // The title in the bar beside Cancel, where iOS would otherwise draw it large under the bar; the modifier
++            // is unavailable on macOS.
+             .navigationBarTitleDisplayMode(.inline)
+             #endif
+             .toolbar {
+@@ -62,75 +65,51 @@
+         }
+         #if os(macOS)
+         // A sheet on the Mac is as large as what it holds, and a scroll view asks for no height of its own: the size
+-        // the sidebar's plain picker had (2026-10-12), which no model holds, since it is the container's. iOS sizes a
+-        // sheet itself, and a minimum height there would cut the sheet of an iPhone turned sideways.
++        // the sidebar's plain picker had (2026-10-12). It is the container's, the system's sheet, and westron has no
++        // token for a sheet's size, so the two numbers stay, the view's only raw values. iOS sizes a sheet itself.
+         .frame(minWidth: 320, minHeight: 400)
+         #endif
+-        .presentationBackground(Color(.paper))
+     }
+ 
+-    /// "Top level", with its glyph on a tile of its own where a list has its tile, and its accessories at its right, as
+-    /// the model has them.
+-    private var topLevelRow: some View {
+-        let topLevel = model.topLevel
+-        return Button { send(topLevel.action) } label: {
+-            HStack(spacing: 0) {
+-                HStack(spacing: topLevel.style.tileToTitle) {
+-                    Icon(topLevel.icon)
+-                        .frame(width: topLevel.style.tileSide, height: topLevel.style.tileSide)
+-                        .background(
+-                            Color(topLevel.style.tileColor), in: .rect(cornerRadius: topLevel.style.tileCornerRadius)
+-                        )
+-                    Text(topLevel.title)
+-                        .frame(maxWidth: .infinity, alignment: .leading)
+-                }
+-                Accessories(
+-                    topLevel.accessories, cellMinimumWidth: topLevel.style.cellMinimumWidth, textMinimumWidth: nil,
+-                    endGap: topLevel.style.endGap, height: topLevel.style.height, send: send
+-                )
++    /// An option as its row, picked by the one switch over what it is (`docs/style.md`, "Views", the kind of a row).
++    @ViewBuilder private func row(_ option: Option) -> some View {
++        switch option.kind {
++        case .tile(let icon, let category):
++            ListRow(level: option.level, guides: false, action: { send(option.action) }) {
++                Text(option.title)
++            } leading: {
++                IconTile(icon).category(category)
++            } trailing: {
++                check(option)
+             }
+-            .padding(.leading, topLevel.style.leading)
+-            .frame(height: topLevel.style.height)
+-            .contentShape(.rect)
++            .disabled(option.isDisabled)
++        case .line:
++            ListRow(level: option.level, guides: false, action: { send(option.action) }) {
++                WestronUI.Rule(option.title)
++            } trailing: {
++                check(option)
++            }
++            .disabled(option.isDisabled)
+         }
+-        .buttonStyle(.plain)
+-        .accessibilityAddTraits(topLevel.isChecked ? .isSelected : [])
+     }
+ 
+-    /// A row of the tree, drawn by the screen's own row of its kind with what stands at its right, at least the model's
+-    /// least height, so that an unnamed area, the line alone, is no 17 pt target.
+-    @ViewBuilder private func option(
+-        _ option: PickerModel<TaskViewList.Model.Kind, TaskViewList.UserAction>.Option
+-    ) -> some View {
+-        switch option.row {
+-        case .area(let line):
+-            choice(option, tap: line.tap) {
+-                AreaLine(line, changed: TaskViewList.UserAction.titleFieldChanged, send: send)
+-            }
+-        case .list(let list):
+-            choice(option, tap: list.tap) {
+-                HStack(spacing: 0) {
+-                    ListRowView(list, changed: TaskViewList.UserAction.titleFieldChanged, send: send)
+-                    ListRowView.End(list, send: send)
+-                }
+-                .background(Color(list.style.background))
+-            }
++    /// The check on the present parent, read as the model's word after the row's title, and on every other row the
++    /// check hidden in its room, which is decorative and read as nothing.
++    @ViewBuilder private func check(_ option: Option) -> some View {
++        if option.isChecked {
++            WestronUI.Icon(.check, label: model.currentLabel)
++        } else {
++            WestronUI.Icon(.check).hidden()
+         }
+     }
+ 
+-    /// An option as a button that sends the row's tap, disabled and dimmed where it cannot be chosen.
+-    private func choice(
+-        _ option: PickerModel<TaskViewList.Model.Kind, TaskViewList.UserAction>.Option, tap: TaskViewList.UserAction,
+-        @ViewBuilder row: () -> some View
+-    ) -> some View {
+-        Button { send(tap) } label: {
+-            row()
+-                .frame(minHeight: model.style.minimumOptionHeight)
+-                .contentShape(.rect)
+-        }
+-        .buttonStyle(.plain)
+-        .accessibilityAddTraits(option.isChecked ? .isSelected : [])
+-        .disabled(option.isDisabled)
+-        .opacity(option.isDisabled ? model.style.disabledOpacity : 1)
++    /// The page's margin, westron's for the window's size class: the narrow one in a compact width, a phone's, and the
++    /// wide one in a regular width and always on the Mac.
++    private var pageMargin: CGFloat {
++        #if os(macOS)
++        .space.page.wide
++        #else
++        sizeClass == .compact ? .space.page.narrow : .space.page.wide
++        #endif
+     }
+ }
+diff -ruN -x .build -x .swiftpm -x .git -x *.png -x *.xcresult /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Apps/Apple/Tests/TodoAppleUITests/DesignSystemRenderersTests.swift /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Apps/Apple/Tests/TodoAppleUITests/DesignSystemRenderersTests.swift
+--- /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Apps/Apple/Tests/TodoAppleUITests/DesignSystemRenderersTests.swift	2026-11-09 22:30:18
++++ /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Apps/Apple/Tests/TodoAppleUITests/DesignSystemRenderersTests.swift	2026-11-24 23:16:10
+@@ -55,7 +55,9 @@
+ /// animation compares equal to the same one built again and unequal to one of another delay, curve or duration, and
+ /// one delayed by 0 is unequal to the same one undelayed (probed 2026-10-26), so every motion is compared delayed.
+ @Test func aMotionRendersItsCurveDurationAndDelay() {
+-    #expect(Animation(.check) == .spring(duration: 0.45).delay(0))
++    // Named whole: westron's `Animation(_: Westron.Transition)`, which this module reaches through `TodoAppleUI`, has a
++    // `.check` too, so the bare `.check` is ambiguous (the westron spike, 2026-11-24).
++    #expect(Animation(DesignSystem.Animation.check) == .spring(duration: 0.45).delay(0))
+     #expect(Animation(.rowLeaves) == .easeIn(duration: 0.32).delay(0.7))
+     #expect(Animation(.pushPop) == .timingCurve(0.2, 0.8, 0.2, 1, duration: 0.32).delay(0))
+     #expect(Animation(.popover) == .spring(duration: 0.2).delay(0))
+diff -ruN -x .build -x .swiftpm -x .git -x *.png -x *.xcresult /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Apps/Apple/Todo.xcodeproj/project.xcproj /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Apps/Apple/Todo.xcodeproj/project.xcproj
+--- /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Apps/Apple/Todo.xcodeproj/project.xcproj	2026-11-12 20:31:56
++++ /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Apps/Apple/Todo.xcodeproj/project.xcproj	2026-11-24 23:17:40
+@@ -38,6 +38,7 @@
+         { "path": "ShowAsWalks.swift", "target-membership": [ "TodoUITests/compile-sources" ] },
+         { "path": "BackWalks.swift", "target-membership": [ "TodoUITests/compile-sources" ] },
+         { "path": "StripWalks.swift", "target-membership": [ "TodoUITests/compile-sources" ] },
++        { "path": "PickerWalks.swift", "target-membership": [ "TodoUITests/compile-sources" ] },
+       ],
+     }, {
+       "kind": "group",
+diff -ruN -x .build -x .swiftpm -x .git -x *.png -x *.xcresult /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Apps/Apple/UITests/PickerWalks.swift /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Apps/Apple/UITests/PickerWalks.swift
+--- /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Apps/Apple/UITests/PickerWalks.swift	1970-01-01 03:00:00
++++ /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Apps/Apple/UITests/PickerWalks.swift	2026-11-24 23:17:34
+@@ -0,0 +1,48 @@
++import XCTest
++
++/// SPIKE (westron, 2026-11-24): the Move to… picker drawn with westron's components, put up over the Lists screen and
++/// kept as a screenshot in the result bundle for a person to look at. It asserts only that the sheet came up with its
++/// hint, "Top level" and the area's line, and that Cancel takes it down.
++final class PickerWalks: Walk {
++    /// The system's process under the app, through which a hold is aimed (`MenuWalks`).
++    private let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
++
++    func testMovePickerOnWestron() {
++        // An area, through "+", New Area, so that the picker has a labelled line to draw too.
++        app.buttons["Add"].firstMatch.tap()
++        let newArea = app.buttons["New Area"].firstMatch
++        XCTAssertTrue(newArea.waitForExistence(timeout: 2), "+ offers no New Area")
++        newArea.tap()
++        settle(1)
++        app.typeText("Work\n")
++        settle(1)
++        // Core's menu, by a still hold on its row, and its Move to….
++        let core = app.staticTexts["Core"].firstMatch
++        XCTAssertTrue(core.waitForExistence(timeout: 2), "no Core on the Lists screen")
++        onScreen(core).press(forDuration: 1.2)
++        let move = app.buttons["Move to…"].firstMatch
++        XCTAssertTrue(move.waitForExistence(timeout: 3), "no Move to… after a still hold on Core")
++        move.tap()
++        XCTAssertTrue(app.staticTexts["Choose where it goes."].waitForExistence(timeout: 5), "the picker did not come up")
++        settle(1.5)
++        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
++        shot.name = "move-picker"
++        shot.lifetime = .keepAlways
++        add(shot)
++        XCTAssertTrue(
++            app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Top level"))
++                .firstMatch.exists,
++            "the picker has no Top level"
++        )
++        app.navigationBars.buttons["Cancel"].firstMatch.tap()
++        XCTAssertTrue(
++            app.staticTexts["Choose where it goes."].waitForNonExistence(timeout: 3), "Cancel left the picker up"
++        )
++    }
++
++    /// The centre of an element, as a point of the screen reached through the springboard (`MenuWalks.onScreen`).
++    private func onScreen(_ element: XCUIElement) -> XCUICoordinate {
++        let frame = element.frame
++        return springboard.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX, dy: frame.midY))
++    }
++}
+diff -ruN -x .build -x .swiftpm -x .git -x *.png -x *.xcresult /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Package.swift /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Package.swift
+--- /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Package.swift	2026-11-06 16:00:11
++++ /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Package.swift	2026-11-24 23:10:36
+@@ -20,6 +20,13 @@
+         .executable(name: "todo", targets: ["todo"]),
+         .executable(name: "wasm-size-probe", targets: ["WasmSizeProbe"]),
+     ],
++    dependencies: [
++        // westron, the design system the screens move to, one screen at a time (spike: the Move to… picker first). The
++        // core takes its `WestronTokens` alone, which imports nothing, so that a feature names westron's icons and list
++        // colours on the host, on Linux and on wasm32; `WestronContract`, its option enums, comes when a model first
++        // names one. SPIKE: a local path to a westron checkout; adopting it for real pins a released version by URL.
++        .package(name: "Westron", path: "/Users/aabanschikov/westron-design-system/.claude/worktrees/spike-westron"),
++    ],
+     targets: [
+         .target(
+             name: "CSQLite",
+@@ -74,7 +81,10 @@
+         // rows (ADR-0007, amendment of 2026-10-26).
+         .target(
+             name: "TaskViewListFeature",
+-            dependencies: ["TodoCore", "FeatureModule", "TaskListFeature", "DesignSystem", "DesignSystemComponents"],
++            dependencies: [
++                "TodoCore", "FeatureModule", "TaskListFeature", "DesignSystem", "DesignSystemComponents",
++                .product(name: "WestronTokens", package: "Westron"),
++            ],
+             path: "Sources/Features/TaskViewList"
+         ),
+         .target(
+@@ -119,7 +129,7 @@
+             name: "TaskViewListFeatureTests",
+             dependencies: [
+                 "TaskViewListFeature", "TaskListFeature", "TaskScreenFeature", "FeatureModule", "TodoCore", "SQLiteKit",
+-                "TestSupport", "DesignSystem", "DesignSystemComponents",
++                "TestSupport", "DesignSystem", "DesignSystemComponents", .product(name: "WestronTokens", package: "Westron"),
+             ]
+         ),
+         .testTarget(
+diff -ruN -x .build -x .swiftpm -x .git -x *.png -x *.xcresult /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/SPIKE-ANSWER.md /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/SPIKE-ANSWER.md
+--- /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/SPIKE-ANSWER.md	1970-01-01 03:00:00
++++ /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/SPIKE-ANSWER.md	2026-11-24 23:25:03
+@@ -0,0 +1,359 @@
++# Spike: the "Move to…" picker on westron
++
++Date: 2026-11-24. Size: spike (throwaway code, the answer written down). Westron: the package at
++`westron-design-system/.claude/worktrees/spike-westron`, by local path; the skill and its `context/` from the plugin
++cache.
++
++## 1. Verdict
++
++**Yes. The picker is on westron, and every check passes.** The sheet's content is westron's `ListRow`, `IconTile`,
++`Icon`, `Rule` and `Text.textRole`, laid out in westron's tokens. The sheet, its navigation bar, the title and Cancel
++are still the system's. The picker's model is new and in westron's vocabulary: an icon, a list colour, a nesting level,
++disabled, checked, the action, the words. It holds no size, colour, font or gap. The Lists tree and its models and
++views are untouched and their tests pass.
++
++- Core: `swift build` and `swift test` on the host (824 tests) and on wasm32 under WasmKit (823; one test is host-only
++  already) pass. `scripts/wasm-size.sh` passes too, but with 11,685 bytes of headroom left (section 7).
++- Apple: `swift build` and `swift test` in `Apps/Apple` pass (151 tests, the project-file tests included).
++- A new UI walk on a fresh iPhone 17 simulator opened the picker, kept a screenshot and closed it with Cancel
++  (`move-picker-westron.png`, section 8).
++
++What does not work, or is worse than before:
++
++- **A rose list loses its colour.** westron has no `rose` (and no `stone`), so the built-in **Upcoming** list draws
++  westron's neutral grey tile in the picker (visible in the screenshot). Stone lists (Trash and every list with no
++  colour) were grey before and still are.
++- **Linking WestronUI broke one todo-app test until I qualified it.** `Animation(.check)` became ambiguous between
++  todo-app's `Animation(_: DesignSystem.Animation)` and westron's `Animation(_: Westron.Transition)`. todo-app's own
++  `Icon` and `Rule` views also shadow westron's, so the sheet has to write `WestronUI.Icon` and `WestronUI.Rule`.
++- **WestronTokens costs about 165 KiB gzipped** in the wasm probe (+168,614 bytes) for two enums.
++- **The picker no longer looks like the old one or like the tree behind it.** Each difference follows from westron
++  (section 4):
++  - the check is in the text colour, not the accent;
++  - titles are all body regular, with no emphasis on lists that have lists inside them;
++  - an area's label is in capitals on the phone;
++  - the hint scrolls with the rows instead of staying pinned under the title;
++  - rows are at least 44 pt and disabled rows are drawn at 40 % opacity.
++- The Mac's sheet was not looked at: there is no unattended Mac route, and I was asked not to drive the Mac's screen.
++
++## 2. What changed
++
++Every file changed, against `todo-app-before`:
++
++| File | Change |
++|---|---|
++| `Package.swift` | `dependencies: [.package(name: "Westron", path: …)]`; product `WestronTokens` added to `TaskViewListFeature` and `TaskViewListFeatureTests` |
++| `Apps/Apple/Package.swift` | the same package (same name, so SwiftPM resolves it once); product `WestronUI` added to `TodoAppleUI` |
++| `Sources/Features/TaskViewList/TaskViewList+Model.swift` | `Model.movePicker` is now `MovePicker?`; the new types `TaskViewList.Model.MovePicker`, `.Option` and `.Option.Kind` |
++| `Sources/Features/TaskViewList/TaskViewList+Components.swift` | new `movePicker(moving:among:)`, which takes no width any more; private `ReadRow.category` and `ReadRow.glyph` read the store's names as westron's; removed `enum Picker` (the check, its cell, `endGap`, `checkInNeed`, the paper background, `rowEnd`, `lineEnd`) and `Metrics.topLevelGlyphSize` / `minimumOptionHeight` with their values |
++| `Sources/Features/TaskViewList/TaskViewList.swift` | the state's `movePicker` uses the new builder |
++| `Sources/DesignSystemComponents/PickerModel.swift`, `OptionPickerStyle.swift`, `PickerTopLevelStyle.swift` | **deleted**: they had no other caller |
++| `Sources/WasmSizeProbe/main.swift` | `pickerLine` reads the new model |
++| `Apps/Apple/Sources/TodoAppleUI/ListsScreen/MovePickerSheet.swift` | rewritten on westron |
++| `Apps/Apple/Sources/TodoAppleUI/ListsScreen/ListsDialogs.swift` | the picker closure takes `TaskViewList.Model.MovePicker` |
++| `Tests/TaskViewListFeatureTests/TaskViewListComponentsTests.swift` | `thePickerWhole` expects the new model; new `aListsColourAndIconInThePickerAreWestronsByName`; `thePickerInAWideWindow` became `thePickerIsTheSameInEveryWidth` |
++| `Tests/TaskViewListFeatureTests/TaskViewListEditsTests.swift` | an option is known by its action; "offers the rows" now compares the place of each row (id, depth, line or list, a list's title), not the tree's look; new check that an unnamed area's line stays alone in edit mode |
++| `Tests/DesignSystemComponentsTests/ClassModelEqualityTests.swift` | `PickerModel`'s equality test and its fixtures removed |
++| `Apps/Apple/Tests/TodoAppleUITests/DesignSystemRenderersTests.swift` | `Animation(.check)` written as `Animation(DesignSystem.Animation.check)` (section 7) |
++| `Apps/Apple/UITests/PickerWalks.swift`, `Apps/Apple/Todo.xcodeproj/project.xcproj` | a throwaway walk that opens the picker and keeps a screenshot |
++
++Test-first: the module's tests were changed first and failed to compile ("'MovePicker' is not a member type of struct
++'TaskViewList.Model'"); then the model and the builder made them pass.
++
++### The new models (shared code, `import WestronTokens`)
++
++```swift
++extension TaskViewList.Model {
++    public struct MovePicker: Equatable, Sendable {
++        public struct Option: Equatable, Sendable {
++            public enum Kind: Equatable, Sendable {
++                case tile(Westron.Icon, Westron.Category?)  // a list, or the top level (.divider, nil = neutral tile)
++                case line                                   // an area's line
++            }
++            public let kind: Kind
++            public let title: String          // a list's name; an area's in capitals; "" for an unnamed area
++            public let level: Int             // the drawn depth, as ListRow's `level`
++            public let isDisabled: Bool
++            public let isChecked: Bool
++            public let action: TaskViewList.UserAction
++        }
++        public let title: String              // "Move “Home” to…"
++        public let hint: String               // "Choose where it goes."
++        public let currentLabel: String       // "Current", what the check is read as
++        public let cancel: ChoiceModel<TaskViewList.UserAction>
++        public let topLevel: Option
++        public let options: [Option]
++    }
++}
++```
++
++`MovePicker` is a struct, not a class. It holds no 500-byte row models, so ADR-0007's class rule (amendment of
++2026-10-30) does not apply. A list's colour is `Westron.Category(rawValue: color.rawValue)` and its icon is
++`Westron.Icon(rawValue:) ?? .fallback`. Nothing depends on the window's width any more.
++
++### How the view is composed
++
++| Part | Before | Now |
++|---|---|---|
++| Sheet, `NavigationStack`, inline title, Cancel | the system's | the system's; `.presentationBackground(Color(.paper))` removed, so the sheet stands on the system's background |
++| Hint | pinned under the bar in a `safeAreaInset` on the paper, todo-app's `.hint` font in ink2 | `Text(hint).textRole(.footnote.regular).foregroundStyle(.text.secondary)`, the first item of the scroll content, `.space.withinGroup` below it |
++| "Top level" | a hand-made `HStack` with todo-app's `Icon` on a fill-coloured rect, plus `Accessories` | `ListRow(level: 0, guides: false, action:) { Text } leading: { IconTile(.divider).category(nil) } trailing: { check }` |
++| A list | `ListRowView` + `ListRowView.End` | `ListRow(level:, guides: false, action:) { Text(title) } leading: { IconTile(icon).category(category) } trailing: { check }` |
++| An area | `AreaLine` | `ListRow(level:, guides: false, action:) { WestronUI.Rule(title) } trailing: { check }` |
++| The check | todo-app's accessory, 15 pt bold accent, hidden in its room on other rows | `WestronUI.Icon(.check, label: model.currentLabel)` on the present parent; `WestronUI.Icon(.check).hidden()` on every other row, so the rows end in one column |
++| A disabled option | `.disabled` plus `.opacity(0.35)` | `.disabled(option.isDisabled)`; ListRow dims itself at `opacity.disabled` |
++| Least height | the model's `minimumOptionHeight`, 36 or 30 | ListRow's own `size.target.minimum`: 44 on iOS, 28 on macOS |
++| Horizontal layout | numbers per width in the models | `.padding(.horizontal, pageMargin)`: `.space.page.narrow` in a compact size class, `.space.page.wide` otherwise and on the Mac; the rows pad themselves |
++
++There is one switch over `option.kind`, which picks the row.
++
++## 3. The reading log
++
++Before the spike, the harness had already loaded westron's `AGENTS.md` into my context: it was the working
++directory's project instructions, which I did not choose to read. It overlaps the skill almost entirely (no prefixes,
++styles on system controls, tokens only). The one thing I used from it that the skill does not say is the
++raw-value-lint marker `// westron-lint: allow <reason>`. I wrote it once and removed it (section 4, Q15). Apart from that,
++everything below came from the skill or from the package's public declarations.
++
++First I listed the plugin's files with `find`, without opening any. Then I opened these skill files, in this order:
++
++| # | File | Why I opened it | Did it answer? |
++|---|---|---|---|
++| 1 | `skills/westron/SKILL.md` | The brief said to start here. | **Yes, the most of any file.** Rule 4 names this exact case: "a 'Move to…' picker is `ListRow`s with `IconTile`s and a check `Icon` on the chosen one", and the sheet stays the system's. Rule 7 says the model keeps westron's vocabulary from `WestronContract`/`WestronTokens` and no size, colour or font. Rule 2 gives the token idioms. |
++| 2 | `context/index.md` | SKILL step 1: "first, every time". | Yes. Which component does what, and that shared code imports `WestronContract` and `WestronTokens` (`Westron.Icon`, `Westron.Category`). |
++| 3 | `context/components/list-row.md` | Card of the row SKILL rule 4 names. | Mostly. The API (`level`, `guides`, `action`, slots), "`guides` … a picker … as the pilot's 'Move to…' sheet does, may leave them out", and that disabled is the system's `.disabled`. It did not say whether the present choice is `.selected` (Q3). |
++| 4 | `context/components/icon-tile.md` | Card of the list's tile. | Partly. `IconTile(_:)`, and that without a label it is decorative. It says "in the list's color", but its only argument is the icon, and the card never says how the colour gets in (Q1). |
++| 5 | `context/components/icon.md` | Card of the check. | Partly. `Icon(.check, label:)`, and to label an icon that means something. Not the check's colour (Q5). |
++| 6 | `context/components/icon-tile.details.md` | The card did not settle the colour; the card points here. | **Yes.** The colour comes from the environment, `.category(Westron.Category(rawValue: list.color))`, and nil gives the neutral tile, which fits "Top level". |
++| 7 | `context/icons.md` | Glyph names for the check and "Top level", and how to read a stored name. | Yes. `.check`, `.divider`, `Westron.Icon(rawValue:) ?? .fallback`, and that every one of todo-app's 32 icon names exists. |
++| 8 | `context/components/rule.md` | The tree draws an area as a labelled line, so I needed westron's line. | Partly. `Rule("…")` with a label, which is a heading. It does not say whether a Rule may be the title of a pressable row (Q2). |
++| 9 | `context/components/rule.details.md` | The card did not settle Q2. | Partly. The label is `heading.overline`; an empty label means the line alone (exactly the unnamed area); it names "an area's line across the Lists screen's tree". Still nothing on a Rule as a choice. |
++| 10 | `context/components/list-row.details.md` | Q2 and Q3 were still open; the card points here. | Partly. It confirms "the rows of the 'Move to…' sheet are each a ListRow with other westron components in its slots"; the 44/28 pt least height (which replaces `minimumOptionHeight`); that a disabled row dims whole; that the trailing slot's words join the row's name; that a row draws no background at rest; and that the product places rows in its page margin. Neither Q2 nor Q3. |
++| 11 | `context/tokens/layout.md` | SKILL step 3. | Yes for the page margin (`space.page.narrow`/`wide` by size class) and `space.withinGroup`. No token for a sheet's size (Q9). |
++| 12 | `context/tokens/typography.md` | The hint's role, and the overline label. | Yes. `footnote.regular` is literally "a hint". `heading.overline` is "written in capitals by the product" (Q7). |
++| 13 | `context/tokens/color.md` | The hint's colour, and list colours. | Yes. `.text.secondary`; `Westron.Category`'s 12 names read by raw value; `.category(_:)` again. This is how I found the `rose`/`stone` gap. |
++| 14 | `context/components/icon.details.md` | The Icon card did not give the check's colour. | Partly. An icon has no colour of its own and takes one of "the roles chapter 07 lists"; it pointed me to chapter 07. |
++| 15 | `context/design-language/07-icons.md` | Pointed to by #14. | Yes. "An icon takes the color of the text it goes with", so no accent and no `foregroundStyle`. |
++| 16 | `context/swiftui.md` | To settle Q3 (selection or a check) and confirm what stays the system's. | No for Q3. It confirmed the sheet takes no westron surface and that `.category(_:)` is a context modifier. |
++| 17 | `context/components/text.md` | **Late, during self-review.** I had used `.textRole` on the hint without reading Text's card, which SKILL step 2 requires for every component used. | Yes, and it matched what I had written. It also says "every use names its role", while ListRow's own example writes `Text(list.title)` with no role (section 4). |
++
++Not opened: the cards and details of Button, Checkbox, Chip, Disclosure, Surface and TextField; `text.details.md`;
++`tokens/motion-and-shadow.md`; design-language chapters 00–06, 08 and 09; `plugin.json`.
++
++From the westron package I read only what a dependency shows: `Package.swift`, `WestronTokens/Westron.swift`, and the
++`public` lines of `Icons.swift` and `Tokens.swift` (`Icon.fallback`, `enum Category: String`, the `TextRole` statics),
++`WestronContract.swift` with `ListRow+Contract.swift` and `Rule+Contract.swift`, and the `public` declarations of
++WestronUI's `Category.swift`, `States.swift`, `IconTile.swift`, `Icon.swift`, `ListRow.swift`, `InsertionMark.swift`,
++`Rule.swift`, `WestronUI.swift` (`@_exported import`), `TokenAdapters.swift` (`textRole`) and
++`Generated/Tokens+SwiftUI.swift` (how `.space.page.*` is declared).
++
++## 4. Questions the skill did not answer
++
++| # | Question | Where I looked | What I chose, and why | How sure I am westron means it |
++|---|---|---|---|---|
++| Q1 | How does a list's colour reach an `IconTile`? | icon-tile card (silent), its details, color.md | `IconTile(icon).category(category)`, and `nil` for "Top level". | **High.** But the answer is only in the details file and on the colour page, not on the card, whose initializer cannot express it. |
++| Q2 | How is an area drawn as a *choice*: a labelled line you can tap? | rule card and details, list-row details | `ListRow(action:) { WestronUI.Rule(title) }`. It keeps the tree's look of a labelled line, an empty name gives the line alone, and ListRow supplies the tap, the 44 pt target and the dimming. | **Low to medium.** A labelled Rule is a heading. Inside the row's combined element it may add a heading trait to a button, and an unnamed area's row has no accessible name at all. VoiceOver was not checked. |
++| Q3 | Is the present parent `.selected(true)` or only the check? | list-row card and details, swiftui.md, States.swift | The check only: `Icon(.check, label: "Current")`, no `.selected`. SKILL rule 4 names only "a check Icon on the chosen one", and `selected` draws an accent highlight and a bar, which here would repeat the check. | **Medium-low.** The old view added the `isSelected` trait; now VoiceOver hears "Project, Current, button" instead of "selected". |
++| Q4 | Do the other rows keep the check's room, so the rows end in one column? | list-row details (Disclosure's `alignsLeaves` keeps a leaf's empty cell; nothing for a slot) | `WestronUI.Icon(.check).hidden()` on every other row. It keeps the owner's earlier ruling (r4431052930) and needs no raw value. | **Medium.** |
++| Q5 | What colour is the check? | icon card and details, chapter 07 | The context's, i.e. the text colour. Chapter 07 lists no accent for a mark. | **Medium-high.** Before, the check was accent bold. SKILL rule 3 says never put `.foregroundStyle` on a component, while `icon.details.md` says an Icon is coloured by "the context's foregroundStyle". The two read as contradictory to a product engineer. |
++| Q6 | Which text role do the titles take, and may a model carry one? | list-row details ("may set … `callout.regular` for a nested row … `body.strong` for a row with children"), SKILL rule 7 | ListRow's default role for every title, and no role in the model. Rule 7 forbids "a font" in a model, and `Westron.TextRole` is a font token even though it lives in `WestronTokens`. | **Medium.** The tree's emphasis on lists with lists inside them is gone from the picker. |
++| Q7 | Should an area's label be in capitals? | typography.md, `heading.overline`: "written in capitals by the product" | The module writes `title.uppercased()`, since todo-app finishes every string in the module. | **Medium-high.** The phone's tree writes the name as typed, so the picker and the tree now differ. |
++| Q8 | Which page margin, and who picks it? | layout.md | The view picks `.space.page.narrow` or `.wide` by `horizontalSizeClass`, and always `.wide` on the Mac. | **High** that this is westron's rule. It strains todo-app's rule that a view decides nothing by width (section 7). |
++| Q9 | How big is the sheet on the Mac, where a scroll view in a sheet asks for no height? | layout.md (no sheet size), SKILL rule 4 (the sheet is the system's) | Kept `.frame(minWidth: 320, minHeight: 400)` under `#if os(macOS)`. | No answer in the skill. |
++| Q10 | Where does a hint go under a system navigation bar? | SKILL rule 4, swiftui.md | The first item of the scroll content. A pinned strip needs a background, and the sheet's background is now the system's. | Role and colour **high**; the placement is the product's. |
++| Q11 | What happens to stored colours westron does not have (`rose`, `stone`)? | color.md ("kept by its name … `Westron.Category(rawValue:)`") | Read by raw value, as the page says, so both become nil, the neutral tile. A new test pins this. | **High** for the reading. The loss of rose is a gap (section 5). |
++| Q12 | westron's names are unprefixed. What about a product that has views of the same names? | SKILL ("no prefixes"), swiftui.md | Wrote `WestronUI.Icon` and `WestronUI.Rule`, and qualified one ambiguous `Animation(.check)` in a todo-app test. | No answer in the skill. Found only by compiling. |
++| Q13 | Where does a product's own composite model live? | SKILL rule 7 ("a model in shared code") | Nested in the feature's `Model` (`TaskViewList.Model.MovePicker`), not in `DesignSystemComponents`, which would then depend on westron. | A todo-app question (section 7). |
++| Q14 | Whose word is the check's label? | icon card ("an icon that means something takes `label:`"), todo-app's `docs/style.md` | The model's: `currentLabel = "Current"`, finished in the module like every other word. | **Medium** on the word itself. |
++| Q15 | How does a product check itself for raw values, and how does it mark an exception? | SKILL ("If westron's repository is at hand, `tools/westron lint raw-values`") | Not run: it would build inside westron's checkout, which this spike must not touch. Checked by eye instead. I first wrote westron's `// westron-lint: allow` marker, which I knew only from the AGENTS.md the harness loaded, and removed it. | The skill never says how a product marks a deliberate raw value. |
++
++Found only in WestronUI's declarations or the compiler, not in the skill:
++
++- The name collisions of Q12, and the ambiguous `Animation(.check)`.
++- A local path dependency on westron prints westron's own Swift warnings in todo-app's build: `@Entry` closures in
++  the catalog-support files and `ListRow.swift`, and a main-actor static (`slotSpace`) referenced from a Sendable
++  closure in `ButtonVariantStyle.swift`.
++- That `.category(_:)` cascades like `.tint(_:)` and that `nil` resets it. The skill does say this, but only in
++  `color.md` and `icon-tile.details.md`, not on the IconTile card.
++
++Where the skill contradicts the declarations or itself:
++
++- SKILL rule 3 forbids `.foregroundStyle` on a component, yet `icon.details.md` says that is how an Icon is coloured
++  (Q5).
++- `text.md` says "every use names its role", yet `list-row.details.md`'s own example puts `Text(list.title)` with no
++  role in a row's title.
++- The IconTile card promises "the list's color" with an initializer that cannot take one.
++- I found nothing in the declarations that contradicts the skill.
++
++## 5. What westron lacks for this screen
++
++| Missing | What I did instead |
++|---|---|
++| A list colour for todo-app's `rose` (Upcoming); `stone` exists only as the neutral tile | Read by raw value, so rose draws neutral. Issue to draft: todo-app / Lists screen and picker / the 11 stored colours do not all have westron names. |
++| A token, or the system's way, for a sheet's least size on the Mac | Kept todo-app's 320 × 400. |
++| A pattern for a section line that is also a choice (an area in a picker) | `ListRow { Rule(name) }`, with the accessibility doubts of Q2. |
++| Guidance on the current value of a picker: a check, `selected`, or both | A labelled check (Q3). |
++| A way to keep a trailing slot's room when its content is absent, outside Disclosure's `alignsLeaves` | A hidden `Icon`. |
++| A hint or subtitle under a system sheet's title | A `Text` at the top of the scroll content. |
++
++No icon was missing: `.check`, `.divider` and all 32 of todo-app's list icons exist.
++
++## 6. Raw values left
++
++- `MovePickerSheet.swift`: `.frame(minWidth: 320, minHeight: 400)` on macOS only. This is the system sheet's size,
++  westron has no token for it (Q9), and the comment says so.
++- `LazyVStack(spacing: 0)`: SKILL rule 2 allows 0.
++- The models hold no raw values: words, an `Int` level that is ListRow's own option, Bools, westron's enums and the
++  action.
++- Left untouched on purpose, so that the tree stays as it was: the tree's builders still carry branches and doc
++  comments that served only the old picker. These are `listRow(guides: [Double]?)`'s `nil` path, the `background:`
++  parameter, and docs mentioning `Picker.rowEnd` / `Picker.lineEnd` / `Picker.background` / "the picker's
++  'Top level'". `AccessoryModel.hidden` and `DesignSystem.Font.hint` now have no caller either. A real PR would remove
++  them all (`docs/style.md`, "No API without a caller").
++
++## 7. For todo-app
++
++**What an amendment to ADR-0007 would have to say.** A screen, or a part of one, that moves to westron leaves
++todo-app's design system:
++
++- Its models hold content, actions, words and westron's vocabulary only: `WestronContract`'s option enums,
++  `Westron.Icon`, `Westron.Category`, a nesting level and states. They hold no size, colour, font, radius, gap, motion
++  or style. So the amendments of 2026-10-26, 2026-10-30 ("a component's model holds every value its platform needs")
++  and 2026-11-06 ("a component's visual values are … its style") no longer bind it.
++- The model of a product's own composition of westron's components belongs to the feature that builds it, nested in
++  its `Model`. It depends on the width only where its content does.
++- A feature that builds such a model depends on `WestronTokens`, and on `WestronContract` once it names an option.
++  Neither imports anything, so the core still builds on the host and on wasm32. This widens what a feature may
++  import, as the amendment of 2026-10-26 did for `DesignSystem`.
++- `Apps/Apple` depends on `WestronUI`. Its views lay out in westron's tokens, including the page margin by size class.
++- The store's names of a list's colour and icon are read as westron's by raw value in the feature. The amendment must
++  decide what to do with a stored colour westron lacks (`rose`): migrate the store, map it in the feature, or ask
++  westron for a colour.
++- `DesignSystem` and `DesignSystemComponents` shrink screen by screen. Until the last screen moves, the two systems
++  live side by side in the same app.
++
++**What adopting westron for real would touch beyond this picker:**
++
++- **The core's `Package.swift`.** A URL dependency on westron pinned to a release instead of the local path. Every
++  CI job that resolves the root package (Linux, wasm32, macOS) then fetches westron, so the repository must be public
++  or the jobs need a token.
++  - **Linux:** `WestronTokens` imports nothing and should build there, but I did not build on Linux.
++  - **wasm32:** the tests pass. But the release probe grew from 7,487,413 to 7,656,027 bytes gzipped (+168,614, about
++    +2.3 %) just for `Westron.Icon` and `Westron.Category`, and the budget now has 11,685 bytes of 180,299 left. The
++    next step will exceed it, so either the budget moves or westron makes the tokens strip better.
++- **`Apps/Apple/Package.swift`.** `WestronUI`, whose resource bundle (fonts, asset catalog, strings) the app now
++  carries.
++- **The Xcode project.** It needs no edit. It takes westron through the `TodoAppleUI` product: the walk's
++  `xcodebuild build-for-testing` built the iOS app with WestronUI and ran it on the simulator.
++  - Not checked here: the watchOS compile check from CI, the Mac app through `swift run todo-mac`, and the Mac's sheet.
++  - `Apps/Apple/Package.resolved` did not change, since path dependencies are not pinned.
++- **Name collisions.**
++  - `TodoAppleUI` has its own `Icon` and `Rule`, which shadow westron's in that module.
++  - todo-app's `Animation(_:)`, `Color(_:)` and `Font(_:)` adapters share implicit-member syntax with westron's.
++    `Animation(.check)` broke in a test file that never imports WestronUI: it reaches WestronUI's extensions through
++    `@testable import TodoAppleUI`.
++  - Every screen that moves will meet more of these. The fixes are the upcoming feature `MemberImportVisibility`
++    (SE-0444), or retiring todo-app's own views as each screen moves.
++- **Specs and process.**
++  - `docs/specs/lists-screen.md` section 6 describes the picker from the canvas (`Phone.dc.html`); with westron the
++    look is westron's.
++  - A screen half on westron (the picker) over a tree on the old look is a mixed screen until the tree moves.
++  - No walk covered the picker before; a real PR would keep one, like `PickerWalks`.
++- **The walk's runtime warning.** It recorded "Adding '_UIReparentingView' as a subview of UIHostingController.view
++  is not supported". It most likely comes from the context menu over the tree, not from the sheet, but I have no
++  baseline run to compare against.
++
++**What this strains in todo-app's own rules:**
++
++- *"A component's look is its style"* (`docs/style.md`, PR #191) and the 2026-10-30/11-06 amendments. They are
++  inverted for westron screens: the model no longer holds the look, westron and the view do.
++- *"A view reports the width of its window and decides nothing by it"*. westron's page margin is chosen by size class
++  in the view (Q8). The alternative is the module handing the view a width class only for this, which the owner's
++  2026-11-24 decision ("layout is the platform view's") argues against.
++- *"A view may switch over three enums of its model…"*. `MovePicker.Option.Kind` is a new enum. I counted it as "the
++  kind of a row"; a strict reading makes it a fourth permission.
++- *"No API without a caller"*. Kept, except the leftovers listed in section 6, which keep the tree's code unchanged.
++- *"A name the core exports is a name its consumers lose"*. The same problem now runs the other way: westron's
++  exported names cost todo-app's own UI names (Q12).
++- *"A view holds no condition over a domain value"*. Held. The view's `if`s are over `isChecked` and the size class,
++  and its one switch dispatches over `kind`.
++
++## 8. Check outputs
++
++All commands ran with `DEVELOPER_DIR=/Applications/Xcode_27_1.app/Contents/Developer` and swiftly's Swift 6.4 from
++`.swift-version`.
++
++**Core, at the root of the copy:**
++
++```
++$ swift build
++Build complete! (0,61 secs)
++
++$ swift test                                   # exit 0
++✔ Test run with 246 tests in 0 suites passed after 1.307 seconds.
++✔ Test run with 15 tests … 117 … 7 … 243 … 23 … 13 … 31 … 3 … 31 … 16 …
++✔ Test run with 79 tests in 0 suites passed after 0.086 seconds.       # 824 tests in 12 runs
++```
++
++The line `error: sqlite(… "unable to open database file")` in that log is a CLI test's expected stderr; its run of 15
++tests passed.
++
++**wasm32.** The SDK is installed: `swift sdk list` shows `swift-6.4.0-RELEASE_wasm`.
++
++```
++$ swift test --swift-sdk swift-6.4.0-RELEASE_wasm --disable-xctest   # exit 0
++✔ Test run with 245 tests in 0 suites passed after 182.913 seconds.
++✔ Test run with 15 … 117 … 7 … 243 … 23 … 13 … 31 … 3 … 31 … 16 …
++✔ Test run with 79 tests in 0 suites passed after 17.694 seconds.      # 823 tests
++```
++
++The one host-only test is under `#if !arch(wasm32)` in `TreePerformanceTests.swift`, as before.
++
++```
++$ scripts/wasm-size.sh                         # exit 0
++wasm-size-probe.wasm: 26337788 bytes raw, 7656027 bytes after gzip -9, budget 7667712 bytes (Apple gzip 479.0.0.700.1)
++under budget by 11685 bytes
++# todo-app-before, same build into the scratchpad: 25642427 raw, 7487413 after gzip -9
++```
++
++**Apple, in `Apps/Apple`:**
++
++```
++$ swift build
++Build complete! (1,68 secs)                    # Swift warnings only from WestronUI's own sources
++
++$ swift test                                   # exit 0
++✔ Test run with 143 tests in 0 suites passed after 1.278 seconds.
++✔ Test everyWalkFileIsASourceOfTheUITestBundle() passed after 0.007 seconds.
++✔ Test theProjectFileIsCanonical() passed after 0.007 seconds.
++✔ Test run with 8 tests in 0 suites passed after 0.007 seconds.
++```
++
++**The walk.** `scripts/ui-walks.sh` makes its own device and deletes it afterwards.
++
++```
++$ scripts/ui-walks.sh PickerWalks
++ui-walks: walking PickerWalks
++'-[TodoUITests.PickerWalks testMovePickerOnWestron]' passed (25.434 seconds).
++ui-walks: 1 passed, 0 failed, 0 skipped
++ui-walks: deleted the device 72AF2C35-8D0D-4EEF-921D-C76B569AC57C
++```
++
++**The screenshot.** `move-picker-westron.png` at the root of the copy, iPhone 17 in light mode, exported from the
++walk's result bundle. The walk added an area "Work" through "+" and opened Move to… on **Core**, a list inside
++**Project**. What I see:
++
++- The sheet is the system's: white background, Cancel as the system's glass capsule at the top left, and the title
++  "Move “Core” to…" inline in the bar.
++- Under the title, "Choose where it goes." is centred, in grey footnote type.
++- "Top level" has a neutral grey tile with the divider glyph.
++- Inbox (blue), Today (amber) and Logbook (green) have coloured tiles. **Upcoming is grey: its rose was lost.** Trash
++  and Project are grey, as before.
++- **Project carries a black check at the far right**: Core's present parent.
++- Core, Design, Ops, Docs, Either and Weekly are indented one level, with no guides. **Core is dimmed**, as the list
++  being moved.
++- Spare is back at the root.
++- Last comes the area: "WORK" in small grey capitals, with a hairline that stops where the check's column begins.
++- Rows are evenly spaced at about 44 pt, in the system font, at westron's page margin.
++
++The walk then pressed Cancel and the sheet went away. The Mac's sheet was not seen.
+diff -ruN -x .build -x .swiftpm -x .git -x *.png -x *.xcresult /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Sources/DesignSystemComponents/OptionPickerStyle.swift /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Sources/DesignSystemComponents/OptionPickerStyle.swift
+--- /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Sources/DesignSystemComponents/OptionPickerStyle.swift	2026-11-07 12:08:24
++++ /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Sources/DesignSystemComponents/OptionPickerStyle.swift	1970-01-01 03:00:00
+@@ -1,17 +0,0 @@
+-// Sources/DesignSystemComponents/OptionPickerStyle.swift
+-
+-/// The numbers a `PickerModel` is drawn with, in points, and the opacity of an option that cannot be chosen, which a
+-/// builder hands over as one value.
+-public struct OptionPickerStyle: Equatable, Sendable {
+-    public let hintGap: Double
+-    public let minimumOptionHeight: Double
+-
+-    /// The opacity an option that cannot be chosen is drawn at, from 0 to 1.
+-    public let disabledOpacity: Double
+-
+-    public init(hintGap: Double, minimumOptionHeight: Double, disabledOpacity: Double) {
+-        self.hintGap = hintGap
+-        self.minimumOptionHeight = minimumOptionHeight
+-        self.disabledOpacity = disabledOpacity
+-    }
+-}
+diff -ruN -x .build -x .swiftpm -x .git -x *.png -x *.xcresult /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Sources/DesignSystemComponents/PickerModel.swift /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Sources/DesignSystemComponents/PickerModel.swift
+--- /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Sources/DesignSystemComponents/PickerModel.swift	2026-11-07 12:08:24
++++ /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Sources/DesignSystemComponents/PickerModel.swift	1970-01-01 03:00:00
+@@ -1,97 +0,0 @@
+-// Sources/DesignSystemComponents/PickerModel.swift
+-
+-/// A picker that puts something into a tree, as every platform draws it (`Phone.dc.html`, the Move to… sheet): its
+-/// title, with its Cancel beside it, the hint under the title, `hintGap` above the rows, then the top level, which the
+-/// canvas draws apart from the tree, and the tree's rows, each an option drawn as its `Row`, at least
+-/// `minimumOptionHeight` high. Each row carries what stands at its right, the check on the present choice and the room
+-/// for it on every other, so that the rows end in one column; an option that cannot be chosen is drawn at
+-/// `disabledOpacity` and takes no tap. The rest of an option is its row's: its tap, and how it draws (ADR-0007,
+-/// amendment of 2026-10-30). Its `hintGap`, its `minimumOptionHeight` and its `disabledOpacity` are the fields of its
+-/// `OptionPickerStyle`.
+-///
+-/// A class, for the reason a list's row is one (`ListRowModel`): a screen's model holds it, every comparison of the
+-/// screen's model compares it, and it is some 500 bytes on wasm32. Its `==` compares every stored property, and a test
+-/// changes them one at a time.
+-public final class PickerModel<Row: Equatable & Sendable, Action: Equatable & Sendable>: Equatable, Sendable {
+-    /// The top level, a row of its own: `height` high, a tile `tileSide` across at `leading` from its left edge with
+-    /// corners of `tileCornerRadius` in `tileColor` with `icon` on it, then `tileToTitle` after it the title, and at
+-    /// its right its accessories in the order given, a text as wide as it reads, a chevron, a grip or a check each
+-    /// centred in a cell at least `cellMinimumWidth` wide and as wide as its glyph on its platform, a space as wide as
+-    /// it says and a hidden accessory's room empty, with `endGap` after them, in points; chosen where it is the present
+-    /// choice, which a view reads for what it says aloud, and sending `action` when tapped. Its numbers and its
+-    /// `tileColor` are the fields of its `PickerTopLevelStyle`.
+-    public struct TopLevel: Equatable, Sendable {
+-        public let icon: IconModel
+-        public let title: TextModel
+-        public let accessories: [AccessoryModel<Action>]
+-        public let isChecked: Bool
+-        public let action: Action
+-        public let style: PickerTopLevelStyle
+-
+-        public init(
+-            icon: IconModel,
+-            title: TextModel,
+-            accessories: [AccessoryModel<Action>],
+-            isChecked: Bool,
+-            action: Action,
+-            style: PickerTopLevelStyle
+-        ) {
+-            self.icon = icon
+-            self.title = title
+-            self.accessories = accessories
+-            self.isChecked = isChecked
+-            self.action = action
+-            self.style = style
+-        }
+-    }
+-
+-    /// A row of the tree as the picker offers it: the row as it draws, with the check or the room for it at its right;
+-    /// whether it cannot be chosen; and whether it is the present choice, which a view reads for what it says aloud.
+-    public struct Option: Equatable, Sendable {
+-        public let row: Row
+-        public let isDisabled: Bool
+-        public let isChecked: Bool
+-
+-        public init(row: Row, isDisabled: Bool, isChecked: Bool) {
+-            self.row = row
+-            self.isDisabled = isDisabled
+-            self.isChecked = isChecked
+-        }
+-    }
+-
+-    public let title: String
+-    public let hint: TextModel
+-
+-    /// The picker's Cancel, which every way the platform has of closing the picker is.
+-    public let cancel: ChoiceModel<Action>
+-
+-    public let topLevel: TopLevel
+-    public let options: [Option]
+-    public let style: OptionPickerStyle
+-
+-    public init(
+-        title: String,
+-        hint: TextModel,
+-        cancel: ChoiceModel<Action>,
+-        topLevel: TopLevel,
+-        options: [Option],
+-        style: OptionPickerStyle
+-    ) {
+-        self.title = title
+-        self.hint = hint
+-        self.cancel = cancel
+-        self.topLevel = topLevel
+-        self.options = options
+-        self.style = style
+-    }
+-
+-    public static func == (lhs: PickerModel, rhs: PickerModel) -> Bool {
+-        if lhs === rhs { return true }
+-        return lhs.title == rhs.title
+-            && lhs.hint == rhs.hint
+-            && lhs.cancel == rhs.cancel
+-            && lhs.topLevel == rhs.topLevel
+-            && lhs.options == rhs.options
+-            && lhs.style == rhs.style
+-    }
+-}
+diff -ruN -x .build -x .swiftpm -x .git -x *.png -x *.xcresult /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Sources/DesignSystemComponents/PickerTopLevelStyle.swift /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Sources/DesignSystemComponents/PickerTopLevelStyle.swift
+--- /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Sources/DesignSystemComponents/PickerTopLevelStyle.swift	2026-11-07 12:08:24
++++ /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Sources/DesignSystemComponents/PickerTopLevelStyle.swift	1970-01-01 03:00:00
+@@ -1,35 +0,0 @@
+-// Sources/DesignSystemComponents/PickerTopLevelStyle.swift
+-import DesignSystem
+-
+-/// The numbers a picker's top level is drawn with, in points, and the colour of its tile, which a builder hands over as
+-/// one value.
+-public struct PickerTopLevelStyle: Equatable, Sendable {
+-    public let tileSide: Double
+-    public let tileCornerRadius: Double
+-    public let tileColor: DesignSystem.Color
+-    public let tileToTitle: Double
+-    public let leading: Double
+-    public let height: Double
+-    public let cellMinimumWidth: Double
+-    public let endGap: Double
+-
+-    public init(
+-        tileSide: Double,
+-        tileCornerRadius: Double,
+-        tileColor: DesignSystem.Color,
+-        tileToTitle: Double,
+-        leading: Double,
+-        height: Double,
+-        cellMinimumWidth: Double,
+-        endGap: Double
+-    ) {
+-        self.tileSide = tileSide
+-        self.tileCornerRadius = tileCornerRadius
+-        self.tileColor = tileColor
+-        self.tileToTitle = tileToTitle
+-        self.leading = leading
+-        self.height = height
+-        self.cellMinimumWidth = cellMinimumWidth
+-        self.endGap = endGap
+-    }
+-}
+diff -ruN -x .build -x .swiftpm -x .git -x *.png -x *.xcresult /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Sources/Features/TaskViewList/TaskViewList+Components.swift /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Sources/Features/TaskViewList/TaskViewList+Components.swift
+--- /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Sources/Features/TaskViewList/TaskViewList+Components.swift	2026-11-09 11:01:48
++++ /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Sources/Features/TaskViewList/TaskViewList+Components.swift	2026-11-24 23:12:43
+@@ -3,6 +3,7 @@
+ import DesignSystemComponents
+ import FeatureModule
+ import TodoCore
++import WestronTokens
+ 
+ /// The models of the Lists screen's components, built from the rows and this person's session with the canvas's numbers
+ /// for the window's width: the phone's in a narrow window, as Task 7's views drew them from `Phone.dc.html`, and the
+@@ -154,64 +155,41 @@
+         )
+     }
+ 
+-    /// The picker of Move to… (Lists screen spec, section 6; `Phone.dc.html`, the Move to… sheet): its title names the
+-    /// list being moved, its hint in ink2 says what to do 8 above the rows, and "Top level" is a row of its own, the
+-    /// divider glyph in ink2 on a tile of the fill colour the size of a list's at the root's depth, where such a tile
+-    /// stands and as high as a row, checked when the list stands at the root. Its options are the whole tree in tree
+-    /// order with the folds ignored, each drawn by the screen's rules for the width with none of this person's session
+-    /// on it, since nothing in the picker is hidden, highlighted or renamed: no menu, no count, no chevron, no grip, no
+-    /// guides, and an unnamed area's line alone, as outside edit mode (the owner's answer on #160, thread r4415002540),
+-    /// and each list's row on the sheet's paper in every width (`Picker.background`); each sends `movePickerRowTapped`.
+-    /// The list being moved and every list inside it cannot take it, and are drawn at 35 %; its present parent, a list,
+-    /// an area's line or the top level, has the check at its right and every other row the room for it (`Picker`); and
+-    /// an option is at least the width's least option height.
+-    static func movePicker(
+-        moving list: ReadRow, among rows: [ReadRow], in width: WindowWidth
+-    ) -> PickerModel<Model.Kind, UserAction> {
+-        let metrics = Metrics.of(width)
++    /// The picker of Move to… (Lists screen spec, section 6), in westron's vocabulary: its title names the list being
++    /// moved, its hint says what to do, and "Top level" comes first, the divider on westron's neutral tile, checked when
++    /// the list stands at the root. Its options are the whole tree in tree order with the folds ignored, since nothing
++    /// in the picker is hidden: a list with its icon and its colour, the store's names read as westron's, and an area
++    /// as its line, labelled with its name in capitals, as westron's labelled line asks its product to write it, and
++    /// alone where it has no name, in edit mode too (the owner's answer on #160, thread r4415002540); each at its
++    /// drawn depth as its nesting level, and each sending `movePickerRowTapped`. The list being moved and every list
++    /// inside it cannot take it and are disabled, and its present parent, a list, an area's line or the top level, is
++    /// checked. Nothing in it depends on the window's width: the platform lays it out in westron's tokens.
++    static func movePicker(moving list: ReadRow, among rows: [ReadRow]) -> Model.MovePicker {
+         let inside = subtree(of: list.id, in: rows)
+         let options = rows.map { row in
+-            let isChecked = row.id == list.parent
+-            let kind: Model.Kind = switch row.kind {
++            let kind: Model.MovePicker.Option.Kind
++            let title: String
++            switch row.kind {
+             case .area:
+-                .area(areaLine(
+-                    row, metrics, isEditing: false, draft: nil,
+-                    end: Picker.lineEnd(isChecked: isChecked),
+-                    tap: .movePickerRowTapped(row.id), menu: nil
+-                ))
++                kind = .line
++                title = row.title.uppercased()
+             case .list:
+-                .list(listRow(
+-                    row, metrics, guides: nil, end: Picker.rowEnd(isChecked: isChecked), draft: nil,
+-                    isHighlighted: false, background: Picker.background, tap: .movePickerRowTapped(row.id),
+-                    menu: nil
+-                ))
++                kind = .tile(row.glyph, row.category)
++                title = row.title
+             }
+-            return PickerModel<Model.Kind, UserAction>.Option(
+-                row: kind, isDisabled: inside.contains(row.id), isChecked: isChecked
++            return Model.MovePicker.Option(
++                kind: kind, title: title, level: row.depth, isDisabled: inside.contains(row.id),
++                isChecked: row.id == list.parent, action: .movePickerRowTapped(row.id)
+             )
+         }
+-        return PickerModel(
+-            title: "Move “\(list.title)” to…",
+-            hint: TextModel(text: "Choose where it goes.", style: TextStyle(font: .hint, color: .ink2)),
++        return Model.MovePicker(
++            title: "Move “\(list.title)” to…", hint: "Choose where it goes.", currentLabel: "Current",
+             cancel: ChoiceModel(title: Words.cancel, isDestructive: false, action: .movePickerCancelled),
+-            topLevel: PickerModel.TopLevel(
+-                icon: IconModel(
+-                    icon: .divider,
+-                    style: IconStyle(size: metrics.topLevelGlyphSize, weight: .regular, color: .ink2)
+-                ),
+-                title: TextModel(text: "Top level", style: TextStyle(font: metrics.root.title, color: .ink)),
+-                accessories: Picker.accessories(isChecked: list.parent == nil),
+-                isChecked: list.parent == nil, action: .movePickerRowTapped(nil),
+-                style: PickerTopLevelStyle(
+-                    tileSide: metrics.root.tileSide, tileCornerRadius: metrics.root.tileCornerRadius, tileColor: .fill,
+-                    tileToTitle: metrics.tileToTitle, leading: metrics.indent.start, height: metrics.rowHeight,
+-                    cellMinimumWidth: Picker.cellMinimumWidth, endGap: Picker.endGap
+-                )
++            topLevel: Model.MovePicker.Option(
++                kind: .tile(.divider, nil), title: "Top level", level: 0, isDisabled: false,
++                isChecked: list.parent == nil, action: .movePickerRowTapped(nil)
+             ),
+-            options: options,
+-            style: OptionPickerStyle(
+-                hintGap: 8, minimumOptionHeight: metrics.minimumOptionHeight, disabledOpacity: 0.35
+-            )
++            options: options
+         )
+     }
+ 
+@@ -651,10 +629,6 @@
+         /// The glyph at the end of the bar's search capsule, where the bar with edit mode stands, and nil for none.
+         let searchTrailingGlyph: SearchGlyph?
+ 
+-        /// The size of the divider glyph on "Top level"'s tile, and how high a picker's option is at least.
+-        let topLevelGlyphSize: Double
+-        let minimumOptionHeight: Double
+-
+         let drag: DragStyle
+ 
+         /// The numbers of the width.
+@@ -689,8 +663,7 @@
+         /// label or a field and 17 alone, ending 20 short of the edge, and in edit mode with the grip 10 after the line
+         /// at the glyph's own width, 12 short of the edge, as Task 7 drew it; its field 160 by 28, padded 8 and rounded
+         /// 8, in the area label's font. The search capsule ends in the microphone, 17 pt in ink2 in a cell of 36.
+-        /// "Top level"'s divider glyph 15, and an option at least 36 high, so that an unnamed area's line is no 17 pt
+-        /// target. The drag's slot and card (`phoneDrag`).
++        /// The drag's slot and card (`phoneDrag`).
+         static let phone = Metrics(
+             indent: phoneIndent, rowHeight: 46,
+             root: Level(
+@@ -714,7 +687,7 @@
+             searchTrailingGlyph: SearchGlyph(
+                 icon: IconModel(icon: .microphone, style: IconStyle(size: 17, weight: .regular, color: .ink2)), cell: 36
+             ),
+-            topLevelGlyphSize: 15, minimumOptionHeight: 36, drag: phoneDrag
++            drag: phoneDrag
+         )
+ 
+         /// The sidebar's numbers, the Mac board's (`Mac.dc.html`), which the Mac and the iPad draw alike. The tree's
+@@ -736,8 +709,7 @@
+         /// the callout, 12 pt, keeping it below the rows' 13. Where the bar with edit mode stands in the column, the
+         /// iPad's, the search capsule ends in no glyph, so that "Search" reads whole between "…" and "+" in the 280 pt
+         /// column, where the microphone left it "Se…" (the controller's ruling on #149's hand check, 2026-10-31).
+-        /// "Top level"'s divider glyph 11, the phone's 15 to a list's 19 on the root's tile of 22 with its glyph of 14,
+-        /// and an option at least a row's 30 high. The drag's indicator and card (`sidebarDrag`).
++        /// The drag's indicator and card (`sidebarDrag`).
+         static let sidebar = Metrics(
+             indent: sidebarIndent, rowHeight: 30,
+             root: Level(
+@@ -758,7 +730,7 @@
+                 fieldWidth: 160, field: FieldSize(height: 22, padding: 6, cornerRadius: 6),
+                 fieldFont: .nestedRowTitleEmphasized
+             ),
+-            searchTrailingGlyph: nil, topLevelGlyphSize: 11, minimumOptionHeight: 30, drag: sidebarDrag
++            searchTrailingGlyph: nil, drag: sidebarDrag
+         )
+ 
+         /// The phone's indent, a tile of the root at 20 and each level 22 further, which its rows and its drag share.
+@@ -823,48 +795,6 @@
+         )
+     }
+ 
+-    /// The picker's check (`Phone.dc.html`, the Move to… sheet): 15 pt bold in the accent at the glyph's own width, in
+-    /// a cell of no least width, 20 short of the right edge, at the right of the present choice, and hidden in its room
+-    /// at the right of every other row, so that the rows end in one column, as Task 7 drew it: "Top level", a list's
+-    /// row and an area's line, which ends 20 before it.
+-    private enum Picker {
+-        static let check = IconModel(icon: .check, style: IconStyle(size: 15, weight: .bold, color: .accent))
+-        static let cellMinimumWidth: Double = 0
+-        static let endGap: Double = 20
+-
+-        /// The room a list's row's need counts for the check, the canvas's 18 px check: the glyph's own width is its
+-        /// platform's, and no view reads a need in the picker, where the rows are drawn whole.
+-        static let checkInNeed: Double = 18
+-
+-        /// What a list's row stands on in the picker, in every width: the sheet's paper, the whole width and square, as
+-        /// the phone's sheet draws its rows, since the sheet stands on the paper and the sidebar's colour, inset and
+-        /// rounded, would stand on it as a stripe (the review of #149, 2026-10-31). The rows keep the width's tiles,
+-        /// indent, titles and ends.
+-        static let background = RowBackground(color: .paper, inset: 0, cornerRadius: 0)
+-
+-        /// The check where a row is the present choice, and the check hidden in its room where it is not.
+-        static func accessories(isChecked: Bool) -> [AccessoryModel<UserAction>] {
+-            [isChecked ? .check(check) : .hidden(.check(check))]
+-        }
+-
+-        /// What stands at a list's row's right in the picker: the check or its room, with no fade, since the row is
+-        /// drawn whole and nothing runs under it.
+-        static func rowEnd(isChecked: Bool) -> RowEnd {
+-            RowEnd(
+-                accessories: accessories(isChecked: isChecked), fadeWidth: 0, cellMinimumWidth: cellMinimumWidth,
+-                endGap: endGap, accessoriesWidth: checkInNeed + endGap
+-            )
+-        }
+-
+-        /// What stands at an area's line's right in the picker: the check or its room, 20 after the line.
+-        static func lineEnd(isChecked: Bool) -> LineEnd {
+-            LineEnd(
+-                lineToAccessories: 20, accessories: accessories(isChecked: isChecked),
+-                cellMinimumWidth: cellMinimumWidth, endGap: endGap
+-            )
+-        }
+-    }
+-
+     /// The words more than one control gives: New List and New Area, a menu's items and the edit bar's buttons, a
+     /// menu's Delete and the confirmation's, and the Cancel of both dialogs; and those both bars give, the search
+     /// field's "Search" and the words "+" reads aloud, "Add".
+@@ -875,5 +805,20 @@
+         static let cancel = "Cancel"
+         static let search = "Search"
+         static let add = "Add"
++    }
++}
++
++private extension TaskViewList.ReadRow {
++    /// The list's colour as westron's list colour, the store's name read by its raw value, which is how westron keeps a
++    /// list's colour (`Westron.Category`); nil, westron's neutral tile, for a list with none or with a name westron has
++    /// no list colour for: the store's stone, its default, and rose.
++    var category: Westron.Category? {
++        color.flatMap { Westron.Category(rawValue: $0.rawValue) }
++    }
++
++    /// The list's glyph as westron's icon of the store's name, and westron's default glyph, bullets, for a list with none
++    /// or with a name westron does not know.
++    var glyph: Westron.Icon {
++        icon.flatMap(Westron.Icon.init(rawValue:)) ?? .fallback
+     }
+ }
+diff -ruN -x .build -x .swiftpm -x .git -x *.png -x *.xcresult /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Sources/Features/TaskViewList/TaskViewList+Model.swift /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Sources/Features/TaskViewList/TaskViewList+Model.swift
+--- /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Sources/Features/TaskViewList/TaskViewList+Model.swift	2026-11-07 12:08:24
++++ /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Sources/Features/TaskViewList/TaskViewList+Model.swift	2026-11-24 23:12:01
+@@ -1,6 +1,7 @@
+ // Sources/Features/TaskViewList/TaskViewList+Model.swift
+ import DesignSystemComponents
+ import TodoCore
++import WestronTokens
+ 
+ extension TaskViewList {
+     /// What a view draws: the rows of the tree, the one being renamed named once more for a view that reads it as one
+@@ -88,16 +89,90 @@
+ 
+         /// The picker of Move to… while it is open, and nil when it is closed: a view draws it as a sheet, "Top level"
+         /// first and then its options, which send `movePickerRowTapped`, with its Cancel, which sends
+-        /// `movePickerCancelled` (spec section 6). Each option is a row of the tree of the kind the screen draws it
+-        /// as, so that a view draws it with the screen's own row, with the check at its right where it is the present
+-        /// choice and the room for one where it is not. It is the module's state and not a screen, and no relaunch
+-        /// restores it (ADR-0009, amendment of 2026-10-25).
+-        public let movePicker: PickerModel<Kind, UserAction>?
++        /// `movePickerCancelled` (spec section 6). It is the first of the screen's parts on westron (the spike of
++        /// 2026-11-24): its options are named in westron's vocabulary, not drawn with the screen's own rows. It is the
++        /// module's state and not a screen, and no relaunch restores it (ADR-0009, amendment of 2026-10-25).
++        public let movePicker: MovePicker?
+ 
+         /// What went wrong, as the finished sentence the view shows, and nil when there is nothing to say:
+         /// `send` cannot throw, so a failure inside it has nowhere else to go, and a view that had to spell one
+         /// would be a view holding logic (spec section 2). A list that could not be opened is said here, where
+         /// the list that stays open is drawn beside it; what the list says about itself is in its own model.
+         public let problem: String?
++    }
++}
++
++extension TaskViewList.Model {
++    /// The picker of Move to… in westron's vocabulary (the owner's decisions for adopting westron, 2026-11-24): what it
++    /// says, its options and their actions, and for each option only what westron's components let a caller set, an
++    /// icon, a list colour, a nesting level and the disabled state. It holds no size, colour, font, radius or gap: the
++    /// platform's view lays it out in westron's tokens, a `ListRow` per option at its level, so the picker is the same
++    /// value in every width.
++    public struct MovePicker: Equatable, Sendable {
++        /// A place the list can be moved to, a row of the picker: what it is, its title, its nesting level, whether it
++        /// cannot take the list, whether it is the list's present parent, which carries the check, and the tap it
++        /// sends.
++        public struct Option: Equatable, Sendable {
++            /// What an option is, which a view switches over once to pick the row to draw, every case drawn and no
++            /// `default` (`docs/style.md`, "Views", the kind of a row).
++            public enum Kind: Equatable, Sendable {
++                /// A title beside a tile: a list's, with its icon in its list colour, or the top level's, with the
++                /// divider and no colour, which westron draws as its neutral tile.
++                case tile(Westron.Icon, Westron.Category?)
++                /// An area's line, labelled with its title, or alone where the area has no name.
++                case line
++            }
++
++            public let kind: Kind
++
++            /// The list's name, or the area's in capitals, as westron's labelled line asks its product to write it, or
++            /// nothing for an unnamed area.
++            public let title: String
++
++            /// The nesting level, the depth the tree draws the row at (`Row.depth`): 0 at the root and under an
++            /// area's line, one more for each list it stands in.
++            public let level: Int
++            public let isDisabled: Bool
++            public let isChecked: Bool
++            public let action: TaskViewList.UserAction
++
++            public init(
++                kind: Kind, title: String, level: Int, isDisabled: Bool, isChecked: Bool,
++                action: TaskViewList.UserAction
++            ) {
++                self.kind = kind
++                self.title = title
++                self.level = level
++                self.isDisabled = isDisabled
++                self.isChecked = isChecked
++                self.action = action
++            }
++        }
++
++        /// The title, which names the list being moved, and the line under it.
++        public let title: String
++        public let hint: String
++
++        /// What the check on the present parent is read as, after the option's title.
++        public let currentLabel: String
++
++        /// The picker's Cancel, which every way the platform has of closing the picker is.
++        public let cancel: ChoiceModel<TaskViewList.UserAction>
++
++        /// "Top level", first, and then the tree's rows in tree order.
++        public let topLevel: Option
++        public let options: [Option]
++
++        public init(
++            title: String, hint: String, currentLabel: String, cancel: ChoiceModel<TaskViewList.UserAction>,
++            topLevel: Option, options: [Option]
++        ) {
++            self.title = title
++            self.hint = hint
++            self.currentLabel = currentLabel
++            self.cancel = cancel
++            self.topLevel = topLevel
++            self.options = options
++        }
+     }
+ }
+diff -ruN -x .build -x .swiftpm -x .git -x *.png -x *.xcresult /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Sources/Features/TaskViewList/TaskViewList.swift /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Sources/Features/TaskViewList/TaskViewList.swift
+--- /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Sources/Features/TaskViewList/TaskViewList.swift	2026-11-09 11:01:48
++++ /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Sources/Features/TaskViewList/TaskViewList.swift	2026-11-24 23:12:49
+@@ -905,13 +905,12 @@
+             return TaskViewList.confirmation(deleting: row, among: rows)
+         }
+ 
+-        /// The picker up over the rows, nil when none is, its options the whole tree as the window's width draws it
+-        /// (`movePicker(moving:among:in:)`).
+-        private var movePicker: PickerModel<Model.Kind, UserAction>? {
++        /// The picker up over the rows, nil when none is, its options the whole tree (`movePicker(moving:among:)`).
++        private var movePicker: Model.MovePicker? {
+             guard case .movePicker(let id)? = dialog, let moving = rows.first(where: { $0.id == id }) else {
+                 return nil
+             }
+-            return TaskViewList.movePicker(moving: moving, among: rows, in: width)
++            return TaskViewList.movePicker(moving: moving, among: rows)
+         }
+ 
+         /// The dialog up over the rows, one at a time, which holds the id of the row it is up for and nothing of what
+diff -ruN -x .build -x .swiftpm -x .git -x *.png -x *.xcresult /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Sources/WasmSizeProbe/main.swift /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Sources/WasmSizeProbe/main.swift
+--- /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Sources/WasmSizeProbe/main.swift	2026-11-09 22:30:18
++++ /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Sources/WasmSizeProbe/main.swift	2026-11-24 23:12:58
+@@ -486,15 +486,15 @@
+     }
+ 
+     /// The move picker as a line: its title, how many rows it offers and how many of them are greyed out, the present
+-    /// parent, by its label or title, or the top level's, and its Cancel: one switch over a row's kinds, as the picker's
++    /// parent, by its title, or the top level's, and its Cancel: one switch over an option's kinds, as the picker's
+     /// view has.
+     private static func pickerLine(of model: AppModule.Model) -> String {
+         guard let picker = model.taskViewList.movePicker else { return "no picker" }
+-        var current = picker.topLevel.isChecked ? picker.topLevel.title.text : "nothing"
++        var current = picker.topLevel.isChecked ? picker.topLevel.title : "nothing"
+         for option in picker.options where option.isChecked {
+-            switch option.row {
+-            case .area(let line): current = line.label?.text ?? "an unnamed area"
+-            case .list(let list): current = list.title.text
++            switch option.kind {
++            case .line: current = option.title.isEmpty ? "an unnamed area" : option.title
++            case .tile: current = option.title
+             }
+         }
+         let greyed = picker.options.filter(\.isDisabled).count
+diff -ruN -x .build -x .swiftpm -x .git -x *.png -x *.xcresult /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Tests/DesignSystemComponentsTests/ClassModelEqualityTests.swift /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Tests/DesignSystemComponentsTests/ClassModelEqualityTests.swift
+--- /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Tests/DesignSystemComponentsTests/ClassModelEqualityTests.swift	2026-11-09 22:30:18
++++ /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Tests/DesignSystemComponentsTests/ClassModelEqualityTests.swift	2026-11-24 23:11:32
+@@ -153,42 +153,6 @@
+     ))), "the card is compared")
+ }
+ 
+-private let topLevelStyle = PickerTopLevelStyle(
+-    tileSide: 30, tileCornerRadius: 8, tileColor: .fill, tileToTitle: 12, leading: 20, height: 46,
+-    cellMinimumWidth: 18, endGap: 20
+-)
+-
+-private let topLevel = PickerModel<Int, Action>.TopLevel(
+-    icon: icon, title: text, accessories: [.space(18)], isChecked: false, action: .first, style: topLevelStyle
+-)
+-
+-private let cancel = ChoiceModel<Action>(title: "Cancel", isDestructive: false, action: .second)
+-
+-private let optionPickerStyle = OptionPickerStyle(hintGap: 8, minimumOptionHeight: 36, disabledOpacity: 0.35)
+-
+-private func picker(
+-    title: String = "Move “Home” to…", hint: TextModel = text, cancel: ChoiceModel<Action> = cancel,
+-    topLevel: PickerModel<Int, Action>.TopLevel = topLevel,
+-    options: [PickerModel<Int, Action>.Option] = [.init(row: 1, isDisabled: false, isChecked: true)],
+-    style: OptionPickerStyle = optionPickerStyle
+-) -> PickerModel<Int, Action> {
+-    PickerModel(title: title, hint: hint, cancel: cancel, topLevel: topLevel, options: options, style: style)
+-}
+-
+-@Test func aPickerComparesEveryStoredProperty() {
+-    expectEveryPropertyCompared({ picker() }, [
+-        "title": picker(title: "Move “Work” to…"),
+-        "hint": picker(hint: TextModel(text: "Choose where it goes.", style: TextStyle(font: .hint, color: .ink2))),
+-        "cancel": picker(cancel: ChoiceModel(title: "Cancel", isDestructive: false, action: .first)),
+-        "topLevel": picker(topLevel: .init(
+-            icon: icon, title: text, accessories: [.check(icon)], isChecked: true, action: .first,
+-            style: topLevelStyle
+-        )),
+-        "options": picker(options: [.init(row: 1, isDisabled: true, isChecked: true)]),
+-        "style": picker(style: OptionPickerStyle(hintGap: 10, minimumOptionHeight: 36, disabledOpacity: 0.35)),
+-    ])
+-}
+-
+ private func check(isChecked: Bool = false) -> CheckModel<Action> {
+     CheckModel(
+         style: .init(
+diff -ruN -x .build -x .swiftpm -x .git -x *.png -x *.xcresult /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Tests/TaskViewListFeatureTests/TaskViewListComponentsTests.swift /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Tests/TaskViewListFeatureTests/TaskViewListComponentsTests.swift
+--- /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Tests/TaskViewListFeatureTests/TaskViewListComponentsTests.swift	2026-11-09 11:01:48
++++ /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Tests/TaskViewListFeatureTests/TaskViewListComponentsTests.swift	2026-11-24 23:11:07
+@@ -5,6 +5,7 @@
+ import FeatureModule
+ import TaskViewListFeature
+ import TodoCore
++import WestronTokens
+ 
+ private typealias Action = TaskViewList.UserAction
+ 
+@@ -486,13 +487,13 @@
+     #expect(listRow(home, in: list.model)?.title.text == "House")
+ }
+ 
+-/// The picker of Move to… whole (`Phone.dc.html`, the Move to… sheet): its title naming the list, the hint, Cancel,
+-/// "Top level" on a tile of the fill colour with the divider glyph, and the whole tree, each row drawn as the screen's
+-/// with no menu, no count, no chevron, no grip, no highlight and no guides, sending `movePickerRowTapped`; the list
+-/// moved and the lists inside it disabled, and its parent checked, the check 15 pt bold in the accent in a cell of 18,
+-/// 20 short of the edge, and the cell kept empty on every other row, "Top level" among them. An unnamed area's line
+-/// stands alone in the picker, in edit mode too, where the screen labels it (the owner's answer on #160, thread
+-/// r4415002540).
++/// The picker of Move to… whole (Lists screen spec, section 6), in westron's vocabulary and nothing else: its title
++/// naming the list, the hint, the word the check is read as, Cancel, "Top level" with the divider on westron's neutral
++/// tile, and the whole tree in tree order, each list with its icon and its colour as westron's by the store's names, at
++/// its depth as its nesting level, and each area a line labelled with its name; the list moved and the lists inside it
++/// disabled, its parent checked, and each sending `movePickerRowTapped`. It holds no size, colour, font or gap: the
++/// platform lays it out in westron's tokens. An unnamed area's line stands alone in the picker, in edit mode too, where
++/// the screen labels it (the owner's answer on #160, thread r4415002540).
+ @Test func thePickerWhole() throws {
+     let store = try makeStore()
+     for id in builtIns { try store.delete(view: id) }
+@@ -514,92 +515,57 @@
+     #expect(list.model.movePicker?.topLevel.isChecked == true, "a list of the root has the top level for its parent")
+ }
+ 
+-/// The picker of Move to… on Home, in the tree of the test above: Projects checked, Home disabled, Errands, the
+-/// unnamed area's line alone and Clients under it, each a row of the screen's with nothing of the session on it, and at
+-/// its right the check, or the check hidden in its room, at the glyph's own width in a cell of no least width and 20
+-/// short of the edge; a row's need counts the canvas's check, 18, for it.
++/// The picker of Move to… on Home, in the tree of the test above: "Top level" first, then Projects checked, Home
++/// disabled one level in, Errands, the unnamed area's line alone and Clients at the line's own depth, as the tree
++/// stands them (Lists screen spec, section 3). Projects is westron's teal with its folder; the others have no colour and
++/// no icon, so westron's neutral tile and its default glyph, bullets.
+ private func homesPicker(
+     projects: ViewID, home: ViewID, errands: ViewID, area: ViewID, clients: ViewID
+-) -> PickerModel<TaskViewList.Model.Kind, Action> {
+-    let check = IconModel(icon: .check, style: IconStyle(size: 15, weight: .bold, color: .accent))
+-    let checked: [AccessoryModel<Action>] = [.check(check)]
+-    let unchecked: [AccessoryModel<Action>] = [.hidden(.check(check))]
+-    func option(
+-        _ id: ViewID, _ title: String, font: DesignSystem.Font, tile: TileModel, depth: Int, isChecked: Bool = false
+-    ) -> TaskViewList.Model.Kind {
+-        let leading = 20 + 22 * Double(depth)
+-        return .list(ListRowModel(
+-            tile: tile,
+-            style: ListRowStyle(
+-                height: 46, leading: leading, tileToTitle: 12, need: leading + tile.style.side + 12 + 140 + 38,
+-                background: .paper, backgroundInset: 0, cornerRadius: 0, guides: [], childGuides: [], guide: guide,
+-                fadeWidth: 0, textMinimumWidth: 20, cellMinimumWidth: 0, endGap: 20, accessoriesWidth: 38
+-            ),
+-            title: TextModel(text: title, style: TextStyle(font: font, color: .ink)), field: nil,
+-            accessories: isChecked ? checked : unchecked, tap: .movePickerRowTapped(id), menu: nil
+-        ))
+-    }
+-    let rootTile = { (color: DesignSystem.Color.Components.Tile, icon: DesignSystem.Icon) in
+-        TileModel(
+-            icon: icon,
+-            style: TileStyle(color: color, side: 30, cornerRadius: 8, glyphSize: 19, glyphWeight: .medium)
++) -> TaskViewList.Model.MovePicker {
++    typealias Option = TaskViewList.Model.MovePicker.Option
++    func list(
++        _ id: ViewID, _ title: String, _ icon: Westron.Icon, _ category: Westron.Category?, level: Int,
++        isDisabled: Bool = false, isChecked: Bool = false
++    ) -> Option {
++        Option(
++            kind: .tile(icon, category), title: title, level: level, isDisabled: isDisabled, isChecked: isChecked,
++            action: .movePickerRowTapped(id)
+         )
+     }
+-    return PickerModel(
+-        title: "Move “Home” to…",
+-        hint: TextModel(text: "Choose where it goes.", style: TextStyle(font: .hint, color: .ink2)),
++    return TaskViewList.Model.MovePicker(
++        title: "Move “Home” to…", hint: "Choose where it goes.", currentLabel: "Current",
+         cancel: ChoiceModel(title: "Cancel", isDestructive: false, action: .movePickerCancelled),
+-        topLevel: .init(
+-            icon: IconModel(icon: .divider, style: IconStyle(size: 15, weight: .regular, color: .ink2)),
+-            title: TextModel(text: "Top level", style: TextStyle(font: .rowTitle, color: .ink)),
+-            accessories: unchecked, isChecked: false, action: .movePickerRowTapped(nil),
+-            style: PickerTopLevelStyle(
+-                tileSide: 30, tileCornerRadius: 8, tileColor: .fill, tileToTitle: 12, leading: 20, height: 46,
+-                cellMinimumWidth: 0, endGap: 20
+-            )
++        topLevel: Option(
++            kind: .tile(.divider, nil), title: "Top level", level: 0, isDisabled: false, isChecked: false,
++            action: .movePickerRowTapped(nil)
+         ),
+         options: [
+-            .init(
+-                row: option(
+-                    projects, "Projects", font: .rowTitleEmphasized, tile: rootTile(.teal, .folder), depth: 0,
+-                    isChecked: true
+-                ),
+-                isDisabled: false, isChecked: true
++            list(projects, "Projects", .folder, .teal, level: 0, isChecked: true),
++            list(home, "Home", .bullets, nil, level: 1, isDisabled: true),
++            list(errands, "Errands", .bullets, nil, level: 0),
++            Option(
++                kind: .line, title: "", level: 0, isDisabled: false, isChecked: false, action: .movePickerRowTapped(area)
+             ),
+-            .init(
+-                row: option(
+-                    home, "Home", font: .nestedRowTitle,
+-                    tile: TileModel(
+-                        icon: .bullets,
+-                        style: TileStyle(color: .stone, side: 26, cornerRadius: 7, glyphSize: 16, glyphWeight: .medium)
+-                    ),
+-                    depth: 1
+-                ),
+-                isDisabled: true, isChecked: false
+-            ),
+-            .init(
+-                row: option(errands, "Errands", font: .rowTitle, tile: rootTile(.stone, .bullets), depth: 0),
+-                isDisabled: false, isChecked: false
+-            ),
+-            .init(
+-                row: .area(AreaLineModel(
+-                    style: AreaLineStyle(
+-                        height: 17, leading: 20, spacing: 10, line: LineStyle(color: .line, width: 1, dash: []),
+-                        lineToAccessories: 20, cellMinimumWidth: 0, endGap: 20
+-                    ),
+-                    label: nil, field: nil, accessories: unchecked, tap: .movePickerRowTapped(area), menu: nil
+-                )),
+-                isDisabled: false, isChecked: false
+-            ),
+-            .init(
+-                row: option(clients, "Clients", font: .rowTitle, tile: rootTile(.stone, .bullets), depth: 0),
+-                isDisabled: false, isChecked: false
+-            ),
+-        ],
+-        style: OptionPickerStyle(hintGap: 8, minimumOptionHeight: 36, disabledOpacity: 0.35)
++            list(clients, "Clients", .bullets, nil, level: 0),
++        ]
+     )
+ }
+ 
++/// A list's colour in the picker is westron's list colour of the same name, the store's name read by its raw value,
++/// and its icon westron's of the same name. A list with no colour, or with one westron has no list colour for, the
++/// store's stone and rose, has none, which westron draws as its neutral tile; an icon westron does not know is its
++/// default glyph, bullets.
++@Test func aListsColourAndIconInThePickerAreWestronsByName() throws {
++    let store = try makeStore()
++    for id in builtIns { try store.delete(view: id) }
++    let amber = try store.createView(NewTaskView(title: "Amber", color: .amber, icon: "sun"))
++    try store.createView(NewTaskView(title: "Rose", color: .rose, icon: "no-such-glyph"))
++    try store.createView(NewTaskView(title: "Stone", color: .stone, icon: "house"))
++    let list = try sidebar(store)
++    _ = list.send(.action(.moveToMenuItemChosen(amber)))
++    #expect(list.model.movePicker?.options.map(\.kind) == [.tile(.sun, .amber), .tile(.bullets, nil), .tile(.house, nil)])
++}
++
+ /// The confirmation of a delete whole: the question and what goes, as before, and its two choices, Delete, which
+ /// destroys, and Cancel, each sending its action.
+ @Test func theConfirmationWhole() throws {
+@@ -933,12 +899,10 @@
+     )
+ }
+ 
+-/// The picker of Move to… in a wide window draws the sidebar's rows (Lists screen spec, section 6): each option the
+-/// screen's row for the width with nothing of the session on it, but standing on the sheet's paper, the whole width
+-/// and square, as on the phone, and "Top level" a row of the sidebar's too, 30 high, its tile the root's, 22 across
+-/// and rounded 6, the divider glyph 11 on it, 18 in and the title 8 after it; an option is at least a row's 30 high.
+-/// The check stands 20 short of the edge on every row, in one column.
+-@Test func thePickerInAWideWindow() throws {
++/// The picker is the same in every width (Lists screen spec, section 6): it holds no size, so a window that widens or
++/// narrows leaves it as it was, and the platform lays it out for its window in westron's tokens. An area's line is
++/// labelled with its name in capitals in every width, as westron's labelled rule asks its product to write it.
++@Test func thePickerIsTheSameInEveryWidth() throws {
+     let store = try makeStore()
+     for id in builtIns { try store.delete(view: id) }
+     let projects = try store.createView(NewTaskView(title: "Projects", color: .teal, icon: "folder"))
+@@ -946,62 +910,11 @@
+     let area = try store.createView(NewTaskView(title: "Work", kind: .area))
+     let list = try sidebar(store, width: .wide, capabilities: mac)
+     _ = list.send(.action(.moveToMenuItemChosen(home)))
+-    let check = IconModel(icon: .check, style: IconStyle(size: 15, weight: .bold, color: .accent))
+-    let checked: [AccessoryModel<Action>] = [.check(check)]
+-    let unchecked: [AccessoryModel<Action>] = [.hidden(.check(check))]
+-    let picker = PickerModel<TaskViewList.Model.Kind, Action>(
+-        title: "Move “Home” to…",
+-        hint: TextModel(text: "Choose where it goes.", style: TextStyle(font: .hint, color: .ink2)),
+-        cancel: ChoiceModel(title: "Cancel", isDestructive: false, action: .movePickerCancelled),
+-        topLevel: .init(
+-            icon: IconModel(icon: .divider, style: IconStyle(size: 11, weight: .regular, color: .ink2)),
+-            title: TextModel(text: "Top level", style: TextStyle(font: .rowTitle, color: .ink)),
+-            accessories: unchecked, isChecked: false, action: .movePickerRowTapped(nil),
+-            style: PickerTopLevelStyle(
+-                tileSide: 22, tileCornerRadius: 6, tileColor: .fill, tileToTitle: 8, leading: 18, height: 30,
+-                cellMinimumWidth: 0, endGap: 20
+-            )
+-        ),
+-        options: [
+-            .init(
+-                row: .list(ListRowModel(
+-                    tile: rootTile(.teal, .folder),
+-                    style: ListRowStyle(
+-                        height: 30, leading: 18, tileToTitle: 8, need: 18 + 22 + 8 + 90 + 38, background: .paper,
+-                        backgroundInset: 0, cornerRadius: 0, guides: [], childGuides: [], guide: sidebarGuide,
+-                        fadeWidth: 0, textMinimumWidth: 18, cellMinimumWidth: 0, endGap: 20, accessoriesWidth: 38
+-                    ),
+-                    title: TextModel(text: "Projects", style: TextStyle(font: .rowTitleEmphasized, color: .ink)),
+-                    field: nil, accessories: checked, tap: .movePickerRowTapped(projects), menu: nil
+-                )),
+-                isDisabled: false, isChecked: true
+-            ),
+-            .init(
+-                row: .list(ListRowModel(
+-                    tile: nestedTile(.stone, .bullets),
+-                    style: ListRowStyle(
+-                        height: 30, leading: 34, tileToTitle: 8, need: 34 + 18 + 8 + 90 + 38, background: .paper,
+-                        backgroundInset: 0, cornerRadius: 0, guides: [], childGuides: [], guide: sidebarGuide,
+-                        fadeWidth: 0, textMinimumWidth: 18, cellMinimumWidth: 0, endGap: 20, accessoriesWidth: 38
+-                    ),
+-                    title: TextModel(text: "Home", style: TextStyle(font: .rowTitle, color: .ink)),
+-                    field: nil, accessories: unchecked, tap: .movePickerRowTapped(home), menu: nil
+-                )),
+-                isDisabled: true, isChecked: false
+-            ),
+-            .init(
+-                row: .area(AreaLineModel(
+-                    style: AreaLineStyle(
+-                        height: 15, leading: 18, spacing: 6, line: LineStyle(color: .line, width: 1, dash: []),
+-                        lineToAccessories: 20, cellMinimumWidth: 0, endGap: 20
+-                    ),
+-                    label: TextModel(text: "WORK", style: TextStyle(font: .areaCaption, color: .ink3)),
+-                    field: nil, accessories: unchecked, tap: .movePickerRowTapped(area), menu: nil
+-                )),
+-                isDisabled: false, isChecked: false
+-            ),
+-        ],
+-        style: OptionPickerStyle(hintGap: 8, minimumOptionHeight: 30, disabledOpacity: 0.35)
+-    )
+-    #expect(list.model.movePicker == picker)
++    let wide = try #require(list.model.movePicker)
++    #expect(wide.options.map(\.title) == ["Projects", "Home", "WORK"])
++    #expect(wide.options.last == .init(
++        kind: .line, title: "WORK", level: 0, isDisabled: false, isChecked: false, action: .movePickerRowTapped(area)
++    ))
++    _ = list.send(.widthChanged(.narrow))
++    #expect(list.model.movePicker == wide)
+ }
+diff -ruN -x .build -x .swiftpm -x .git -x *.png -x *.xcresult /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Tests/TaskViewListFeatureTests/TaskViewListEditsTests.swift /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Tests/TaskViewListFeatureTests/TaskViewListEditsTests.swift
+--- /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/Tests/TaskViewListFeatureTests/TaskViewListEditsTests.swift	2026-11-07 12:08:24
++++ /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/Tests/TaskViewListFeatureTests/TaskViewListEditsTests.swift	2026-11-24 23:11:23
+@@ -7,7 +7,7 @@
+ import TaskViewListFeature
+ import TodoCore
+ 
+-private typealias Option = PickerModel<TaskViewList.Model.Kind, TaskViewList.UserAction>.Option
++private typealias Option = TaskViewList.Model.MovePicker.Option
+ 
+ /// The areas' labels a model draws, in order, read off its rows' kinds: a name, "Area" in edit mode for an unnamed
+ /// area, and nil for an unnamed area's line outside it.
+@@ -20,63 +20,43 @@
+ 
+ /// The id of the row an option of the picker offers, read off the tap it sends, which is all a view knows of it.
+ private func id(of option: Option) -> ViewID? {
+-    let tap = switch option.row {
+-    case .area(let line): line.tap
+-    case .list(let list): list.tap
+-    }
+-    guard case .movePickerRowTapped(let id) = tap else { return nil }
++    guard case .movePickerRowTapped(let id) = option.action else { return nil }
+     return id
+ }
+ 
+-/// How a row of the tree looks with no control on it and nothing of a person's session: its kind, its title or its
+-/// label, its tile and title font, and where it starts. The picker draws each row as the screen draws it, so an option
+-/// looks as the screen's row of the same id does, but for what it stands on, the sheet's paper (`standsOnTheSheet`).
+-private struct Look: Equatable {
++/// Where a row of the tree stands, which the picker keeps of it: the row it is, its depth, whether it is an area's line,
++/// and a list's title. The picker draws its options with westron's components and not with the screen's rows, so it
++/// keeps where each row stands in the tree and none of how the screen draws it; an area's label is the picker's own,
++/// in capitals (`thePickerIsTheSameInEveryWidth`).
++private struct Place: Equatable {
++    let id: ViewID?
++    let depth: Int
++    let isLine: Bool
+     let title: String?
+-    let tile: TileModel?
+-    let font: DesignSystem.Font?
+-    let leading: Double
++}
+ 
+-    init(_ kind: TaskViewList.Model.Kind) {
+-        switch kind {
+-        case .area(let line):
+-            title = line.label?.text
+-            tile = nil
+-            font = line.label?.style.font
+-            leading = line.style.leading
+-        case .list(let list):
+-            title = list.title.text
+-            tile = list.tile
+-            font = list.title.style.font
+-            leading = list.style.leading
+-        }
++/// The picker's options as places.
++private func places(_ options: [Option]) -> [Place] {
++    options.map { option in
++        let isLine = option.kind == .line
++        return Place(id: id(of: option), depth: option.level, isLine: isLine, title: isLine ? nil : option.title)
+     }
+ }
+ 
+-/// Whether an option stands on the sheet, as a view draws it: a list's option on the paper, the whole width and
+-/// square, in every width, and an area's line, which has no background, on whatever the sheet is.
+-private func standsOnTheSheet(_ option: Option) -> Bool {
+-    guard case .list(let list) = option.row else { return true }
+-    return list.style.background == .paper && list.style.backgroundInset == 0 && list.style.cornerRadius == 0
++/// The screen's rows as places.
++private func places(_ rows: [TaskViewList.Model.Row]) -> [Place] {
++    rows.map { row in
++        switch row.kind {
++        case .area: Place(id: row.id, depth: row.depth, isLine: true, title: nil)
++        case .list(let list): Place(id: row.id, depth: row.depth, isLine: false, title: list.title.text)
++        }
++    }
+ }
+ 
+-/// The picker's options as a view reads them, each the id it offers and how it looks, to hold beside the screen's rows.
+-private func offered(_ options: [Option]?) -> [(ViewID?, Look)]? {
+-    options?.map { (id(of: $0), Look($0.row)) }
+-}
+-
+-/// The screen's rows as the picker offers them, each its id and how it looks.
+-private func offered(_ rows: [TaskViewList.Model.Row]) -> [(ViewID?, Look)] {
+-    rows.map { ($0.id, Look($0.kind)) }
+-}
+-
+-/// Whether the picker offers the rows the screen draws, in the same order and looking the same, each standing on the
+-/// sheet.
++/// Whether the picker offers the rows the screen draws, in the same order, each at its depth and of its kind.
+ private func offersTheRows(_ options: [Option]?, of rows: [TaskViewList.Model.Row]) -> Bool {
+-    guard let options, let looks = offered(options) else { return false }
+-    let drawn = offered(rows)
+-    return looks.count == drawn.count && zip(looks, drawn).allSatisfy { $0.0 == $1.0 && $0.1 == $1.1 }
+-        && options.allSatisfy(standsOnTheSheet)
++    guard let options else { return false }
++    return places(options) == places(rows)
+ }
+ 
+ /// Edit mode, from "…", takes the counts off the rows and shows a label on every area, "Area" standing in for a missing
+@@ -370,12 +350,11 @@
+     #expect(list.model == reference.model)
+ }
+ 
+-/// Move to… opens the picker over the whole tree in tree order, each row drawn as the screen draws it with nothing
+-/// highlighted, the list being moved and every list inside it greyed out, and its present parent marked: a list, an
+-/// area's line, or "Top level" for a list of the root (Lists screen spec, section 6). Its rows follow the width as the
+-/// screen's do, and in edit mode an unnamed area's line stands alone in it, where the screen labels it (the owner's
+-/// answer on #160, thread r4415002540). Asking writes nothing, and on an area or a row that is not there it opens
+-/// nothing.
++/// Move to… opens the picker over the whole tree in tree order, each row at its depth, the list being moved and every
++/// list inside it greyed out, and its present parent marked: a list, an area's line, or "Top level" for a list of the
++/// root (Lists screen spec, section 6). It offers the same rows in every width, and in edit mode an unnamed area's line
++/// stands alone in it, where the screen labels it (the owner's answer on #160, thread r4415002540). Asking writes
++/// nothing, and on an area or a row that is not there it opens nothing.
+ @Test func movePickerShowsTheWholeTreeWithTheListAndItsSubtreeDisabledAndItsParentCurrent() throws {
+     let store = try makeStore()
+     try store.createTask(NewTask(title: "Buy milk"))
+@@ -393,7 +372,7 @@
+     let picker = try #require(list.model.movePicker)
+     #expect(picker.title == "Move “Home” to…")
+     #expect(!picker.topLevel.isChecked)
+-    #expect(offersTheRows(picker.options, of: (try sidebarOn(ViewID(), in: store)).rows), "the screen's rows, nothing lit")
++    #expect(offersTheRows(picker.options, of: (try sidebarOn(ViewID(), in: store)).rows), "the screen's rows")
+     #expect(picker.options.filter(\.isDisabled).map(id(of:)) == [home, garden])
+     #expect(picker.options.filter(\.isChecked).map(id(of:)) == [projects])
+     #expect(list.model.rows == before.rows)
+@@ -415,12 +394,10 @@
+     let wide = try TaskViewList(
+         store: store, route: .init(list: .init(head: .init(view: ViewID()))), width: .wide, day: testDay, capabilities: iPhone
+     )
++    #expect(offersTheRows(list.model.movePicker?.options, of: wide.model.rows), "the same rows in a wide window")
+     #expect(
+-        offersTheRows(list.model.movePicker?.options, of: wide.model.rows),
+-        """
+-        the sidebar's tiles on the sheet's paper, and the unnamed area's line alone, as the screen draws it outside \
+-        edit mode
+-        """
++        list.model.movePicker?.options.filter { $0.kind == .line }.map(\.title) == [""],
++        "the unnamed area's line alone in edit mode, where the screen labels it"
+     )
+     _ = list.send(.action(.movePickerCancelled))
+ 
+Binary files /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app-before/docs/.DS_Store and /private/tmp/claude-501/-Users-aabanschikov-westron-design-system/a7700c6f-9d3d-4a79-b4ff-30604c50f4c5/scratchpad/spike/todo-app/docs/.DS_Store differ
