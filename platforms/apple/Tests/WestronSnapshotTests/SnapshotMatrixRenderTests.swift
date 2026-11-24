@@ -89,6 +89,7 @@ struct SnapshotMatrixRenderTests {
                             id: matrix.supplement?.id ?? "contract",
                             title: matrix.supplement?.title ?? "from the contract",
                             supplement: matrix.supplement != nil, note: matrix.supplement?.note,
+                            notCompared: matrix.notComparedReason,
                             combinations: matrix.drawnCombinations.count,
                             sheets: matrix.sheets.map { sheet in
                                 .init(
@@ -424,6 +425,9 @@ struct SnapshotManifest: Codable {
         var title: String
         var supplement: Bool
         var note: String?
+        /// Why the comparison does not hold this supplement's pictures to their pixels on this OS
+        /// (`Supplement.notCompared`); absent where it does.
+        var notCompared: String?
         var combinations: Int
         var sheets: [Sheet]
     }

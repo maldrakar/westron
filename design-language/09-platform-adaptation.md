@@ -39,11 +39,15 @@ control, the contract records why.
 - System bars, toolbars, tab bars, sidebars, sheets and menus get glass by themselves. westron does not restyle them.
 - A westron control that floats over content, such as the pilot's round back and "…" buttons, may use glass through the
   system API (`glassEffect`, the `.glass` button styles), because it is a control. A row, a card, a tile or an empty
-  state never does.
+  state never does. That control is Button's option `floating` (decisions/0015): a floating secondary stands on the
+  system's glass, regular and interactive, with nothing of westron's on it; a floating primary keeps its opaque fill.
+  A group of controls on one piece of glass is a bar's own group, or the system's `GlassEffectContainer` that a
+  product writes around floating buttons; westron has no glass surface.
 - Brand color belongs "in the content layer, where it scrolls beneath Liquid Glass controls and gets picked up
   dynamically" (HIG Branding).
 - Glass needs iOS 26, macOS 26 and watchOS 26. It sits behind `if #available` with a fallback for the minimum versions
-  ([decisions/0008](../decisions/0008-apple-toolchain-and-catalog.md)).
+  ([decisions/0008](../decisions/0008-apple-toolchain-and-catalog.md)): an opaque raised surface,
+  `color.background.surface` casting `shadow.overlay`, never a material (open question 3, answered).
 
 ## What stays with the system and what westron controls
 
@@ -110,8 +114,10 @@ type name may differ only where the platform forces it, and the contract says so
    person's choice wins on system controls. Should westron override it on GNOME? Chapter 02 asks the same.
 2. **Dynamic color on Android.** decisions/0012 maps westron's tokens to a static `ColorScheme`. Material can take
    its colors from the wallpaper instead. Should a westron product ever allow that? Decided at the latest in phase 8.
-3. **The fallback before OS 26.** The pilot draws its floating buttons on its own translucent color when glass is not
-   available. Proposal: use the system material instead, which adapts to Reduce Transparency and Increase Contrast.
+3. **The fallback before OS 26.** Answered by the owner on 2026-11-23 (decisions/0015), otherwise than this chapter
+   proposed (the system material): a floating button stands on an opaque raised surface from tokens,
+   `color.background.surface` casting `shadow.overlay`, whose contrast is declared and checked in every theme and which
+   Reduce Transparency has nothing to change on.
 4. **Headings on GNOME.** libadwaita's title style classes (`.title-1`…`.title-4`, `.heading`) set a weight and a
    size in Adwaita Sans. westron's one CSS rule sets Onest on headings. Does it keep these classes' weights and
    sizes, or give them westron's heading roles too?

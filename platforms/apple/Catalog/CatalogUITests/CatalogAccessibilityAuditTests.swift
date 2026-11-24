@@ -541,6 +541,9 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         var elementType: XCUIElement.ElementType? = nil
         /// The widest the element's frame may be, if that matters: a control's cell, not a row with the same name.
         var maxWidth: CGFloat? = nil
+        /// Whether a text of the page must reach under the iOS status bar while the issue is reported: the status bar's
+        /// own text, the clock, is then drawn over the page's. Never on macOS, which has no status bar over the page.
+        var textUnderStatusBar = false
         /// Tells the issue by its element's label; `nil` when the audit names no element.
         let label: @Sendable (String?) -> Bool
 
@@ -548,7 +551,8 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             _ scope: Scope, type: XCUIAccessibilityAuditType, reason: String, description: String? = nil,
             appearance: Configuration.Appearance? = nil, value: String? = nil, enabled: Bool? = nil,
             detail: String? = nil, underKeyboard: Bool = false, elementType: XCUIElement.ElementType? = nil,
-            maxWidth: CGFloat? = nil, label: @escaping @Sendable (String?) -> Bool
+            maxWidth: CGFloat? = nil, textUnderStatusBar: Bool = false,
+            label: @escaping @Sendable (String?) -> Bool
         ) {
             self.elementType = elementType
             self.maxWidth = maxWidth
@@ -561,6 +565,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             self.enabled = enabled
             self.detail = detail
             self.underKeyboard = underKeyboard
+            self.textUnderStatusBar = textUnderStatusBar
             self.label = label
         }
 
@@ -585,7 +590,25 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                     frame.maxY > keyboard.frame.minY
                 else { return false }
             }
+            if textUnderStatusBar && !Self.pageTextUnderStatusBar() { return false }
             return label(issue.element?.label)
+        }
+
+        /// Whether a static text of the catalog reaches under the iOS status bar now; always `false` on macOS.
+        @MainActor
+        static func pageTextUnderStatusBar() -> Bool {
+            #if os(iOS)
+                let statusBar = XCUIApplication(bundleIdentifier: "com.apple.springboard").statusBars.firstMatch
+                guard statusBar.exists, let page = try? XCUIApplication().snapshot() else { return false }
+                let bar = statusBar.frame
+                func reaches(_ element: XCUIElementSnapshot) -> Bool {
+                    (element.elementType == .staticText && !element.frame.isEmpty && element.frame.intersects(bar))
+                        || element.children.contains(where: reaches)
+                }
+                return reaches(page)
+            #else
+                return false
+            #endif
         }
     }
 
@@ -633,6 +656,54 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             }
         }
         suppressions += [
+            // Contrast on the disabled floating samples with a label, drawn whole at opacity.disabled by the contract:
+            // WCAG exempts an inactive control (design-language chapter 08). The audit reports a button's text, never
+            // an icon-only button, so only the words match (ButtonFloatingID): "Edit", the disabled row on glass of
+            // `button-floating-states`, and "Disabled", the disabled row before OS 26 of `button-floating-before-26`.
+            Suppression(
+                .entry("button-floating-states"), type: .contrast, reason: "an inactive control", enabled: false
+            ) { $0 == "Edit" },
+            Suppression(
+                .entry("button-floating-before-26"), type: .contrast, reason: "an inactive control", enabled: false
+            ) { $0 == "Disabled" },
+        ]
+        // Contrast on the enabled floating secondary "Edit" on the system's glass over the striped ground, which westron
+        // does not draw and whose contrast the contract does not promise (decisions/0015). Measured by pixels instead:
+        // text.primary on that glass 5.85:1 and more in the dark theme, 8.09:1 at accessibility5 in the light one, where
+        // the audit flags it; the audit reports no colors, so what it sampled on the glass cannot be shown. Only "Edit"
+        // matches, the samples on glass over the stripes (ButtonFloatingID): at every size, in each state and loading,
+        // on the three entries that hold them; the primaries, "New" and "Delete", and the samples before OS 26 are
+        // still audited.
+        suppressions += ["button-floating-sizes", "button-floating-states", "button-floating-before-26"].map {
+            entryID in
+            Suppression(
+                .entry(entryID), type: .contrast, reason: "a label on glass, measured by pixels", enabled: true
+            ) { $0 == "Edit" }
+        }
+        suppressions += [
+            // Contrast on "Open", the floating secondary on glass over the band of the opposite tone: the contract's
+            // recorded limitation. On glass the label keeps text.primary, which follows the theme, while the glass
+            // follows what lies beneath, and the owner kept westron's colors there rather than the system's adaptive
+            // foreground (decisions/0015, Q5, 2026-11-23); the contract promises no ratio for it. By pixels on
+            // iOS 26.3 it fails in the dark theme alone, 3.78 to 3.82:1 over the wide light band, and passes in the
+            // others: 12.14 to 12.19 in light, 15.70 to 15.75 in light-hc, 15.40 to 15.50 in dark-hc. On the CI
+            // runner's iOS 27 the audit also flags it in the default, increased-contrast and accessibility5 runs,
+            // which no pixel measurement here confirms or refutes (iOS 27 is the runner's only). So every
+            // configuration matches, and only "Open" on this entry: the other words on glass have their own
+            // suppressions, and the primaries and the samples before OS 26 are still audited.
+            Suppression(
+                .entry("button-floating-sizes"), type: .contrast,
+                reason: "a label on glass over content of the opposite tone: the contract's recorded limitation "
+                    + "(decisions/0015, Q5)",
+                enabled: true
+            ) { $0 == "Open" },
+            // Contrast on the list rows under the floating buttons of "Over a pressable list": the buttons stand in
+            // the rows' frames (size l, 50 pt, reaches into the rows above and below), and the audit samples their
+            // glass with the row's title. The rows are ListRow's own, audited without anything over them in
+            // list-row. Only those three titles match.
+            Suppression(
+                .entry("button-floating"), type: .contrast, reason: "a row under floating buttons", enabled: true
+            ) { ["Groceries", "Work", "Home"].contains($0 ?? "") },
             // Contrast on the disabled Checkbox sample, drawn whole at opacity.disabled by the contract: WCAG exempts
             // an inactive control (design-language chapter 08). Only an element that is not enabled matches.
             Suppression(.entry("checkbox"), type: .contrast, reason: "an inactive control", enabled: false) {
@@ -725,6 +796,29 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                     .entry("chip"), type: .textClipped, reason: "a pressed chip drawn at 0.98 of its size",
                     enabled: true
                 ) { $0 == "pressed" },
+                // "Text clipped" on the floating secondary before OS 26 that the catalog holds pressed, at the default
+                // settings and at accessibility5: the contract draws a pressed Button at 0.98 of its size
+                // (ButtonTokens.pressScale), and the audit measures the scaled text against its unscaled line; its
+                // frame is 0.98 of the unpressed sample's (112.4 of 114.7 points). On glass the press is the glass's
+                // own, not drawn scaled. Only that sample says "Pressed" (ButtonFloatingID), as Chip's says "pressed".
+                Suppression(
+                    .entry("button-floating-before-26"), type: .textClipped,
+                    reason: "a pressed button drawn at 0.98 of its size", enabled: true
+                ) { $0 == "Pressed" },
+                // "Potentially inaccessible text" with no element on `button-floating-before-26` at the default
+                // settings, on its second and last screenful, where the page's title and summary lie under the status
+                // bar and its clock is drawn over them (the audit's own screenshot of the issue shows it). Measured on
+                // iOS 26.3, 2026-11-23: it came in every run of the page (six); with the page's status bar hidden, in
+                // neither of two; with only the page's loading section, or only its states, the page ends elsewhere
+                // and it came in none of two runs each. It is the status bar's text over the page's, not a sample's:
+                // the floating entries with glass did not report it in three runs (decisions/0015, "The catalog page,
+                // split in four"). Only an issue with no element, in the light appearance, while a text of the page
+                // reaches under the status bar, matches.
+                Suppression(
+                    .entry("button-floating-before-26"), type: .elementDetection,
+                    reason: "the status bar's clock over the page's text", description: "Potentially inaccessible text",
+                    appearance: .light, textUnderStatusBar: true
+                ) { $0 == nil },
             ]
             // The TextField focus pages focus a field for real, so the system keyboard is up while they are audited
             // (spec/components/text-field). The keyboard's own prediction cells, empty or carrying a suggestion

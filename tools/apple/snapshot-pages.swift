@@ -1,14 +1,19 @@
 // The review pages of the snapshot matrix (#24, #92), for tools/apple/snapshot-matrix.sh, which compiles and runs it:
 //
 //   snapshot-pages index <dir>      index.html over a render: <dir>/matrix.json and its PNGs
-//   snapshot-pages compare <dirA> <dirB> <out> [--tolerance <n>] [--labels <a>,<b>]
+//   snapshot-pages compare <dirA> <dirB> <out> [--tolerance <n>] [--labels <a>,<b>] [--strict]
 //                                   compares two directories of PNGs pixel by pixel, writes <out>/index.html
 //   snapshot-pages sync <render> <references> [--tolerance <n>]
 //                                   makes the references hold the render's images (`snapshot-matrix.sh record`)
 //
 // index exits 1 when an image the manifest expects is missing or a sheet failed its checks; compare exits 0 when every
 // image is the same within the tolerance (a pixel whose every channel differs by at most <n> levels, 1 by default), 1
-// when one changed, was added or was removed. All exit 2 on bad input. The pages are self-contained: inline styles,
+// when one changed, was added or was removed. A picture that either directory's manifest (matrix.json) marks not
+// compared, a supplement's `notCompared` on the render's OS, is held to its presence and its size only: it is listed
+// and counted as not compared, with the reason, unless --strict compares it too; sync keeps its reference as it was
+// while the size holds, except at tolerance 0 (references recorded for another environment), where it is held to the
+// same pixels as any other. The marks are read leniently: a manifest they cannot be read from gives none, with a line
+// on stderr. All exit 2 on bad input. The pages are self-contained: inline styles,
 // relative image links, nothing from the network. Apple-only (ImageIO, CoreGraphics), so it lives in tools/apple/ and
 // not in the tools package, which builds on Linux (decisions/0009).
 
@@ -55,6 +60,9 @@ struct Group: Codable {
     var title: String
     var supplement: Bool
     var note: String?
+    /// Why compare holds this supplement's pictures to their presence and size, not their pixels, on the manifest's
+    /// OS; nil where it compares them pixel by pixel.
+    var notCompared: String?
     var combinations: Int
     var sheets: [Sheet]
 }
@@ -223,7 +231,11 @@ func index(_ directory: URL) -> Int32 {
                 body +=
                     "<div class=\"supplement\"><h3><span class=\"mark\">Not a contract option</span>"
                     + "\(html(group.title))</h3><p>\(html(group.note ?? "")) Hand-written in the catalog "
-                    + "(<code>ComponentMatrix.Supplement</code>) on the generated sheets; \(summary)</p></div>\n"
+                    + "(<code>ComponentMatrix.Supplement</code>) on the generated sheets; \(summary)</p>"
+                    + (group.notCompared.map {
+                        "<p><span class=\"mark\">Not compared on \(html(platformName))</span>Its pictures here are "
+                            + "checked for presence and size, not pixel by pixel: \(html($0))</p>"
+                    } ?? "") + "</div>\n"
             } else {
                 body += "<p>From the contract: \(summary)</p>\n"
             }
@@ -390,6 +402,59 @@ func writePNG(_ bitmap: Bitmap, to url: URL) {
     }
 }
 
+/// A picture's width and height in pixels, from its header; nil when the file is not an image.
+func pixelSize(_ url: URL) -> [Int]? {
+    guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+        let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+        let width = properties[kCGImagePropertyPixelWidth] as? Int,
+        let height = properties[kCGImagePropertyPixelHeight] as? Int
+    else { return nil }
+    return [width, height]
+}
+
+/// The part of a manifest the not-compared marks need, so that a manifest without the other fields (an older render's)
+/// still gives its marks.
+struct Marks: Decodable {
+    struct Component: Decodable { var groups: [Group] }
+    struct Group: Decodable {
+        var notCompared: String?
+        var sheets: [Sheet]
+    }
+    struct Sheet: Decodable { var images: [String: [Image]] }
+    struct Image: Decodable { var file: String }
+    var components: [Component]
+}
+
+/// The pictures a directory's manifest marks not compared (`Group.notCompared`), each with the reason; empty without a
+/// manifest, as in a set of references, and empty with a line on stderr when the manifest cannot be read.
+func notCompared(in directory: URL) -> [String: String] {
+    let url = directory.appendingPathComponent("matrix.json")
+    guard let data = try? Data(contentsOf: url) else { return [:] }
+    let manifest: Marks
+    do {
+        manifest = try JSONDecoder().decode(Marks.self, from: data)
+    } catch {
+        FileHandle.standardError.write(
+            Data("snapshot-pages: no not-compared marks taken from \(url.path), which cannot be read: \(error)\n".utf8))
+        return [:]
+    }
+    var marks: [String: String] = [:]
+    for group in manifest.components.flatMap(\.groups) {
+        guard let reason = group.notCompared else { continue }
+        for image in group.sheets.flatMap({ $0.images.values.joined() }) { marks[image.file] = reason }
+    }
+    return marks
+}
+
+/// Whether two pictures that are not compared pixel by pixel still fail: either is not an image, or their sizes
+/// differ. nil when both are images of one size.
+func sizeVerdict(_ a: URL, _ b: URL) -> Verdict? {
+    guard let before = pixelSize(a) else { return .unreadable(a.path) }
+    guard let after = pixelSize(b) else { return .unreadable(b.path) }
+    guard before == after else { return .sizeChanged("\(before[0]) × \(before[1]) → \(after[0]) × \(after[1])") }
+    return nil
+}
+
 /// How two images of one name compare.
 enum Verdict {
     /// The files are the same bytes.
@@ -505,7 +570,7 @@ struct Change {
     let diff: Bool
 }
 
-func compare(_ before: URL, _ after: URL, out: URL, tolerance: Int, labels: (String, String)) -> Int32 {
+func compare(_ before: URL, _ after: URL, out: URL, tolerance: Int, labels: (String, String), strict: Bool) -> Int32 {
     let beforeNames = pngs(in: before)
     let afterNames = pngs(in: after)
     if beforeNames.isEmpty && afterNames.isEmpty { fail("no PNG in \(before.path) or \(after.path)") }
@@ -528,10 +593,25 @@ func compare(_ before: URL, _ after: URL, out: URL, tolerance: Int, labels: (Str
     var identical = 0
     var samePixels = 0
     var withinTolerance: [(name: String, pixels: Int, maxDelta: Int)] = []
+    // The pictures either manifest marks not compared, with the reason: only their presence and size count.
+    let marks = strict ? [:] : notCompared(in: before).merging(notCompared(in: after)) { first, _ in first }
+    var notComparedNames: [(name: String, reason: String)] = []
     for name in beforeNames where afterSet.contains(name) {
         let a = before.appendingPathComponent(name)
         let b = after.appendingPathComponent(name)
-        switch verdict(a, b, tolerance: tolerance) {
+        let result: Verdict
+        if let reason = marks[name] {
+            guard let problem = sizeVerdict(a, b) else {
+                notComparedNames.append((name, reason))
+                copy(a, to: out.appendingPathComponent("before").appendingPathComponent(name))
+                copy(b, to: out.appendingPathComponent("after").appendingPathComponent(name))
+                continue
+            }
+            result = problem
+        } else {
+            result = verdict(a, b, tolerance: tolerance)
+        }
+        switch result {
         case .identical:
             identical += 1
             unchanged.append(name)
@@ -572,7 +652,8 @@ func compare(_ before: URL, _ after: URL, out: URL, tolerance: Int, labels: (Str
         + "\(html(environmentLine(after)))</dd>"
     body +=
         "<dt>Result</dt><dd>\(changed.count) changed, \(added.count) added, \(removed.count) removed, "
-        + "\(unchanged.count) unchanged</dd>"
+        + "\(unchanged.count) unchanged"
+        + (notComparedNames.isEmpty ? "" : "; \(notComparedNames.count) not compared (below)") + "</dd>"
     if !changed.isEmpty || !added.isEmpty || !removed.isEmpty {
         body +=
             "<dt>Components</dt><dd>\(html(components(changed.map(\.name) + added + removed)))</dd>"
@@ -596,6 +677,37 @@ func compare(_ before: URL, _ after: URL, out: URL, tolerance: Int, labels: (Str
     body += added.map { figure("after/" + $0, caption: $0) }.joined() + "</div>\n"
     body += "<h2>Removed (\(removed.count))</h2>\n<div class=\"pair\">"
     body += removed.map { figure("before/" + $0, caption: $0) }.joined() + "</div>\n"
+    // The not-compared pictures by reason, in the order first seen.
+    var reasons: [(reason: String, names: [String])] = []
+    for item in notComparedNames {
+        if let index = reasons.firstIndex(where: { $0.reason == item.reason }) {
+            reasons[index].names.append(item.name)
+        } else {
+            reasons.append((item.reason, [item.name]))
+        }
+    }
+    if !notComparedNames.isEmpty {
+        body +=
+            "<h2>Not compared (\(notComparedNames.count))</h2>\n<p>Pictures of a supplement whose render on this OS is "
+            + "not the same from one run to the next (its <code>notCompared</code>): present on both sides and of the "
+            + "same size, which is all that is checked of them; they never fail. Each shows the \(html(afterLabel)) "
+            + "picture first, then the \(html(beforeLabel)) one"
+            + (beforeLabel == "reference"
+                ? ", which <code>record</code> keeps as first recorded in this environment while its size holds, so it "
+                    + "may show an older look." : ".")
+            + " <code>--strict</code> compares them too.</p>\n"
+    }
+    for group in reasons {
+        body +=
+            "<p class=\"supplement\"><span class=\"mark\">Not compared</span>\(html(components(group.names))) "
+            + "pictures: \(html(group.reason))</p>\n"
+        for name in group.names {
+            body += "<h3>\(html(name))</h3><div class=\"pair\">"
+            body += figure("after/" + name, caption: afterLabel)
+            body += figure("before/" + name, caption: beforeLabel)
+            body += "</div>\n"
+        }
+    }
     body +=
         "<h2>Unchanged (\(unchanged.count))</h2>\n<p class=\"meta\">\(identical) identical files, \(samePixels) with "
         + "the same pixels in other bytes, \(withinTolerance.count) within the tolerance.</p>"
@@ -615,11 +727,16 @@ func compare(_ before: URL, _ after: URL, out: URL, tolerance: Int, labels: (Str
     for change in changed { print("changed: \(change.name) (\(change.what))") }
     for name in added { print("added: \(name)") }
     for name in removed { print("removed: \(name)") }
+    for group in reasons {
+        let names = Set(group.names.map(component(of:))).sorted().joined(separator: ", ")
+        print("not compared (\(group.names.count), \(names)): \(group.reason)")
+    }
     print(
         "snapshot-matrix compare: \(changed.count) changed, \(added.count) added, \(removed.count) removed, "
             + "\(unchanged.count) unchanged (\(identical) identical files, \(samePixels) the same pixels in other "
             + "bytes, \(withinTolerance.count) within the tolerance of \(tolerance), up to "
-            + "\(withinTolerance.map(\.pixels).max() ?? 0) pixels in one image)")
+            + "\(withinTolerance.map(\.pixels).max() ?? 0) pixels in one image)"
+            + (notComparedNames.isEmpty ? "" : "; \(notComparedNames.count) not compared"))
     if !changed.isEmpty || !added.isEmpty || !removed.isEmpty {
         print("snapshot-matrix compare: components: \(components(changed.map(\.name) + added + removed))")
     }
@@ -629,19 +746,31 @@ func compare(_ before: URL, _ after: URL, out: URL, tolerance: Int, labels: (Str
 /// Makes `references` hold the images of `render`: copies each image that is new or differs beyond the tolerance (or
 /// whose reference is not an image, an LFS pointer that was not pulled), keeps a reference within the tolerance as it
 /// is, so that a run-to-run drift of one level does not rewrite it, and deletes a reference the render no longer has.
+/// A picture the render's manifest marks not compared keeps its reference as it is while the size holds, whatever the
+/// pixels, so that recording does not rewrite it on every run: the reference marks that it exists. At tolerance 0,
+/// which `snapshot-matrix.sh record` passes when the references come from another environment (or there are none), it
+/// is held to the same pixels as any other picture, so a kept reference never shows an older OS's look.
 func sync(_ render: URL, _ references: URL, tolerance: Int) -> Int32 {
     let names = pngs(in: render)
     if names.isEmpty { fail("no PNG in \(render.path)") }
     let kept = Set(names)
+    let marks = notCompared(in: render)
     var added = 0
     var replaced = 0
     var same = 0
+    var unchecked = 0
     var removed = 0
     for name in names {
         let source = render.appendingPathComponent(name)
         let target = references.appendingPathComponent(name)
         if !FileManager.default.fileExists(atPath: target.path) {
             added += 1
+        } else if marks[name] != nil, tolerance > 0 {
+            guard sizeVerdict(target, source) != nil else {
+                unchecked += 1
+                continue
+            }
+            replaced += 1
         } else {
             switch verdict(target, source, tolerance: tolerance) {
             case .identical, .samePixels, .withinTolerance:
@@ -659,7 +788,8 @@ func sync(_ render: URL, _ references: URL, tolerance: Int) -> Int32 {
     }
     print(
         "snapshot-matrix record: \(added) added, \(replaced) replaced, \(removed) removed, \(same) kept as they were "
-            + "(within the tolerance of \(tolerance))")
+            + "(within the tolerance of \(tolerance))"
+            + (unchecked == 0 ? "" : ", \(unchecked) not compared kept as they were (the same size)"))
     return 0
 }
 
@@ -672,12 +802,17 @@ func figure(_ path: String, caption: String) -> String {
 
 func url(_ path: String) -> URL { URL(fileURLWithPath: path).standardizedFileURL }
 
-/// The arguments after the positional ones: `--tolerance <n>` and `--labels <before>,<after>`.
-func options(_ arguments: ArraySlice<String>) -> (tolerance: Int, labels: (String, String)) {
+/// The arguments after the positional ones: `--tolerance <n>`, `--labels <before>,<after>` and `--strict`.
+func options(_ arguments: ArraySlice<String>) -> (tolerance: Int, labels: (String, String), strict: Bool) {
     var tolerance = 1
     var labels = ("before", "after")
+    var strict = false
     var rest = arguments
     while let flag = rest.popFirst() {
+        if flag == "--strict" {
+            strict = true
+            continue
+        }
         guard let value = rest.popFirst() else { fail("\(flag): no value") }
         switch flag {
         case "--tolerance":
@@ -690,7 +825,7 @@ func options(_ arguments: ArraySlice<String>) -> (tolerance: Int, labels: (Strin
         default: fail("unknown option \(flag)")
         }
     }
-    return (tolerance, labels)
+    return (tolerance, labels, strict)
 }
 
 let arguments = Array(CommandLine.arguments.dropFirst())
@@ -698,12 +833,15 @@ switch arguments.first {
 case "index" where arguments.count == 2:
     exit(index(url(arguments[1])))
 case "compare" where arguments.count >= 4:
-    let (tolerance, labels) = options(arguments[4...])
-    exit(compare(url(arguments[1]), url(arguments[2]), out: url(arguments[3]), tolerance: tolerance, labels: labels))
+    let (tolerance, labels, strict) = options(arguments[4...])
+    exit(
+        compare(
+            url(arguments[1]), url(arguments[2]), out: url(arguments[3]), tolerance: tolerance, labels: labels,
+            strict: strict))
 case "sync" where arguments.count >= 3:
     exit(sync(url(arguments[1]), url(arguments[2]), tolerance: options(arguments[3...]).tolerance))
 default:
     fail(
         "usage: snapshot-pages index <dir> | snapshot-pages compare <dirA> <dirB> <out> [--tolerance <n>] "
-            + "[--labels <a>,<b>] | snapshot-pages sync <render> <references> [--tolerance <n>]")
+            + "[--labels <a>,<b>] [--strict] | snapshot-pages sync <render> <references> [--tolerance <n>]")
 }

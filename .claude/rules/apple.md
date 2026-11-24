@@ -26,8 +26,9 @@ paths:
   compile and silently take westron's overload, which shadows the system style (decisions/0003, note of 2026-11-18).
   `tools/westron spec check` rejects it; the names per control are in
   `tools/Sources/WestronTools/Contracts/SystemStyles.swift`.
-- What exists, before you draw your own (each per `spec/components/<id>/`): `.buttonStyle(_:size:iconOnly:)` with
-  `.loading(_:)`, `.textFieldStyle(.framed|.inline, size:leadingIcon:trailingIcon:)` (decorative glyphs, each
+- What exists, before you draw your own (each per `spec/components/<id>/`): `.buttonStyle(_:size:iconOnly:floating:)`
+  with `.loading(_:)` (`floating`: a button over content, on the system's glass from OS 26, decisions/0015),
+  `.textFieldStyle(.framed|.inline, size:leadingIcon:trailingIcon:)` (decorative glyphs, each
   optional, naming what the field is for and never an action: no microphone, clear mark or chevron; a search field is
   `TextField("Search", text: $query, prompt: Text("Search").foregroundStyle(.text.placeholder))` with
   `.textFieldStyle(.framed, leadingIcon: .magnifier)`, `.accessibilityLabel("Search")` and
