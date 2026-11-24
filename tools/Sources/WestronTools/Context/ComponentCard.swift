@@ -329,11 +329,19 @@ struct ComponentCard {
 
     func external(_ text: String) -> String { ContextMarkdown.withoutTooling(text) }
 
-    /// The prose a card keeps: without the sentences on westron's tooling, and without those that name a token
-    /// binding, which say how westron draws the component (the details file keeps them).
+    /// The prose a card keeps: without the sentences on westron's tooling, and without a token binding's name, which
+    /// says how westron draws the component (the details file keeps it). The fact a sentence states stays: the phrase
+    /// that names the binding goes, "indented by container.indent for each level" reads "indented for each level", and
+    /// so does a clause after "; " that still names one; a sentence goes only when nothing is left of it.
     func usable(_ text: String) -> String {
-        ContextMarkdown.sentences(external(text)).filter { sentence in
-            !bindings.contains { ContextMarkdown.names(sentence, $0) }
+        ContextMarkdown.sentences(external(text)).compactMap { sentence in
+            var kept = sentence
+            for binding in bindings {
+                kept = ContextMarkdown.removingPhrases(naming: binding, in: kept)
+            }
+            return ContextMarkdown.withoutClauses(kept) { clause in
+                bindings.contains { ContextMarkdown.names(clause, $0) }
+            }
         }.joined(separator: " ")
     }
 

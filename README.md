@@ -40,13 +40,7 @@ Build and check commands are in [AGENTS.md](AGENTS.md).
 
 ## For agents in a product
 
-westron's Claude Code plugin gives an agent that builds a product's UI the rules and a reference generated from the contracts, tokens, icons and design language (decisions/0016). This repository is its marketplace. In a session in the product's repository:
-
-```
-/plugin install westron --marketplace maldrakar/westron
-```
-
-or, from a shell, for everyone who works in that repository (commit the `.claude/settings.json` it writes):
+westron's Claude Code plugin gives an agent that builds a product's UI the rules and a reference generated from the contracts, tokens, icons and design language (decisions/0016). This repository is its marketplace. From a shell in the product's repository, for everyone who works in it (commit the `.claude/settings.json` it writes):
 
 ```sh
 claude plugin marketplace add maldrakar/westron --scope project

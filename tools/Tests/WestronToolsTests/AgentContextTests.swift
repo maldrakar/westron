@@ -322,4 +322,33 @@ struct AgentContextTests {
         #expect(!ContextMarkdown.names("by container.gapX", "container.gap"))
         #expect(!ContextMarkdown.names("by subcontainer.gap", "container.gap"))
     }
+
+    @Test("a filter keeps the fact: a binding's phrase goes, a tooling clause goes, a test's aside goes")
+    func filtersKeepFacts() throws {
+        #expect(
+            ContextMarkdown.removingPhrases(
+                naming: "container.indent", in: "The row is indented by container.indent for each level.")
+                == "The row is indented for each level.")
+        #expect(
+            ContextMarkdown.removingPhrases(naming: "container.gap", in: "Spaced by container.gapX.")
+                == "Spaced by container.gapX.")
+        #expect(
+            ContextMarkdown.withoutTooling("It holds (TextFieldLineTests, #115). Kept as is; the matrix draws no slot")
+                == "It holds. Kept as is.")
+        #expect(ContextMarkdown.withoutTooling("The matrix draws it; a product sets it.") == "")
+        #expect(
+            ContextMarkdown.withoutClauses("A (b; c); d.") { $0 == "d." } == "A (b; c).")
+        // The real cards: ListRow's level says the row is indented, so that an agent does not indent it again.
+        let files = try generator().run()
+        let row = try #require(files.first { $0.path == AgentContext.outputDirectory + "/components/list-row.md" })
+        let text = row.contents.replacingOccurrences(of: "\n  ", with: " ")
+        #expect(text.contains("The row is indented for each level and, with guides on, draws one guide per level"))
+        let swiftUI = try #require(files.first { $0.path == AgentContext.outputDirectory + "/swiftui.md" })
+        #expect(
+            swiftUI.contents.replacingOccurrences(of: "\n", with: " ").contains(
+                "the initializers that take the slot leave those options out (Rule: `Rule(\"Work\")` takes no axis"))
+        let details = try #require(
+            files.first { $0.path == AgentContext.outputDirectory + "/components/text-field.details.md" })
+        #expect(!details.contents.contains("Tests"))
+    }
 }
