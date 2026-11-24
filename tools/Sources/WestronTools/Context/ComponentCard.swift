@@ -90,9 +90,11 @@ struct ComponentCard {
         var out: [String] = []
         var byExtension: [(extends: String, lines: [String])] = []
         for function in functions {
+            // A twin on the base carries the attribute the lint allows it, `@_disfavoredOverload`, as declared.
+            let attributes = function.allowedExtras.sorted().map { $0 + " " }.joined()
             let lines = Self.signature(
-                "public func \(function.name)(", function.parameters.map(parameter), ") -> \(function.result)",
-                indent: "    ")
+                attributes + "public func \(function.name)(", function.parameters.map(parameter),
+                ") -> \(function.result)", indent: "    ")
             if let index = byExtension.firstIndex(where: { $0.extends == function.extends }) {
                 byExtension[index].lines += lines
             } else {
@@ -191,15 +193,25 @@ struct ComponentCard {
                 var call = view.type
                 let arguments = requiredArguments(rest)
                 if !arguments.isEmpty || slots.isEmpty { call += "(" + arguments.joined(separator: ", ") + ")" }
-                if slots.contains(where: { $0.defaultValue == nil && $0.type.hasPrefix("() -> ") }) { call += " { … }" }
-                out.append([call])
+                // The first slot is the trailing closure; a slot with a default is left out, then shown in the full
+                // form, each as a labeled trailing closure in the initializer's order.
+                if let first = slots.first(where: { $0.defaultValue == nil }) {
+                    call += " { … }"
+                    out.append([call])
+                    let others = slots.filter { $0.label != first.label }
+                    if !others.isEmpty {
+                        out.append([call + others.map { " \($0.label): { … }" }.joined()])
+                    }
+                } else {
+                    out.append([call])
+                }
             }
         }
         for mark in markModifiers {
             out.append(["….\(mark.name)(\(requiredArguments(mark.parameters).joined(separator: ", ")))"])
         }
-        for setting in contract.context {
-            out.append(["….\(AppleComponents.contextModifier(setting, of: contract.id))()"])
+        for modifier in contextModifiers {
+            out.append(["….\(modifier.name)(\(requiredArguments(modifier.parameters).joined(separator: ", ")))"])
         }
         for state in contract.states where stateModifier(state) != nil {
             out.append(["….\(state)(is\(state.prefix(1).uppercased() + state.dropFirst()))"])
@@ -218,6 +230,13 @@ struct ComponentCard {
         return try? AppleComponents.Own(contract, source: source).name
     }
 
+    /// The modifiers of the context the contract sets, `.disclosureAlignsLeaves(_:)`, as the API declares them.
+    var contextModifiers: [APIParity.ExpectedFunction] {
+        contract.context.compactMap { setting in
+            functions.first { $0.name == AppleComponents.contextModifier(setting, of: contract.id) }
+        }
+    }
+
     /// The modifiers of the contract's marks, `.insertionMark(_:level:)`.
     var markModifiers: [(name: String, parameters: [SwiftDeclarations.Parameter])] {
         contract.marks.compactMap { mark in
@@ -227,6 +246,11 @@ struct ComponentCard {
 
     // MARK: - The card
 
+    /// The details file's path inside the bundle.
+    static func detailsPath(_ id: String) -> String { "components/\(id).details.md" }
+
+    /// The card: what a product agent needs to write a call. How the component behaves and is built is in the
+    /// details file (`details()`), which the card points to last.
     func markdown() -> String {
         var out = ContextMarkdown.header([source])
         out += ["", "# \(component)", ""]
@@ -235,7 +259,7 @@ struct ComponentCard {
             meta.append("used by " + consumers.joined(separator: ", "))
         }
         out += ContextMarkdown.wrap(meta.joined(separator: " · "))
-        out += [""] + ContextMarkdown.wrap(summary)
+        out += [""] + ContextMarkdown.wrap(usable(summary))
         out += callSection()
         out += optionsSection()
         out += slotsSection()
@@ -245,9 +269,85 @@ struct ComponentCard {
         out += contextSection()
         out += accessibilitySection()
         out += constraintsSection()
-        out += behaviorSection()
+        if hasDetails {
+            out +=
+                [""]
+                + ContextMarkdown.wrap(
+                    "More: `\(Self.fileName(Self.detailsPath(contract.id)))` holds "
+                        + detailsContents.joined(separator: "; ") + ". Read it when this card does not settle a case. "
+                        + "A reference such as \"decisions/0001\" or \"#120\" points into westron's repository, not "
+                        + "into this bundle.")
+        }
+        return out.joined(separator: "\n") + "\n"
+    }
+
+    static func fileName(_ path: String) -> String { String(path.split(separator: "/").last ?? "") }
+
+    /// What the details file holds, for the card's last line.
+    private var detailsContents: [String] {
+        var parts: [String] = []
+        if !accessibilityProse.isEmpty { parts.append("how assistive technology reads it") }
+        if !behaviorProse.isEmpty { parts.append("how it behaves, sizes and draws") }
+        if document["platforms"]?["apple"] != nil { parts.append("how WestronUI builds it on Apple and each OS") }
+        return parts
+    }
+
+    var hasDetails: Bool { !detailsContents.isEmpty }
+
+    /// The details: the contract's prose on behavior, accessibility and Apple, as it stands, for the cases the card
+    /// does not settle. Nil when the contract has none.
+    func details() -> String? {
+        guard hasDetails else { return nil }
+        var out = ContextMarkdown.header([source])
+        out += ["", "# \(component): details", ""]
+        out += ContextMarkdown.wrap(
+            "The prose of westron's contract for `\(contract.id)`, for the cases its card "
+                + "(`\(Self.fileName(Self.path(contract.id)))`) does not settle. A reference such as "
+                + "\"decisions/0001\" or \"#120\" here points into westron's repository: to the component's own "
+                + "decisions, westron's decisions or an issue, none of which is in this bundle. Names such as "
+                + "`container.gap` are the contract's bindings of westron's tokens, how WestronUI draws the component; "
+                + "a product never sets them.")
+        if !accessibilityProse.isEmpty {
+            out += ["", "## Accessibility", ""]
+            out += Array(accessibilityProse.map { ContextMarkdown.wrap($0) }.joined(separator: [""]))
+        }
+        if !behaviorProse.isEmpty {
+            out += ["", "## Behavior", ""] + ContextMarkdown.wrap(behaviorProse)
+        }
         out += appleSection()
         return out.joined(separator: "\n") + "\n"
+    }
+
+    // MARK: - Prose
+
+    /// The names of the contract's token bindings, `container.indent`: how westron draws the component.
+    var bindings: [String] { document["tokens"]?.members?.map(\.key) ?? [] }
+
+    func external(_ text: String) -> String { ContextMarkdown.withoutTooling(text) }
+
+    /// The prose a card keeps: without the sentences on westron's tooling, and without those that name a token
+    /// binding, which say how westron draws the component (the details file keeps them).
+    func usable(_ text: String) -> String {
+        ContextMarkdown.sentences(external(text)).filter { sentence in
+            !bindings.contains { ContextMarkdown.names(sentence, $0) }
+        }.joined(separator: " ")
+    }
+
+    /// The long accessibility prose: the contract's, then each form's.
+    private var accessibilityProse: [String] {
+        var out: [String] = []
+        if let description = document["accessibility"]?["description"]?.string { out.append(external(description)) }
+        for form in document["forms"]?.members ?? [] {
+            if let description = form.value["accessibility"]?["description"]?.string {
+                out.append("The form `\(form.key)`: " + external(description))
+            }
+        }
+        return out.filter { !$0.isEmpty }
+    }
+
+    /// The description after its first sentence.
+    private var behaviorProse: String {
+        external(ContextMarkdown.firstSentence(document["description"]?.string ?? "").rest)
     }
 
     /// `own view on Apple`, `style on SwiftUI's Button`.
@@ -369,7 +469,7 @@ struct ComponentCard {
                     "a name of the icon registry (`../icons.md`); "
                     + (optional ? "by default `nil`, no glyph." : "every use names one.")
             }
-            if let description = option.description { text += " " + description }
+            if let description = option.description { text += " " + usable(description) }
             text += restrictions(option)
             out += ContextMarkdown.item(text)
         }
@@ -476,7 +576,7 @@ struct ComponentCard {
             } else {
                 text += "."
             }
-            if let description = form.value["description"]?.string { text += " " + description }
+            if let description = form.value["description"]?.string { text += " " + usable(description) }
             if let states = contract.forms.first(where: { $0.name == form.key })?.states {
                 text +=
                     " States: " + (states.isEmpty ? "none." : states.map { "`\($0)`" }.joined(separator: ", ") + ".")
@@ -495,10 +595,10 @@ struct ComponentCard {
                 text += ", `.\(modifier.name)(\(modifier.parameters.map(\.description).joined(separator: ", ")))`"
             }
             text += ":"
-            if let description = mark.value["description"]?.string { text += " " + description }
+            if let description = mark.value["description"]?.string { text += " " + usable(description) }
             for parameter in mark.value["parameters"]?.members ?? [] {
                 if let description = parameter.value["description"]?.string {
-                    text += " `\(parameter.key)`: \(description)"
+                    text += " `\(parameter.key)`: \(usable(description))"
                 }
             }
             out += ContextMarkdown.item(text)
@@ -510,9 +610,13 @@ struct ComponentCard {
         guard let settings = document["context"]?.members, !settings.isEmpty else { return [] }
         var out = ["", "## Context it sets", ""]
         for setting in settings {
-            var text = "`.\(AppleComponents.contextModifier(setting.key, of: contract.id))(_: Bool = true)`"
+            let name = AppleComponents.contextModifier(setting.key, of: contract.id)
+            var text = "`\(setting.key)`"
+            if let modifier = contextModifiers.first(where: { $0.name == name }) {
+                text += ", `.\(name)(\(modifier.parameters.map(\.description).joined(separator: ", ")))`"
+            }
             text += ", on an ancestor:"
-            if let description = setting.value["description"]?.string { text += " " + description }
+            if let description = setting.value["description"]?.string { text += " " + usable(description) }
             out += ContextMarkdown.item(text)
         }
         return out
@@ -532,30 +636,54 @@ struct ComponentCard {
                     + states.map { "`\($0.key)` as \($0.value.string ?? "")" }.joined(separator: ", ") + ".")
         }
         if !facts.isEmpty { out += ContextMarkdown.item(facts.joined(separator: " ")) }
-        switch accessibility["label"]?.string {
-        case "required":
-            out += ContextMarkdown.item(
-                "**The caller gives every instance a label**: it is the accessible name, also where it is not "
-                    + "drawn. Name what it does or holds, never what it looks like.")
-        case "optional":
-            out += ContextMarkdown.item("A label is optional: read below what an instance without one is.")
-        default: break
-        }
+        if let duty = labelDuty(accessibility["label"]?.string) { out += ContextMarkdown.item(duty) }
         if let label = hiddenLabels.first?.api {
             out += ContextMarkdown.item(
                 "A control beside its own title draws no label: write `\(label.control)("
                     + label.initializers[0].parameters.map { "\($0.label): …" }.joined(separator: ", ")
                     + ")`, which requires the name, and hide the title beside it from assistive technology.")
         }
-        if let description = accessibility["description"]?.string {
-            out += [""] + ContextMarkdown.wrap(description)
-        }
-        for form in document["forms"]?.members ?? [] {
-            if let description = form.value["accessibility"]?["description"]?.string {
-                out += [""] + ContextMarkdown.wrap("The form `\(form.key)`: " + description)
-            }
-        }
         return out
+    }
+
+    /// Where the accessible name comes from and what the caller owes it, from the API: the system control's own
+    /// label, an initializer's `label:`, a drawn text, or the component's content where no initializer takes one.
+    private func labelDuty(_ label: String?) -> String? {
+        guard let label, label == "required" || label == "optional", let apple = contract.apple else { return nil }
+        let required = label == "required"
+        let never = "Name what it does or holds, never what it looks like."
+        let initializers = views.flatMap(\.initializers)
+        var controls = targets.map(\.control)
+        if controls.isEmpty, let base = apple.base?.split(separator: ".").last { controls = [String(base)] }
+        if !controls.isEmpty,
+            apple.strategy == AppleComponents.strategy || apple.strategy == SystemStyles.extensionStrategy
+        {
+            let label =
+                contract.slots.contains("icon")
+                ? ", such as a `Label`, whose title is the name also where only its icon is drawn" : ""
+            return
+                (required
+                ? "**Every instance needs an accessible name**: " : "The accessible name, where it has one, is ")
+                + "the label the system's own initializer of "
+                + ContextMarkdown.list(controls.map { "`\($0)`" }, conjunction: "or")
+                + " takes, its title or the view of its `label:`\(label). westron adds no parameter for it. " + never
+        }
+        if initializers.contains(where: { $0.parameters.contains { $0.label == "label" } }) {
+            return required
+                ? "**Every instance needs an accessible name**: the initializer's `label:`. " + never
+                : "The accessible name is the initializer's `label:`. Give it when the instance means something on "
+                    + "the screen; without it the instance is decorative and hidden from assistive technology. " + never
+        }
+        if initializers.contains(where: {
+            $0.parameters.first.map { $0.label == "_" && $0.type == AppleComponents.Own.labelType } ?? false
+        }) {
+            return "The accessible name is the drawn text, the initializer's first argument"
+                + (required ? "; every instance gives one." : "; an instance without it has none.")
+        }
+        guard required else { return nil }
+        return "**The accessible name comes from the component's content**: no initializer takes a label, and the "
+            + "caller adds no `.accessibilityLabel` of its own, which would replace that name. Which parts are read, "
+            + "and in what order, is in the details file."
     }
 
     /// A condition of a constraint: `` `floating: true` ``, `` `variant: .secondary` ``, `` `variant` `.a` or `.b` ``.
@@ -592,30 +720,24 @@ struct ComponentCard {
             var text =
                 (constraint.forbids ? "**Never**: " : "**Avoid**: ") + ContextMarkdown.list(when) + " with "
                 + ContextMarkdown.list(require, conjunction: "or") + "."
-            if let description = entry["description"]?.string { text += " " + description }
+            if let description = entry["description"]?.string { text += " " + usable(description) }
             out += ContextMarkdown.item(text)
         }
         return out
-    }
-
-    private func behaviorSection() -> [String] {
-        let rest = ContextMarkdown.firstSentence(document["description"]?.string ?? "").rest
-        guard !rest.isEmpty else { return [] }
-        return ["", "## Behavior", ""] + ContextMarkdown.wrap(rest)
     }
 
     private func appleSection() -> [String] {
         guard let entry = document["platforms"]?["apple"] else { return [] }
         var out = ["", "## On Apple", ""]
         if let description = entry["description"]?.string {
-            out += ContextMarkdown.wrap(description)
+            out += ContextMarkdown.wrap(external(description))
         } else if let status = entry["status"]?.string {
             out += ContextMarkdown.wrap("Apple: \(status).")
         }
         for os in ComponentContract.appleOSes {
             guard let target = entry[os] else { continue }
             var text = target["status"]?.string == ComponentContract.unavailableStatus ? "Unavailable. " : ""
-            text += target["description"]?.string ?? ""
+            text += external(target["description"]?.string ?? "")
             if !text.isEmpty {
                 out += ["", "### \(AppleComponents.osNames[os]!)", ""] + ContextMarkdown.wrap(text)
             }

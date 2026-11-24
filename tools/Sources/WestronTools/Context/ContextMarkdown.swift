@@ -68,6 +68,64 @@ enum ContextMarkdown {
         return (String(text[..<end.lowerBound]) + ".", String(text[end.upperBound...]))
     }
 
+    /// The text's sentences, each with its full stop: a sentence ends at ". " before anything but a lowercase letter.
+    static func sentences(_ text: String) -> [String] {
+        var out: [String] = []
+        var current = ""
+        var characters = text.makeIterator()
+        var pending: Character? = characters.next()
+        while let character = pending {
+            pending = characters.next()
+            current.append(character)
+            if character == ".", pending == " " {
+                let afterSpace = characters.next()
+                if let afterSpace, !afterSpace.isLowercase {
+                    out.append(current)
+                    current = ""
+                    pending = afterSpace
+                } else {
+                    current.append(" ")
+                    pending = afterSpace
+                }
+            }
+        }
+        let last = current.trimmingCharacters(in: .whitespaces)
+        if !last.isEmpty { out.append(last) }
+        return out
+    }
+
+    /// What a sentence about westron's own testing and tooling names, in any case; a product agent has none of it.
+    /// "The catalog" is westron's catalog app; WestronUI's "string catalog" is not.
+    static let toolingMarks = ["snapshot matrix", "the matrix", "the catalog", "tools/"]
+    /// A parenthesis that names a test or a tool of westron's, `(CatalogUITests/ChipBehaviorTests)`: it goes, and the
+    /// sentence around it stays.
+    private static let toolingAside = try! NSRegularExpression(
+        pattern: #"\s?\([^()]*(?:UITests|BehaviorTests|AccessibilityFrameTests|tools/)[^()]*\)"#)
+
+    /// The prose without the asides and the sentences on westron's own testing and tooling: the snapshot matrix, the
+    /// catalog app, the tools.
+    static func withoutTooling(_ text: String) -> String {
+        let text = toolingAside.stringByReplacingMatches(
+            in: text, range: NSRange(location: 0, length: NSString(string: text).length), withTemplate: "")
+        return sentences(text).filter { sentence in
+            let lowered = sentence.lowercased()
+            return !toolingMarks.contains { lowered.contains($0) }
+        }.joined(separator: " ")
+    }
+
+    /// Whether the text names `name` as a whole: not as part of a longer name, `container.gapX` or `xcontainer.gap`.
+    static func names(_ text: String, _ name: String) -> Bool {
+        var search = text.startIndex..<text.endIndex
+        while let range = text.range(of: name, range: search) {
+            let before = range.lowerBound == text.startIndex ? nil : text[text.index(before: range.lowerBound)]
+            let after = range.upperBound == text.endIndex ? nil : text[range.upperBound]
+            let part: (Character?) -> Bool = { $0.map { $0.isLetter || $0.isNumber || $0 == "." } ?? false }
+            if !part(before), !(after.map { $0.isLetter || $0.isNumber } ?? false) { return true }
+            search = range.upperBound..<text.endIndex
+        }
+        return false
+    }
+
     // MARK: - Links
 
     /// A Markdown link, `[text](target)`, or an image, `![text](target)`.

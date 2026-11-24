@@ -1,12 +1,14 @@
 import Foundation
 
 /// The context bundle for agents that write UI in a product that uses westron (#37, decisions/0016): from the
-/// contracts, the tokens, the icon registry, `spec/conventions.md` and the design language it writes
-/// `skills/westron/context/`, which the hand-written `skills/westron/SKILL.md` points into, and `llms.txt` at the root,
-/// for agents outside the Claude family.
+/// contracts, the tokens, the icon registry, `spec/conventions.md` and the design language it writes the `context/`
+/// directory of the skill in westron's Claude Code plugin (`plugins/westron/`, listed by the repository's
+/// `.claude-plugin/marketplace.json`), which the hand-written `SKILL.md` beside it points into, and `llms.txt` at the
+/// root, for agents outside the Claude family.
 ///
 /// - `index.md`: one line per component, token page, the icons, the SwiftUI page and chapter, with its file;
-/// - `components/<id>.md`: one card per contract (`ComponentCard`);
+/// - `components/<id>.md`: one card per contract (`ComponentCard`), what a call needs; `components/<id>.details.md`:
+///   the contract's prose on behavior, accessibility and Apple;
 /// - `tokens/*.md`: the semantic tokens by kind (`ContextTokens`); `icons.md`: the icon registry;
 /// - `swiftui.md`: how a contract's concepts become SwiftUI, from spec/conventions.md;
 /// - `design-language/`: the chapters 00–09, copied, their links to the rest of the repository turned into text.
@@ -36,8 +38,11 @@ public struct AgentContext: Generator {
         self.designLanguageDirectory = designLanguageDirectory
     }
 
+    /// The Claude Code plugin's root: an installed plugin is this directory copied, so the skill and its context live
+    /// inside it.
+    public static let pluginDirectory = "plugins/westron"
     /// The skill's directory, relative to the repository root; its `SKILL.md` is hand-written.
-    public static let skillDirectory = "skills/westron"
+    public static let skillDirectory = pluginDirectory + "/skills/westron"
     /// The generated bundle.
     public static let outputDirectory = skillDirectory + "/context"
     public static let llmsFile = "llms.txt"
@@ -99,7 +104,8 @@ public struct AgentContext: Generator {
         -> [GeneratedFile]
     {
         let cards = try Self.cards(sources, textRoles: tokens.textRoles.map { AppleTokensSwift.reference($0.members) })
-        let tokenPages = ContextTokens.pages(tokens)
+        let names = ContextNames(model: tokens, functions: Set(cards.first?.expected.functions.map(\.name) ?? []))
+        let tokenPages = try ContextTokens.pages(tokens, names: names)
         var map: [String: String] = [:]
         for card in cards { map[card.source] = Self.outputDirectory + "/" + ComponentCard.path(card.contract.id) }
         for chapter in sources.chapters {
@@ -127,10 +133,17 @@ public struct AgentContext: Generator {
                     ContractCheck.defaultDirectory, tokens.resolver, IconRegistry.defaultFile,
                     conventionsSource, Self.designLanguageDirectory,
                 ]))
-        for card in cards { add(ComponentCard.path(card.contract.id), card.markdown()) }
+        for card in cards {
+            add(ComponentCard.path(card.contract.id), card.markdown())
+            if let details = card.details() { add(ComponentCard.detailsPath(card.contract.id), details) }
+        }
         for page in tokenPages { add(page.path, page.contents) }
-        add(Self.iconsPath, Self.icons(sources.icons, cards: cards))
-        add(Self.swiftUIPath, try Self.swiftUI(sources.conventions, source: conventionsSource, map: map))
+        add(Self.iconsPath, try Self.icons(sources.icons, cards: cards, names: names))
+        add(
+            Self.swiftUIPath,
+            try Self.swiftUI(
+                sources.conventions, source: conventionsSource, map: map,
+                components: Set(cards.map(\.contract.id))))
         for chapter in sources.chapters {
             let output = Self.outputDirectory + "/" + Self.chapterPath(chapter.source)
             let header =
@@ -221,7 +234,8 @@ public struct AgentContext: Generator {
                 + "this file; the rules for using westron are in `../SKILL.md`.")
         out += [
             "", "## Components", "",
-            "`import WestronUI`. Each line: the card, the shortest call, what the component is.", "",
+            "`import WestronUI`. Each line: the card, the shortest call, what the component is. A card ends with a",
+            "pointer to its details file, the contract's prose, for cases the card does not settle.", "",
         ]
         for card in cards {
             let call = card.shortestCall.map(ContextMarkdown.code)
@@ -251,7 +265,7 @@ public struct AgentContext: Generator {
 
     // MARK: - Icons
 
-    static func icons(_ registry: IconRegistry, cards: [ComponentCard]) -> String {
+    static func icons(_ registry: IconRegistry, cards: [ComponentCard], names: ContextNames) throws -> String {
         var out = ContextMarkdown.header([IconRegistry.defaultFile])
         out += ["", "# Icons", ""]
         let first = registry.icons.first?.name ?? registry.fallback
@@ -286,14 +300,19 @@ public struct AgentContext: Generator {
             }
         }
         out += ContextMarkdown.item(
-            "`Label(\"…\", icon: .\(first))`: the title and the icon of a control's label, such as a button's.")
+            try names.fill(
+                "`Label(\"…\", icon: .\(first))`{!adapter:Label.init}: the title and the icon of a control's label, "
+                    + "such as a button's."))
         out += ContextMarkdown.item(
-            "`Image(.\(first))`: only where nothing but an `Image` fits, as inside `Text` interpolation; it keeps the "
-                + "symbol's spoken name, so such a text takes an `.accessibilityLabel`.")
+            try names.fill(
+                "`Image(.\(first))`{!adapter:Image.init}: only where nothing but an `Image` fits, as inside `Text` "
+                    + "interpolation; it keeps the symbol's spoken name, so such a text takes an "
+                    + "`.accessibilityLabel`."))
         out += ContextMarkdown.item(
-            "`Westron.Icon(rawValue: name) ?? .fallback`: a name a product stored; a name this version does not know "
-                + "draws `.\(registry.fallback)`. `icon.systemName` is the SF Symbol's name, for a system call that "
-                + "takes `systemImage:`.")
+            try names.fill(
+                "`Westron.Icon(rawValue: name) ?? .{icon:fallback}`: a name a product stored; a name this version does "
+                    + "not know draws `.\(registry.fallback)`. `icon.{icon:systemName}` is the SF Symbol's name, for a "
+                    + "system call that takes `systemImage:`."))
         out +=
             [""]
             + ContextMarkdown.wrap(
@@ -315,8 +334,39 @@ public struct AgentContext: Generator {
 
     /// The SwiftUI page from spec/conventions.md.
     /// - Throws: `ConventionsProblem` when the section or the table is not where the page reads it.
-    static func swiftUI(_ conventions: String, source: String, map: [String: String]) throws -> String {
+    /// A pointer to a section of spec/conventions.md, `(below, "Own components")`: the page copies only one section,
+    /// so the pointers go.
+    private static let pointer = try! NSRegularExpression(
+        pattern: #"(\s?\((?:below|above)(?:, "[^"]*")?\)|, (?:below|above), "[^"]*")"#)
+    /// An example of an id and the type it gives, `` `empty-state` → `EmptyState` ``, after a comma.
+    private static let idExample = try! NSRegularExpression(pattern: #",\s*`([a-z][a-z-]*)` → `[^`]*`"#)
+
+    /// A line of the conventions as the page writes it: its links fit for the bundle, without pointers to sections it
+    /// does not copy, and without examples that name a component westron does not have.
+    static func swiftUILine(
+        _ line: String, source: String, output: String, map: [String: String], components: Set<String>
+    ) -> String {
+        var text = ContextMarkdown.rewritingLinks(line, from: source, to: output, map: map)
+        text = pointer.stringByReplacingMatches(
+            in: text, range: NSRange(location: 0, length: NSString(string: text).length), withTemplate: "")
+        let ns = NSString(string: text)
+        var result = ""
+        var last = 0
+        for match in idExample.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
+            guard !components.contains(ns.substring(with: match.range(at: 1))) else { continue }
+            result += ns.substring(with: NSRange(location: last, length: match.range.location - last))
+            last = match.range.location + match.range.length
+        }
+        return result + ns.substring(from: last)
+    }
+
+    static func swiftUI(
+        _ conventions: String, source: String, map: [String: String], components: Set<String>
+    ) throws -> String {
         let output = outputDirectory + "/" + swiftUIPath
+        func line(_ text: String) -> String {
+            swiftUILine(text, source: source, output: output, map: map, components: components)
+        }
         let lines = conventions.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         guard let start = lines.firstIndex(of: systemSection) else {
             throw ConventionsProblem(source: source, "no section \"\(systemSection)\"")
@@ -340,16 +390,16 @@ public struct AgentContext: Generator {
         out += ["", "# westron in SwiftUI", ""]
         out += ContextMarkdown.wrap(
             "How each concept of a component contract becomes SwiftUI API, and what stays the system's: from westron's "
-                + "platform conventions. A card names these concepts; this page says what each means in code.")
+                + "platform conventions. A card names these concepts; this page says what each means in code. A "
+                + "reference such as \"decisions/0003\" or \"#33\" points into westron's repository and is not in this "
+                + "bundle.")
         out += ["", "## " + systemSection.dropFirst(4)]
-        out += lines[(start + 1)..<end].map {
-            ContextMarkdown.rewritingLinks($0, from: source, to: output, map: map)
-        }
+        out += lines[(start + 1)..<end].map(line)
         while out.last == "" { out.removeLast() }
         out += ["", "## The concepts in SwiftUI"]
         for row in rows {
             out += ["", "### \(row.concept)", ""]
-            out += ContextMarkdown.wrap(ContextMarkdown.rewritingLinks(row.swiftUI, from: source, to: output, map: map))
+            out += ContextMarkdown.wrap(ContextMarkdown.withoutTooling(line(row.swiftUI)))
         }
         return out.joined(separator: "\n") + "\n"
     }
@@ -383,7 +433,8 @@ public struct AgentContext: Generator {
         out.append("")
         out += ContextMarkdown.wrap(
             "Read `\(AgentContext.skillDirectory)/SKILL.md` for the rules, then the index, then only the cards a task "
-                + "needs.")
+                + "needs. In Claude Code the same files come as the plugin `westron` from the marketplace in this "
+                + "repository, `.claude-plugin/marketplace.json`.")
         out += [
             "", "## Docs", "",
             "- [Index](\(base)\(indexPath)): every component, token page, the icons and the design language, one line each",

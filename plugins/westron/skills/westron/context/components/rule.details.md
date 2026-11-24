@@ -1,64 +1,20 @@
 <!-- Generated from spec/components/rule/rule.spec.yaml by `tools/westron generate`. Do not edit: change the source and
 generate again (decisions/0016). -->
 
-# Rule
+# Rule: details
 
-`rule` · approved · westron's own view · used by todo-app/lists-screen, todo-app/list-screen
-
-A straight line that separates two groups, or marks where a dragged item would land: westron's own line, the same on
-every platform, rather than the system's separator, whose thickness and color the system fixes.
-
-## In SwiftUI
-
-`import WestronUI`. A call writes at least:
-
-```swift
-Rule()
-Rule("…")
-```
-
-What WestronUI declares for it:
-
-```swift
-public struct Rule: View {
-    public init(axis: RuleAxis = .horizontal, purpose: RulePurpose = .separator)
-    public init(_: LocalizedStringKey)
-    @_disfavoredOverload public init<S: StringProtocol>(_: S)
-    public var body: some View
-}
-public enum RuleAxis: String, CaseIterable, Sendable { case horizontal, vertical }
-public enum RulePurpose: String, CaseIterable, Sendable { case separator, insertion }
-```
-
-## Options
-
-- `axis`, `RuleAxis`: `.horizontal`, `.vertical`; by default `.horizontal`. horizontal runs along the width and
-  separates groups stacked one above the other; vertical runs along the height and separates groups side by side. A
-  vertical rule takes no label.
-- `purpose`, `RulePurpose`: `.separator`, `.insertion`; by default `.separator`. separator divides two groups and is
-  quiet; insertion marks where a dragged item would be dropped, between two items of a list (horizontal) or of a row of
-  items side by side (vertical), and must be found at once. An insertion rule takes no label.
-
-## Slots
-
-`label`: drawn text, the initializer's first, unlabeled argument.
+The prose of westron's contract for `rule`, for the cases its card (`rule.md`) does not settle. A reference such as
+"decisions/0001" or "#120" here points into westron's repository: to the component's own decisions, westron's decisions
+or an issue, none of which is in this bundle. Names such as `container.gap` are the contract's bindings of westron's
+tokens, how WestronUI draws the component; a product never sets them.
 
 ## Accessibility
-
-- Role: `heading`.
-- A label is optional: read below what an instance without one is.
 
 A rule without a label is decorative, whatever its purpose: it is hidden from assistive technology, which already reads
 the groups it separates by their own content, and learns of a drop's place from the drag, not from the line. A labelled
 rule names the group under it, so its label is announced as a heading with that text, and a person can move from one
 group to the next by headings; the line itself is not announced. The label is read whole, also where it is truncated on
 screen.
-
-## Do not
-
-- **Never**: a filled `label` slot with `axis` other than `.horizontal` or `purpose` other than `.separator`. Only a
-  horizontal separator takes a label: no consumer has a vertical one, which in a bar is about as tall as one line of
-  text, and an insertion rule marks a place, it names nothing.
 
 ## Behavior
 

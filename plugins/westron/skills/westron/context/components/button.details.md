@@ -1,93 +1,18 @@
 <!-- Generated from spec/components/button/button.spec.yaml by `tools/westron generate`. Do not edit: change the source
 and generate again (decisions/0016). -->
 
-# Button
+# Button: details
 
-`button` · approved · a style on `SwiftUI.Button` · used by todo-app/lists-screen, todo-app/list-screen
-
-A push button that runs an action: westron's style on the platform's own button, with a label and a leading icon.
-
-## In SwiftUI
-
-`import WestronUI`. A call writes at least:
-
-```swift
-Button(…)
-    .buttonStyle(.primary)
-….loading(isLoading)
-```
-
-What WestronUI declares for it:
-
-```swift
-extension View {
-    public func buttonStyle(
-        _: ButtonVariant,
-        size: ButtonSize? = nil,
-        iconOnly: Bool = false,
-        floating: Bool = false
-    ) -> some View
-    public func loading(_: Bool) -> some View
-}
-public enum ButtonVariant: String, CaseIterable, Sendable { case primary, secondary, tertiary }
-public enum ButtonSize: String, CaseIterable, Sendable { case s, m, l }
-```
-
-The option `role` is the system's own `SwiftUI.ButtonRole`: the product sets it where SwiftUI takes it, and westron
-reads it from there. westron adds no argument for it.
-
-## Options
-
-- `variant`, `ButtonVariant`: `.primary`, `.secondary`, `.tertiary`; no default. No default: every use names its
-  variant. primary is filled with the accent, the one main action on a screen; secondary is filled with a quiet gray,
-  the muted fill; tertiary has no background and an accent label.
-- `size`, `ButtonSize?`: `.s`, `.m`, `.l`; left out, the size comes from `controlSize` (`regular` is `.m`). The height
-  is size.control.s, m or l: 24, 32 and 40 with a pointer (macOS), 28, 36 and 50 on iOS and iPadOS, and 44, the only
-  size, on watchOS. It is a minimum, so the button grows with its text. The hit area is at least size.target.minimum,
-  the platform's recommended target (chapter 08), also where the drawn height is smaller, except where the contract's
-  platforms block says otherwise (on macOS the drawn button; on iOS the system's touch tolerance, which a control nearby
-  shares). Where an OS lacks a value: on watchOS it draws `s` as `m` and `l` as `m`.
-- `role`, the system's `SwiftUI.ButtonRole`: the values `default`, `destructive`; by default `default`. destructive
-  recolors any variant in the danger colors; it is not a variant of its own.
-- `iconOnly`, `Bool`: by default `false`. The same button showing only its icon: a circle whose diameter equals its
-  height; padding and gap do not apply. The label is still there as the accessible label.
-- `floating`, `Bool`: by default `false`. The button stands over content, outside the layout and any bar, rather than
-  among it: secondary on the system's glass from OS 26 and on a raised surface before it, primary on its own fill with a
-  shadow. Not for a button in a system bar, toolbar or tab bar, whose glass is the bar's. The snapshot matrix names it
-  only where it is true, so the sheets of a button that does not float keep the names and pictures they had before it
-  (decisions/0015).
-
-## Slots
-
-`label` and `icon`: through the system control's own initializer and label, never a westron parameter. `label` and
-`icon` are the title and the icon of a `Label` in it: `Label("…", icon: .tray)` (`../icons.md`).
-
-## States
-
-- `hover`: the system's, under a pointer: a Mac, an iPad with a pointer; touch never enters it. Never entered on
-  watchOS.
-- `focus`: the system's keyboard focus.
-- `pressed`: the system's, while a press is held.
-- `disabled`: `.disabled(_:)`, the system's.
-- `loading`: `.loading(_:)`, westron's modifier, on the component: the product passes its own state.
+The prose of westron's contract for `button`, for the cases its card (`button.md`) does not settle. A reference such as
+"decisions/0001" or "#120" here points into westron's repository: to the component's own decisions, westron's decisions
+or an issue, none of which is in this bundle. Names such as `container.gap` are the contract's bindings of westron's
+tokens, how WestronUI draws the component; a product never sets them.
 
 ## Accessibility
-
-- Role: `button`. A person can activate it. Announced: `disabled` as disabled, `loading` as busy.
-- **The caller gives every instance a label**: it is the accessible name, also where it is not drawn. Name what it does
-  or holds, never what it looks like.
 
 The label is the accessible name, also when iconOnly hides it, and names the action ("More", not "Ellipsis"). An icon
 beside a visible label is decorative and hidden. In loading, assistive technology announces the label and busy; in
 disabled, the button is announced as unavailable.
-
-## Do not
-
-- **Never**: `floating: true` with `variant` other than `.primary` or `.secondary`. tertiary has no fill, so it has no
-  ground to float on.
-- **Never**: `variant: .secondary` and `floating: true` with `role` other than `` .`default` ``. The danger words read
-  too faintly on the system's glass: color.status.danger.text measured 2.96:1 in the light theme and 2.79 to 4.18:1 in
-  the dark one over a busy ground (decisions/0015). A floating destructive primary, on its opaque fill, stays.
 
 ## Behavior
 
@@ -121,23 +46,20 @@ button dims its glass with it. The glass answers a touch or the pointer (it is i
 presses: not while disabled or loading. Before those versions it stands on color.background.surface and casts
 shadow.overlay, tinted and scaled under the pointer and pressed as the bindings say, and draws secondary's outline in
 the high-contrast themes. A floating primary, destructive or not, keeps its opaque fill, its tints and its scale on
-every version and casts shadow.overlay. The bindings cannot name an OS version, so container.shadow's floating case and
-container.background's floating secondary cases are the look where there is no glass: before OS 26, and in the snapshot
-matrix, which draws the bindings on every OS; on glass the label and the icon keep their colors and the disabled button
-its opacity.disabled. The glass adapts its luminosity to what passes beneath it and follows Reduce Transparency,
-Increase Contrast and the person's choice of the glass's look by itself, while the label's and the icon's colors,
-westron's, follow the theme, not the glass. So the contract promises no contrast ratio for text.primary on glass: what
-lies beneath is the product's content, which tokens do not name. Over content of the tone opposite to the theme, such as
-a light photo or map under a floating button in the dark theme, or a dark one in the light theme, the label can fall
-below 4.5:1: measured 3.8:1 in the dark theme over a wide light ground on iOS 26.3. That is a recorded limitation, not a
-defect: the owner kept westron's colors on glass rather than the system's adaptive foreground (decisions/0015, Q5,
-2026-11-23). Over content whose tone it does not control, a product uses a floating primary, whose fill is opaque, or
-keeps the content beneath in the theme's tone. The danger words read too faintly on glass (measured 2.8 to 4.2:1 over a
-busy ground in the standard themes, decisions/0015), so a floating secondary does not take the destructive role. Two
-combinations are forbidden, each by a constraint below: a floating tertiary, which has no ground to float on, and a
-floating destructive secondary. A platform that is given one anyway draws the button that does not float, the same
-variant and role in the layout's look, with no warning at run time (spec/conventions.md, open question 3). A button in a
-system bar, toolbar or tab bar never floats: the bar draws its own glass (design-language/09).
+every version and casts shadow.overlay. The glass adapts its luminosity to what passes beneath it and follows Reduce
+Transparency, Increase Contrast and the person's choice of the glass's look by itself, while the label's and the icon's
+colors, westron's, follow the theme, not the glass. So the contract promises no contrast ratio for text.primary on
+glass: what lies beneath is the product's content, which tokens do not name. Over content of the tone opposite to the
+theme, such as a light photo or map under a floating button in the dark theme, or a dark one in the light theme, the
+label can fall below 4.5:1: measured 3.8:1 in the dark theme over a wide light ground on iOS 26.3. That is a recorded
+limitation, not a defect: the owner kept westron's colors on glass rather than the system's adaptive foreground
+(decisions/0015, Q5, 2026-11-23). Over content whose tone it does not control, a product uses a floating primary, whose
+fill is opaque, or keeps the content beneath in the theme's tone. The danger words read too faintly on glass (measured
+2.8 to 4.2:1 over a busy ground in the standard themes, decisions/0015), so a floating secondary does not take the
+destructive role. Two combinations are forbidden, each by a constraint below: a floating tertiary, which has no ground
+to float on, and a floating destructive secondary. A platform that is given one anyway draws the button that does not
+float, the same variant and role in the layout's look, with no warning at run time (spec/conventions.md, open question
+3). A button in a system bar, toolbar or tab bar never floats: the bar draws its own glass (design-language/09).
 
 ## On Apple
 
@@ -166,17 +88,12 @@ product that sets floating buttons side by side, or morphs one into another, wri
 
 Hover only with a pointer, on iPad; an iPhone never enters it. The hit area is the system's touch tolerance around the
 drawn button, which westron does not grow: measured on iOS 26.3 it reached 16 pt past a 32 pt button (#23), and with no
-other control near it reaches 16 to 19 pt past a button of size s or m on iOS 26.3 and 27.0 alike (#102). The catalog's
-ButtonBehaviorTests taps 8 pt below the 28 pt size s, the edge of size.target.minimum, 44 pt, and 4 pt below the 36 pt
-size m, the edge of the same target; both reach the button. Another control closer than about 16 pt shares the gap with
-the button, which gets only part of it: in the measured cases 10 pt of a 20 pt gap, 7 of 16, and, with a Toggle row 12
-pt below a size s button, 8 pt on iOS 26.3 and 7.67 on 27.0, one pixel less, so the test's tap at 8 pt failed on 27.0
-until the catalog moved the row away. So a size s button reaches the full target only where no other control is within
-about 16 pt of it (the owner's decision of 2026-11-21, decisions/0001). A floating button over content a person presses,
-a list's rows, gets no tolerance at all: on iOS 26.3 a press half a point inside its drawn edge reaches it and a press 1
-or 4 pt past it, below or beside, reaches the row, at sizes s, m and l alike (ButtonBehaviorTests, decisions/0015). So
-over pressable content its hit area is what it draws, and only size l, 50 pt, reaches size.target.minimum: use size l
-for a floating button over pressable content on iOS.
+other control near it reaches 16 to 19 pt past a button of size s or m on iOS 26.3 and 27.0 alike (#102). So a size s
+button reaches the full target only where no other control is within about 16 pt of it (the owner's decision of
+2026-11-21, decisions/0001). A floating button over content a person presses, a list's rows, gets no tolerance at all:
+on iOS 26.3 a press half a point inside its drawn edge reaches it and a press 1 or 4 pt past it, below or beside,
+reaches the row, at sizes s, m and l alike. So over pressable content its hit area is what it draws, and only size l, 50
+pt, reaches size.target.minimum: use size l for a floating button over pressable content on iOS.
 
 ### macOS
 

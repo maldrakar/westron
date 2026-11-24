@@ -1,56 +1,14 @@
 <!-- Generated from spec/components/icon/icon.spec.yaml by `tools/westron generate`. Do not edit: change the source and
 generate again (decisions/0016). -->
 
-# Icon
+# Icon: details
 
-`icon` · approved · westron's own view · used by todo-app/lists-screen, todo-app/list-screen
-
-An icon of westron's registry, drawn as the platform's own glyph image: westron adds the names, how a glyph is drawn and
-what assistive technology hears of it (design-language/07, decisions/0011).
-
-## In SwiftUI
-
-`import WestronUI`. A call writes at least:
-
-```swift
-Icon(.tray)
-Icon(.tray, label: "…")
-```
-
-What WestronUI declares for it:
-
-```swift
-public struct Icon: View {
-    public init(_: Westron.Icon)
-    public init(_: Westron.Icon, label: LocalizedStringKey)
-    @_disfavoredOverload public init<S: StringProtocol>(_: Westron.Icon, label: S)
-    public var body: some View
-}
-```
-
-The option `scale` is the system's own `SwiftUI.Image.Scale`: the product sets it where SwiftUI takes it, and westron
-reads it from there. westron adds no argument for it.
-
-## Options
-
-- `glyph`, `Westron.Icon`: a name of the icon registry (`../icons.md`); every use names one. No default: every use names
-  its glyph. The values are the names of the icon registry, spec/icons/icons.yaml, in its order, so the contract and the
-  registry cannot drift. A name says what the glyph draws, never what it means on a screen, and a released name is never
-  renamed or removed; a name this version does not know draws the registry's default, bullets (design-language/07,
-  "Names").
-- `scale`, the system's `SwiftUI.Image.Scale`: the values `small`, `medium`, `large`; by default `medium`. The
-  platform's relative scale against the text the icon takes its size from: medium is the text's own size. It is never a
-  size in points (design-language/07, "Size relative to text").
-
-## Slots
-
-`label`: the glyph's spoken name, the initializer's `label:`; an instance without one is decorative and hidden from
-assistive technology.
+The prose of westron's contract for `icon`, for the cases its card (`icon.md`) does not settle. A reference such as
+"decisions/0001" or "#120" here points into westron's repository: to the component's own decisions, westron's decisions
+or an issue, none of which is in this bundle. Names such as `container.gap` are the contract's bindings of westron's
+tokens, how WestronUI draws the component; a product never sets them.
 
 ## Accessibility
-
-- Role: `image`.
-- A label is optional: read below what an instance without one is.
 
 An icon without a label is decorative and hidden from assistive technology: beside its own words it would only repeat
 them, and the system's name for a glyph ("tray", "pencil") is not what it means on the screen. A meaningful standalone

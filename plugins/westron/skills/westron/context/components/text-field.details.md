@@ -1,82 +1,14 @@
 <!-- Generated from spec/components/text-field/text-field.spec.yaml by `tools/westron generate`. Do not edit: change the
 source and generate again (decisions/0016). -->
 
-# TextField
+# TextField: details
 
-`text-field` · approved · a style on `SwiftUI.TextField` · used by todo-app/lists-screen, todo-app/list-screen
-
-A field a person types text into: westron's style on the platform's own text field, which keeps editing, selection,
-input methods, the keyboard and the system's text input.
-
-## In SwiftUI
-
-`import WestronUI`. A call writes at least:
-
-```swift
-TextField(…)
-    .textFieldStyle(.framed)
-```
-
-What WestronUI declares for it:
-
-```swift
-extension View {
-    public func textFieldStyle(
-        _: TextFieldVariant,
-        size: TextFieldSize? = nil,
-        leadingIcon: Westron.Icon? = nil,
-        trailingIcon: Westron.Icon? = nil
-    ) -> some View
-}
-public enum TextFieldVariant: String, CaseIterable, Sendable { case framed, inline }
-public enum TextFieldSize: String, CaseIterable, Sendable { case s, m, l }
-```
-
-The option `lines` is the system's own `SwiftUI.Axis`: the product sets it where SwiftUI takes it, and westron reads it
-from there. westron adds no argument for it.
-
-## Options
-
-- `variant`, `TextFieldVariant`: `.framed`, `.inline`; no default. No default: every use names its variant. The system's
-  own style names (automatic, plain, roundedBorder, squareBorder, bordered) are not values: westron's overload would
-  shadow them (decisions/0003).
-- `size`, `TextFieldSize?`: `.s`, `.m`, `.l`; left out, the size comes from `controlSize` (`regular` is `.m`). framed:
-  the height is size.control.s, m or l, 24, 32 and 40 with a pointer (macOS), 28, 36 and 50 on iOS and iPadOS, 44 on
-  watchOS, as a minimum, so the field grows with its text; its padding follows the size, and its text is body.regular at
-  every size. A field drawn below size.target.minimum, the platform's recommended target, 28 pt on macOS and 44 pt on
-  iOS, keeps a hit area of that height (design-language/08): at s on macOS, at s and m on iOS. inline takes its height
-  and its text role from its context, so the size changes nothing on it. Where an OS lacks a value: on watchOS it draws
-  `s` as `m` and `l` as `m`.
-- `lines`, the system's `SwiftUI.Axis`: the values `single`, `multiple`; by default `single`. single is a field of one
-  line, whose text scrolls sideways, such as a list's name; multiple is a field whose text wraps and which grows a line
-  at a time, such as a card's notes. framed draws single as a capsule and multiple as a rounded rectangle of radius.150,
-  its lines held off its top and bottom edges by a padding that, at the default text size, makes a field of one line as
-  tall as a single one of its size, and that does not grow with the text, as the minimum heights do not; inline draws
-  both alike. On Apple it is the system field's own axis (platforms.apple.systemOptions).
-- `leadingIcon`, `Westron.Icon?`: a name of the icon registry (`../icons.md`); by default `nil`, no glyph. The glyph at
-  the field's start, a name of the icon registry that names what the field is for, never an action, or none, which draws
-  no glyph there and gives the text that room. A search field's magnifier. It is decoration and says nothing to
-  assistive technology, so the field's label still names the field.
-- `trailingIcon`, `Westron.Icon?`: a name of the icon registry (`../icons.md`); by default `nil`, no glyph. The glyph at
-  the field's end, a name of the icon registry that names what the field is for, never an action, or none, such as a
-  number sign at the end of a field that holds a tag's name. Decoration, as the leading one. A glyph that acts when it
-  is pressed, or draws an action, such as a clear mark or a microphone that starts dictation, is not this option
-  (decisions/0003-icons-at-the-start-and-the-end.md).
-
-## Slots
-
-`label` and `placeholder`: through the system control's own initializer and label, never a westron parameter.
-
-## States
-
-- `focus`: the system's keyboard focus. Never entered on watchOS.
-- `disabled`: `.disabled(_:)`, the system's.
+The prose of westron's contract for `text-field`, for the cases its card (`text-field.md`) does not settle. A reference
+such as "decisions/0001" or "#120" here points into westron's repository: to the component's own decisions, westron's
+decisions or an issue, none of which is in this bundle. Names such as `container.gap` are the contract's bindings of
+westron's tokens, how WestronUI draws the component; a product never sets them.
 
 ## Accessibility
-
-- Role: `textField`. A person can edit it. Announced: `disabled` as disabled.
-- **The caller gives every instance a label**: it is the accessible name, also where it is not drawn. Name what it does
-  or holds, never what it looks like.
 
 Every field has an accessible label that names what it holds ("List name"), also where no label is visible; a
 placeholder is not a label, since it disappears as the person types. The text is the field's value. In disabled, the
@@ -218,14 +150,13 @@ style for it, and westron leaves it to the system as it leaves a menu or an aler
 Focus is the field being edited, with the keyboard up. There is no pointer to hover with on an iPhone, and the field
 shows nothing on hover on an iPad either. At s, drawn 28 pt high, a tap 8 pt past the drawn edge, at the 44 pt target,
 focuses the field, and one 24 pt past it does not; at m, drawn 36 pt high, a tap 4 pt past either edge, at the same
-target, focuses it (the catalog's TextFieldBehaviorTests); a one-off probe of #30 found the reach ending between 16 and
-18 pt. The style's tap gesture, which focuses a field from its padding, is what takes these touches: with it removed, a
-tap on the padding and one at the target missed. A tap on a glyph is taken by the same gesture and focuses the field.
-The style grows no frame of its own on iOS. A product reaches color.text.placeholder by coloring its prompt itself:
-prompt: Text("Untitled").foregroundStyle(.text.placeholder). A field's accessibility frame is the whole field westron
-draws, its padding and glyphs included, with a glyph or without, and an inline field's is the room it is laid out in,
-within a point across and up and down (TextFieldAccessibilityFrameTests, iOS 26.3, #135); macOS differs (the macos
-block).
+target, focuses it; a one-off probe of #30 found the reach ending between 16 and 18 pt. The style's tap gesture, which
+focuses a field from its padding, is what takes these touches: with it removed, a tap on the padding and one at the
+target missed. A tap on a glyph is taken by the same gesture and focuses the field. The style grows no frame of its own
+on iOS. A product reaches color.text.placeholder by coloring its prompt itself: prompt:
+Text("Untitled").foregroundStyle(.text.placeholder). A field's accessibility frame is the whole field westron draws, its
+padding and glyphs included, with a glyph or without, and an inline field's is the room it is laid out in, within a
+point across and up and down; macOS differs (the macos block).
 
 ### macOS
 
@@ -278,16 +209,13 @@ which has neither padding nor glyphs, has a frame as wide as the room it is laid
 the card's title and notes report frames whose outer edges, the title's top and the notes' bottom, are within a point of
 their lines as measured (the title's a point above its line, the notes' a point below theirs; the test allows two), and
 which are 6 pt apart where their lines are 8 pt apart: the frames together are 4 pt taller than the lines, and how the 2
-pt between them divide between the title and the notes is not known. This is the system's behaviour, measured with Xcode
-27.1 on macOS 26.7.1 on the catalog's text-field-behavior page (TextFieldAccessibilityFrameTests, #135): a field at s
-666 × 18 pt of the 696 × 24 drawn, at m 658 × 18 of 696 × 32, the frame of a search field starting 42.5 pt into the
-drawn field, past the magnifier and its gap. None of the public APIs tried moves it: an accessibility or an interaction
-content shape on the field or on its fill leaves the frame as AppKit gives it, combining the field's children into one
-element loses the field's value and placeholder (and, set on the style, its role), containing them takes the field out
-of the tree, and an accessibility representation exposes a hidden copy of the field instead of the field. Setting the
-frame on AppKit's field, found in SwiftUI's private view tree, works but goes stale as the window moves or the page
-scrolls (decisions/0004). Recorded on 2026-11-23 under the owner's delegation (decisions/0014). The test fails when
-macOS starts reporting the drawn field, and then this entry goes.
+pt between them divide between the title and the notes is not known. None of the public APIs tried moves it: an
+accessibility or an interaction content shape on the field or on its fill leaves the frame as AppKit gives it, combining
+the field's children into one element loses the field's value and placeholder (and, set on the style, its role),
+containing them takes the field out of the tree, and an accessibility representation exposes a hidden copy of the field
+instead of the field. Setting the frame on AppKit's field, found in SwiftUI's private view tree, works but goes stale as
+the window moves or the page scrolls (decisions/0004). Recorded on 2026-11-23 under the owner's delegation
+(decisions/0014). The test fails when macOS starts reporting the drawn field, and then this entry goes.
 
 ### watchOS
 

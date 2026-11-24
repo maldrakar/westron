@@ -1,72 +1,14 @@
 <!-- Generated from spec/components/chip/chip.spec.yaml by `tools/westron generate`. Do not edit: change the source and
 generate again (decisions/0016). -->
 
-# Chip
+# Chip: details
 
-`chip` · approved · a style on `SwiftUI.Toggle`, `SwiftUI.Button` or `SwiftUI.Label` · used by todo-app/list-screen
-
-A compact capsule with a short label and an optional leading icon: a tag, a filter, a value.
-
-## In SwiftUI
-
-`import WestronUI`. A call writes at least:
-
-```swift
-Toggle(…)
-    .toggleStyle(.chip)
-Button(…)
-    .buttonStyle(.chip)
-Label(…)
-    .labelStyle(.chip)
-```
-
-What WestronUI declares for it:
-
-```swift
-extension View {
-    public func toggleStyle(_: ChipVariant) -> some View
-    public func buttonStyle(_: ChipVariant) -> some View
-    public func labelStyle(_: ChipVariant) -> some View
-}
-public enum ChipVariant: String, CaseIterable, Sendable { case chip }
-```
-
-## Options
-
-- `variant`, `ChipVariant`: `.chip`; no default. The chip; the only variant, so that a call reads .toggleStyle(.chip),
-  .buttonStyle(.chip) and .labelStyle(.chip). No system style of the three bases is named chip, and neither is a value
-  of Button's or Checkbox's variant, which share two of the modifiers (decisions/0003; decisions/0001, P3).
-
-## Slots
-
-`label` and `icon`: through the system control's own initializer and label, never a westron parameter. `label` and
-`icon` are the title and the icon of a `Label` in it: `Label("…", icon: .tray)` (`../icons.md`).
-
-## States
-
-- `checked`: the toggle's value, `isOn`.
-- `hover`: the system's, under a pointer: a Mac, an iPad with a pointer; touch never enters it. Never entered on
-  watchOS.
-- `focus`: the system's keyboard focus. Never entered on watchOS.
-- `pressed`: the system's, while a press is held.
-- `disabled`: `.disabled(_:)`, the system's.
-
-## Forms
-
-The same look in several forms; the product picks one by what it writes.
-
-- `selectable`: `Toggle` with `.toggleStyle(…)`. A filter that is on or off; checked while it is on. States: `checked`,
-  `hover`, `focus`, `pressed`, `disabled`.
-- `pressable`: `Button` with `.buttonStyle(…)`. A value that opens something when pressed. Its pilot consumer arrives
-  with the Task screen's pickers; until then the pilot draws its inert pills as static chips (decisions/0001, Q3).
-  States: `hover`, `focus`, `pressed`, `disabled`.
-- `static`: `Label` with `.labelStyle(…)`. A value shown and not acted on; its label is read as text. States: none.
+The prose of westron's contract for `chip`, for the cases its card (`chip.md`) does not settle. A reference such as
+"decisions/0001" or "#120" here points into westron's repository: to the component's own decisions, westron's decisions
+or an issue, none of which is in this bundle. Names such as `container.gap` are the contract's bindings of westron's
+tokens, how WestronUI draws the component; a product never sets them.
 
 ## Accessibility
-
-- Role: `toggleButton`. A person can toggle it. Announced: `checked` as checked, `disabled` as disabled.
-- **The caller gives every instance a label**: it is the accessible name, also where it is not drawn. Name what it does
-  or holds, never what it looks like.
 
 The label is the accessible name, the whole of it also when it is truncated; the icon beside it, and the check in its
 place, are decorative and hidden. These fields are the selectable form's, which the other forms replace in `forms`. The
@@ -142,12 +84,12 @@ capsule (contentShape(.accessibility, …)), as Button's is.
 ### iOS
 
 Hover only with a pointer, on iPad; an iPhone never enters it. The hit area is at least 44 pt high and 44 pt across
-around the 28 pt chip. Measured on iOS 26.3 as XCUITest reads the hierarchy (CatalogUITests/ChipBehaviorTests), not with
-VoiceOver itself: the selectable chip is a switch with its label and its value 0 or 1, never selected, and no button,
-the text-only chip too; the pressable chip a button with its label, never selected; the static chip its text; the
-disabled samples not enabled; a truncated label the whole name. Under the pressable chip XCUITest lists nothing: the
-icon and the check are hidden, then represented by nothing, as a westron Button's icon is (#131). The element's frame is
-the 44 pt hit area, not the drawn capsule, with contentShape(.accessibility, …) set as Button's is.
+around the 28 pt chip. Measured on iOS 26.3 as XCUITest reads the hierarchy, not with VoiceOver itself: the selectable
+chip is a switch with its label and its value 0 or 1, never selected, and no button, the text-only chip too; the
+pressable chip a button with its label, never selected; the static chip its text; the disabled samples not enabled; a
+truncated label the whole name. Under the pressable chip XCUITest lists nothing: the icon and the check are hidden, then
+represented by nothing, as a westron Button's icon is (#131). The element's frame is the 44 pt hit area, not the drawn
+capsule, with contentShape(.accessibility, …) set as Button's is.
 
 ### macOS
 
@@ -156,12 +98,12 @@ not in the hit area's margin nor in the corners of the capsule's frame beyond it
 chip's frame is tested against the capsule (onContinuousHover), since onHover reports the whole frame whatever its
 content shape (decisions/0001, "Measured on macOS"). The click is taken in the whole hit area. The system's focus ring
 follows the drawn capsule (contentShape(.focusEffect, …)), as Button's does. The selectable chip's representation is the
-system Toggle, a checkbox on macOS, as Checkbox's is. Measured on macOS 26.7 as XCUITest reads the hierarchy
-(CatalogUITests/ChipBehaviorTests), not with VoiceOver itself: the selectable chip is a checkbox with its label and its
-value 0 or 1, never selected, and no button; the pressable chip a button with its label and nothing under it; the static
-chip a text whose words are its value; the disabled samples not enabled; a truncated label the whole name. The element's
-frame is the 28 pt hit area, and a click 1 pt above the drawn capsule toggles. Keyboard focus follows the system's
-controls, as Checkbox's does; it is not measured, since keyboard navigation was off on the Mac that ran the tests.
+system Toggle, a checkbox on macOS, as Checkbox's is. Measured on macOS 26.7 as XCUITest reads the hierarchy, not with
+VoiceOver itself: the selectable chip is a checkbox with its label and its value 0 or 1, never selected, and no button;
+the pressable chip a button with its label and nothing under it; the static chip a text whose words are its value; the
+disabled samples not enabled; a truncated label the whole name. The element's frame is the 28 pt hit area, and a click 1
+pt above the drawn capsule toggles. Keyboard focus follows the system's controls, as Checkbox's does; it is not
+measured, since keyboard navigation was off on the Mac that ran the tests.
 
 ### watchOS
 

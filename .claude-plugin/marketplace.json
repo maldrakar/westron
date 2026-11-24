@@ -1,0 +1,14 @@
+{
+  "name": "westron",
+  "description": "westron's Claude Code plugin, for products that build their UI with westron (decisions/0016).",
+  "owner": {
+    "name": "maldrakar"
+  },
+  "plugins": [
+    {
+      "name": "westron",
+      "source": "./plugins/westron",
+      "description": "The westron design system's components, tokens, icons and rules, for agents that build UI in a product that uses westron."
+    }
+  ]
+}

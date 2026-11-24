@@ -1,56 +1,14 @@
 <!-- Generated from spec/components/icon-tile/icon-tile.spec.yaml by `tools/westron generate`. Do not edit: change the
 source and generate again (decisions/0016). -->
 
-# IconTile
+# IconTile: details
 
-`icon-tile` · approved · westron's own view · used by todo-app/lists-screen, todo-app/list-screen
-
-A list's mark: a rounded square in the list's color with the list's glyph on it, which stands beside a list's title in a
-row, a screen header, a picker and the card a drag carries, and alone above the words of an empty screen.
-
-## In SwiftUI
-
-`import WestronUI`. A call writes at least:
-
-```swift
-IconTile(.tray)
-IconTile(.tray, label: "…")
-```
-
-What WestronUI declares for it:
-
-```swift
-public struct IconTile: View {
-    public init(_: Westron.Icon)
-    public init(_: Westron.Icon, label: LocalizedStringKey)
-    @_disfavoredOverload public init<S: StringProtocol>(_: Westron.Icon, label: S)
-    public var body: some View
-}
-```
-
-The option `scale` is the system's own `SwiftUI.Image.Scale`: the product sets it where SwiftUI takes it, and westron
-reads it from there. westron adds no argument for it.
-
-## Options
-
-- `glyph`, `Westron.Icon`: a name of the icon registry (`../icons.md`); every use names one. No default: every use names
-  its glyph, the list's icon as the product stores it. The values are the names of the icon registry,
-  spec/icons/icons.yaml, in its order, as Icon's are; a name this version does not know draws the registry's default,
-  bullets.
-- `scale`, the system's `SwiftUI.Image.Scale`: the values `small`, `medium`, `large`; by default `medium`. The
-  platform's relative scale against the text role the tile takes its size from: medium is the role's own tile. It scales
-  the tile and its glyph together, so the glyph keeps its proportion to the tile. It is never a size in points
-  (design-language/07, "A relative scale is the only size choice").
-
-## Slots
-
-`label`: the glyph's spoken name, the initializer's `label:`; an instance without one is decorative and hidden from
-assistive technology.
+The prose of westron's contract for `icon-tile`, for the cases its card (`icon-tile.md`) does not settle. A reference
+such as "decisions/0001" or "#120" here points into westron's repository: to the component's own decisions, westron's
+decisions or an issue, none of which is in this bundle. Names such as `container.gap` are the contract's bindings of
+westron's tokens, how WestronUI draws the component; a product never sets them.
 
 ## Accessibility
-
-- Role: `image`.
-- A label is optional: read below what an instance without one is.
 
 A tile without a label is decorative and hidden from assistive technology, as an icon without one is: beside its list's
 title, in a row, a header, a picker or an empty screen's title, it would only repeat it, and neither the system's name
@@ -101,8 +59,7 @@ hidden symbols, so IconTile takes no scale argument and no enum is generated. Th
 hidden line centered in it, so in a row aligned on the first text baseline its center sits on the middle of the title's
 first line. Inside ContentUnavailableView, the empty screen's system view (decisions/0014), the tile stands in the
 label's icon and takes the font the system gives that icon. The shape is a continuous rounded rectangle. The name is no
-SwiftUI type (tools/Sources/WestronTools/Contracts/SwiftUITypes.swift, Xcode 27.1); SwiftUI has no tile, so westron
-builds its own view, as it does Icon (decisions/0003, point 2).
+SwiftUI type; SwiftUI has no tile, so westron builds its own view, as it does Icon (decisions/0003, point 2).
 
 ### watchOS
 

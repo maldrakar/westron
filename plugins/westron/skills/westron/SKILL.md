@@ -13,7 +13,8 @@ contracts, tokens and design language. Paths here are relative to this file.
 
 1. Read `context/index.md` first, every time: one line per component, token page, the icons and each chapter.
 2. Read the card of every component you use, `context/components/<id>.md`, and only those: how it is called, its
-   options, states, slots, what accessibility needs from the caller, what not to do, and how Apple differs.
+   options, states, slots, what accessibility needs from the caller and what not to do. Its details file,
+   `<id>.details.md`, holds how it behaves and how Apple's OSes differ: read it when the card does not settle a case.
 3. Lay out with the token pages, `context/tokens/*.md`; ask for glyphs by `context/icons.md`.
 4. `context/swiftui.md` maps a card's concepts to SwiftUI; `context/design-language/` says why westron is as it is.
    Read a chapter when a card points to it or nothing else settles a case.
@@ -39,12 +40,15 @@ generated with; where the product's pinned WestronUI differs, the package's decl
    a westron component from outside (no `.font`, `.foregroundStyle`, `.background` or `.clipShape` on it to change
    what its style draws). What a card leaves to the product, such as a slot's content or a title's text role, is
    the product's.
-4. **What the system presents stays the system's.** Navigation stacks and split views, navigation bars, toolbars and
-   tab bars, sheets, popovers, alerts and confirmation dialogs, menus and context menus, swipe actions, pickers,
-   `.searchable`, `ContentUnavailableView`, scrolling and the system's focus ring. Write them as SwiftUI gives them;
-   westron styles what is inside: a sheet's rows are `ListRow`s, a menu's trigger is a westron `Button`, an empty
-   state's image is an `IconTile`. No westron surface, shadow or glass on them: the bars take the system's own glass,
-   and a control floating over content is `Button`'s `floating` (decisions/0015).
+4. **The container is the system's; its content is westron's.** Navigation stacks and split views, navigation bars,
+   toolbars and tab bars, `.sheet`, popovers, `.alert` and `.confirmationDialog`, `Menu` and `.contextMenu`,
+   `.swipeActions`, `.searchable`, `ContentUnavailableView`, scrolling and the system's focus ring: write them as
+   SwiftUI gives them, with no westron surface, shadow or glass on them (the bars take the system's own glass; a
+   control floating over content is `Button`'s `floating`). What stands inside is composed from westron's components:
+   a list of choices in a sheet, such as a "Move to…" picker, is `ListRow`s with `IconTile`s and a check `Icon` on
+   the chosen one, not a SwiftUI `Picker`; a menu's trigger is a westron `Button`; an empty state's image is an
+   `IconTile`. A system `Picker` or `DatePicker` stays only where the system draws its own control, such as a wheel
+   or a pop-up menu.
 5. **Accessibility is part of the call.** Give each control the label its card requires, an icon-only button too; a
    check beside its own title takes `Toggle(isOn:accessibilityLabel:)`; an icon that means something takes `label:`;
    a heading takes `.accessibilityAddTraits(.isHeader)`. Never fix a height that text must grow out of: text follows

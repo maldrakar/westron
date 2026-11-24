@@ -4,7 +4,7 @@ import Foundation
 /// with (decisions/0014 leaves composition to products), how SwiftUI reaches it, and what it is for. The names and the
 /// Swift members are the Apple token generator's (`AppleTokenModel`), so a page cannot name an accessor WestronUI does
 /// not have; the adapters that take them are the reviewed ones of `WestronUI/TokenAdapters.swift`
-/// (`APIParity.adapters`).
+/// (`APIParity.adapters`). Every name the pages' own prose writes is a placeholder that `ContextNames` looks up.
 enum ContextTokens {
     struct Page {
         /// Inside the bundle.
@@ -26,7 +26,8 @@ enum ContextTokens {
         let doc: Doc
     }
 
-    static func pages(_ model: AppleTokenModel) -> [Page] {
+    /// - Throws: `ContextNames.Missing` when the prose names a token or an adapter WestronUI does not declare.
+    static func pages(_ model: AppleTokenModel, names: ContextNames) throws -> [Page] {
         var pages: [Page] = []
         let colors = model.colors.map {
             Entry(path: $0.path, swift: AppleTokensSwift.reference($0.members), value: nil, doc: $0.doc)
@@ -37,13 +38,15 @@ enum ContextTokens {
             categoryCount = categories.categories.count
             colorBody += ["", "## List colors: `\(categories.group)`", ""]
             colorBody += ContextMarkdown.wrap(
-                "A list's color is a `Westron.Category`, kept by its name and read back with "
-                    + "`Westron.Category(rawValue: list.color)`: "
-                    + categories.categories.map { "`\($0.rawValue)`" }.joined(separator: ", ") + ". "
-                    + "`.category(_:)` on an ancestor draws the westron controls that take a list's color in it, "
-                    + "such as a checked `.toggleStyle(.check)` and an `IconTile`; nil keeps each control's own "
-                    + "default. A product's own drawing reads a role of the category, a `Westron.Color`: "
-                    + "`.foregroundStyle(category.\(categories.roles.first?.name ?? "text"))`. The roles:")
+                try names.fill(
+                    "A list's color is a `Westron.Category`, kept by its name and read back with "
+                        + "`Westron.Category(rawValue: list.color)`: "
+                        + categories.categories.map { "`\($0.rawValue)`" }.joined(separator: ", ") + ". "
+                        + "`.{adapter:View.category}(_:)` on an ancestor draws the westron controls that take a list's "
+                        + "color in it, such as a checked Checkbox and an IconTile; nil keeps each control's own "
+                        + "default. A product's own drawing reads a role of the category, a `Westron.Color`, by what "
+                        + "the call draws: `.{adapter:View.foregroundStyle}(category.{category:text})` for text, "
+                        + "`.{adapter:View.background}(category.{category:background})` for a ground. The roles:"))
             colorBody.append("")
             for role in categories.roles {
                 colorBody += ContextMarkdown.item("`.\(role.name)`: " + text(role.doc))
@@ -52,20 +55,26 @@ enum ContextTokens {
         pages.append(
             page(
                 "tokens/color.md", title: "Colors",
-                summary:
-                    "\(model.colors.count) semantic colors, `Westron.Color`: `.foregroundStyle(.text.primary)`, "
-                    + "`.background(.background.surface)`; \(categoryCount) list colors, `Westron.Category`",
-                intro:
+                summary: try names.fill(
+                    "\(model.colors.count) semantic colors, `Westron.Color`: "
+                        + "`.{adapter:View.foregroundStyle}(.{token:color.text.primary})`, "
+                        + "`.{adapter:View.background}(.{token:color.background.surface})`; \(categoryCount) list "
+                        + "colors, `Westron.Category`"),
+                intro: try names.fill(
                     "A semantic color is a `Westron.Color`, named after its path without `color.`: "
-                    + "`color.text.primary` is `.text.primary`. WestronUI takes one where SwiftUI takes a color: "
-                    + "`.foregroundStyle(.text.primary)`, `.background(.background.surface)`, "
-                    + "`.background(.background.muted, in: Capsule())`, `.tint(.text.accent)`, "
-                    + "`shape.fill(.background.surface)`, `shape.stroke(.border.default, lineWidth: .stroke.thin)`, "
-                    + "`shape.strokeBorder(…)`, `Text(…).foregroundStyle(…)`, and `Color(.text.primary)` where only a "
-                    + "SwiftUI `Color` fits. Each switches with the light and dark themes and increased contrast by "
-                    + "itself. A color is chosen by its role, which its entry names (\"Use for\", \"Avoid\"); never a "
-                    + "raw color, a hex value or an opacity laid on a token to make a new color. The design language: "
-                    + "`../design-language/02-color.md`.",
+                        + "`color.text.primary` is `.{token:color.text.primary}`. WestronUI takes one where SwiftUI "
+                        + "takes a color: `.{adapter:View.foregroundStyle}(.{token:color.text.primary})`, "
+                        + "`.{adapter:View.background}(.{token:color.background.surface})`, "
+                        + "`.{adapter:View.background}(.{token:color.background.muted}, in: Capsule())`, "
+                        + "`.{adapter:View.tint}(.{token:color.text.accent})`, "
+                        + "`shape.{adapter:Shape.fill}(.{token:color.background.surface})`, "
+                        + "`shape.{adapter:Shape.stroke}(.{token:color.border.default}, lineWidth: "
+                        + ".{token:stroke.thin})`, `shape.{adapter:InsettableShape.strokeBorder}(…)`, "
+                        + "`Text(…).{adapter:Text.foregroundStyle}(…)`, and `Color(.{token:color.text.primary})` "
+                        + "where only a SwiftUI `Color` fits{!adapter:Color.init}. Each switches with the light and "
+                        + "dark themes and increased contrast by itself. A color is chosen by its role, which its "
+                        + "entry names (\"Use for\", \"Avoid\"); never a raw color, a hex value or an opacity laid on a "
+                        + "token to make a new color. The design language: `../design-language/02-color.md`."),
                 body: colorBody, model: model))
 
         let roles = model.textRoles.map { role in
@@ -76,17 +85,21 @@ enum ContextTokens {
         pages.append(
             page(
                 "tokens/typography.md", title: "Text roles",
-                summary: "\(roles.count) text roles, `Westron.TextRole`: `.textRole(.body.regular)`",
-                intro:
+                summary: try names.fill(
+                    "\(roles.count) text roles, `Westron.TextRole`: `.{api:textRole}(.{token:typography.body.regular})`"
+                ),
+                intro: try names.fill(
                     "A text role is a `Westron.TextRole`, named after its path without `typography.`: "
-                    + "`typography.body.regular` is `.body.regular`. It sets a text's font and its tracking: "
-                    + "`.textRole(.heading.medium)` on any view, and on a part of a text inside interpolation, "
-                    + "`Text(\"\\(title) \\(Text(count).textRole(.footnote.medium))\")`. `Font(.body.regular)` is "
-                    + "its font alone, without the tracking. Each role follows Dynamic Type through its text style, "
-                    + "named in its entry with the font it draws. A role is chosen by what the text is, never by its "
-                    + "size; no `.font(.system(size:))` and no font of the product's own. A heading role does not "
-                    + "make a heading for assistive technology: add `.accessibilityAddTraits(.isHeader)` where the "
-                    + "screen has one. The design language: `../design-language/03-typography.md`.",
+                        + "`typography.body.regular` is `.{token:typography.body.regular}`. It sets a text's font and "
+                        + "its tracking: `.{api:textRole}(.{token:typography.heading.medium})` on any view, and on a "
+                        + "part of a text inside interpolation, `Text(\"\\(title) \\(Text(count).{api:textRole}("
+                        + ".{token:typography.footnote.medium}))\")`. `Font(.{token:typography.body.regular})` is its "
+                        + "font alone, without the tracking{!adapter:Font.init}. Each role follows Dynamic Type through "
+                        + "its text style, named in its entry with the font it draws. A role is chosen by what the text "
+                        + "is, never by its size; no `.font(.system(size:))` and no font of the product's own. A "
+                        + "heading role does not make a heading for assistive technology: add "
+                        + "`.accessibilityAddTraits(.isHeader)` where the screen has one. The design language: "
+                        + "`../design-language/03-typography.md`."),
                 body: section(roles, depth: 2), model: model))
 
         let dimensions = model.dimensions.map { scalar in
@@ -102,27 +115,31 @@ enum ContextTokens {
         var layoutBody = section(dimensions, depth: 1)
         if !numbers.isEmpty {
             layoutBody += ["", "## Numbers, `Double`", ""]
-            layoutBody += ContextMarkdown.wrap("`Double` statics: `.opacity(.opacity.disabled)`.")
+            layoutBody += ContextMarkdown.wrap(
+                try names.fill("`Double` statics{!adapter:Double.init}: `.opacity(.{token:opacity.disabled})`."))
             layoutBody += [""] + numbers.flatMap(item)
         }
         pages.append(
             page(
                 "tokens/layout.md", title: "Space, size, radius, stroke and opacity",
-                summary:
-                    "\(dimensions.count) lengths, `CGFloat` in points: `.padding(.space.card)`, "
-                    + "`VStack(spacing: .space.withinGroup)`, `.radius.card`, `.stroke.thin`, `.size.target.minimum`; "
-                    + "\(numbers.count) number\(numbers.count == 1 ? "" : "s"), `Double`: `.opacity.disabled`",
-                intro:
-                    "A length is a `CGFloat` static in points, named after its path: `space.card` is `.space.card`, "
-                    + "the step `space.200` is `.space200`: `.padding(.space.card)`, "
-                    + "`.padding(.horizontal, .space.page.narrow)`, `VStack(spacing: .space.withinGroup)`, "
-                    + "`RoundedRectangle(cornerRadius: .radius.card, style: .continuous)`, "
-                    + "`.frame(minHeight: .size.target.minimum)`, `lineWidth: .stroke.thin`. A role name "
-                    + "(`space.card`, `space.within-group`, `space.between-groups`, `space.page.narrow`, "
-                    + "`radius.card`) comes before a step of the ladder, which is for a gap no role names. A value "
-                    + "that differs by platform is the current platform's, chosen when the product builds. Never a "
-                    + "number of the product's own for a padding, a gap, a radius, a line or a size. The design "
-                    + "language: `../design-language/06-layout.md`, `../design-language/04-shape.md`.",
+                summary: try names.fill(
+                    "\(dimensions.count) lengths, `CGFloat` in points: `.padding(.{token:space.card})`, "
+                        + "`VStack(spacing: .{token:space.within-group})`, `.{token:radius.card}`, "
+                        + "`.{token:stroke.thin}`, `.{token:size.target.minimum}`; \(numbers.count) "
+                        + "number\(numbers.count == 1 ? "" : "s"), `Double`: `.{token:opacity.disabled}`"),
+                intro: try names.fill(
+                    "A length is a `CGFloat` static in points{!adapter:CGFloat.init}, named after its path: "
+                        + "`space.card` is `.{token:space.card}`, the step `space.200` is `.{token:space.200}`: "
+                        + "`.padding(.{token:space.card})`, `.padding(.horizontal, .{token:space.page.narrow})`, "
+                        + "`VStack(spacing: .{token:space.within-group})`, `RoundedRectangle(cornerRadius: "
+                        + ".{token:radius.card}, style: .continuous)`, "
+                        + "`.frame(minHeight: .{token:size.target.minimum})`, `lineWidth: .{token:stroke.thin}`. A "
+                        + "role name (`space.card`, `space.within-group`, `space.between-groups`, `space.page.narrow`, "
+                        + "`radius.card`) comes before a step of the ladder, which is for a gap no role names"
+                        + "{!token:space.between-groups}. A value that differs by platform is the current platform's, "
+                        + "chosen when the product builds. Never a number of the product's own for a padding, a gap, a "
+                        + "radius, a line or a size. The design language: `../design-language/06-layout.md`, "
+                        + "`../design-language/04-shape.md`."),
                 body: layoutBody, model: model))
 
         let transitions = model.transitions.map { transition in
@@ -139,24 +156,29 @@ enum ContextTokens {
         if !transitions.isEmpty {
             motionBody += ["", "## Motion, `Animation`", ""]
             motionBody += ContextMarkdown.wrap(
-                "A motion is a SwiftUI `Animation` static, named after its path without `motion.`: "
-                    + "`.animation(.fade, value: isSelected)`, `withAnimation(.move) { … }`. Never a duration, a curve "
-                    + "or a spring of the product's own. The design language: `../design-language/05-motion.md`.")
+                try names.fill(
+                    "A motion is a SwiftUI `Animation` static{!adapter:Animation.init}, named after its path "
+                        + "without `motion.`: `.animation(.{token:motion.fade}, value: isSelected)`, "
+                        + "`withAnimation(.{token:motion.move}) { … }`. Never a duration, a curve or a spring of the "
+                        + "product's own. The design language: `../design-language/05-motion.md`."))
             motionBody += [""] + transitions.flatMap(item)
         }
         if !shadows.isEmpty {
             motionBody += ["", "## Shadows, `Westron.Shadow`", ""]
             motionBody += ContextMarkdown.wrap(
-                "A shadow is a `Westron.Shadow`, named after its path without `shadow.`: `card.shadow(.raised)`. It "
-                    + "follows the theme. Never a `.shadow(color:radius:x:y:)` of the product's own.")
+                try names.fill(
+                    "A shadow is a `Westron.Shadow`, named after its path without `shadow.`: "
+                        + "`card.{adapter:View.shadow}(.{token:shadow.raised})`. It follows the theme. Never a "
+                        + "`.shadow(color:radius:x:y:)` of the product's own."))
             motionBody += [""] + shadows.flatMap(item)
         }
         pages.append(
             page(
                 "tokens/motion-and-shadow.md", title: "Motion and shadows",
-                summary:
-                    "\(transitions.count) motions, SwiftUI `Animation`: `.animation(.fade, value: …)`; "
-                    + "\(shadows.count) shadows, `Westron.Shadow`: `.shadow(.raised)`",
+                summary: try names.fill(
+                    "\(transitions.count) motions, SwiftUI `Animation`: `.animation(.{token:motion.fade}, value: …)`; "
+                        + "\(shadows.count) shadows, `Westron.Shadow`: "
+                        + "`.{adapter:View.shadow}(.{token:shadow.raised})`"),
                 intro: nil, body: motionBody, model: model))
         return pages
     }

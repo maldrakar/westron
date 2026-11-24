@@ -1,47 +1,14 @@
 <!-- Generated from spec/components/surface/surface.spec.yaml by `tools/westron generate`. Do not edit: change the
 source and generate again (decisions/0016). -->
 
-# Surface
+# Surface: details
 
-`surface` · approved · westron's own modifier · used by todo-app/lists-screen, todo-app/list-screen
-
-The ground a card or a panel stands on, which westron draws behind content the product lays out: a background, a corner
-and, where it stands off what is under it, a shadow.
-
-## In SwiftUI
-
-`import WestronUI`. A call writes at least:
-
-```swift
-content
-    .surface(.raised)
-```
-
-What WestronUI declares for it:
-
-```swift
-extension View {
-    public func surface(_: SurfaceVariant, outlined: Bool = false) -> some View
-}
-public enum SurfaceVariant: String, CaseIterable, Sendable { case raised, dragged, sunken }
-```
-
-## Options
-
-- `variant`, `SurfaceVariant`: `.raised`, `.dragged`, `.sunken`; no default. No default: every use names its kind. The
-  kinds differ by height: sunken lies below the canvas, raised barely lifts, dragged is unmistakable
-  (design-language/04, "Shadows").
-- `outlined`, `Bool`: by default `false`. The hairline for a surface that sits on a fill rather than on the canvas. In
-  the high-contrast themes a raised or dragged surface draws the thicker high-contrast line in any case, an outlined one
-  included.
-
-## Slots
-
-`content`: the view the modifier is applied to.
+The prose of westron's contract for `surface`, for the cases its card (`surface.md`) does not settle. A reference such
+as "decisions/0001" or "#120" here points into westron's repository: to the component's own decisions, westron's
+decisions or an issue, none of which is in this bundle. Names such as `container.gap` are the contract's bindings of
+westron's tokens, how WestronUI draws the component; a product never sets them.
 
 ## Accessibility
-
-- Role: `none`.
 
 A surface adds no role, trait or label of its own: assistive technology reads its content as if the surface were not
 there. Where a card is one thing to a screen reader, the product groups it, as it would without a surface.

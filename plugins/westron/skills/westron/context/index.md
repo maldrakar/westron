@@ -9,7 +9,8 @@ are in `../SKILL.md`.
 
 ## Components
 
-`import WestronUI`. Each line: the card, the shortest call, what the component is.
+`import WestronUI`. Each line: the card, the shortest call, what the component is. A card ends with a
+pointer to its details file, the contract's prose, for cases the card does not settle.
 
 - [Button](components/button.md), `.buttonStyle(…)`: A push button that runs an action: westron's style on the platform's own button, with a label and a leading icon.
 - [Checkbox](components/checkbox.md), `.toggleStyle(…)`: The round check that marks a task or a subtask done: westron's style on the platform's own toggle, which keeps its role, its value and its keyboard.

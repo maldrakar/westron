@@ -1,104 +1,14 @@
 <!-- Generated from spec/components/list-row/list-row.spec.yaml by `tools/westron generate`. Do not edit: change the
 source and generate again (decisions/0016). -->
 
-# ListRow
+# ListRow: details
 
-`list-row` · approved · westron's own view · used by todo-app/lists-screen, todo-app/list-screen
-
-The core row of a list or a tree: a title, a second line under it, a leading slot and a trailing slot, at a nesting
-level with guide lines, on a highlight that shows hover, pressed, selected and a drop onto it.
-
-## In SwiftUI
-
-`import WestronUI`. A call writes at least:
-
-```swift
-ListRow(action: { … }) { … }
-ListRow { … }
-….insertionMark(.top)
-….selected(isSelected)
-….dropTarget(isDropTarget)
-```
-
-What WestronUI declares for it:
-
-```swift
-public struct ListRow: View {
-    public init<Title: View, Subtitle: View, Leading: View, Trailing: View>(
-        level: Int = 0,
-        guides: Bool = true,
-        action: @escaping () -> Void,
-        @ViewBuilder title: () -> Title,
-        @ViewBuilder subtitle: () -> Subtitle = { EmptyView() },
-        @ViewBuilder leading: () -> Leading = { EmptyView() },
-        @ViewBuilder trailing: () -> Trailing = { EmptyView() }
-    )
-    public init<Title: View, Subtitle: View, Leading: View, Trailing: View>(
-        level: Int = 0,
-        guides: Bool = true,
-        @ViewBuilder title: () -> Title,
-        @ViewBuilder subtitle: () -> Subtitle = { EmptyView() },
-        @ViewBuilder leading: () -> Leading = { EmptyView() },
-        @ViewBuilder trailing: () -> Trailing = { EmptyView() }
-    )
-    public var body: some View
-}
-extension View {
-    public func insertionMark(_: ListRowInsertionEdge?, level: Int = 0) -> some View
-    public func selected(_: Bool) -> some View
-    public func dropTarget(_: Bool) -> some View
-}
-public enum ListRowInsertionEdge: String, CaseIterable, Sendable { case top, bottom }
-```
-
-## Options
-
-- `level`, `Int`: a whole number, at least 0; by default `0`. The row's nesting level: 0 at the top of a tree, one more
-  for each level below. The row is indented by container.indent for each level and, with guides on, draws one guide per
-  level above it.
-- `guides`, `Bool`: by default `true`. Whether a row at level 1 or deeper draws its guides. A tree draws them; a picker
-  that indents its rows by level to show where a choice stands, as the pilot's "Move to…" sheet does, may leave them
-  out. A row at level 0 draws none either way.
-
-## Slots
-
-`title`, `subtitle`, `leading` and `trailing`: each a `@ViewBuilder` closure named after it; `title` is the content
-every instance has, the others default to nothing.
-
-## States
-
-- `hover`: the system's, under a pointer: a Mac, an iPad with a pointer; touch never enters it. Never entered on
-  watchOS.
-- `focus`: the system's keyboard focus. Never entered on watchOS.
-- `pressed`: the system's, while a press is held.
-- `selected`: `.selected(_:)`, westron's modifier, on the component: the product passes its own state.
-- `disabled`: `.disabled(_:)`, the system's.
-- `dropTarget`: `.dropTarget(_:)`, westron's modifier, on the component: the product passes its own state. Never entered
-  on watchOS.
-
-## Forms
-
-The same look in several forms; the product picks one by what it writes.
-
-- `pressable`: the initializer with `action:`. A row with an action, such as opening a list or a task, or choosing a
-  list in a picker: a button to assistive technology, named by its words. States: `hover`, `focus`, `pressed`,
-  `selected`, `disabled`, `dropTarget`.
-- `static`: the initializer without `action:`. A row without an action, such as a subtask's row, whose check at the
-  start is its only control: its words are read as text, in one element, announced as selected while selected and as
-  unavailable while disabled. States: `selected`, `disabled`, `dropTarget`.
-
-## Marks
-
-- `insertion`, `.insertionMark(_: ListRowInsertionEdge?, level: Int = 0)`: Where a dragged row would land beside this
-  one: Rule(purpose: insertion) over the row's top or bottom edge, at the level the drop would take. None by default.
-  `edge`: The edge of the row the mark is drawn over. `level`: The level the dropped row would take, which may differ
-  from this row's: the mark starts at the leading edge of that level's leading slot.
+The prose of westron's contract for `list-row`, for the cases its card (`list-row.md`) does not settle. A reference such
+as "decisions/0001" or "#120" here points into westron's repository: to the component's own decisions, westron's
+decisions or an issue, none of which is in this bundle. Names such as `container.gap` are the contract's bindings of
+westron's tokens, how WestronUI draws the component; a product never sets them.
 
 ## Accessibility
-
-- Role: `button`. A person can activate it. Announced: `selected` as selected, `disabled` as disabled.
-- **The caller gives every instance a label**: it is the accessible name, also where it is not drawn. Name what it does
-  or holds, never what it looks like.
 
 These fields are the pressable form's. Such a row is one element with the role of a button: its name is the title, then
 the second line, then the words of the trailing slot, such as a count, in reading order, so that a person hears "Inbox,

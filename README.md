@@ -32,10 +32,28 @@ Phases are tracked as [milestones](../../milestones), tasks as [issues](../../is
 | `spec/components/` | Component contracts (phase 2) |
 | `platforms/apple/` | SwiftUI library and catalog app |
 | `tools/` | Generators, checks and scripts |
+| `plugins/westron/` | The Claude Code plugin for products: the skill and its generated reference (decisions/0016) |
 | `reports/` | Final research report |
 | `research_notes/` | Research notes with sources |
 
 Build and check commands are in [AGENTS.md](AGENTS.md).
+
+## For agents in a product
+
+westron's Claude Code plugin gives an agent that builds a product's UI the rules and a reference generated from the contracts, tokens, icons and design language (decisions/0016). This repository is its marketplace. In a session in the product's repository:
+
+```
+/plugin install westron --marketplace maldrakar/westron
+```
+
+or, from a shell, for everyone who works in that repository (commit the `.claude/settings.json` it writes):
+
+```sh
+claude plugin marketplace add maldrakar/westron --scope project
+claude plugin install westron@westron --scope project
+```
+
+The repository is private, so the machine needs git access to it: a GitHub SSH key in `ssh-agent`, or `gh auth login` and `gh auth setup-git` for HTTPS. Agents outside Claude Code read [`llms.txt`](llms.txt).
 
 ## License
 

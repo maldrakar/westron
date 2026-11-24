@@ -1,46 +1,14 @@
 <!-- Generated from spec/components/text/text.spec.yaml by `tools/westron generate`. Do not edit: change the source and
 generate again (decisions/0016). -->
 
-# Text
+# Text: details
 
-`text` · approved · an extension of `SwiftUI.Text` · used by todo-app/lists-screen, todo-app/list-screen
-
-A text role on the platform's own text view: westron adds no text type of its own, only the role.
-
-## In SwiftUI
-
-`import WestronUI`. A call writes at least:
-
-```swift
-Text("…")
-    .textRole(.body.regular)
-```
-
-What WestronUI declares for it:
-
-```swift
-extension View {
-    public func textRole(_: Westron.TextRole) -> some View
-}
-extension Text {
-    public func textRole(_: Westron.TextRole) -> Text
-}
-```
-
-## Options
-
-- `role`, `Westron.TextRole`: a token of `typography` (`../tokens/typography.md`); no default. No default: every use
-  names its role. The values are the tokens under typography, by their path after it, heading.large to code.strong, so
-  the contract and the tokens cannot drift. A role is chosen by what the text is, never by its size; a product that
-  needs a size the roles do not have asks for a new role (design-language/03).
-
-## Slots
-
-`label`: the `Text` itself.
+The prose of westron's contract for `text`, for the cases its card (`text.md`) does not settle. A reference such as
+"decisions/0001" or "#120" here points into westron's repository: to the component's own decisions, westron's decisions
+or an issue, none of which is in this bundle. Names such as `container.gap` are the contract's bindings of westron's
+tokens, how WestronUI draws the component; a product never sets them.
 
 ## Accessibility
-
-- Role: `text`.
 
 The text is its own accessible label; a role adds no trait. A heading role does not make the text a heading for
 assistive technology: the product marks a heading where the screen's structure has one, on Apple with
