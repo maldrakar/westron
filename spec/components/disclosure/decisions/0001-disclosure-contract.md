@@ -387,6 +387,45 @@ What XCUITest reads:
 - **The glyph's text role** (P6): the role that reaches the style, not a role set inside the label; a product sizes the
   chevron by a heading label by setting the role on the group.
 
+## Revision after the review of phase 4 (2026-11-24)
+
+The review of the whole phase put the components together and found the chevron's cell inside a disabled ListRow
+dimmed twice, and its fold locked by a row disabled alone. Measured on main (an in-process render, the most opaque
+pixel of the cell on a transparent ground, macOS, by `ImageRenderer` and by Core Animation's renderer alike): the
+chevron enabled 1.0; after a disabled text label 1.0, enabled, folding; in a disabled group after a text label 0.4; in
+a disabled row 0.16, 0.4 × 0.4, and disabled, so the branch could not be folded. The cell, drawn inside the row, read
+the row's `isEnabled` and applied `opacity.disabled` under the row's own. The same call, `.disabled(true)` on the
+label, so did one thing to the chevron after a ListRow and another after any other label.
+
+Neither contract said the opposite: the ListRow contract drew a disabled row "whole at opacity.disabled, its slots
+with it", and this one drew a disabled chevron at `opacity.disabled`; each read alone means once, and nothing decided
+the fold of a branch whose row alone is disabled (P12 keeps the expansion and leaves the label to the product). The
+revision, written into both contracts:
+
+- **Disabled is the group's.** The cell takes its enabled state and its look from its group, never from its label: the
+  style reads `isEnabled` where it lays the group out and sets it on the cell, wherever the cell is drawn. A label
+  disabled alone, a ListRow, pressable or static, or any other, leaves the chevron enabled, drawn whole and folding.
+  A disabled row is not pressable, but folding is navigation, and a chevron that still folds is an active control,
+  which the contract holds to 3:1 non-text contrast: dimmed to `opacity.disabled` it would not meet it. A disabled
+  group disables its chevron, whatever the label.
+- **Dimmed once.** A ListRow that draws the cell does not dim it with the rest of a disabled row: the row dims its
+  slots, its words, its guides and its highlight, and the cell dims itself, only when its group is disabled. So a
+  disabled group's chevron is at `opacity.disabled` once after a ListRow as after any other label.
+
+Measured after the revision, macOS (`ListRowTests.disabledRowDimsTheChevronOnce` by `ImageRenderer` on iOS and macOS,
+`DisabledRowPixelTests.chevronDimmedOnce` by Core Animation's renderer on macOS): enabled 1.0; in a row disabled alone,
+pressable or static, 1.0, as after a disabled text label; in a disabled group's row 0.4, as a disabled group's after a
+text label. `DisclosureStyleTests.disabledLabelKeepsTheFold` counts the cells drawn enabled (`DisclosureCellsEnabled`, a
+package-internal preference beside `DisclosureCellsDrawn`), and `DisclosureFoldClickTests` (macOS, in-process: mouse
+events sent to a window, as `ButtonHitAreaTests` sends them) clicks the chevron: it folds the branch after an enabled
+row, a disabled pressable row and a disabled static row, and not in a disabled group, and a click on the disabled row's
+title runs its action 0 times; on the code before the revision the disabled rows' chevrons folded nothing. A behaviour
+test pressed such a chevron on the iOS simulator while the revision was made, on a live sample, a row disabled alone:
+the row was announced as unavailable and took no press, the cell was enabled and folded and unfolded the branch. The
+sample is not kept: a disabled row on an audited page fails the contrast audit as an inactive control, which only a new
+suppression would excuse, so the ListRow supplement `composition`, which the audit does not walk, draws such a row
+instead.
+
 ## Pilot files read
 
 At todo-app's `0162887`: `Sources/DesignSystemComponents/` `ChevronStyle.swift`, `AccessoryModel.swift`,

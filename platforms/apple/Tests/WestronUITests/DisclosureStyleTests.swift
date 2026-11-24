@@ -196,6 +196,36 @@
             #expect(label.minX >= group.minX + DisclosureMetrics.minimumHitSide - 0.5, "\(label) \(group)")
         }
 
+        /// Disabled is the group's (the contract's disabled): the cell takes its enabled state from the group, so a label
+        /// disabled alone leaves the fold available whatever the label is, a ListRow, pressable or static, or a text;
+        /// a disabled group disables its cell whatever the label is. The cells drawn enabled are counted
+        /// (`DisclosureCellsEnabled`); that a click on that cell folds the branch, and on a disabled group's does not, is
+        /// DisclosureFoldClickTests.
+        @Test("a label disabled alone leaves the chevron enabled, a ListRow as any other; a disabled group disables it")
+        func disabledLabelKeepsTheFold() {
+            func enabledCells(groupDisabled: Bool = false, @ViewBuilder _ label: () -> some View) -> Int {
+                let record = Record()
+                TextFieldStyleTests.show(
+                    DisclosureGroup(isExpanded: .constant(false)) {
+                        EmptyView()
+                    } label: {
+                        label()
+                    }
+                    .disclosureGroupStyle(.chevron)
+                    .disabled(groupDisabled)
+                    .onPreferenceChange(DisclosureCellsEnabled.self) { record.cells.append($0) }
+                    .frame(width: 320))
+                return record.cells.last ?? -1
+            }
+            #expect(enabledCells { ListRow(action: {}) { Text("Work") } } == 1)
+            #expect(
+                enabledCells { ListRow(action: {}) { Text("Work") }.disabled(true) } == 1, "a disabled pressable row")
+            #expect(enabledCells { ListRow { Text("Work") }.disabled(true) } == 1, "a disabled static row")
+            #expect(enabledCells { Text("Work").disabled(true) } == 1, "a disabled text label")
+            #expect(enabledCells(groupDisabled: true) { ListRow(action: {}) { Text("Work") } } == 0)
+            #expect(enabledCells(groupDisabled: true) { Text("Work") } == 0)
+        }
+
         @Test("a row inside a branch's content is no label: it draws no chevron, and no empty cell by default")
         func contentRowsDrawNoCell() throws {
             let frames = Frames()

@@ -43,9 +43,11 @@
 # used only from its own file. Then:
 #   - a change to a component's implementation (its WestronUI directory, its generated `<Name>+Contract.swift`, its
 #     contract) also selects every entry whose unit reaches a unit of that implementation through uses, at any depth:
-#     ListRow's change selects `disclosure` (DisclosurePage → ListRow) and the floating Button entries
-#     (ButtonFloatingPage → ListRow); Rule's selects `list-row` (ListRowPage → ListRowDragSamples →
-#     `.insertionMark` → ListRowInsertionMark → Rule);
+#     Checkbox's change selects `disclosure` (DisclosurePage → DisclosureBlockHeader →
+#     `Toggle(isOn:accessibilityLabel:)`), Disclosure's selects `list-row` (ListRowPage → listRowChevronToggles →
+#     `.onDisclosureToggle`), Rule's selects `color-in-use` (ColorInUsePage → TasksSample → Rule) but not `list-row`,
+#     whose way to Rule goes through ListRow, a base component (ListRowPage → ListRowDragSamples → `.insertionMark` →
+#     ListRowInsertionMark → Rule);
 #   - a change to a component's page also selects every entry that reaches a unit of the page: `FlowLayout` in
 #     ButtonPages.swift is used by the Checkbox, Chip and color pages;
 #   - the cut, declared: a base component (`base_components` below, each with its reason) is drawn on so many entries
@@ -59,9 +61,10 @@
 #     page's shared code out of the page, or raise the limit and accept larger audits. A declared base component whose
 #     change would select no more than the limit fails it too: the declaration is stale and would skip entries that
 #     fit. The scan runs on every call, whatever the paths, so the pull request that adds the use that crosses the
-#     limit fails its own scope job, even when it changes only a shared file. On 2026-11-24 four counts stand at the
-#     limit exactly (Button's implementation and page, ListRow, Surface: 5 each), with no headroom on purpose: the next
-#     use of any of them asks for the decision. The counts are in tools/apple/audit-scope-test.sh, which pins them.
+#     limit fails its own scope job, even when it changes only a shared file. On 2026-11-24 three counts stand at the
+#     limit exactly (Button's implementation and page, Surface: 5 each), with no headroom on purpose: the next use of
+#     any of them asks for the decision. ListRow stood there too, until #147 took it to 7 and the owner declared it
+#     base. The counts are in tools/apple/audit-scope-test.sh, which pins them.
 #   - Text has no directory of its own (its code is in the shared TokenAdapters.swift), so it is shared, as before.
 # The snapshot matrix (WestronCatalog/Generated/, SnapshotMatrix/) and the catalog's host (the root files that declare
 # no entry) are not read: they render the pages, and no entry draws them. A unit is the finest grain: an entry that
@@ -90,6 +93,8 @@ fan_out_limit=5
 base_components="
 Icon: every glyph of the catalog is an Icon, drawn on 13 other entries on 2026-11-24 (Chip, Disclosure, ListRow,
   TextField's glyphs, the color and status pages)
+ListRow: the row of every list, drawn on 7 other entries on 2026-11-24 (the four floating Button entries, Disclosure,
+  and Checkbox's two, whose check dims with a disabled row, #147); the owner's decision of 2026-11-24
 "
 
 note() { echo "audit-scope: $*" >&2; }

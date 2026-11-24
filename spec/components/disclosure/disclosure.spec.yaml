@@ -39,7 +39,12 @@ description: >-
   05's cap of 150 ms for travel's reduced fade has no token yet (chapter 05, open question 1; decisions/0001,
   "Open"); the press keeps its tint and loses its scale. Disabled draws the chevron and its
   cell at opacity.disabled, with no hover or press; the group keeps its expansion, and the label and the content are
-  the product's, which .disabled reaches as it reaches any view. The chevron meets 3:1 as a non-text glyph on the
+  the product's, which .disabled reaches as it reaches any view. Disabled is the group's: the cell takes its enabled
+  state and its look from the group, not from its label, so a label disabled alone, a ListRow or any other, leaves the
+  chevron enabled, drawn whole and folding the group, the same whatever the label is; a disabled row is not
+  pressable, but folding is navigation (the ListRow contract). A ListRow that draws the cell does not dim it with the
+  rest of a disabled row, so a disabled group's chevron is drawn at opacity.disabled once, by itself, whatever its
+  label. The chevron meets 3:1 as a non-text glyph on the
   canvas, the surface, the sunken ground, the hover and pressed tints and a selected row, 4.5:1 in high contrast
   (color.icon.tertiary's declared pairs). A leaf in a tree, a row with nothing to fold, lines up with the branches
   beside it when the product sets the context alignsLeaves on the tree (`context`).

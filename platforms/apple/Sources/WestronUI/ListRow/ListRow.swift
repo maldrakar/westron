@@ -132,6 +132,17 @@ extension EnvironmentValues {
     /// Told when the pressable row's system Button begins and ends a press: the catalog counts the presses, so that a
     /// UI test can see whether a press on a control in a slot also presses the row. Package-internal.
     @Entry var listRowPressObserver: (@MainActor @Sendable (Bool) -> Void)? = nil
+
+    /// Whether a disabled ListRow around this view already draws it at `opacity.disabled`: a disabled row dims what it
+    /// holds once, so a control in its slots, a Checkbox at its start, draws no opacity of its own for disabled while
+    /// this is true, and a row inside it none either (the contract's disabled). The Disclosure chevron's cell is not
+    /// dimmed by the row (`listRowOpacity`) and dims itself as its group's state says. Package-internal: only the row
+    /// sets it.
+    @Entry var listRowDimsContent: Bool = false
+
+    /// The opacity the row's layout draws its parts at, the slots, the words and the guides, but not the Disclosure
+    /// chevron's cell: `opacity.disabled` in a disabled row, else 1. Package-internal: only the row sets it.
+    @Entry var listRowOpacity: Double = 1
 }
 
 // MARK: - The row
@@ -259,6 +270,7 @@ private struct ListRowHighlight: ViewModifier {
     @Environment(\.isDropTarget) private var isDropTarget
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.forcedListRowStates) private var forcedStates
+    @Environment(\.listRowDimsContent) private var dimmedAround
 
     func body(content: Content) -> some View {
         // What the system and the environment report, and what the catalog forces for a screenshot.
@@ -270,10 +282,16 @@ private struct ListRowHighlight: ViewModifier {
         let tokens = ListRowTokens(form: form, states: states)
         let radius = CGFloat(ListRowMetrics.radius)
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        // A disabled row dims what it draws once: here, unless a disabled row around it already does. The layout dims
+        // each part but the chevron's cell (`listRowOpacity`), whose look follows its group's state, as after any
+        // other label; a control in a slot reads `listRowDimsContent` and draws no opacity of its own for disabled.
+        let opacity = (dimmedAround ? nil : tokens.opacity).map(Double.init) ?? 1
 
         return
             content
             .environment(\.listRowTitleFont, tokens.titleFont)
+            .environment(\.listRowDimsContent, dimmedAround || opacity < 1)
+            .environment(\.listRowOpacity, opacity)
             .background {
                 ZStack(alignment: .leading) {
                     if let background = tokens.background {
@@ -295,6 +313,7 @@ private struct ListRowHighlight: ViewModifier {
                 .animation(ListRowMotion.highlight, value: effective.contains(.selected))
                 .animation(ListRowMotion.highlight, value: effective.contains(.dropTarget))
                 .animation(ListRowMotion.press, value: effective.contains(.pressed))
+                .opacity(opacity)
             }
             // The drop target's ring, above the row's content, so that the guides do not cross it.
             .overlay {
@@ -305,6 +324,7 @@ private struct ListRowHighlight: ViewModifier {
                     }
                 }
                 .animation(ListRowMotion.highlight, value: effective.contains(.dropTarget))
+                .opacity(opacity)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
             }
@@ -317,7 +337,6 @@ private struct ListRowHighlight: ViewModifier {
                 // The system's focus ring follows the highlight.
                 .contentShape(.focusEffect, shape)
             #endif
-            .opacity(tokens.opacity.map(Double.init) ?? 1)
     }
 
     /// The states that hold, from what the system and the environment report.
@@ -379,6 +398,7 @@ private struct ListRowLayout: View {
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.listRowTitleFont) private var titleFont
+    @Environment(\.listRowOpacity) private var opacity
     #if os(iOS)
         @Environment(\.horizontalSizeClass) private var sizeClass
     #endif
@@ -404,11 +424,15 @@ private struct ListRowLayout: View {
                     .textRole(ListRowMetrics.slotRole)
                     .anchorPreference(key: ListRowLeadingBounds.self, value: .bounds) { $0 }
                     .listRowProbed("leading")
+                    .opacity(opacity)
                     .padding(.trailing, spacing.gap)
             }
             wordsElement(stacks: stacks)
+                .opacity(opacity)
             if let cell {
-                // In the slots' role, so that the chevron sizes from the row's text as an Icon at the end does.
+                // In the slots' role, so that the chevron sizes from the row's text as an Icon at the end does. Not at
+                // the row's opacity: the cell's look follows its group's state, which a row disabled alone leaves
+                // enabled, so that it folds the branch and is drawn as after any other label (the contract's disabled).
                 cell
                     // The cell is named by the row's title, read here in the row's own tree: the group's label view,
                     // drawn again inside the cell's representation, would resolve to the outermost group's in a tree.
@@ -429,13 +453,17 @@ private struct ListRowLayout: View {
                             slotWidth: leading.map { proxy[$0].width } ?? 0),
                         width: ListRowMetrics.guideWidth(compact: compact))
                 }
+                .opacity(opacity)
                 .accessibilityHidden(true)
             }
         }
     }
 
     /// The title, the second line and, at the accessibility sizes, the trailing slot under them; otherwise the trailing
-    /// slot at the end. Together they are the row's words: one element to assistive technology.
+    /// slot at the end. Together they are the row's words: one element to assistive technology. The text is padded
+    /// vertically, and the trailing slot at the end stands beside that padding, on the title's first line, as the
+    /// leading slot does: a frame taller than the line, such as a static Chip's, stands in the padding and grows the
+    /// row only where it would cross the row's edge.
     @ViewBuilder private func wordsElement(stacks: Bool) -> some View {
         let column = HStack(alignment: .firstTextBaseline, spacing: 0) {
             VStack(alignment: .leading, spacing: subtitleGap) {
@@ -452,13 +480,16 @@ private struct ListRowLayout: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, stacks ? 0 : paddingVertical)
             if !stacks, let trailing = parts.trailing {
                 trailing
                     .textRole(ListRowMetrics.slotRole)
                     .padding(.leading, spacing.trailingGap)
             }
         }
-        .padding(.vertical, paddingVertical)
+        // Stacked, nothing stands beside the text: the padding goes around the whole column, as it always has, so that
+        // the row's height rounds to the same pixels.
+        .padding(.vertical, stacks ? paddingVertical : 0)
         .listRowProbed("words")
         switch words {
         case .drawn:

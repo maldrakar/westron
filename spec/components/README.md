@@ -26,7 +26,16 @@ delegation) is the first with a drawn text label on a view, a constraint on a sl
 owner's delegation (decisions/0014), is an own view with Icon's shape whose nil list color is its own default, a
 neutral tile, and whose fill of a list's color is solid, as the owner chose. Chip ([`chip/`](chip/chip.spec.yaml),
 #117), approved on 2026-11-22 by the coordinating agent under the owner's delegation, is the first in several forms,
-each on its own system control, and the first with a case over several states at once. Disclosure
+each on its own system control, and the first with a case over several states at once. TextField's revision of
+2026-11-22 (#115, approved by the coordinating agent under the owner's delegation, text-field/decisions/0003) adds
+the options leadingIcon and trailingIcon, decorative glyphs at the field's start and end, so that a search field is
+this field; they are no axis of the generated snapshot matrix. ListRow ([`list-row/`](list-row/list-row.spec.yaml),
+#119), approved on 2026-11-22 by the coordinating agent under the owner's delegation, is the core row a product
+composes its rows from (decisions/0014): the first own view in two forms, with an action and without, the first with
+a mark (`marks: insertion`, Rule's insertion point over its edge) and the first that holds other components in its
+slots; its revision of 2026-11-24, after the review of phase 4, says that a disabled row dims what it holds once and
+leaves its branch's fold to the chevron's group, and that the trailing slot stands in the row's padding as the
+leading one does. Disclosure
 ([`disclosure/`](disclosure/disclosure.spec.yaml), #120), approved on 2026-11-22 by the coordinating agent under the
 owner's delegation, is the first component an Apple OS lacks (`watchos: { status: unavailable }`, as SwiftUI has no
 DisclosureGroup there), the first with the role `disclosure`, and the first that sets a context for other components

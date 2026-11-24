@@ -66,6 +66,8 @@ private struct CheckboxLookBody<Label: View>: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.forcedCheckboxStates) private var forcedStates
+    /// Whether a disabled ListRow around the check already dims it: then the check draws no opacity of its own.
+    @Environment(\.listRowDimsContent) private var dimmedByRow
     /// The space between the check's hit area and its label, which grows with the text.
     @ScaledMetric private var gap: CGFloat = .space50
 
@@ -105,7 +107,8 @@ private struct CheckboxLookBody<Label: View>: View {
         .contentShape(Rectangle())
         .scaleEffect(motion.scale(pressed: scalesDown))
         .animation(.press, value: scalesDown)
-        .opacity(tokens.opacity.map(Double.init) ?? 1)
+        // A disabled row dims its content once (the ListRow contract's disabled).
+        .opacity(dimmedByRow ? 1 : tokens.opacity.map(Double.init) ?? 1)
     }
 }
 

@@ -170,9 +170,11 @@ The hand-written `<Component>MatrixCell` (Button's is in `Components/ButtonPages
 as on the `button-states` pages, disabled and loading with the real modifiers; Text's with `.textRole(_:)`; Surface's
 (`Components/SurfacePages.swift`) with `.surface(_:outlined:)` around sample content, a plain surface on the canvas
 and an outlined one on a fill (a raised or dragged one in a sunken well, a sunken one in a raised card); Rule's
-(`Components/RulePages.swift`) between two lines or two words; Icon's, Checkbox's, Chip's and Text field's in
-`Components/IconPages.swift`, `CheckboxPages.swift`, `ChipPages.swift` and `TextFieldPages.swift`; Chip's draws each
-of its forms on sheets of its own, in the states the form enters. The rows of a state the OS never
+(`Components/RulePages.swift`) between two lines or two words; Icon's, Checkbox's, Chip's, Text field's, IconTile's,
+ListRow's and Disclosure's in `Components/IconPages.swift`, `CheckboxPages.swift`, `ChipPages.swift`,
+`TextFieldPages.swift`, `IconTilePages.swift`, `ListRowPages.swift` and `DisclosurePages.swift`; Chip's draws each
+of its forms on sheets of its own, in the states the form enters; ListRow's draws the sample row at level 1, in its
+form, and Disclosure's a group with a text label, collapsed unless the state is expanded. The rows of a state the OS never
 enters are left out, as on those pages; a value the OS does not offer is drawn with its fallback and marked, and a
 combination a `warning` constraint advises against is drawn with a caption. A state no token binding names in a case looks as rest,
 and the sheet and the review page say so: Button's focus, whose ring the system draws. The sheets are not catalog
@@ -221,7 +223,7 @@ still drives every generated sheet and combination:
   (`onlyOn`), and its note says why. One that must still be drawn there for the reviewer, but whose pixels the OS
   does not repeat from one render to the next, names that OS in `notCompared` with the reason: its pictures there are
   rendered and shown, and `compare`, `check` and `record` hold them to their presence and size, not their pixels
-  (below, "Comparing"). There are thirty-eight (`SnapshotMatrix/Supplements.swift`, `Supplement.all`):
+  (below, "Comparing"). There are forty-four (`SnapshotMatrix/Supplements.swift`, `Supplement.all`):
   - Button, `label-without-icon`: its generated cells have an icon and a label or are icon-only, so a label without an
     icon, which while loading has the indicator before the label and widens the button (P13), is shown on the sheets
     with iconOnly false: every variant, size and role, floating or not, at rest and in each state, but what the
@@ -263,14 +265,18 @@ still drives every generated sheet and combination:
     holds two states at once; `list-colors-1` to `list-colors-4`, the twelve list colors lit, three to a sheet; on
     each control, `text-only-selectable` and `text-only-pressable`, a label that is only text, short and truncated; and
     in every form, `long-label`, a long label in a narrow place.
-  - ListRow, eight: `selected`, the selected row's bar in every state and theme, also beside a title whose role the
+  - ListRow, nine: `selected`, the selected row's bar in every state and theme, also beside a title whose role the
     product set; `tree`, rows at levels 0 to 3 with their guides; `slots`, a row with a second line, a leading icon
     and a trailing count; `task`, a static row with a check in its leading slot; `long-title`, a title on one line
     truncated at level 4; `drag`, the insertion mark at a level, drawn above the next row's highlight, and a drop
-    target; `right-to-left`, the slots, indent, guides and bar mirrored; and `accessibility5`, the trailing slot under
-    the text at level 0. Every one is drawn at every text size of the sheet, accessibility5 included, where the row's
-    horizontal spacing stops at its xxxLarge width (spec/components/list-row, decisions/0001, D2). The branches in
-    `slots`, `right-to-left` and `accessibility5` draw the real Disclosure chevron (#120).
+    target; `right-to-left`, the slots, indent, guides and bar mirrored; `accessibility5`, the trailing slot under
+    the text at level 0; and `composition`, the lists screen's rows as the pilot composes them: IconTiles at the
+    start, a count and a static Chip at the end, then the same as a Disclosure branch with a leaf and a collapsed
+    branch whose row is disabled alone, guides on only. Every one but `composition` is drawn at every text size of the sheet, accessibility5
+    included, where the row's horizontal spacing stops at its xxxLarge width (spec/components/list-row,
+    decisions/0001, D2); `composition` stops at xxxLarge, as Disclosure's `tree` does, since five rows with their
+    trailing slots stacked are taller than a phone's screen at accessibility5. The branches in `slots`,
+    `right-to-left`, `accessibility5` and `composition` draw the real Disclosure chevron (#120).
   - Disclosure, five, on iOS and macOS only (SwiftUI has no DisclosureGroup on watchOS): `expanded`, expanded in each
     state; `right-to-left`, collapsed and expanded; `tree`, three levels of ListRows with `.disclosureAlignsLeaves()`;
     `block-header`, a title with its date over two rows with checks; and `accessibility5`, a label that wraps at
@@ -514,18 +520,19 @@ contract `spec/components/<id>/`, and gives the entries that page declares; a Fo
 with other files gives its own entries. A component's change also gives the entries that draw it, since components
 draw each other: the script derives who uses whom from the sources on every run, with no list to keep (its header,
 "Use"). It splits WestronUI and the catalog's pages into units (top-level declarations, extension members, each
-entry) and follows names from unit to unit, so ListRow's change also gives `disclosure` and the floating Button
-entries, Rule's gives `list-row`, `list-row-in-list` and `color-in-use`, and a page's code other pages use
-(`FlowLayout` in ButtonPages.swift) gives theirs. The cut is declared: a base component, listed with its reason in
-the script's `base_components` (on 2026-11-24 Icon alone, drawn on 13 other entries), gives its own entries only, says
-so in the job's log, and leaves the rest to the nightly run; the search does not go on through it. The limit is a
-tripwire, not a switch: a change that would add more than 5 entries beyond its component's own (one leg) fails the
-scope job, naming the component, its count and the choices (declare it base, move a page's shared code out of the
-page, or raise the limit), and so does a declared base component back within the limit. The scan runs on every pull
-request, so the one that adds the crossing use fails its own job. Four counts stand at the limit exactly (Button's
-implementation and page, ListRow, Surface), with no headroom on purpose: the next use of any of them asks for the
-decision. `tools/apple/audit-scope-test.sh` pins every count; `tools/apple/audit-scope.sh --uses` prints them with the
-units each entry reaches the change through. Everything else gives nothing: shared paths (tokens, the shared files
+entry) and follows names from unit to unit, so Checkbox's change also gives `list-row`, `list-row-in-list` and
+`disclosure`, Rule's gives `color-in-use`, and a page's code other pages use (`FlowLayout` in ButtonPages.swift) gives
+theirs. The cut is declared: a base component, listed with its reason in the script's `base_components` (on 2026-11-24
+Icon, drawn on 13 other entries, and ListRow, drawn on 7 since #147), gives its own entries only, says so in the job's
+log, and leaves the rest to the nightly run; the search does not go on through it, so Rule's change no longer gives
+`list-row`, which draws Rule only inside ListRow (its insertion mark). The limit is a tripwire, not a switch: a
+change that would add more than 5 entries beyond its component's own (one leg) fails the scope job, naming the
+component, its count and the choices (declare it base, move a page's shared code out of the page, or raise the
+limit), and so does a declared base component back within the limit. The scan runs on every pull request, so the one
+that adds the crossing use fails its own job. Three counts stand at the limit exactly (Button's implementation and
+page, Surface), with no headroom on purpose: the next use of any of them asks for the decision. ListRow stood there
+too, until #147 took it to 7 and the owner declared it base (2026-11-24). `tools/apple/audit-scope-test.sh` pins
+every count; `tools/apple/audit-scope.sh --uses` prints them with the units each entry reaches the change through. Everything else gives nothing: shared paths (tokens, the shared files
 of WestronUI, the catalog's host, the audit test, the scripts) touch every entry and wait for the nightly run, or for
 a run by hand on the branch. The audit is skipped when there is nothing to audit, and on a push to `main`. The script
 reads the registry, `Catalog.entries` in `Catalog.swift`, from its array literals and its `append(.<name>)` lines (an
@@ -539,8 +546,8 @@ What a change to one file of each component directory selects, before (main at 4
 | Button/ | its 10 entries | + text-field-behavior, text-field-focus-framed, text-field-focus-inline, color-in-use, controls (15) |
 | Checkbox/ | checkbox, checkbox-in-list | + list-row, list-row-in-list, disclosure (5) |
 | Disclosure/ | disclosure | + list-row (2) |
-| ListRow/ | list-row, list-row-in-list | + the four button-floating entries, disclosure (7) |
-| Rule/ | rule | + list-row, list-row-in-list, color-in-use (4) |
+| ListRow/ | list-row, list-row-in-list | + the four button-floating entries, disclosure (7); since #147, base: its own (2) |
+| Rule/ | rule | + list-row, list-row-in-list, color-in-use (4); since #147, ListRow base: + color-in-use (2) |
 | Surface/ | surface | + rule, text-field-behavior, text-field-focus-framed, text-field-focus-inline, color-in-use (6) |
 | Chip/, Icon/ (base), IconTile/, TextField/ | their own | their own, unchanged |
 

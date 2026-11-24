@@ -117,7 +117,9 @@ public struct ComponentMatrix: Sendable {
         /// draws one sheet of a few rows rather than every generated sheet again; nil keeps every row.
         let rows: [String]?
         /// The values of the column option the supplement keeps, so that a column whose every cell a constraint forbids
-        /// on its sheets is not drawn again (Button's tertiary, which does not float); nil keeps every column.
+        /// on its sheets is not drawn again (Button's tertiary, which does not float), or a column whose option the
+        /// cell does not draw (ListRow's `composition`, guides on only); its combinations are left out with it. nil
+        /// keeps every column.
         let columns: [String]?
         /// The most rows of one picture at a text size that splits sheets (`TextSize.limit`), where its cells are
         /// taller than a generated cell; nil takes the text size's own limit.
@@ -341,6 +343,11 @@ public struct ComponentMatrix: Sendable {
         var matrix = self
         matrix.combinations = combinations.filter { combination in
             guard keeps(combination.values) else { return false }
+            if let columns = supplement.columns, let columnIndex,
+                !columns.contains(combination.values[columnIndex])
+            {
+                return false
+            }
             guard let rows = supplement.rows, let rowIndex else { return true }
             return rows.contains(combination.values[rowIndex])
         }
