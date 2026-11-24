@@ -539,40 +539,47 @@ struct APIParityTests {
         #expect(generated[0].contains("public enum Spacing: a new public top-level type in a generated token file"))
     }
 
-    @Test("a reviewed adapter outside the adapters file is accepted in its own file only, with its own names")
-    func otherAdapters() throws {
+    @Test("a context value a contract reads expects its one shared modifier, in any file; without a reader it is none")
+    func contextRead() throws {
         let category = """
             extension View {
                 public func category(_ category: Westron.Category?) -> some View { self }
             }
 
             """
-        #expect(try problems(files(extra: ["Category.swift": category])) == [])
+        let reads = "reads:\n  category: { description: In a list's color., unset: the accent. }\n"
+        let yaml = contractYAML().replacingOccurrences(of: "accessibility:", with: reads + "accessibility:")
+        let reader = try contract(yaml)
+        #expect(reader.contract.reads == ["category"])
+        let module = try files(generated: generatedSwift(yaml), extra: ["Context/Category.swift": category])
+        #expect(problems([reader], module) == [])
 
-        // Anywhere else it is a modifier no contract gives.
-        let elsewhere = try problems(files(extra: ["Context.swift": category]))
-        #expect(elsewhere.count == 1)
-        #expect(elsewhere[0].contains("public func View.category: a public modifier on View that no contract gives"))
-        // The message names every place a reviewed adapter may live.
+        // Missing, it is reported at the contract's `reads`.
+        let missing = problems([reader], try files(generated: generatedSwift(yaml)))
+        #expect(missing.count == 1)
         #expect(
-            elsewhere[0].contains(
-                "a reviewed adapter in TokenAdapters.swift (APIParity.adapters) or in Category.swift "
-                    + "(APIParity.otherAdapters)"))
+            missing.first?.contains(
+                "missing: the shared context modifier of category, `public func category(_: Westron.Category?) -> "
+                    + "some View` in extension View") == true, "\(missing)")
 
-        // The file holds only the names listed for it, each taking a westron value.
-        let unlisted = try problems(
-            files(extra: [
-                "Category.swift": category
-                    + "extension View {\n    public func listTint(_ c: Westron.Category?) -> some View { self }\n}\n"
-            ]))
-        #expect(unlisted.count == 1)
-        #expect(unlisted[0].contains("public func View.listTint: a public modifier on View that no contract gives"))
-        let notWestron = try problems(
-            files(extra: [
-                "Category.swift": "extension View {\n    public func category(_ c: String?) -> some View { self }\n}\n"
-            ]))
-        #expect(notWestron.count == 1)
-        #expect(notWestron[0].contains("public func View.category: a public modifier on View that no contract gives"))
+        // Another signature differs from the contract.
+        let changed = problems(
+            [reader],
+            try files(
+                generated: generatedSwift(yaml),
+                extra: [
+                    "Category.swift":
+                        "extension View {\n    public func category(_ c: String?) -> some View { self }\n}\n"
+                ]
+            ))
+        #expect(changed.count == 1)
+        #expect(changed.first?.contains("the shared context modifier of category differs from the contract") == true)
+
+        // With no contract that reads it, it is a modifier no contract gives, in its old file too.
+        let unread = try problems(files(extra: ["Category.swift": category]))
+        #expect(unread.count == 1)
+        #expect(unread[0].contains("public func View.category: a public modifier on View that no contract gives"))
+        #expect(unread[0].contains("a context's modifier, or a reviewed adapter in TokenAdapters.swift"))
     }
 
     @Test("the token files let no component API through: style protocols, View modifiers, style overloads, new types")

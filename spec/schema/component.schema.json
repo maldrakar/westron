@@ -63,6 +63,13 @@
       "propertyNames": { "$ref": "#/$defs/name" },
       "additionalProperties": { "$ref": "#/$defs/contextSetting" }
     },
+    "reads": {
+      "description": "Values the component takes from its context rather than from an option of one instance: a product sets each once, on the component or on any view around it, and every westron component below that reads it takes it, the closest setting winning, as with the system's tint. Each is a value of westron's shared context, named as the one shared modifier that sets it, which no contract owns: `category`, a list's color, set on Apple by `.category(_: Westron.Category?)`. The entry says what the component draws with the value and what it draws where no view around it sets one. A setting another contract declares in its `context`, such as Disclosure's alignsLeaves, is described there, not here (spec/conventions.md, \"Context a style reads\").",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "enum": ["category"] },
+      "additionalProperties": { "$ref": "#/$defs/contextRead" }
+    },
     "constraints": {
       "description": "Rules between options: when the options have the values in `when`, they must have the values in `require`. A rule on a slot names it in `when` under the key `slots` instead of options: when an instance fills that slot, the options must have the values in `require`, one value each, with severity error (Rule: a labelled rule is a horizontal separator).",
       "type": "array",
@@ -100,6 +107,16 @@
     "text": {
       "type": "string",
       "minLength": 1
+    },
+    "contextRead": {
+      "description": "One value the component reads from its context: what it draws with the value (`description`), and what it draws where no view around it sets one (`unset`), the contract's own default, which its token bindings give.",
+      "type": "object",
+      "required": ["description", "unset"],
+      "additionalProperties": false,
+      "properties": {
+        "description": { "$ref": "#/$defs/text" },
+        "unset": { "$ref": "#/$defs/text" }
+      }
     },
     "tokenPath": {
       "description": "The dotted path of a token in tokens/, without braces: `color.background.accent`.",

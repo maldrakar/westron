@@ -62,6 +62,11 @@ private func pill() throws -> ComponentCard {
     return cards[0]
 }
 
+/// A card's text with its wrapped lines joined, for prose that a wrap may break anywhere.
+private func unwrapped(_ text: String) -> String {
+    text.replacingOccurrences(of: "\n  ", with: " ").replacingOccurrences(of: "\n", with: " ")
+}
+
 private func path(_ relative: String) -> String { repositoryRoot.appendingPathComponent(relative).path }
 
 /// The generator over this repository's sources.
@@ -84,7 +89,8 @@ private func realCards() throws -> (cards: [ComponentCard], names: ContextNames)
         contracts: contracts, icons: try IconRegistry.load(file: path(IconRegistry.defaultFile)), conventions: "",
         chapters: [], readme: nil)
     let cards = try AgentContext.cards(
-        sources, textRoles: model.textRoles.map { AppleTokensSwift.reference($0.members) })
+        sources, textRoles: model.textRoles.map { AppleTokensSwift.reference($0.members) },
+        categories: model.categories?.categories.map(\.caseName) ?? [])
     return (cards, ContextNames(model: model, functions: Set(cards.first?.expected.functions.map(\.name) ?? [])))
 }
 
@@ -225,6 +231,45 @@ struct AgentContextTests {
         #expect(disclosure.contains("`.disclosureAlignsLeaves(_: Bool = true)`, on an ancestor"))
     }
 
+    @Test("a component that reads a context shows its modifier in the call, where it is set and what it draws without")
+    func contextRead() throws {
+        let cards = try realCards().cards
+        // The modifier is expected once, for every reader.
+        let expected = try #require(cards.first).expected.functions.filter { $0.name == "category" }
+        #expect(expected.count == 1)
+        #expect(expected.first?.signature == "category(_: Westron.Category?) -> some View")
+        #expect(Set(expected.first?.contracts.map(\.contract.id) ?? []) == ["checkbox", "chip", "icon-tile"])
+        let readers = cards.filter { !$0.contract.reads.isEmpty }.map(\.contract.id)
+        #expect(readers.sorted() == ["checkbox", "chip", "icon-tile"])
+
+        let tile = try #require(cards.first { $0.contract.id == "icon-tile" }).markdown()
+        #expect(
+            tile.contains(
+                "```swift\nIconTile(.tray)\nIconTile(.tray, label: \"…\")\nIconTile(.tray)\n    .category(.blue)\n"))
+        #expect(tile.contains("    public func category(_: Westron.Category?) -> some View\n"))
+        #expect(
+            unwrapped(tile).contains(
+                "It reads `category` from its context: `.category(_:)` on the component itself, or"))
+        #expect(unwrapped(tile).contains("Without it, the tile is neutral"))
+        let check = try #require(cards.first { $0.contract.id == "checkbox" }).markdown()
+        #expect(check.contains("Toggle(…)\n    .toggleStyle(.check)\n    .category(.blue)\n"))
+        // A component that reads nothing shows no such modifier.
+        let row = try #require(cards.first { $0.contract.id == "list-row" }).markdown()
+        #expect(!row.contains(".category("))
+    }
+
+    @Test("the text card names the slots that give their text a role, so that every use is every call")
+    func textRoleSlots() throws {
+        let cards = try realCards().cards
+        let text = unwrapped(try #require(cards.first { $0.contract.id == "text" }).markdown())
+        #expect(text.contains("takes that role with no `.textRole(_:)`"))
+        #expect(text.contains("the `title` and `subtitle` of `ListRow`"))
+        #expect(text.contains("the `label` of `Rule`"))
+        // Only the card of the text role's option says it.
+        let button = try #require(cards.first { $0.contract.id == "button" }).markdown()
+        #expect(!button.contains("takes that role with no"))
+    }
+
     @Test("a name the prose writes is looked up, and an unknown one fails")
     func names() throws {
         let names = try realCards().names
@@ -252,6 +297,7 @@ struct AgentContextTests {
             "`RoundedRectangle(cornerRadius: .{token:radius.card}, style: .continuous)`",
             "`.opacity(.{token:opacity.disabled})`", "`.animation(.{token:motion.fade}, value: x)`",
             "`.{api:selected}(_:)`", "`.{api:loading}(_:)`", "`.{api:dropTarget}(_:)`",
+            "`.{adapter:View.foregroundStyle}(.{token:color.text.secondary})`", "`.{api:category}(_:)`",
         ] {
             let text = try names.fill(template)
             #expect(skill.contains(text), "SKILL.md writes \(text)")

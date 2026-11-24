@@ -160,6 +160,14 @@ public struct AppleComponents: Generator {
     /// The parameters of a context setting's modifier.
     static let contextParameters = [SwiftDeclarations.Parameter(label: "_", type: "Bool", defaultValue: "true")]
 
+    /// The values of westron's shared context a contract may read (`reads`, spec/conventions.md, "Context a style
+    /// reads"), each with the one parameter of the shared modifier named after it, which sets it on `View`, hand-written:
+    /// `.category(_: Westron.Category?)`, nil being each reading contract's default. It is named after the token type it
+    /// takes, never after a component. The schema's `reads` names exactly these values.
+    static let contextValues: [String: SwiftDeclarations.Parameter] = [
+        "category": .init(label: "_", type: "Westron.Category?")
+    ]
+
     /// Whether the generator writes an API for a contract: approved or later, styled on an Apple system control, or, in
     /// a contract with forms, on one per form.
     public static func generates(_ contract: ComponentContract) -> Bool {

@@ -41,7 +41,9 @@ owner's delegation, is the first component an Apple OS lacks (`watchos: { status
 DisclosureGroup there), the first with the role `disclosure`, and the first that sets a context for other components
 (`context: alignsLeaves`, which ListRow reads). Button's revision of 2026-11-23 (#121, the owner's answers and the
 coordinating agent's, decisions/0015 at the repository's root) adds the option `floating`, the first look that stands
-on the system's glass and the first `container.shadow` on a control.
+on the system's glass and the first `container.shadow` on a control. The revision of 2026-11-24 (#167, agreed by the
+owner after the pilot's check of the agent context, Checkbox's decisions/0001) declares the context a component reads:
+Checkbox, Chip and IconTile name `reads: category`, the list's color, which their prose had described alone.
 
 ## Format
 
@@ -170,6 +172,14 @@ are fine.
   icons (Rule), so on any other contract, such as a style, a modifier or an icon's view, it is an error: nothing would
   enforce it. No option is named `slots`. The snapshot matrix draws no slot, so it leaves out nothing for such a
   constraint.
+- **Context it sets and context it reads.** `context` names the settings a component's contract gives a product to
+  make once around many instances, for the components it says read them (Disclosure's `alignsLeaves`, which ListRow
+  reads). `reads` names the values of westron's shared context a component takes from where it stands rather than
+  from an option, each with what it draws in the value and what it draws where nothing around it sets one:
+  `reads: { category: { description: …, unset: … } }` (Checkbox, Chip and IconTile: a list's color). A value's one
+  setter is the shared modifier named after it, `.category(_:)` on Apple, on the component or on any view around it;
+  the schema lists the names, `category` so far. The parity lint expects that modifier from the contracts that read
+  it, and each reader's card shows it in its call (`spec/conventions.md`, "Context a style reads").
 - **No role of its own.** `accessibility.role: none` is a component that adds no role for assistive technology, as
   ARIA's `none`: its content, if it has any, is read as if the component were not there (Surface), and a component
   with no content is hidden. No contract has that shape yet: an unlabelled Rule is hidden too, but its role is

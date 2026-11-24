@@ -11,7 +11,9 @@ the options whose values are tokens or icons, `extension-on-system-control` ("Ex
 2026-11-22 (#116), approved by the coordinating agent under the owner's delegation: a view's drawn text label, a
 constraint on a slot, and the role `heading` ("Own components", the table). On 2026-11-22 (#119), approved by the
 coordinating agent under the owner's delegation: an own view with slots, forms and states, an integer option, and marks
-(ListRow; "Own components").
+(ListRow; "Own components"). On 2026-11-24 (#167), agreed by the owner after the pilot's check of the agent context: a
+contract declares the context it reads (`reads`), and the parity lint expects `.category(_:)` from it ("Context a style
+reads").
 
 A component contract (`spec/components/<id>/<id>.spec.yaml`) is neutral: options, states, slots, constraints, token
 bindings, accessibility and a `platforms` block. This document is the one rule for how each of those concepts becomes
@@ -56,7 +58,7 @@ decisions/0003 rejected.
 | **Bool option** | A labeled `Bool` argument of the style overload, named as in the contract, with the contract's default: `.buttonStyle(.primary, size: .m, iconOnly: true)`; so too on an own component's modifier or initializer, `.surface(.sunken, outlined: true)`. Not an environment modifier, which would make the option look like a state, and not a system modifier the style cannot read (`.labelStyle(.iconOnly)`, see "Slots"). A bool that is a state follows the state rows | A boolean attribute, present or absent; an absent attribute is `false` (Q1) | A boolean GObject property, or a style class | A `Boolean` parameter with the contract's default |
 | **States the system control has** (pressed, hover, focus, disabled, checked) | The system owns them, and the style reads them: pressed is `configuration.isPressed`, disabled is `@Environment(\.isEnabled)` set by `.disabled(_:)`, focus is `@Environment(\.isFocused)`, hover is `onHover`. A control whose value is on or off is in `checked` when it is on: `ToggleStyleConfiguration.isOn`; its configuration has no `isPressed`, so a toggle style follows a press itself, as it follows hover (`SystemStyles`). Touch iOS and watchOS never enter hover, and `onHover` does not exist on watchOS. The system draws the focus ring (chapter 08), except where a component's contract says westron draws it: today the text field's, on iOS and macOS (spec/components/text-field, the owner's decision of 2026-11-18). A text field style reads focus with a `@FocusState` it binds to the field: `@Environment(\.isFocused)` there describes the field's ancestors, not the field. Where states hold at once, the first matching case of a binding wins, as the contract orders them | CSS pseudo-classes: `:active`, `:hover`, `:focus-visible`, `:disabled`; a native element still matches `:hover` while disabled, and `:hover` and `:active` while `aria-busy`, so westron's CSS excludes what the contract excludes | CSS pseudo-classes `:active`, `:hover`, `:focus-visible`, `:disabled`; disabled is `set_sensitive(false)` | `interactionSource` (`collectIsPressedAsState`, `collectIsHoveredAsState`, `collectIsFocusedAsState`); disabled is the `enabled = false` parameter, Compose's positive name |
 | **States the system control lacks** (loading) | A modifier sets an environment value, and the style reads it (decisions/0003): `.loading(isSaving)`. One shared modifier per state, named as the state, for every component that has it: `.loading(_:)`, not `.buttonLoading(_:)` | An attribute that is also the accessible state: `aria-busy="true"`, styled by westron's CSS | A westron style class plus the accessible state `gtk::AccessibleState::Busy` | A `Boolean` parameter (`loading = true`), as Compose passes per-component state; a cascading value would go through `CompositionLocal` |
-| **Context a style reads** (a list's color) | A value a contract takes from the context, not from an option or a state: one shared modifier, named after the token type it takes, sets an environment value that every westron style which takes it reads, and it cascades like `.tint(_:)`: `.category(_: Westron.Category?)`, nil each contract's default: the accent for Checkbox (#31), the neutral tile for IconTile (#118). A reviewed adapter for the parity lint, in a file of its own (below, "Context a style reads") | A custom property or class on an ancestor, read by westron's CSS (#40) | A style class on an ancestor (phase 7) | A `CompositionLocal` (phase 8) |
+| **Context a style reads** (a list's color; `reads`) | A value a contract takes from the context, not from an option or a state, declared in its `reads`: one shared modifier, named after the token type it takes, sets an environment value that every westron style which takes it reads, and it cascades like `.tint(_:)`: `.category(_: Westron.Category?)`, nil each contract's default (`unset`): the accent for Checkbox (#31) and Chip (#117), the neutral tile for IconTile (#118). The parity lint expects it from the contracts that read it (below, "Context a style reads") | A custom property or class on an ancestor, read by westron's CSS (#40) | A style class on an ancestor (phase 7) | A `CompositionLocal` (phase 8) |
 | **Slots** | System control: the control's own `@ViewBuilder` label. The contract's `label` and `icon` are the title and the icon of a `Label` inside it: `Button { save() } label: { Label("Save", icon: .check) }`. A decorative glyph beside a control whose label is no `Label`, as a text field's, is not a slot but an optional option whose values are icons, an argument of the style (row above; TextField's `leadingIcon`). Own component: a `@ViewBuilder` closure per slot, named after the slot, plus convenience initializers that take text and a `Westron.Icon`, as SwiftUI's `Label` does | The element's content; `<slot>` and `<slot name="icon">` in a custom element | Child widgets: `adw::ButtonContent` for an icon and a label; an own component exposes a child property per slot | `@Composable` lambda parameters: `content`, `icon: (@Composable () -> Unit)? = null` |
 | **Extension of a system view** (`extension-on-system-control`) | The base takes no style (SwiftUI has no `textStyle`), so westron adds a modifier in `extension View`, named after what it sets, and the same on the base where the base's own modifiers return it: `.textRole(.heading.large)` on any view, and `Text.textRole(_:) -> Text`. No westron type and no style. The base is one of `SystemStyles.withoutStyle`; a base with a style modifier takes a style instead, and `spec check` reports the other strategy (below) | The native element the product chooses, with westron's class | The stock widget with a style class (`GtkLabel`): in GTK terms a style on the system control, so the strategy there is `style-on-system-control` | A `TextStyle` from `WestronTheme` passed to the Material3 composable (`Text(style = …)`) |
 | **Constraints between options** | The contract states them (`when` / `require` / `severity`) and the validator checks the contract (#18). The catalog and the snapshot matrix (#24) leave out combinations a constraint forbids. What code does with a forbidden combination is Q3. A constraint on a slot (`when: { slots: [label] }`, severity `error`, one value for each option it requires), allowed only on an own view whose one slot is a drawn label, is kept by the API: the initializers that take the slot leave those options out (Rule: `Rule("Work")` takes no axis and no purpose, below, "Own components"); the matrix draws no slot, so it leaves nothing out for it | As SwiftUI: checked in the contract; runtime behavior with Q3 | As SwiftUI | As SwiftUI |
@@ -356,19 +358,34 @@ ForEach(list.tasks) { task in
 ```
 
 Some of what a component draws comes from where it stands, not from the call: a checked Checkbox fills its disc with
-its list's color, and a row does not pass that color to each control in it. The contract describes the context's
-value and binds its default (the accent for Checkbox, the neutral tile for IconTile); the platform carries the value
-down the tree.
+its list's color, and a row does not pass that color to each control in it. The contract declares each value it reads
+in its top-level `reads` block, by the value's name, with what it draws in the value (`description`) and what it
+draws where nothing around it sets one (`unset`), the default its bindings give: the accent for Checkbox and Chip, the
+neutral tile for IconTile. The platform carries the value down the tree.
 
+```yaml
+reads:
+  category:
+    description: In a list's color, the tile is filled with color.category.<name>.fill and its glyph … on-fill.
+    unset: the tile is neutral, color.background.muted with its glyph in color.text.secondary, and never the accent.
+```
+
+- **Westron's shared context, and who sets it.** A name in `reads` is a value of westron's shared context, which no
+  contract owns, and its setter is the one shared modifier named after it: so far only `category`, a list's color
+  (the schema lists the names; `AppleComponents.contextValues` their Apple parameter). A setting another component's
+  contract declares in its `context` (below, "Context a component sets") is not named in `reads`; that contract's
+  description names the components that read it, as Disclosure's `alignsLeaves` names ListRow.
 - **One modifier per kind of value, shared.** `.category(_:)` takes a `Westron.Category?`, nil being the contract's
   default, and sets an environment value that every westron style which takes a list's color reads; the closest one
-  wins, as with `.tint(_:)`. It is named after the token type it takes, as `.textRole(_:)` is, never after a
-  component: there is no `.checkboxColor(_:)`.
-- **The parity lint.** No contract option gives it, since it is the context's, and it is not a state, whose modifier
-  takes a `Bool`. It is a reviewed adapter in a file of its own, `APIParity.otherAdapters` (`Category.swift`), held to
-  the adapters' rule that it takes a `Westron.*` value, and added there where review sees it. A contract concept for
-  context values, which would let the lint derive the modifier, waits for a second such value (Checkbox's
-  decisions/0001, P15).
+  wins, as with `.tint(_:)`. A product sets it on the component itself or once on any view around it, a row, a list or
+  a screen. It is named after the token type it takes, as `.textRole(_:)` is, never after a component: there is no
+  `.checkboxColor(_:)`. It is hand-written beside the environment value (`Category.swift`).
+- **The parity lint** expects the shared modifier of each value that a contract with Apple API reads, once for all its
+  readers, as it expects one shared state modifier for every component that has the state: `public func
+  category(_: Westron.Category?) -> some View` on `View`. Without a reader, the modifier is a public modifier no
+  contract gives, and the lint reports it (Checkbox's decisions/0001, P15 and its revision of 2026-11-24).
+- **The agent context** shows the modifier in the card of each reader, in its call, with what the component draws
+  without it.
 
 ### Context a component sets
 

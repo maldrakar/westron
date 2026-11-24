@@ -47,6 +47,14 @@ options:
 slots: [label]
 states: [checked, pressed, focus, disabled]
 
+reads:
+  category:
+    description: >-
+      In a list's color, a checked check fills its disc with color.category.<name>.control and draws its mark in
+      color.category.<name>.on-control. The unchecked ring does not change.
+    unset: >-
+      a checked check is drawn in the accent, its disc color.background.accent and its mark color.text.on-accent.
+
 tokens:
   ring.color:
     token: color.border.default
@@ -96,9 +104,9 @@ platforms:
       configuration.isOn. The list's color reaches the style through the environment: .category(_:), a shared
       modifier that takes a Westron.Category? (nil, the default, is the accent) and cascades like .tint(_:), set once
       around a list's rows: .category(Westron.Category(rawValue: list.color)). It is named for what it sets, not for
-      the check, so that every westron control that takes the list's color reads it; the API parity lint accounts for
-      it as a reviewed adapter in its own file (APIParity.otherAdapters, Category.swift), since no contract option can
-      give it (decisions/0001, P15). ToggleStyleConfiguration has no isPressed, so the style's body is a system Button
+      the check, so that every westron control that takes the list's color reads it; the contract declares that it
+      reads it (`reads: category`), and the API parity lint expects the shared modifier from the contracts that read
+      it (decisions/0001, P15 and its revision of 2026-11-24). ToggleStyleConfiguration has no isPressed, so the style's body is a system Button
       that toggles the value, drawn by a ButtonStyle, which sees isPressed; the button is the check's activation and
       its focusable element (keyboard focus on macOS: platforms.apple.macos). For assistive technology the body is
       replaced by the system's own Toggle on the same value and label (accessibilityRepresentation), so assistive

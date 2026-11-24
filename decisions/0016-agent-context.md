@@ -106,10 +106,12 @@ None is settled here; the first two are #37's.
    The plugin's root is a small directory, not the repository's root: Claude Code copies a marketplace plugin into
    its cache and leaves out every file outside the plugin's directory (Claude Code's plugin loading reference, "In-place
    and copied plugins"), so the skill and its bundle live inside it. A product adds this repository as a marketplace
-   and enables the plugin (`README.md`, "For agents in a product"); the repository is private, so the machine needs git
-   access to it. With no `version` in the manifest, Claude Code takes the commit of the plugin's directory as its
-   version, so an update reaches users with the next commit that changes it; `claude plugin validate` warns about the
-   missing version. Open point 2 stays open: a product pinned to an older WestronUI still reads the newest bundle.
+   and installs the plugin (`README.md`, "For agents in a product": `claude plugin marketplace add maldrakar/westron
+   --scope project`, then `claude plugin install westron@westron --scope project`); the repository is public, so
+   neither needs credentials (corrected on 2026-11-24, #167: this text first called the repository private, from a
+   wrong brief, and asked for git access to it). With no `version` in the manifest, Claude Code takes the commit of
+   the plugin's directory as its version, so an update reaches users with the next commit that changes it; `claude
+   plugin validate` warns about the missing version. Open point 2 stays open: a product pinned to an older WestronUI still reads the newest bundle.
 
    Changes from the proposal: the tables of tokens are split by kind, since one table of every token ran to several
    hundred lines; each card holds only what a call needs, and the contract's prose goes to a details file beside it,

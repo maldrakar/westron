@@ -184,3 +184,29 @@ No state modifier is expected, since `SystemStyles` lists every state of the con
 implementation writes `CheckboxVariantStyle` and the environment value that carries the list's color (P15) in `WestronUI`,
 and `CheckboxMatrixCell` in the catalog. If the list's color becomes an option of the contract, the generator must
 first give a style a token-valued option, which it reports today as not supported.
+
+## Revision of 2026-11-24: the context it reads, declared (#167)
+
+Agreed by the owner on 2026-11-24, after the check of the agent context on the pilot (#37: a fresh agent with only the
+skill moved todo-app's "Move to…" picker to westron). The IconTile card promised "the list's color" beside an
+initializer that takes only the icon; the modifier that sets the color, `.category(_:)`, was in no contract, and the
+agent found it in a details file. P15 had foreseen it: "a contract concept for a value read from the context […] can
+replace the adapter when a second context value appears". There are three readers now, Checkbox, Chip and IconTile.
+
+- **The schema** gains a top-level `reads` block beside `context` (the settings a contract gives others): the values of
+  westron's shared context the component takes from where it stands, each with `description`, what it draws in the
+  value, and `unset`, what it draws where nothing around it sets one. The names are the schema's, `category` so far,
+  each set by the one shared modifier named after it, which no contract owns; that is "who sets it". A setting another
+  contract declares in its `context`, Disclosure's `alignsLeaves`, stays described there: naming it in a reader's
+  `reads` would make `spec check`, which reads one contract at a time, look into another.
+- **The contracts.** Checkbox, Chip and IconTile declare `reads: category`, verified in WestronUI's sources: the only
+  readers of the environment value are `CheckboxVariantStyle`, Chip's `ChipSurface` (every form, though only the
+  selectable form is ever checked) and `IconTile`. Icon takes its color from `.foregroundStyle`, ListRow and the others
+  read no list color. Nothing they draw changes, and no generated file of the platforms does.
+- **The parity lint** expects `public func category(_: Westron.Category?) -> some View` on `View` from the contracts
+  that read it, as it expects a shared state modifier, and `APIParity.otherAdapters`, which listed it alone, is gone
+  (`spec/conventions.md`, "Context a style reads").
+- **The agent context.** Each reader's card shows the modifier in its call, `IconTile(.tray).category(.blue)`, and says
+  where it may be set and what the component draws without it, from the contract's `description` and `unset`.
+
+Not here: consumer prose for every contract (`summary`, `usage`, `examples`), which the owner decided against for now.

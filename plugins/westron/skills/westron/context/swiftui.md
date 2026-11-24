@@ -102,12 +102,13 @@ matching case of a binding wins, as the contract orders them
 A modifier sets an environment value, and the style reads it (decisions/0003): `.loading(isSaving)`. One shared modifier
 per state, named as the state, for every component that has it: `.loading(_:)`, not `.buttonLoading(_:)`
 
-### Context a style reads (a list's color)
+### Context a style reads (a list's color; `reads`)
 
-A value a contract takes from the context, not from an option or a state: one shared modifier, named after the token
-type it takes, sets an environment value that every westron style which takes it reads, and it cascades like
-`.tint(_:)`: `.category(_: Westron.Category?)`, nil each contract's default: the accent for Checkbox (#31), the neutral
-tile for IconTile (#118). A reviewed adapter for the parity lint, in a file of its own
+A value a contract takes from the context, not from an option or a state, declared in its `reads`: one shared modifier,
+named after the token type it takes, sets an environment value that every westron style which takes it reads, and it
+cascades like `.tint(_:)`: `.category(_: Westron.Category?)`, nil each contract's default (`unset`): the accent for
+Checkbox (#31) and Chip (#117), the neutral tile for IconTile (#118). The parity lint expects it from the contracts that
+read it
 
 ### Slots
 

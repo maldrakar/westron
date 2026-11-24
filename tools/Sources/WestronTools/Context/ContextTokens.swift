@@ -42,8 +42,8 @@ enum ContextTokens {
                     "A list's color is a `Westron.Category`, kept by its name and read back with "
                         + "`Westron.Category(rawValue: list.color)`: "
                         + categories.categories.map { "`\($0.rawValue)`" }.joined(separator: ", ") + ". "
-                        + "`.{adapter:View.category}(_:)` on an ancestor draws the westron controls that take a list's "
-                        + "color in it, such as a checked Checkbox and an IconTile; nil keeps each control's own "
+                        + "`.{api:category}(_:)` on a control or on any view around it draws in that color the westron "
+                        + "controls that read it, whose cards show it in their call; nil keeps each control's own "
                         + "default. A product's own drawing reads a role of the category, a `Westron.Color`, by what "
                         + "the call draws: `.{adapter:View.foregroundStyle}(category.{category:text})` for text, "
                         + "`.{adapter:View.background}(category.{category:background})` for a ground. The roles:"))

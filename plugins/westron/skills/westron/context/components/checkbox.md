@@ -17,6 +17,9 @@ Toggle(…)
     .toggleStyle(.check)
 Toggle(isOn: $isOn, accessibilityLabel: "…")
     .toggleStyle(.check)
+Toggle(…)
+    .toggleStyle(.check)
+    .category(.blue)
 ```
 
 What WestronUI declares for it:
@@ -28,6 +31,7 @@ extension Toggle where Label == ModifiedContent<EmptyView, AccessibilityAttachme
 }
 extension View {
     public func toggleStyle(_: CheckboxVariant) -> some View
+    public func category(_: Westron.Category?) -> some View
 }
 ```
 
@@ -38,6 +42,12 @@ color or a font:
 ```swift
 public enum CheckboxVariant: String, CaseIterable, Sendable { case check }
 ```
+
+It reads `category` from its context: `.category(_:)` on the component itself, or once on any view around it, such as a
+row or a list, sets it for every westron component below that reads it, and the closest setting wins. In a list's color,
+a checked check fills its disc with color.category.<name>.control and draws its mark in
+color.category.<name>.on-control. The unchecked ring does not change. Without it, a checked check is drawn in the
+accent, its disc color.background.accent and its mark color.text.on-accent.
 
 ## Options
 

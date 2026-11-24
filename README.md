@@ -47,7 +47,7 @@ claude plugin marketplace add maldrakar/westron --scope project
 claude plugin install westron@westron --scope project
 ```
 
-The repository is private, so the machine needs git access to it: a GitHub SSH key in `ssh-agent`, or `gh auth login` and `gh auth setup-git` for HTTPS. Agents outside Claude Code read [`llms.txt`](llms.txt).
+The repository is public, so neither command needs credentials. Agents outside Claude Code read [`llms.txt`](llms.txt).
 
 ## License
 

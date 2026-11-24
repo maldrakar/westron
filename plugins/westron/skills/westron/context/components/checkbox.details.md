@@ -49,14 +49,14 @@ it: Toggle(task.title, isOn: $task.isDone).toggleStyle(.check).textRole(.body.re
 The list's color reaches the style through the environment: .category(_:), a shared modifier that takes a
 Westron.Category? (nil, the default, is the accent) and cascades like .tint(_:), set once around a list's rows:
 .category(Westron.Category(rawValue: list.color)). It is named for what it sets, not for the check, so that every
-westron control that takes the list's color reads it; the API parity lint accounts for it as a reviewed adapter in its
-own file (APIParity.otherAdapters, Category.swift), since no contract option can give it (decisions/0001, P15).
-ToggleStyleConfiguration has no isPressed, so the style's body is a system Button that toggles the value, drawn by a
-ButtonStyle, which sees isPressed; the button is the check's activation and its focusable element (keyboard focus on
-macOS: platforms.apple.macos). For assistive technology the body is replaced by the system's own Toggle on the same
-value and label (accessibilityRepresentation), so assistive technology is meant to meet the toggle's role and value and
-no button. The circle's diameter is 1.2 times the line height of the text role that reaches the style, and its hit area
-is a square of at least size.target.minimum and at least size.control.m around it, the label beside it included
+westron control that takes the list's color reads it; the contract declares that it reads it (`reads: category`), and
+the API parity lint expects the shared modifier from the contracts that read it (decisions/0001, P15 and its revision of
+2026-11-24). ToggleStyleConfiguration has no isPressed, so the style's body is a system Button that toggles the value,
+drawn by a ButtonStyle, which sees isPressed; the button is the check's activation and its focusable element (keyboard
+focus on macOS: platforms.apple.macos). For assistive technology the body is replaced by the system's own Toggle on the
+same value and label (accessibilityRepresentation), so assistive technology is meant to meet the toggle's role and value
+and no button. The circle's diameter is 1.2 times the line height of the text role that reaches the style, and its hit
+area is a square of at least size.target.minimum and at least size.control.m around it, the label beside it included
 (decisions/0001, P10, P16, P17; the minimum target since 2026-11-20, when size.control.m on iOS fell below the touch
 target, so that no hit area shrank). A row whose title is a separate text writes its check with no drawn label, through
 westron's initializer of the system Toggle that takes no label view and requires the accessible name, Toggle(isOn:
