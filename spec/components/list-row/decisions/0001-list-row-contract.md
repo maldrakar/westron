@@ -578,8 +578,8 @@ review.
 Against the first measurement: the branch and its cell and the static row are new on the page; the static row is one
 element of text at the row's height (first measured at its words' height, 20 pt, and given the row's); the
 rest is as before. The
-words are listed under each button as texts too, as XCUITest lists them under a westron Button; nothing outside the
-button repeats them. The level as more content is not visible to XCUITest; a unit test (`spokenLevel`) holds that it is
+words are listed under each button as texts too, as XCUITest listed them then under a westron Button with a Label
+(since #131 it lists nothing under a westron Button); nothing outside the button repeats them. The level as more content is not visible to XCUITest; a unit test (`spokenLevel`) holds that it is
 attached, "Level, 2" at level 1 and nothing at level 0, for both forms, and VoiceOver's "More content" rotor reads it.
 
 **Presses.** A press on a row runs its action and chooses it; a press at the row's far end, past its words, and one in
