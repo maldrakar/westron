@@ -130,6 +130,10 @@ struct AgentContextTests {
         #expect(!index.contents.contains(".details.md"))
         #expect(!llms.contents.contains(".details.md"))
         #expect(index.contents.split(separator: "\n").count < 80)
+        // Where the option enums come from, for views and for shared code (decisions/0017).
+        let indexText = index.contents.replacingOccurrences(of: "\n", with: " ")
+        #expect(indexText.contains("are in `WestronContract`, which `WestronUI` re-exports"))
+        #expect(indexText.contains("`WestronTokens` for `Westron.Icon` and `Westron.Category`"))
     }
 
     @Test("a card has the call, the declarations, the options, the states, the name and the constraints")
@@ -146,6 +150,13 @@ struct AgentContextTests {
             ))
         #expect(card.contains("    public func loading(_: Bool) -> some View"))
         #expect(card.contains("public enum PillVariant: String, CaseIterable, Sendable { case solid, quiet }"))
+        // The enums apart from WestronUI's API: they are WestronContract's, which shared code imports alone.
+        let joined = card.replacingOccurrences(of: "\n", with: " ")
+        #expect(joined.contains("Its enums are in `WestronContract`, which `WestronUI` re-exports"))
+        #expect(joined.contains("imports `WestronContract` instead"))
+        let vocabulary = try #require(card.range(of: "Its enums are in `WestronContract`"))
+        #expect(card[vocabulary.upperBound...].contains("public enum PillVariant"))
+        #expect(!card[..<vocabulary.lowerBound].contains("public enum PillVariant"))
         // The options, with their values, defaults and descriptions; a sentence naming a binding is left out.
         #expect(card.contains("- `variant`, `PillVariant`: `.solid`, `.quiet`; no default. The fill."))
         #expect(card.contains("- `size`, `PillSize?`: `.s`, `.m`; left out, the size comes from `controlSize`"))

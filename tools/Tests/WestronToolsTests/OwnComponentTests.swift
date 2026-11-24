@@ -77,8 +77,12 @@ private func contract(_ yaml: String, id: String) throws -> ComponentContract {
     try ComponentContract(yaml: yaml, source: source(id))
 }
 
+/// The generated vocabulary of an own component, its enums in WestronContract: without states or forms, it is all the
+/// generator writes for one.
 private func generated(_ yaml: String, id: String = "surface") throws -> GeneratedFile? {
-    try AppleComponents.file(for: contract(yaml, id: id), source: source(id))
+    let files = try AppleComponents.files(for: contract(yaml, id: id), source: source(id))
+    #expect(files.count <= 1, "an own component without states or forms gives WestronUI no generated file")
+    return files.first
 }
 
 /// The message the generator throws for a contract, nil when it generates.
@@ -136,14 +140,14 @@ struct OwnComponentTests {
     @Test("a modifier: the enum of its variant, and the signature the lint expects")
     func modifier() throws {
         let file = try #require(try generated(ownYAML()))
-        #expect(file.path == "platforms/apple/Sources/WestronUI/Generated/Surface+Contract.swift")
+        #expect(file.path == "platforms/apple/Sources/WestronContract/Generated/Surface+Contract.swift")
         #expect(
             file.contents.hasPrefix(
                 "// Generated from spec/components/surface/surface.spec.yaml by `tools/westron generate`. Do not edit:")
         )
         #expect(
             file.contents.replacingOccurrences(of: "\n// ", with: " ").contains(
-                "the modifier `surface(_:outlined:)` is hand-written in WestronUI/Surface/"))
+                "Surface's vocabulary from its contract: the enums of its options. WestronContract imports nothing"))
         #expect(
             file.contents.contains(
                 """
@@ -158,7 +162,7 @@ struct OwnComponentTests {
 
                 """))
         // Only the enum: no import, no modifier, no type for the bool.
-        #expect(!file.contents.contains("import"))
+        #expect(!file.contents.contains("\nimport "))
         #expect(!file.contents.contains("func "))
         let api = try AppleComponents.Own(contract(ownYAML(), id: "surface"), source: source("surface"))
         #expect(api.form == .modifier && api.name == "surface")
@@ -169,10 +173,8 @@ struct OwnComponentTests {
     @Test("a view: the enum of its option, and an initializer with every option labeled and its default")
     func view() throws {
         let file = try #require(try generated(viewYAML(), id: "rule"))
-        #expect(file.path == "platforms/apple/Sources/WestronUI/Generated/Rule+Contract.swift")
-        #expect(
-            file.contents.replacingOccurrences(of: "\n// ", with: " ").contains(
-                "the view `Rule` and its `Rule.init(axis:)` are hand-written in WestronUI/Rule/"))
+        #expect(file.path == "platforms/apple/Sources/WestronContract/Generated/Rule+Contract.swift")
+        #expect(!file.contents.contains("\nimport "))
         #expect(
             file.contents.contains(
                 "public enum RuleAxis: String, CaseIterable, Sendable {\n    case horizontal\n    case vertical\n}\n"))
@@ -291,12 +293,14 @@ struct OwnComponentTests {
         let view = (try contract(viewYAML(id: "button-variant"), id: "button-variant"), source("button-variant"))
         let plainStyle = (try contract(styleYAML(), id: "button"), source("button"))
         #expect(throws: AppleComponents.Problems.self) { try AppleComponents.files(for: [plainStyle, view]) }
-        // Without a collision, the style's file and the own component's come in the contracts' order.
+        // Without a collision, the style's files and the own component's come in the contracts' order, each
+        // contract's vocabulary first; an own component without states or forms gives WestronUI no generated file.
         let surface = (try contract(ownYAML(), id: "surface"), source("surface"))
         #expect(
             try AppleComponents.files(for: [plainStyle, surface]).map(\.path) == [
+                "platforms/apple/Sources/WestronContract/Generated/Button+Contract.swift",
                 "platforms/apple/Sources/WestronUI/Generated/Button+Contract.swift",
-                "platforms/apple/Sources/WestronUI/Generated/Surface+Contract.swift",
+                "platforms/apple/Sources/WestronContract/Generated/Surface+Contract.swift",
             ])
     }
 
@@ -338,12 +342,11 @@ struct OwnComponentTests {
         }
         var sources: [(path: String, text: String)] = []
         for (yaml, id) in yamls {
-            if let file = try generated(yaml, id: id) {
-                sources.append(("\(root)/Generated/\(componentTypeName(id))+Contract.swift", file.contents))
-            }
+            sources += try generatedSources(try contract(yaml, id: id), source: source(id))
         }
         sources += files.sorted { $0.key < $1.key }.map { ("\(root)/\($0.key)", $0.value) }
-        return APIParity.check(contracts: contracts, files: sources, sourceRoot: root).problems.map(\.description)
+        return APIParity.check(contracts: contracts, files: sources, sourceRoot: root, contractRoot: "WestronContract")
+            .problems.map(\.description)
     }
 
     private static let surfaceSwift = """

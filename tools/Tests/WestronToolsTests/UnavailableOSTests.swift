@@ -99,8 +99,17 @@ struct UnavailableOSTests {
         #expect(lines.last { !$0.isEmpty } == "#endif")
         // Everything after the header is inside, indented once; nothing public stands outside it.
         for line in lines[..<opening] { #expect(!line.contains("public "), "\(line)") }
-        #expect(file.contents.contains("    public enum DisclosureVariant: String, CaseIterable, Sendable {"))
         #expect(file.contents.contains("        public func disclosureGroupStyle(_ variant: DisclosureVariant)"))
+        // The vocabulary in WestronContract keeps the component's availability, under the same #if (decisions/0017).
+        let vocabulary = try #require(try AppleComponents.contractFile(for: disclosure(), source: disclosureSource))
+        let vocabularyLines = vocabulary.contents.split(separator: "\n", omittingEmptySubsequences: false)
+        #expect(vocabularyLines.filter { $0 == "#if !os(watchOS)" }.count == 1)
+        #expect(vocabularyLines.last { !$0.isEmpty } == "#endif")
+        #expect(vocabulary.contents.contains("    public enum DisclosureVariant: String, CaseIterable, Sendable {"))
+        #expect(!vocabulary.contents.contains("\nimport "))
+        #expect(
+            try String(contentsOf: repositoryRoot.appendingPathComponent(vocabulary.path), encoding: .utf8)
+                == vocabulary.contents)
         // The context's modifier is hand-written (`.disclosureAlignsLeaves(_:)`): the generator writes none.
         #expect(!file.contents.contains("disclosureAlignsLeaves"))
         // westron's own file on disk is this generation.
@@ -131,14 +140,11 @@ struct UnavailableOSTests {
     @Test("the parity lint: the API under the contract's own #if passes, the context's modifier is expected")
     func parity() throws {
         let directory = repositoryRoot.appendingPathComponent(ContractCheck.defaultDirectory).path
-        let sources = repositoryRoot.appendingPathComponent(APIParity.defaultSources).path
-        let report = try APIParity.run(contractsDirectory: directory, sourceRoot: sources)
+        let (sources, contractSources, swiftFiles) = try repositoryModules()
+        let report = try APIParity.run(
+            contractsDirectory: directory, sourceRoot: sources, contractRoot: contractSources)
         #expect(report.problems.isEmpty, "\(report.problems.map(\.description))")
         // Without the hand-written modifier, the lint misses it.
-        let swiftFiles = try FileManager.default.subpathsOfDirectory(atPath: sources).filter { $0.hasSuffix(".swift") }
-            .sorted().map { path in
-                (path: sources + "/" + path, text: try String(contentsOfFile: sources + "/" + path, encoding: .utf8))
-            }
         var contracts: [APIParity.Contract] = []
         for file in try ContractCheck.files(in: directory) {
             let text = try String(contentsOfFile: file, encoding: .utf8)
@@ -152,15 +158,31 @@ struct UnavailableOSTests {
                     of: "public func disclosureAlignsLeaves(", with: "func disclosureAlignsLeaves(")
             )
         }
-        let missing = APIParity.check(contracts: contracts, files: without, sourceRoot: sources).problems.map(
-            \.description)
+        let missing = APIParity.check(
+            contracts: contracts, files: without, sourceRoot: sources, contractRoot: contractSources
+        ).problems.map(\.description)
         #expect(missing.contains { $0.contains("disclosureAlignsLeaves") }, "\(missing)")
         // A public declaration under another #if is still a problem.
         let otherCondition = swiftFiles.map { file in
             (path: file.path, text: file.text.replacingOccurrences(of: "#if !os(watchOS)", with: "#if os(iOS)"))
         }
-        let conditioned = APIParity.check(contracts: contracts, files: otherCondition, sourceRoot: sources).problems
-            .map(\.description)
+        let conditioned = APIParity.check(
+            contracts: contracts, files: otherCondition, sourceRoot: sources, contractRoot: contractSources
+        ).problems.map(\.description)
         #expect(conditioned.contains { $0.contains("#if") }, "\(conditioned)")
+        // The vocabulary under another #if is a problem too: its availability is the component's.
+        let vocabularyOnly = swiftFiles.map { file in
+            guard file.path.hasPrefix(contractSources) else { return file }
+            return (path: file.path, text: file.text.replacingOccurrences(of: "#if !os(watchOS)", with: "#if os(iOS)"))
+        }
+        let vocabularyConditioned = APIParity.check(
+            contracts: contracts, files: vocabularyOnly, sourceRoot: sources, contractRoot: contractSources
+        ).problems.map(\.description)
+        #expect(
+            vocabularyConditioned.contains {
+                $0.contains("WestronContract/Generated/Disclosure+Contract.swift:")
+                    && $0.contains("public API under #if os(iOS)")
+            },
+            "\(vocabularyConditioned)")
     }
 }

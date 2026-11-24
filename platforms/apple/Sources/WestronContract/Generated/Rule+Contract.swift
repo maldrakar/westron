@@ -1,9 +1,8 @@
 // Generated from spec/components/rule/rule.spec.yaml by `tools/westron generate`. Do not edit: change the contract and
 // generate again (spec/conventions.md).
 //
-// Rule's API from its contract: the enums of its options. It is an own component, and the view `Rule` and its
-// initializers are hand-written in WestronUI/; the API parity lint holds their signatures to the contract
-// (spec/conventions.md, "Own components").
+// Rule's vocabulary from its contract: the enums of its options. WestronContract imports nothing, so that a product's
+// shared code names them without SwiftUI; WestronUI re-exports it and adds the SwiftUI side (decisions/0017).
 
 /// Rule's option `axis`, from its contract.
 ///

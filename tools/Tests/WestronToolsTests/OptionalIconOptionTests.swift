@@ -74,13 +74,15 @@ private let styleSwift = """
 
 private func lint(generated: String, yaml: String = fieldFixture) throws -> [String] {
     let contract = try ComponentContract(yaml: yaml, source: fieldSource)
+    let vocabulary = try #require(try AppleComponents.contractFile(for: contract, source: fieldSource)).contents
     return APIParity.check(
         contracts: [APIParity.Contract(contract: contract, source: fieldSource, text: yaml)],
         files: [
+            (path: "WestronContract/Generated/TextField+Contract.swift", text: vocabulary),
             (path: "WestronUI/Generated/TextField+Contract.swift", text: generated),
             (path: "WestronUI/TextField/TextFieldVariantStyle.swift", text: styleSwift),
         ],
-        sourceRoot: "WestronUI"
+        sourceRoot: "WestronUI", contractRoot: "WestronContract"
     ).problems.map(\.description)
 }
 

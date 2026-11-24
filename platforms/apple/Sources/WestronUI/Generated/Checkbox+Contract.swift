@@ -1,18 +1,12 @@
 // Generated from spec/components/checkbox/checkbox.spec.yaml by `tools/westron generate`. Do not edit: change the
 // contract and generate again (spec/conventions.md).
 //
-// Checkbox's API from its contract: the enums of its options, the overload of `toggleStyle` that products call, which
-// applies the hand-written `CheckboxVariantStyle` (decisions/0001), and the tables that style reads.
+// Checkbox's API from its contract: the overload of `toggleStyle` that products call, which applies the hand-written
+// `CheckboxVariantStyle` (decisions/0001), and the tables that style reads. The enums of its options are in
+// WestronContract/Generated/Checkbox+Contract.swift (decisions/0017).
 
 import SwiftUI
-
-/// Checkbox's option `variant`, from its contract.
-///
-/// The round check; the only variant. The system's own style names (automatic, switch, button, checkbox) are not
-/// values: westron's overload would shadow them (decisions/0003).
-public enum CheckboxVariant: String, CaseIterable, Sendable {
-    case check
-}
+import WestronContract
 
 extension View {
     /// Applies westron's Checkbox style, from its contract, to the system's `Toggle` in this view:

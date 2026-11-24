@@ -1,19 +1,11 @@
 // Generated from spec/components/list-row/list-row.spec.yaml by `tools/westron generate`. Do not edit: change the
 // contract and generate again (spec/conventions.md).
 //
-// ListRow's API from its contract: the enums of its marks' parameters, its states and its forms. It is an own
-// component, and the view `ListRow` and its initializers, the modifier `insertionMark`, the state modifier `selected`
-// and the state modifier `dropTarget` are hand-written in WestronUI/; the API parity lint holds their signatures to the
-// contract (spec/conventions.md, "Own components").
-
-/// The parameter `edge` of ListRow's mark `insertion`, from its contract: `.insertionMark(…)`, hand-written in
-/// WestronUI/ListRow/.
-///
-/// The edge of the row the mark is drawn over.
-public enum ListRowInsertionEdge: String, CaseIterable, Sendable {
-    case top
-    case bottom
-}
+// ListRow's API from its contract: its states and its forms. It is an own component, and the view `ListRow` and its
+// initializers, the modifier `insertionMark`, the state modifier `selected` and the state modifier `dropTarget` are
+// hand-written in WestronUI/; the API parity lint holds their signatures to the contract (spec/conventions.md, "Own
+// components"). The enums of its marks' parameters are in WestronContract/Generated/ListRow+Contract.swift
+// (decisions/0017).
 
 /// The states of a ListRow in its contract, in its order. The view carries hover, focus, pressed, disabled itself; the
 /// others are set through the environment (spec/conventions.md).

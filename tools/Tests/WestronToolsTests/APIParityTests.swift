@@ -41,11 +41,12 @@ private func contract(_ yaml: String, id: String = "button") throws -> APIParity
     return APIParity.Contract(contract: try ComponentContract(yaml: yaml, source: source), source: source, text: yaml)
 }
 
-/// The generator's file for the fixture contract, as `tools/westron generate` would write it.
+/// The generator's files for the fixture contract, as `tools/westron generate` would write them, joined: the fixture
+/// is one module's sources, read without a `contractRoot`, so the enums may stand beside the overload. The split
+/// between WestronContract and WestronUI is checked apart (`ContractModuleParityTests`).
 private func generatedSwift(_ yaml: String = contractYAML()) throws -> String {
     let source = "spec/components/button/button.spec.yaml"
-    return try #require(try AppleComponents.file(for: ComponentContract(yaml: yaml, source: source), source: source))
-        .contents
+    return try generatedText(ComponentContract(yaml: yaml, source: source), source: source)
 }
 
 private let statesSwift = """
@@ -161,13 +162,13 @@ private func realRepository(changingContract change: (String) -> String) throws 
         contracts.append(
             APIParity.Contract(contract: try ComponentContract(yaml: text, source: file), source: file, text: text))
     }
-    let report = try APIParity.run(contractsDirectory: directory, sourceRoot: sources)
+    let modules = try repositoryModules()
+    let report = try APIParity.run(
+        contractsDirectory: directory, sourceRoot: sources, contractRoot: modules.contractSources)
     #expect(report.problems.isEmpty, "the repository as it is passes")
-    let swiftFiles = try FileManager.default.subpathsOfDirectory(atPath: sources).filter { $0.hasSuffix(".swift") }
-        .sorted().map { path in
-            (path: sources + "/" + path, text: try String(contentsOfFile: sources + "/" + path, encoding: .utf8))
-        }
-    return APIParity.check(contracts: contracts, files: swiftFiles, sourceRoot: sources).problems.map(\.description)
+    return APIParity.check(
+        contracts: contracts, files: modules.files, sourceRoot: sources, contractRoot: modules.contractSources
+    ).problems.map(\.description)
 }
 
 @Suite("API parity lint")
@@ -178,7 +179,8 @@ struct APIParityTests {
     func repository() throws {
         let report = try APIParity.run(
             contractsDirectory: repositoryRoot.appendingPathComponent(ContractCheck.defaultDirectory).path,
-            sourceRoot: repositoryRoot.appendingPathComponent(APIParity.defaultSources).path)
+            sourceRoot: repositoryRoot.appendingPathComponent(APIParity.defaultSources).path,
+            contractRoot: repositoryRoot.appendingPathComponent(APIParity.defaultContractSources).path)
         #expect(report.problems.map(\.description) == [])
         #expect(report.contracts >= 1)
         // ButtonVariant and its 3 cases, ButtonSize and its 3, buttonStyle, loading.
@@ -818,5 +820,82 @@ struct APIParityTests {
         #expect(h?.line == 6)
         #expect(h?.parameters == [.init(label: "_", type: "T"), .init(label: "y", type: "Int", defaultValue: "1")])
         #expect(h?.extras == ["<T>", "where T: View", "async throws"])
+    }
+}
+
+/// The fixture as two modules (decisions/0017): the generated vocabulary in WestronContract, the rest in WestronUI.
+private func twoModules(vocabulary change: (String) -> String = { $0 }) throws -> [String] {
+    let item = try contract(contractYAML())
+    var sources = try generatedSources(item.contract, source: item.source).map { file in
+        file.path.hasPrefix("WestronContract/") ? (path: file.path, text: change(file.text)) : file
+    }
+    sources += try files(generated: "").filter { !$0.path.hasSuffix("Button+Contract.swift") }
+    return APIParity.check(contracts: [item], files: sources, sourceRoot: root, contractRoot: "WestronContract")
+        .problems.map(\.description)
+}
+
+@Suite("API parity lint across WestronUI and WestronContract")
+struct ContractModuleParityTests {
+    @Test("the generator's two files pass: the enums in WestronContract, the overload in WestronUI")
+    func passes() throws {
+        #expect(try twoModules() == [])
+    }
+
+    @Test("an enum a contract gives, declared in WestronUI, is reported and points to WestronContract")
+    func enumInUI() throws {
+        let item = try contract(contractYAML())
+        let all = try generatedSources(item.contract, source: item.source)
+        let vocabulary = try #require(all.first { $0.path.hasPrefix("WestronContract/") })
+        let ui = try #require(all.first { $0.path.hasPrefix("WestronUI/") })
+        let rest = try files(generated: "").filter { !$0.path.hasSuffix("Button+Contract.swift") }
+        let found = APIParity.check(
+            contracts: [item], files: [(path: ui.path, text: ui.text + "\n" + vocabulary.text)] + rest,
+            sourceRoot: root, contractRoot: "WestronContract"
+        ).problems.map(\.description)
+        #expect(found.count == 2, "\(found)")
+        #expect(found.allSatisfy { $0.hasPrefix("WestronUI/Generated/Button+Contract.swift:") })
+        #expect(found.contains { $0.contains("ButtonVariant is declared in WestronUI;") })
+        #expect(found.contains { $0.contains("ButtonSize is declared in WestronUI;") })
+        #expect(found.allSatisfy { $0.contains("decisions/0017") })
+        // Missing from both, it is missing in WestronContract.
+        let missing = APIParity.check(
+            contracts: [item], files: [(path: ui.path, text: ui.text)] + rest, sourceRoot: root,
+            contractRoot: "WestronContract"
+        ).problems.map(\.description)
+        #expect(missing.contains { $0.contains("missing: public enum ButtonVariant in WestronContract") })
+    }
+
+    @Test("WestronContract declares nothing the contracts do not give, at any access, and imports nothing")
+    func nothingElse() throws {
+        let extra = try twoModules {
+            $0 + """
+
+                enum Helper {}
+                public let version = 1
+                extension ButtonVariant {
+                    var isPrimary: Bool { self == .primary }
+                }
+                public enum BadgeTone: String, CaseIterable, Sendable {
+                    case info
+                }
+
+                """
+        }
+        #expect(extra.count == 5, "\(extra)")
+        #expect(extra.allSatisfy { $0.hasPrefix("WestronContract/Generated/Button+Contract.swift:") })
+        #expect(extra.allSatisfy { $0.contains("WestronContract declares only the enums the contracts give") })
+        #expect(extra.contains { $0.contains("internal enum Helper") })
+        #expect(extra.contains { $0.contains("public var version") })
+        #expect(extra.contains { $0.contains("extension ButtonVariant:") || $0.contains("extension ButtonVariant ") })
+        #expect(extra.contains { $0.contains("internal var ButtonVariant.isPrimary") })
+        #expect(extra.contains { $0.contains("public enum BadgeTone") })
+        // An import, even of Foundation, and even re-exported.
+        let imports = try twoModules { "import Foundation\n@_exported import WestronTokens\n" + $0 }
+        #expect(imports.count == 2, "\(imports)")
+        #expect(imports.allSatisfy { $0.contains("WestronContract imports nothing, not even Foundation") })
+        #expect(imports.contains { $0.hasPrefix("WestronContract/Generated/Button+Contract.swift:1:") })
+        // A deliberate exception is marked, as anywhere else.
+        let allowed = try twoModules { $0 + "\n// westron-api-parity: allow a reviewed exception\nenum Helper {}\n" }
+        #expect(allowed == [])
     }
 }

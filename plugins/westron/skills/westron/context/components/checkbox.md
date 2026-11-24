@@ -29,6 +29,13 @@ extension Toggle where Label == ModifiedContent<EmptyView, AccessibilityAttachme
 extension View {
     public func toggleStyle(_: CheckboxVariant) -> some View
 }
+```
+
+Its enums are in `WestronContract`, which `WestronUI` re-exports, so a view needs no other import. A product's shared
+code, which cannot import SwiftUI, imports `WestronContract` instead, and its models keep these values, never a size, a
+color or a font:
+
+```swift
 public enum CheckboxVariant: String, CaseIterable, Sendable { case check }
 ```
 

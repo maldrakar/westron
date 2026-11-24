@@ -50,6 +50,13 @@ extension View {
     public func selected(_: Bool) -> some View
     public func dropTarget(_: Bool) -> some View
 }
+```
+
+Its enums are in `WestronContract`, which `WestronUI` re-exports, so a view needs no other import. A product's shared
+code, which cannot import SwiftUI, imports `WestronContract` instead, and its models keep these values, never a size, a
+color or a font:
+
+```swift
 public enum ListRowInsertionEdge: String, CaseIterable, Sendable { case top, bottom }
 ```
 

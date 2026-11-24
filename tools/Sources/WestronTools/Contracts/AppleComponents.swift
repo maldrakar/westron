@@ -1,11 +1,14 @@
 import Foundation
 
 /// The Swift API generator (#20): from every component contract whose Apple strategy is `style-on-system-control`, it
-/// writes `WestronUI/Generated/<Component>+Contract.swift` with what `spec/conventions.md` prescribes, so that the
-/// names on Apple are the contract's (AGENTS.md, rule 4):
+/// writes what `spec/conventions.md` prescribes, so that the names on Apple are the contract's (AGENTS.md, rule 4):
 ///
-/// - a `public enum <Component><Option>: String, CaseIterable, Sendable` for each enum option, its cases and raw values
-///   the contract's values; none for an option that `platforms.apple.systemOptions` gives to the system's own API;
+/// - into `WestronContract/Generated/<Component>+Contract.swift`, the contract's vocabulary, which imports nothing
+///   (decisions/0017, `vocabularyFile`): a `public enum <Component><Option>: String, CaseIterable, Sendable` for each
+///   enum option, its cases and raw values the contract's values; none for an option that
+///   `platforms.apple.systemOptions` gives to the system's own API;
+///
+/// and into `WestronUI/Generated/<Component>+Contract.swift`, which imports SwiftUI:
 /// - the overload of the base control's style modifier, `buttonStyle(_ variant:size:iconOnly:)`: the variant unlabeled,
 ///   every other option labeled, a contract default as the argument's default, `size` optional (nil: from
 ///   `controlSize`). It applies the hand-written `<Component>VariantStyle(<option>: …)` (decisions/0001), so a value
@@ -15,8 +18,8 @@ import Foundation
 ///   fallbacks; the declared states, `<Component>State`, with whether the current OS enters each, `isEntered`.
 ///
 /// Draft contracts are skipped: an API appears once the contract is approved (decisions/0005), so a draft never breaks
-/// the build. An own component (`own-component`) gets the enums of its options alone, in the same file: its modifier
-/// or view is hand-written, and the API parity lint holds its signature to the contract (`Own`; spec/conventions.md,
+/// the build. An own component (`own-component`) gets the enums of its options, in WestronContract, and its states and
+/// forms, in WestronUI: its modifier or view is hand-written, and the API parity lint holds its signature to the contract (`Own`; spec/conventions.md,
 /// "Own components"). No drawing is generated: style bodies are written natively (decisions/0001).
 ///
 /// An extension of a system view (`extension-on-system-control`, Text) gets no file: its modifier is hand-written in
@@ -48,7 +51,7 @@ public struct AppleComponents: Generator {
     /// from are here.
     public static let tokenAccessors: [String: String] = [AppleTokenModel.textRoleGroup: AppleTokenModel.textRoleType]
 
-    public var ownedDirectories: [String] { [Self.outputDirectory] }
+    public var ownedDirectories: [String] { [Self.outputDirectory, Self.contractDirectory] }
 
     /// Every problem of a contract that cannot be generated from.
     public struct Problems: Error, CustomStringConvertible {
@@ -103,7 +106,8 @@ public struct AppleComponents: Generator {
                 do {
                     let own = try Own(contract, source: source)
                     owns.append((own, source))
-                    if let file = own.file(source: source) { files.append(file) }
+                    files += [own.vocabularyFile(source: source, contract: contract), own.file(source: source)]
+                        .compactMap { $0 }
                 } catch {
                     problems.append(error)
                 }
@@ -129,8 +133,7 @@ public struct AppleComponents: Generator {
             do {
                 let api = try API(contract, apple: apple, source: source)
                 apis.append(api)
-                files.append(
-                    GeneratedFile(path: "\(outputDirectory)/\(api.component)+Contract.swift", contents: api.swift()))
+                files += [api.vocabularyFile(), api.file()].compactMap { $0 }
             } catch {
                 problems.append(error)
             }
@@ -258,16 +261,12 @@ public struct AppleComponents: Generator {
         try SwiftName.members(TokenPath(group + "." + value), dropping: group).map(\.name).joined(separator: ".")
     }
 
-    /// The generated file for a contract, or nil when the generator skips it. `source` is the contract's path, which
-    /// the header names.
+    /// The generated SwiftUI side of a contract, `WestronUI/Generated/<Component>+Contract.swift`, or nil when the
+    /// generator skips it or the contract gives WestronUI nothing to generate (`contractFile(for:source:)` has its
+    /// vocabulary). `source` is the contract's path, which the header names.
     /// - Throws: `ContractProblem` when the contract cannot give the API the conventions prescribe.
     public static func file(for contract: ComponentContract, source: String) throws(ContractProblem) -> GeneratedFile? {
-        if givesAPI(contract), contract.apple?.strategy == ownStrategy {
-            return try Own(contract, source: source).file(source: source)
-        }
-        guard generates(contract), let apple = contract.apple else { return nil }
-        let api = try API(contract, apple: apple, source: source)
-        return GeneratedFile(path: "\(outputDirectory)/\(api.component)+Contract.swift", contents: api.swift())
+        try files(for: contract, source: source).first { $0.path.hasPrefix(outputDirectory + "/") }
     }
 
     /// The type names that WestronUI declares for components: each generated enum, `<Component>State`, and the
@@ -554,6 +553,23 @@ public struct AppleComponents: Generator {
 
         // MARK: - Swift
 
+        /// The SwiftUI side, `WestronUI/Generated/<Component>+Contract.swift`.
+        func file() -> GeneratedFile {
+            GeneratedFile(path: "\(AppleComponents.outputDirectory)/\(component)+Contract.swift", contents: swift())
+        }
+
+        /// The vocabulary, `WestronContract/Generated/<Component>+Contract.swift`: the enums of the options.
+        func vocabularyFile() -> GeneratedFile? {
+            let missing = (contract.apple?.unavailable ?? []).compactMap { AppleComponents.osNames[$0] }
+            return AppleComponents.vocabularyFile(
+                component: component, source: source,
+                enums: enums.map { VocabularyEnum(paragraphs: enumParagraphs($0), type: $0.type, values: $0.values) },
+                ofMarks: false, condition: contract.apple?.availabilityCondition,
+                absence: "\(component) does not exist on \(missing.joined(separator: " and ")), whose SwiftUI has no "
+                    + "\(targets.map(\.control).joined(separator: " or ")) (the contract's `platforms` block); its "
+                    + "vocabulary is there only where the component is.")
+        }
+
         func swift() -> String {
             let width = AppleTokensSwift.lineLength - 3
             let origin =
@@ -564,18 +580,23 @@ public struct AppleComponents: Generator {
                 return quoted.count == 1
                     ? quoted[0] : quoted.dropLast().joined(separator: ", ") + " and " + quoted.last!
             }
-            let purpose =
+            var purpose =
                 targets.count == 1 && targets[0].form == nil
-                ? "\(component)'s API from its contract: the enums of its options, the overload of "
-                    + "`\(targets[0].modifier)` that products call, which applies the hand-written `\(targets[0].style)` "
-                    + "(decisions/0001), and the tables that style reads."
-                : "\(component)'s API from its contract: the enums of its options, an overload of each form's style "
-                    + "modifier that products call, \(list(targets.map(\.modifier))), each applying its hand-written "
-                    + "style, \(list(targets.map(\.style))) (decisions/0001), and the tables those styles read."
+                ? "\(component)'s API from its contract: the overload of `\(targets[0].modifier)` that products call, "
+                    + "which applies the hand-written `\(targets[0].style)` (decisions/0001), and the tables that style "
+                    + "reads."
+                : "\(component)'s API from its contract: an overload of each form's style modifier that products call, "
+                    + "\(list(targets.map(\.modifier))), each applying its hand-written style, "
+                    + "\(list(targets.map(\.style))) (decisions/0001), and the tables those styles read."
+            if !enums.isEmpty {
+                purpose +=
+                    " The enums of its options are in WestronContract/Generated/\(component)+Contract.swift "
+                    + "(decisions/0017)."
+            }
             var out =
                 AppleTokensSwift.wrap(origin, width: width).map { "// " + $0 } + ["//"]
                 + AppleTokensSwift.wrap(purpose, width: width).map { "// " + $0 }
-            out += ["", "import SwiftUI"]
+            out += ["", "import SwiftUI"] + (enums.isEmpty ? [] : ["import WestronContract"])
             guard let condition = contract.apple?.availabilityCondition else {
                 return (out + declarations()).joined(separator: "\n") + "\n"
             }
@@ -596,9 +617,6 @@ public struct AppleComponents: Generator {
         /// The declarations, each after a blank line.
         private func declarations() -> [String] {
             var out: [String] = []
-            for item in enums {
-                out += [""] + enumDeclaration(item)
-            }
             for target in targets {
                 out += [""] + overload(target)
             }
@@ -621,7 +639,8 @@ public struct AppleComponents: Generator {
             AppleIcons.paragraphs(paragraphs, indent: indent)
         }
 
-        private func enumDeclaration(_ item: Enum) -> [String] {
+        /// The doc comment of an option's enum, as WestronContract declares it.
+        private func enumParagraphs(_ item: Enum) -> [String] {
             var paragraphs = ["\(component)'s option `\(item.option.name)`, from its contract."]
             if let description = item.option.description { paragraphs.append(description) }
             if item.option.name == "size" {
@@ -629,11 +648,7 @@ public struct AppleComponents: Generator {
                     "A call without `size:` takes the size from `controlSize`: \(controlSizeSummary(item)). An explicit "
                         + "`size:` wins.")
             }
-            var out = doc(paragraphs, indent: 0)
-            out.append("public enum \(item.type): String, CaseIterable, Sendable {")
-            out += item.values.map { "    case \(SwiftName.declared($0))" }
-            out.append("}")
-            return out
+            return paragraphs
         }
 
         /// The variant first and unlabeled, then the other options in the contract's order, labeled.

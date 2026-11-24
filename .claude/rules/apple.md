@@ -19,7 +19,10 @@ paths:
     `modifier` (`.surface(.raised)`) or `view` (`Rule()`, `Icon(.tray)`). Only its enums are generated; the modifier
     or view is hand-written in `WestronUI/<Component>/`, and `tools/westron lint api-parity` holds it to the contract.
 - Enums of variants and sizes (`ButtonVariant`, `ButtonSize`, `SurfaceVariant`) are generated from the contract. Do
-  not write them by hand.
+  not write them by hand. They are in `WestronContract`, which imports nothing, so that a product's shared code names
+  them without SwiftUI, and which `WestronUI` re-exports; their SwiftUI extensions (a size from `controlSize`, the
+  tables a style reads) stay in `WestronUI/Generated/` (decisions/0017). A product's model keeps westron's vocabulary,
+  these enums and `Westron.Icon` and `Westron.Category`, never a size, a color or a font.
 - Sizes are named `s`, `m`, `l`, as in the contract. The default takes `@Environment(\.controlSize)` into account.
 - States that the system control does not have (for example, `loading`) are set with a modifier through the environment.
 - No option value may be the static name of a system style of the same control: `.buttonStyle(.plain)` would still
@@ -48,8 +51,9 @@ paths:
 - Tokens only. The hook and `tools/westron lint raw-values` catch raw colors, sizes, spacing, radii, opacity and animation
   in `WestronUI`. An exception is `// westron-lint: allow <reason>`, with a real reason.
 - Tokens come from `tools/westron generate` (decisions/0010): never edit `WestronTokens/Generated/`,
-  `WestronUI/Generated/` or `WestronUI/Tokens.xcassets`; change the tokens and generate again. Names follow the token
-  path, a member per segment, without the group the type already names; a step joins its ladder (`space100`):
+  `WestronContract/Generated/`, `WestronUI/Generated/` or `WestronUI/Tokens.xcassets`; change the tokens and generate
+  again. Names follow the token path, a member per segment, without the group the type already names; a step joins its
+  ladder (`space100`):
   - colors: `.foregroundStyle(.text.secondary)`, `.background(.background.surface)`, `.fill`, `.stroke`,
     `.strokeBorder` and `.tint` take a `Westron.Color` through WestronUI's overloads; any other call takes
     `Color(.text.secondary)`, and so do a color's own modifiers (`Color(.text.secondary).opacity(0.5)`). Colors
@@ -80,7 +84,8 @@ paths:
     (decisions/0011, `spec/components/icon/`).
 - Scalable spacing goes through `@ScaledMetric`, with a token as its base value.
 - The adapters from WestronTokens values to SwiftUI values are hand-written in `WestronUI/TokenAdapters.swift`.
-  `WestronTokens` imports nothing, not even Foundation: shared code and its WebAssembly build use it.
+  `WestronTokens` and `WestronContract` import nothing, not even Foundation: shared code and its WebAssembly build use
+  them.
 
 ## Platforms
 

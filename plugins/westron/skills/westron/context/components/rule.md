@@ -26,6 +26,13 @@ public struct Rule: View {
     @_disfavoredOverload public init<S: StringProtocol>(_: S)
     public var body: some View
 }
+```
+
+Its enums are in `WestronContract`, which `WestronUI` re-exports, so a view needs no other import. A product's shared
+code, which cannot import SwiftUI, imports `WestronContract` instead, and its models keep these values, never a size, a
+color or a font:
+
+```swift
 public enum RuleAxis: String, CaseIterable, Sendable { case horizontal, vertical }
 public enum RulePurpose: String, CaseIterable, Sendable { case separator, insertion }
 ```
