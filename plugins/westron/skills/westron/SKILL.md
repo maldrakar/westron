@@ -59,9 +59,9 @@ generated with; where the product's pinned WestronUI differs, the package's decl
    `.dropTarget(_:)`; the rest are the system's, such as `.disabled(_:)`.
 7. **A model keeps westron's vocabulary, not its values.** A model in shared code, which cannot import SwiftUI, names
    the option enums of `WestronContract` (`ButtonVariant`, `RuleAxis`) and `Westron.Icon` and `Westron.Category` of
-   `WestronTokens`, both modules with no imports, and holds no size, color, font, radius, spacing or duration. The
-   view passes them to westron's API as they are and maps nothing: `.buttonStyle(row.action)`, not a `switch` to a
-   color.
+   `WestronTokens`, both modules with no imports, and holds no size, color, font, radius, spacing or duration. A view
+   passes that vocabulary to westron's API, `.buttonStyle(row.action)`, and never turns a product's own value into a
+   raw color or size: no `switch` to a color.
 
 ## When westron lacks something
 

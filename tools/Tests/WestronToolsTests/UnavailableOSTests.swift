@@ -184,5 +184,25 @@ struct UnavailableOSTests {
                     && $0.contains("public API under #if os(iOS)")
             },
             "\(vocabularyConditioned)")
+        // And under no #if at all: the vocabulary would exist on watchOS, where the component does not.
+        let vocabularyUnconditioned = swiftFiles.map { file in
+            guard file.path.hasPrefix(contractSources) else { return file }
+            return (
+                path: file.path,
+                text: file.text.replacingOccurrences(of: "#if !os(watchOS)\n", with: "")
+                    .replacingOccurrences(of: "#endif\n", with: "")
+            )
+        }
+        let unconditioned = APIParity.check(
+            contracts: contracts, files: vocabularyUnconditioned, sourceRoot: sources, contractRoot: contractSources
+        ).problems.map(\.description)
+        #expect(unconditioned.count == 1, "\(unconditioned)")
+        #expect(
+            unconditioned.allSatisfy {
+                $0.contains("WestronContract/Generated/Disclosure+Contract.swift:")
+                    && $0.contains("DisclosureVariant stands under no #if")
+                    && $0.contains("`#if !os(watchOS)`")
+            },
+            "\(unconditioned)")
     }
 }

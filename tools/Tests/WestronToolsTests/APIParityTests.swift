@@ -889,9 +889,14 @@ struct ContractModuleParityTests {
         #expect(extra.contains { $0.contains("extension ButtonVariant:") || $0.contains("extension ButtonVariant ") })
         #expect(extra.contains { $0.contains("internal var ButtonVariant.isPrimary") })
         #expect(extra.contains { $0.contains("public enum BadgeTone") })
-        // An import, even of Foundation, and even re-exported.
-        let imports = try twoModules { "import Foundation\n@_exported import WestronTokens\n" + $0 }
-        #expect(imports.count == 2, "\(imports)")
+        // An import, even of Foundation, even re-exported, and at any access level.
+        let imports = try twoModules {
+            "import Foundation\n@_exported import WestronTokens\npublic import Foundation\npackage import Foundation\n"
+                + "internal import Foundation\nfileprivate import Foundation\n"
+                + "@preconcurrency private import Foundation\n" + $0
+        }
+        #expect(imports.count == 7, "\(imports)")
+        #expect(imports.contains { $0.hasPrefix("WestronContract/Generated/Button+Contract.swift:3:") })
         #expect(imports.allSatisfy { $0.contains("WestronContract imports nothing, not even Foundation") })
         #expect(imports.contains { $0.hasPrefix("WestronContract/Generated/Button+Contract.swift:1:") })
         // A deliberate exception is marked, as anywhere else.

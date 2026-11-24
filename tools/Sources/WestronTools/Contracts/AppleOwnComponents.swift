@@ -42,8 +42,9 @@ extension AppleComponents {
     /// optional, nil drawing no mark, then the others labeled, with their defaults: `.insertionMark(_ edge:
     /// ListRowInsertionEdge?, level: Int = 0)`. Each enum parameter gets the enum `<Component><Mark><Parameter>`.
     ///
-    /// The generator writes the enums of the enum options, `<Component><Option>`, into
-    /// `WestronUI/Generated/<Component>+Contract.swift`, by the naming rules of a style. The modifier or the view is
+    /// The generator writes the enums of the enum options, `<Component><Option>`, by the naming rules of a style, into
+    /// `WestronContract/Generated/<Component>+Contract.swift`, and the states and forms, when it has any, into
+    /// `WestronUI/Generated/<Component>+Contract.swift` (decisions/0017). The modifier or the view is
     /// hand-written, since its body is the whole implementation; the API parity lint holds its signature to this.
     /// An option in `platforms.apple.systemOptions` is the system's own environment modifier, which a product writes
     /// on the component and the system views inside it read (Icon's `scale`, `.imageScale(_:)`): it is no parameter

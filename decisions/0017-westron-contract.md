@@ -39,7 +39,9 @@ The owner, 2026-11-24:
    of their own, so that each says where its types come from.
 4. **Models keep westron's vocabulary and lose raw values.** A product's model in shared code names the option enums of
    `WestronContract` and `Westron.Icon` and `Westron.Category` of `WestronTokens`, and holds no size, color, font,
-   radius, spacing or duration. The view passes them through to westron's API and maps nothing.
+   radius, spacing or duration. A view passes that vocabulary to westron's API and does not turn a product's own value
+   into a raw color or size (no `switch` from a model's value to a color). Where a view derives a westron parameter
+   from the product's state, it derives one of westron's values, as compositions in decisions/0014 do.
 5. **The API parity lint reads both modules.** An enum a contract gives must be declared in `WestronContract`, not in
    `WestronUI`; `WestronContract` declares nothing else, at any access, and imports nothing
    (`tools/westron lint api-parity`, `APIParity.check(…, contractRoot:)`).
@@ -54,7 +56,9 @@ clients a UI module and a module of the contracts' vocabulary, beside the token 
 
 - A product's shared code adds the product `WestronContract`, and `WestronTokens` where it names an icon or a list
   color; its views keep `import WestronUI`. A call site that qualified an enum by its module, `WestronUI.ButtonVariant`,
-  is the one source break: it is `WestronContract.ButtonVariant` now.
+  still compiles in a file that imports `WestronUI` alone, since the re-export makes the enum visible through it. What
+  changes is the module in reflected and mangled names: `String(reflecting: ButtonVariant.primary)` starts with
+  `WestronContract.` now, not `WestronUI.`, so code or stored data that keyed on such a name sees a new one.
 - `tools/westron generate` writes one or two files per contract and owns both `Generated/` directories, so a file it no
   longer writes in either is stale and `generate --check` fails.
 - An enum a future contract gives lands in `WestronContract` by construction, and the lint fails a hand-written one in
@@ -70,15 +74,17 @@ clients a UI module and a module of the contracts' vocabulary, beside the token 
    (its contract's `platforms` block), and its API in `WestronUI` stands under `#if !os(watchOS)`. In a module with no
    SwiftUI the reason does not hold by itself: nothing stops `DisclosureVariant` from compiling on watchOS. It stays
    under the same `#if !os(watchOS)` in `WestronContract`, so the vocabulary has the availability the contract records,
-   and the lint holds it there, as it holds any declaration that a contract's condition allows. The cost: shared code
-   that builds for watchOS cannot name it outside the same condition. Whether the vocabulary should exist on every OS,
-   so that a shared model may name a disclosure's variant that the watch never draws, is the owner's to decide; the
-   change would be the generator's condition and the lint's rule, not a contract.
+   and two checks hold it there: the lint reports an enum in `WestronContract` of a contract with such a condition
+   that stands under no `#if` or under another one, and `generate --check` reports any edit of the generated file.
+   The cost: shared code that builds for watchOS cannot name it outside the same condition. Whether the vocabulary
+   should exist on every OS, so that a shared model may name a disclosure's variant that the watch never draws, is the
+   owner's to decide; the change would be the generator's condition and the lint's rule, not a contract.
 2. **One import for shared code.** `WestronContract` does not depend on `WestronTokens`, so shared code that names an
    icon and a variant imports both. Whether `WestronContract` should re-export `WestronTokens` is open; it would tie
    the vocabulary's module to the token values.
 3. **States in a model.** The states stay `WestronUI`'s: a model keeps a state such as `selected` as the `Bool` its
    modifier takes. If shared code ever needs a state's name, that is a change to this decision.
-4. **The Stop hook.** `.claude/hooks/stop-checks.sh` selects its checks by path and does not name `WestronContract` yet:
-   a change to the module alone runs the package checks but not `generate --check` or the lint. A change to the hook is
-   the owner's to make.
+4. **The Stop hook.** Closed on 2026-11-24. `.claude/hooks/stop-checks.sh` selects its checks by path, and it did not
+   name `WestronContract`: a change to the module alone ran the package checks but not `generate --check` or the lint.
+   It names the module beside `WestronUI` now, so such a change also runs `generate --check`, the lint, the tools'
+   tests and the step audit-scope.

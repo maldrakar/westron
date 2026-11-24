@@ -463,11 +463,13 @@ public enum APIParity {
         let contractPrefix = contractRoot.map { $0.hasSuffix("/") ? $0 : $0 + "/" }
         /// Whether a file is WestronContract's.
         func inContract(_ file: String) -> Bool { contractPrefix.map { file.hasPrefix($0) } ?? false }
-        // WestronContract imports nothing, not even Foundation (decisions/0017).
+        // WestronContract imports nothing, not even Foundation (decisions/0017): no import, whatever its attributes
+        // (`@_exported`, `@preconcurrency`) or its access level (`public import Foundation`).
+        let accessLevels: Set<Substring> = ["public", "package", "internal", "fileprivate", "private"]
         for file in files where inContract(file.path) {
             for (index, line) in file.text.split(separator: "\n", omittingEmptySubsequences: false).enumerated() {
                 let words = line.split(separator: " ").filter { !$0.hasPrefix("@") }
-                guard words.first == "import" else { continue }
+                guard words.drop(while: { accessLevels.contains($0) }).first == "import" else { continue }
                 problems.append(
                     Problem(
                         file: file.path, line: index + 1,
@@ -549,6 +551,19 @@ public enum APIParity {
             }
             accounted.formUnion(cases)
             allowCondition([index] + cases, of: [item.contract])
+            // A component an Apple OS lacks has its vocabulary only where it exists: the enum in WestronContract stands
+            // under the contract's condition, as its API in WestronUI does (decisions/0017, open point 1). Under
+            // another condition it is reported below, as any public API is.
+            if contractRoot != nil, inContract(d.file), !d.allowed, d.conditions.isEmpty,
+                let condition = item.contract.contract.apple?.availabilityCondition
+            {
+                problem(
+                    d,
+                    "\(item.type) stands under no #if; \(item.contract.component) does not exist on every Apple OS "
+                        + "(\(item.contract.source), platforms.apple), so its vocabulary in WestronContract stands "
+                        + "under `#if \(condition)`, as its API in WestronUI does (decisions/0017); run "
+                        + "tools/westron generate")
+            }
             expectedCount += cases.count
             let names = cases.map { declarations[$0].name }
             if names != item.values {
