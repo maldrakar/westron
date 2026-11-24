@@ -680,20 +680,57 @@ macOS (and once, on the iOS simulator, a behaviour test on a live sample the cat
 decisions/0001, its revision).
 
 **A static Chip at the end made a row taller.** The trailing slot stood inside the words' column, which was padded by
-`container.paddingVertical`, so its frame could not stand in that padding as the leading slot's does, which the
-contract allowed for any slot. Measured on macOS on main: the title alone 28, an Icon at the end 28, a static Chip at
-the end 36, the same Chip at the start 28, a check at the start 32; with a second line 43, and 45.5 with a Chip at
-the end. Now only the title and the second line are padded and the trailing slot stands beside them on the first line,
-as the leading slot does: a static Chip at the end 28, with a second line 43, and a slot really taller than the row
-still grows it (84 pt high: 93). On iOS (iPhone 17 simulator) the 44 pt minimum hid it on one line at the default
-size, but not at xxxLarge, the largest size where the slot stays at the end (45.7 against 44), nor under a second
-line (52.3 against 50 at the default size); now the Chip at the end is 44 at both sizes and 50 and 69.3 with a second
-line, as without it. `ListRowTests.trailingSlotStandsInThePadding` holds both platforms at both sizes. One existing
-sheet changes with it, on iOS alone: in `long-title`, where the row is given less width than its title needs at
-level 4, the count at the end is squeezed onto two lines, and that frame, taller than the title's one line, now stands
-in the padding too, so the row is about 46 pt high instead of 52, the count still inside it. Every other sheet keeps
-its layout pixel for pixel; a row whose trailing slot stacks under its text, at the accessibility sizes, keeps its
+`container.paddingVertical`, so its frame could not stand in that padding as the leading slot's does, which the contract
+allowed for any slot. Measured on macOS on main: the title alone 28, an Icon at the end 28, a static Chip at the end 36,
+the same Chip at the start 28, a check at the start 32; with a second line 43, and 45.5 with a Chip at the end. Now only
+the title and the second line are padded and the trailing slot stands beside them on the first line, as the leading slot
+does: a static Chip at the end 28, with a second line 43, and a slot really taller than the row still grows it (84 pt
+high: 93). On iOS (iPhone 17 simulator) the 44 pt minimum hid it on one line at the default size, but not at xxxLarge,
+the largest size where the slot stays at the end (45.7 against 44), nor under a second line (52.3 against 50 at the
+default size); now the Chip at the end is 44 at both sizes and 50 and 69.3 with a second line, as without it.
+`ListRowTests.trailingSlotStandsInThePadding` holds both platforms at both sizes. One existing sheet changes with it, on
+iOS alone: in `long-title`, where the row is given less width than its title needs at level 4, the count at the end is
+squeezed onto two lines, and that frame, taller than the title's one line, now stands in the padding too, so the row is
+about 46 pt high instead of 52, the count still inside it (no longer squeezed after the next point). Every other sheet
+keeps its layout pixel for pixel; a row whose trailing slot stacks under its text, at the accessibility sizes, keeps its
 padding around the whole column as before.
+
+**The trailing slot was squeezed before the title** (after the review of this revision). The contract gives the slots
+their own sizes and the title the width they leave, but the title's column, `frame(maxWidth: .infinity)`, and the
+trailing slot stood in an `HStack`, which offers its width by how flexible each child is and so gave the slot about half
+the line whatever the title needed. Measured on macOS before the change, in a row at level 1 with an IconTile, a
+chevron's cell and the title "Errands" (47 pt): the static Chip "Today", 64 pt alone, was 61.5 pt in a 260 pt row and
+49 in a 240 pt row, while the title had room to spare; at level 4 in a 180 pt row the count "12", 12 × 14 alone, was 7
+pt wide and two lines high, and in a 160 pt row 0 wide; a line of words 340.5 pt wide at the end of a 320 pt row got
+130. On iOS the `composition` sheet drawn at xxxLarge showed the Chips as "Sha…" and "T…" beside whole titles, and the
+`long-title` sheet its count a digit a line.
+
+Now the column and the slot are laid out by a Layout of the row's own (`ListRowWordsLine`): the slot is offered its own
+width, up to half the row's width and never more than the line has, and the column the rest. At the accessibility
+sizes, where the slot stands under the text, the column stays in a stack as before, so those sheets keep their pixels.
+The contract said nothing of a trailing slot wider than the row can give; it now says that such a slot is given half
+the row's width and is the one that truncates or wraps, so that words at the end never take the title's place. Two
+other limits were weighed. Half of the width the title and the slot share keeps the title at least that half, but for
+a long title it is the split the `HStack` made: the count of the `long-title` sample stays cut. The slot's whole width,
+with no limit, lets a sentence at the end push the title to nothing in any row. Half the row keeps counts and tags whole
+wherever the line can hold them; only a row whose indent and slots themselves take more than half its width, a deep
+level on a narrow width, can leave the title little or no room, as the contract now says. The row reads its width from
+its own frame once laid out (`onGeometryChange`); before that first layout the slot is held to the line alone, which
+differs only for a slot wider than half the row, so a row measured in one pass, as a `fittingSize`, is the row drawn.
+
+Measured after, on macOS: the Chip 64 pt, its own width, in rows from 240 to 400 pt beside "Errands" and beside a long
+title, which truncates (40.5 pt of its 392.5 in 240); the count 12 × 14 in rows of 180, 220 and 260 pt; the wide line
+149.5 pt, offered 152, half the row less `container.trailingGap`. On iOS (iPhone 17 simulator, iOS 26): the Chip 75.7,
+its own width, from 240 to 400 pt at the default size, and 104.7, its own, from 320 pt at xxxLarge, where a narrower row
+at level 1 leaves the whole line less than the Chip; the count 15.7 × 18, its own, from 180 to 260 pt; the wide line
+145.3 of its 443.7. Right to left the Chip stands at the left, after the chevron's cell, whole, the title truncated at
+its right. `ListRowTests.trailingChipKeepsItsWidth`, `longTitleKeepsTheCount`, `trailingChipKeepsItsWidthRightToLeft`
+and `wideTrailingSlotTakesHalf` hold it, and each fails on the `HStack`. Sheets, on iOS only (macOS keeps every
+picture): `composition` at the accessibility5 text size, which draws it at xxxLarge, the Chips whole; there the selected
+Errands, set in `body.strong`, no longer fits beside its Chip and wraps onto a second line, as a title without a line
+limit does. And `long-title`: on a phone each picture now holds one column, since in half the screen's width the
+indent, the Icon and the whole count leave a title at level 4 no room to show; in the full width the title truncates
+with its ellipsis and the count keeps both digits.
 
 **The lists screen's row.** Nothing drew a ListRow with an IconTile at its start, the pilot's main composition. The
 supplement `composition` draws IconTiles at the start, a count and a static Chip at the end, then the same rows as a
