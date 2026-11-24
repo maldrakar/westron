@@ -127,7 +127,9 @@ style modifier takes a style instead, and `spec check` reports the other strateg
 ### Constraints between options
 
 The contract states them (`when` / `require` / `severity`) and the validator checks the contract (#18). What code does
-with a forbidden combination is Q3.
+with a forbidden combination is Q3. A constraint on a slot (`when: { slots: [label] }`, severity `error`, one value for
+each option it requires), allowed only on an own view whose one slot is a drawn label, is kept by the API: the
+initializers that take the slot leave those options out (Rule: `Rule("Work")` takes no axis and no purpose).
 
 ### Token bindings
 

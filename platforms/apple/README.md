@@ -5,7 +5,8 @@ A SwiftUI library for iOS, iPadOS, macOS and watchOS. The package manifest lives
 | Path | What is there |
 |---|---|
 | `Sources/WestronTokens/` | Token values as plain Swift with no imports, for a product's shared code and its WebAssembly build |
-| `Sources/WestronUI/` | Styles, components and the SwiftUI accessors of the tokens: what products import |
+| `Sources/WestronContract/` | The contracts' vocabulary: the generated option enums, with no imports, for a product's shared code (decisions/0017) |
+| `Sources/WestronUI/` | Styles, components and the SwiftUI accessors of the tokens: what products import; re-exports the two above |
 | `Sources/WestronCatalog/` | Catalog entries, their host and launch arguments |
 | `Tests/` | Package tests (Swift Testing); `Tests/WestronSnapshotTests/` renders the snapshot matrix, on iOS inside the catalog app |
 | `Snapshots/` | The snapshot matrix's references, recorded on the CI runner (PNGs in Git LFS) |
@@ -16,8 +17,25 @@ A SwiftUI library for iOS, iPadOS, macOS and watchOS. The package manifest lives
 ```swift
 .package(url: "https://github.com/maldrakar/westron", from: "0.1.0")
 // …
-.product(name: "WestronUI", package: "westron")       // views
-.product(name: "WestronTokens", package: "westron")   // shared code that must not import SwiftUI
+.product(name: "WestronUI", package: "westron")         // views
+.product(name: "WestronTokens", package: "westron")     // shared code that must not import SwiftUI: token values,
+                                                        // Westron.Icon, Westron.Category
+.product(name: "WestronContract", package: "westron")   // shared code too: the option enums (ButtonVariant, RuleAxis)
+```
+
+A product's model in shared code keeps westron's vocabulary, never raw values: the option enums of `WestronContract`
+and the `Westron.Icon` and `Westron.Category` of `WestronTokens`, not a size, a color or a font. A view that imports
+`WestronUI` passes them on as they are, since `WestronUI` re-exports both modules (decisions/0017):
+
+```swift
+import WestronContract   // shared code: no SwiftUI
+import WestronTokens
+
+struct ListStyle: Sendable {   // what the product's model keeps of a list's look
+    var color: Westron.Category
+    var icon: Westron.Icon
+    var action: ButtonVariant
+}
 ```
 
 ## Tokens

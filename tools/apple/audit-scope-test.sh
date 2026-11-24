@@ -32,6 +32,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$root"
 script=tools/apple/audit-scope.sh
 ui=platforms/apple/Sources/WestronUI
+contract=platforms/apple/Sources/WestronContract
 catalog=platforms/apple/Sources/WestronCatalog
 failures=0
 
@@ -56,6 +57,9 @@ expect() {
 
 # A component's paths.
 expect "$ui/Generated/Disclosure+Contract.swift" list-row,disclosure
+# Its enums in WestronContract (decisions/0017): the same entries as the component's other generated file.
+expect "$contract/Generated/Disclosure+Contract.swift" list-row,disclosure
+expect "$contract/Generated/Rule+Contract.swift" rule,color-in-use
 expect "$catalog/Generated/Chip+Matrix.swift" chip
 expect "$catalog/Components/DisclosurePages.swift" disclosure
 expect spec/components/text-field/text-field.spec.yaml \
@@ -173,7 +177,7 @@ fresh_copy() {
   rm -rf "$copy"
   mkdir -p "$copy/tools/apple" "$copy/platforms/apple/Sources"
   cp "$script" "$copy/tools/apple/"
-  cp -R "$ui" "$catalog" "$copy/platforms/apple/Sources/"
+  cp -R "$ui" "$contract" "$catalog" "$copy/platforms/apple/Sources/"
 }
 # Adds the code <line> to the body of the entry <name> in the page <file> of the copy.
 add_to_entry() {

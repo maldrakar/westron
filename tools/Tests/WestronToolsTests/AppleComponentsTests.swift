@@ -54,8 +54,9 @@ private func generated(_ yaml: String) throws -> GeneratedFile? {
     try AppleComponents.file(for: ComponentContract(yaml: yaml, source: source), source: source)
 }
 
+/// Both generated files for a contract, joined: its vocabulary in WestronContract and its SwiftUI side in WestronUI.
 private func swift(_ yaml: String) throws -> String {
-    try #require(try generated(yaml)).contents
+    try generatedText(ComponentContract(yaml: yaml, source: source), source: source)
 }
 
 /// The generator over contracts by id, each in `<directory>/<id>/<id>.spec.yaml` of a fresh directory, which is
@@ -108,6 +109,33 @@ struct AppleComponentsTests {
         let file = try #require(try generated(contractYAML()))
         #expect(file.path == "platforms/apple/Sources/WestronUI/Generated/Button+Contract.swift")
         #expect(file.contents == Self.button)
+        let vocabulary = try #require(
+            try AppleComponents.contractFile(
+                for: ComponentContract(yaml: contractYAML(), source: source), source: source))
+        #expect(vocabulary.path == "platforms/apple/Sources/WestronContract/Generated/Button+Contract.swift")
+        #expect(vocabulary.contents == Self.buttonVocabulary)
+    }
+
+    @Test("WestronContract's file imports nothing, not even Foundation, and declares nothing but the enums")
+    func vocabularyImportsNothing() throws {
+        let contracts = try ContractCheck.files(in: repositoryRoot.appendingPathComponent("spec/components").path)
+        var checked = 0
+        for file in contracts {
+            let relative = "spec/components/" + file.split(separator: "/").suffix(2).joined(separator: "/")
+            let contract = try ComponentContract(yaml: String(contentsOfFile: file, encoding: .utf8), source: relative)
+            guard let vocabulary = try AppleComponents.contractFile(for: contract, source: relative) else { continue }
+            checked += 1
+            let lines = vocabulary.contents.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
+            #expect(!lines.contains { $0.hasPrefix("import ") || $0.hasPrefix("@_exported") }, "\(relative)")
+            let declarations = lines.filter { !$0.hasPrefix("//") && !$0.hasPrefix("#") && $0 != "}" }
+                .filter { !$0.isEmpty && !$0.hasPrefix("case ") }
+            #expect(
+                declarations.allSatisfy {
+                    $0.hasPrefix("public enum ") && $0.hasSuffix(": String, CaseIterable, Sendable {")
+                },
+                "\(relative): \(declarations)")
+        }
+        #expect(checked == 8, "Button, Checkbox, Chip, Disclosure, ListRow, Rule, Surface and TextField have enums")
     }
 
     @Test("names: <Component><Option> in UpperCamelCase, cases the values as written, a keyword in backticks")
@@ -286,9 +314,16 @@ struct AppleComponentsTests {
             let first = try generator.run()
             #expect(
                 first.map(\.path)
-                    == ["Button", "Toggle"].map { "\(AppleComponents.outputDirectory)/\($0)+Contract.swift" })
+                    == ["Button", "Toggle"].flatMap { name in
+                        [AppleComponents.contractDirectory, AppleComponents.outputDirectory].map {
+                            "\($0)/\(name)+Contract.swift"
+                        }
+                    })
             #expect(try generator.run() == first)
-            #expect(generator.ownedDirectories == ["platforms/apple/Sources/WestronUI/Generated"])
+            #expect(
+                generator.ownedDirectories == [
+                    "platforms/apple/Sources/WestronUI/Generated", "platforms/apple/Sources/WestronContract/Generated",
+                ])
         }
     }
 
@@ -402,10 +437,10 @@ struct AppleComponentsTests {
                     && $0.contains("share the variant primary, secondary, so .buttonStyle(.primary) would be ambiguous")
             })
         let distinct = chip.replacingOccurrences(of: "values: [primary, secondary]", with: "values: [filled, outlined]")
-        #expect(try generate(["button": contractYAML(), "chip": distinct]).count == 2)
+        #expect(try generate(["button": contractYAML(), "chip": distinct]).count == 4, "each a vocabulary and a style")
         // A required variant next to one with a default: .buttonStyle() can only be the chip's (probed, Xcode 27.1).
         let defaulted = distinct.replacingOccurrences(of: "outlined],", with: "outlined], default: filled,")
-        #expect(try generate(["button": contractYAML(), "chip": defaulted]).count == 2)
+        #expect(try generate(["button": contractYAML(), "chip": defaulted]).count == 4)
         // Two overloads a call without a variant fits: two variants with a default, or one with a default and one
         // component without a variant, where Swift would silently take the one without.
         let tag = contractYAML(
@@ -429,7 +464,7 @@ struct AppleComponentsTests {
     func realContract() throws {
         let file = repositoryRoot.appendingPathComponent(source).path
         let contract = try ComponentContract(yaml: String(contentsOfFile: file, encoding: .utf8), source: source)
-        let contents = try #require(try AppleComponents.file(for: contract, source: source)).contents
+        let contents = try generatedText(contract, source: source)
         #expect(contents.contains("public enum ButtonVariant: String, CaseIterable, Sendable {\n    case primary\n"))
         #expect(contents.contains("public enum ButtonSize: String, CaseIterable, Sendable {\n    case s\n"))
         #expect(!contents.contains("enum ButtonRole"))
@@ -439,14 +474,12 @@ struct AppleComponentsTests {
                     + "floating: Bool = false\n    ) -> some View {"))
     }
 
-    static let button = """
+    static let buttonVocabulary = """
         // Generated from spec/components/button/button.spec.yaml by `tools/westron generate`. Do not edit: change the contract
         // and generate again (spec/conventions.md).
         //
-        // Button's API from its contract: the enums of its options, the overload of `buttonStyle` that products call, which
-        // applies the hand-written `ButtonVariantStyle` (decisions/0001), and the tables that style reads.
-
-        import SwiftUI
+        // Button's vocabulary from its contract: the enums of its options. WestronContract imports nothing, so that a product's
+        // shared code names them without SwiftUI; WestronUI re-exports it and adds the SwiftUI side (decisions/0017).
 
         /// Button's option `variant`, from its contract.
         ///
@@ -465,6 +498,19 @@ struct AppleComponentsTests {
             case m
             case l
         }
+
+        """
+
+    static let button = """
+        // Generated from spec/components/button/button.spec.yaml by `tools/westron generate`. Do not edit: change the contract
+        // and generate again (spec/conventions.md).
+        //
+        // Button's API from its contract: the overload of `buttonStyle` that products call, which applies the hand-written
+        // `ButtonVariantStyle` (decisions/0001), and the tables that style reads. The enums of its options are in
+        // WestronContract/Generated/Button+Contract.swift (decisions/0017).
+
+        import SwiftUI
+        import WestronContract
 
         extension View {
             /// Applies westron's Button style, from its contract, to the system's `Button` in this view:

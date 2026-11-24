@@ -6,8 +6,8 @@
 # Reads changed paths, one per line, and prints one line: the ids of the catalog entries to audit, comma-separated,
 # in the order of the registry (`Catalog.entries`), or an empty line when there is nothing to audit. Why each path
 # counts, or does not, goes to stderr. The rules:
-#   - a path of one component: `platforms/apple/Sources/WestronUI/<Name>/`, its generated `<Name>+Contract.swift` and
-#     `<Name>+Matrix.swift`, `platforms/apple/Sources/WestronCatalog/Components/<Name>Pages.swift`, its contract
+#   - a path of one component: `platforms/apple/Sources/WestronUI/<Name>/`, its generated `<Name>+Contract.swift` (in
+#     WestronUI, and its enums in WestronContract, decisions/0017) and `<Name>+Matrix.swift`, `platforms/apple/Sources/WestronCatalog/Components/<Name>Pages.swift`, its contract
 #     `spec/components/<id>/` (`text-field` is `TextField`) → the entries `<Name>Pages.swift` declares, and the
 #     entries that draw what changed (see "Use" below). A component of WestronUI without that page fails the script:
 #     every component has its catalog entry (Catalog.swift). A contract without one is not implemented on Apple yet,
@@ -28,8 +28,9 @@
 #
 # Use. Since phase 4 components draw each other (Disclosure's page holds ListRows, ListRow draws Rule and Checkbox,
 # TextField draws Icon), so a change to one can break another's page. The script follows use, derived from the
-# sources on every run, not from a list: there is no map to keep. It reads every Swift file of WestronUI, the catalog's
-# pages (Components/, Foundations/) and its root files that declare entries, without comments and string literals,
+# sources on every run, not from a list: there is no map to keep. It reads every Swift file of WestronUI and
+# WestronContract (whose enums tell a component's style modifier from the system's), the catalog's pages (Components/,
+# Foundations/) and its root files that declare entries, without comments and string literals,
 # and splits them into units: each top-level declaration; each extension of a type they declare, under that type's
 # name; and each member of an extension of a type they do not declare (View, EnvironmentValues, Toggle, CatalogEntry),
 # so that every entry, `static let <name> = CatalogEntry(…)`, is a unit of its own. A unit uses another when its code
@@ -85,6 +86,8 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$root"
 
 ui=platforms/apple/Sources/WestronUI
+# The contracts' vocabulary, the components' generated enums (decisions/0017): read with WestronUI.
+contract=platforms/apple/Sources/WestronContract
 catalog=platforms/apple/Sources/WestronCatalog
 registry="$catalog/Catalog.swift"
 # The limit (see "Use" above): at most this many entries beyond a component's own, one leg of the audit.
@@ -158,17 +161,17 @@ uses_table() {
   local components files
   components="$(find "$catalog/Components" -name '*Pages.swift' | sed -E 's|.*/([^/]+)Pages\.swift$|\1|' | sort)"
   files="$({
-    find "$ui" "$catalog/Components" "$catalog/Foundations" -name '*.swift'
+    find "$ui" "$contract" "$catalog/Components" "$catalog/Foundations" -name '*.swift'
     for file in "$catalog"/*.swift; do
       if [ -n "$(declared "$file")" ]; then echo "$file"; fi
     done
   } | sort)"
   # shellcheck disable=SC2086 # the names and paths have no spaces
-  perl - "$ui" "$catalog" "$fan_out_limit" "$(base_names | paste -sd, -)" $components -- $files << 'PERL'
+  perl - "$ui" "$contract" "$catalog" "$fan_out_limit" "$(base_names | paste -sd, -)" $components -- $files << 'PERL'
 use strict;
 use warnings;
 
-my ($ui, $catalog, $limit, $base_list, @rest) = @ARGV;
+my ($ui, $contract, $catalog, $limit, $base_list, @rest) = @ARGV;
 my (@components, @files);
 my $list = \@components;
 for (@rest) {
@@ -346,6 +349,7 @@ sub impl_of {    # the component whose implementation <file> is, or ''
   my ($file) = @_;
   return $1 if $file =~ m{^\Q$ui\E/([^/]+)/[^/]+\.swift$} && $1 ne 'Generated';
   return $1 if $file =~ m{^\Q$ui\E/Generated/(\w+)\+Contract\.swift$};
+  return $1 if $file =~ m{^\Q$contract\E/Generated/(\w+)\+Contract\.swift$};
   return '';
 }
 for my $c (@components) {
@@ -495,7 +499,7 @@ while IFS= read -r path || [ -n "$path" ]; do
   [ -n "$path" ] || continue
   page="" why="shared or outside the catalog" use=""
   case "$path" in
-    "$ui"/Generated/*+Contract.swift)
+    "$ui"/Generated/*+Contract.swift | "$contract"/Generated/*+Contract.swift)
       name="${path##*/}"
       page="$(component_page "${name%+Contract.swift}")"
       use="${name%+Contract.swift} impl"

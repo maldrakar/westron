@@ -237,6 +237,13 @@ public struct AgentContext: Generator {
             "`import WestronUI`. Each line: the card, the shortest call, what the component is. A card ends with a",
             "pointer to its details file, the contract's prose, for cases the card does not settle.", "",
         ]
+        let someEnums = cards.flatMap(\.enums).prefix(2).map { "`\($0.type)`, " }.joined()
+        out += ContextMarkdown.wrap(
+            "The option enums the cards list (\(someEnums)…) are in `WestronContract`, which "
+                + "`WestronUI` re-exports. A product's shared code, which cannot import SwiftUI, imports "
+                + "`WestronContract` instead, and `WestronTokens` for `Westron.Icon` and `Westron.Category`; neither "
+                + "imports anything.")
+        out.append("")
         for card in cards {
             let call = card.shortestCall.map(ContextMarkdown.code)
             let styled = card.targets.map { "`.\($0.modifier)(…)`" }

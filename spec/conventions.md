@@ -96,11 +96,15 @@ name (spec/components/text-field, decisions/0003).
 ### Generated enums, a generated signature, a hand-written style
 
 `tools/westron generate` (the `components-apple` generator, #20) generates, from every contract that is approved or
-later and whose Apple strategy is `style-on-system-control`, the enums and the signature of the overload, into
-`WestronUI/Generated/<Component>+Contract.swift`; the body of the style is written by hand (decisions/0001). For
-Button, without its doc comments:
+later and whose Apple strategy is `style-on-system-control`, the enums and the signature of the overload; the body of
+the style is written by hand (decisions/0001). The enums go into
+`WestronContract/Generated/<Component>+Contract.swift`, the contracts' vocabulary, a module that imports nothing, not
+even Foundation, so that a product's shared code, which cannot import SwiftUI, names them; `WestronUI` re-exports it,
+so a view's `import WestronUI` sees them, and the rest goes into `WestronUI/Generated/<Component>+Contract.swift`
+(decisions/0017). For Button, without its doc comments:
 
 ```swift
+// WestronContract/Generated/Button+Contract.swift
 public enum ButtonVariant: String, CaseIterable, Sendable {
     case primary
     case secondary
@@ -113,6 +117,7 @@ public enum ButtonSize: String, CaseIterable, Sendable {
     case l
 }
 
+// WestronUI/Generated/Button+Contract.swift
 extension View {
     public func buttonStyle(
         _ variant: ButtonVariant, size: ButtonSize? = nil, iconOnly: Bool = false, floating: Bool = false
@@ -143,8 +148,10 @@ enum ButtonState: String, CaseIterable, Sendable {
   for every enum option (its restrictions and fallbacks on each Apple OS, as `#if os(…)`), and `<Component>State`
   with `isEntered`. The hand-written style switches over these enums exhaustively, so a value renamed, added or
   removed in the contract fails the build there until the style follows it (#20). A draft contract generates nothing,
-  so a contract in review never breaks the build; an own component gets its enums alone ("Own components"). The generator first runs
-  `spec check` on every contract and generates nothing while one fails it (#62).
+  so a contract in review never breaks the build; an own component gets its enums alone ("Own components"). The enums
+  are WestronContract's and their extensions WestronUI's: what needs SwiftUI (`init(_: ControlSize)`, `offered`, the
+  states) stays out of the vocabulary. The generator first runs `spec check` on every contract and generates nothing
+  while one fails it (#62).
 - **An option that is the system's own API gets no type.** The Apple entry names it in `systemOptions`, with the
   system type that carries it: Button's `role` is `systemOptions: { role: SwiftUI.ButtonRole }`, so no `ButtonRole`
   is generated, which would shadow SwiftUI's, the overload takes no `role:`, and the style reads
@@ -578,10 +585,12 @@ public struct Rule: View {
   `SwiftUI.Image.Scale`, set with `.imageScale(.small)`. They are no parameter and get no enum, as on a style.
 - **Generated enums, a hand-written entry point** (the choice Text made for an extension, "Extensions of a system
   view"). `tools/westron generate` writes the enums of the enum options, `<Component><Option>` by the style's naming
-  rules (`SurfaceVariant`, `RuleAxis`), into `WestronUI/Generated/<Component>+Contract.swift`, and nothing else: no
-  import, no signature. The modifier or the view is hand-written in `WestronUI/<Component>/`, since its body is the
-  whole implementation: a generated modifier could only forward to a hand-written `ViewModifier`, and a generated
-  view would split one type between a generated declaration and a hand-written body. The API parity lint
+  rules (`SurfaceVariant`, `RuleAxis`), into `WestronContract/Generated/<Component>+Contract.swift` (decisions/0017),
+  and no signature; its states and forms, which a hand-written view reads, into
+  `WestronUI/Generated/<Component>+Contract.swift`. The modifier or the view is hand-written in
+  `WestronUI/<Component>/`, since its body is the whole implementation: a generated modifier could only forward to a
+  hand-written `ViewModifier`, and a generated view would split one type between a generated declaration and a
+  hand-written body. The API parity lint
   (`AppleComponents.Own`, `APIParity.expectOwn`, `checkViews`) holds the hand-written signature to the contract: the
   modifier, or the view's type, conformance, initializer and body, missing, changed or doubled, and any other public
   member of the view's type or function named after the component is reported as API no contract gives. An option

@@ -2,7 +2,7 @@
 
 A design system for everyday and technical products with a cross-platform core and a native UI on each platform.
 
-**Status:** phases 1 "Design language and tokens", 2 "Contract and Button on Apple", 3 "Primitives and forms (Apple)" and 4 "Pilot components (Apple)" are done; phase 5 "Patterns, documentation, agent context" is next. There are DTCG tokens in four themes with a palette generator and a contrast check, the Apple token output (`WestronTokens`, `WestronUI`), the component contract schema with its checks, the generator of API names, the public API parity lint, eleven components in SwiftUI (Button, Text, Icon, Surface, Rule, TextField, Checkbox, Chip, IconTile, ListRow and Disclosure; iOS and macOS, and compiled for watchOS except Disclosure, which has no system control there), a catalog app for iOS and macOS with screenshots, the accessibility audit and the snapshot matrix, CI and a Claude Code setup. The pilot product is [todo-app](https://github.com/maldrakar/todo-app): its screens decide which components come first, and it is the first to adopt westron's look.
+**Status:** phases 1 "Design language and tokens", 2 "Contract and Button on Apple", 3 "Primitives and forms (Apple)" and 4 "Pilot components (Apple)" are done; phase 5 "Patterns, documentation, agent context" is next. There are DTCG tokens in four themes with a palette generator and a contrast check, the Apple token output (`WestronTokens`, `WestronUI`), the component contract schema with its checks, the generator of API names, with the option enums in `WestronContract`, a module with no imports for shared code (decisions/0017), the public API parity lint, eleven components in SwiftUI (Button, Text, Icon, Surface, Rule, TextField, Checkbox, Chip, IconTile, ListRow and Disclosure; iOS and macOS, and compiled for watchOS except Disclosure, which has no system control there), a catalog app for iOS and macOS with screenshots, the accessibility audit and the snapshot matrix, CI and a Claude Code setup. The pilot product is [todo-app](https://github.com/maldrakar/todo-app): its screens decide which components come first, and it is the first to adopt westron's look.
 
 ## The idea
 
@@ -40,13 +40,7 @@ Build and check commands are in [AGENTS.md](AGENTS.md).
 
 ## For agents in a product
 
-westron's Claude Code plugin gives an agent that builds a product's UI the rules and a reference generated from the contracts, tokens, icons and design language (decisions/0016). This repository is its marketplace. In a session in the product's repository:
-
-```
-/plugin install westron --marketplace maldrakar/westron
-```
-
-or, from a shell, for everyone who works in that repository (commit the `.claude/settings.json` it writes):
+westron's Claude Code plugin gives an agent that builds a product's UI the rules and a reference generated from the contracts, tokens, icons and design language (decisions/0016). This repository is its marketplace. From a shell in the product's repository, for everyone who works in it (commit the `.claude/settings.json` it writes):
 
 ```sh
 claude plugin marketplace add maldrakar/westron --scope project
@@ -74,3 +68,7 @@ Code, tokens and contracts: [MIT](LICENSE). Design language texts in `design-lan
 - [0011. Icons and fonts](decisions/0011-icons-and-fonts.md)
 - [0012. Color](decisions/0012-color.md)
 - [0013. Typography, space, shape and motion](decisions/0013-typography-space-shape-motion.md)
+- [0014. A small core of components; products compose the rest](decisions/0014-core-components-and-composition.md)
+- [0015. Glass: a floating Button on the system's glass; the bars are the system's](decisions/0015-glass.md)
+- [0016. Agent context: skills and generated files, no MCP server; two channels](decisions/0016-agent-context.md)
+- [0017. WestronContract: the contracts' option enums, no imports, for shared code](decisions/0017-westron-contract.md)

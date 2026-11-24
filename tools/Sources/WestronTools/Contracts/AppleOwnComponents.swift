@@ -42,8 +42,9 @@ extension AppleComponents {
     /// optional, nil drawing no mark, then the others labeled, with their defaults: `.insertionMark(_ edge:
     /// ListRowInsertionEdge?, level: Int = 0)`. Each enum parameter gets the enum `<Component><Mark><Parameter>`.
     ///
-    /// The generator writes the enums of the enum options, `<Component><Option>`, into
-    /// `WestronUI/Generated/<Component>+Contract.swift`, by the naming rules of a style. The modifier or the view is
+    /// The generator writes the enums of the enum options, `<Component><Option>`, by the naming rules of a style, into
+    /// `WestronContract/Generated/<Component>+Contract.swift`, and the states and forms, when it has any, into
+    /// `WestronUI/Generated/<Component>+Contract.swift` (decisions/0017). The modifier or the view is
     /// hand-written, since its body is the whole implementation; the API parity lint holds its signature to this.
     /// An option in `platforms.apple.systemOptions` is the system's own environment modifier, which a product writes
     /// on the component and the system views inside it read (Icon's `scale`, `.imageScale(_:)`): it is no parameter
@@ -381,64 +382,66 @@ extension AppleComponents {
             return result
         }
 
-        /// The generated file, the enums of the options, or nil when the contract has no enum option.
+        /// The vocabulary, `WestronContract/Generated/<Component>+Contract.swift`: the enums of the options and of the
+        /// marks' parameters; nil when the contract has none.
+        func vocabularyFile(source: String, contract: ComponentContract) -> GeneratedFile? {
+            var vocabulary: [VocabularyEnum] = enums.map { item in
+                VocabularyEnum(
+                    paragraphs: ["\(component)'s option `\(item.option)`, from its contract."]
+                        + (item.description.map { [$0] } ?? []),
+                    type: item.type, values: item.values)
+            }
+            for mark in marks {
+                for item in mark.enums {
+                    vocabulary.append(
+                        VocabularyEnum(
+                            paragraphs: [
+                                "The parameter `\(item.option)` of \(component)'s mark `\(mark.mark)`, from its "
+                                    + "contract: `.\(mark.name)(…)`, hand-written in WestronUI/\(component)/."
+                            ] + (item.description.map { [$0] } ?? []),
+                            type: item.type, values: item.values))
+                }
+            }
+            let missing = (contract.apple?.unavailable ?? []).compactMap { AppleComponents.osNames[$0] }
+            return AppleComponents.vocabularyFile(
+                component: component, source: source, enums: vocabulary,
+                ofMarks: marks.contains { !$0.enums.isEmpty }, condition: contract.apple?.availabilityCondition,
+                absence: "\(component) does not exist on \(missing.joined(separator: " and ")) (the contract's "
+                    + "`platforms` block); its vocabulary is there only where the component is.")
+        }
+
+        /// The generated SwiftUI side, the states and the forms, or nil when the contract has neither: its enums are
+        /// in `vocabularyFile`.
         func file(source: String) -> GeneratedFile? {
-            guard !enums.isEmpty || !states.isEmpty || !marks.isEmpty else { return nil }
+            guard !states.isEmpty || !forms.isEmpty else { return nil }
             let width = AppleTokensSwift.lineLength - 3
             let origin =
                 "Generated from \(source) by `tools/westron generate`. Do not edit: change the contract and generate "
                 + "again (spec/conventions.md)."
-            let entry =
-                form == .modifier
-                ? "the modifier `\(signatureName)` is" : "the view `\(name)` and its `\(signatureName)` are"
+            var parts: [String] = []
+            if !states.isEmpty { parts.append("its states") }
+            if !forms.isEmpty { parts.append("its forms") }
+            let list = parts.joined(separator: " and ")
+            let hand =
+                [form == .modifier ? "the modifier `\(name)`" : "the view `\(name)` and its initializers"]
+                + marks.map { "the modifier `\($0.name)`" } + modifierStates.map { "the state modifier `\($0)`" }
+            let handList = hand.count > 1 ? hand.dropLast().joined(separator: ", ") + " and " + hand.last! : hand[0]
             var purpose =
-                "\(component)'s API from its contract: the enums of its options. It is an own component, and "
-                + "\(entry) hand-written in WestronUI/\(component)/; the API parity lint holds the signature to the "
-                + "contract (spec/conventions.md, \"Own components\")."
-            if !states.isEmpty || !marks.isEmpty || initializers.count > 1 {
-                var parts: [String] = []
-                if !enums.isEmpty { parts.append("the enums of its options") }
-                if !marks.isEmpty { parts.append("the enums of its marks' parameters") }
-                if !states.isEmpty { parts.append("its states") }
-                if !forms.isEmpty { parts.append("its forms") }
-                let list =
-                    parts.count > 1 ? parts.dropLast().joined(separator: ", ") + " and " + parts.last! : parts[0]
-                let hand =
-                    ["the view `\(name)` and its initializers"] + marks.map { "the modifier `\($0.name)`" }
-                    + modifierStates.map { "the state modifier `\($0)`" }
-                let handList =
-                    hand.count > 1 ? hand.dropLast().joined(separator: ", ") + " and " + hand.last! : hand[0]
-                purpose =
-                    "\(component)'s API from its contract: \(list). It is an own component, and \(handList) are "
-                    + "hand-written in WestronUI/; the API parity lint holds their signatures to the contract "
-                    + "(spec/conventions.md, \"Own components\")."
+                "\(component)'s API from its contract: \(list). It is an own component, and \(handList) "
+                + (hand.count > 1 ? "are" : "is") + " hand-written in WestronUI/; the API parity lint holds "
+                + (hand.count > 1 ? "their signatures" : "its signature") + " to the contract (spec/conventions.md, "
+                + "\"Own components\")."
+            var vocabulary: [String] = []
+            if !enums.isEmpty { vocabulary.append("its options") }
+            if marks.contains(where: { !$0.enums.isEmpty }) { vocabulary.append("its marks' parameters") }
+            if !vocabulary.isEmpty {
+                purpose +=
+                    " The enums of \(vocabulary.joined(separator: " and of ")) are in "
+                    + "WestronContract/Generated/\(component)+Contract.swift (decisions/0017)."
             }
             var out =
                 AppleTokensSwift.wrap(origin, width: width).map { "// " + $0 } + ["//"]
                 + AppleTokensSwift.wrap(purpose, width: width).map { "// " + $0 }
-            for item in enums {
-                out.append("")
-                var paragraphs = ["\(component)'s option `\(item.option)`, from its contract."]
-                if let description = item.description { paragraphs.append(description) }
-                out += AppleIcons.paragraphs(paragraphs, indent: 0)
-                out.append("public enum \(item.type): String, CaseIterable, Sendable {")
-                out += item.values.map { "    case \(SwiftName.declared($0))" }
-                out.append("}")
-            }
-            for mark in marks {
-                for item in mark.enums {
-                    out.append("")
-                    var paragraphs = [
-                        "The parameter `\(item.option)` of \(component)'s mark `\(mark.mark)`, from its contract: "
-                            + "`.\(mark.name)(…)`, hand-written in WestronUI/\(component)/."
-                    ]
-                    if let description = item.description { paragraphs.append(description) }
-                    out += AppleIcons.paragraphs(paragraphs, indent: 0)
-                    out.append("public enum \(item.type): String, CaseIterable, Sendable {")
-                    out += item.values.map { "    case \(SwiftName.declared($0))" }
-                    out.append("}")
-                }
-            }
             if !states.isEmpty { out += [""] + stateLines() }
             if !forms.isEmpty { out += [""] + formLines() }
             return GeneratedFile(

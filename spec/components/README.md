@@ -192,16 +192,19 @@ are fine.
 ## Generated API
 
 `tools/westron generate` writes, for every contract that is approved or later and whose Apple strategy is
-`style-on-system-control`, `platforms/apple/Sources/WestronUI/Generated/<Component>+Contract.swift`: the enums of its
-options (`ButtonVariant`, `ButtonSize`), the overload of the base control's style modifier
-(`.buttonStyle(.primary, size: .m)`), which applies the hand-written `<Component>VariantStyle`, and the tables that
-style reads (the `controlSize` mapping, each OS's fallbacks, the states). Its exact form is in
+`style-on-system-control`, two files (decisions/0017). The enums of its options (`ButtonVariant`, `ButtonSize`) go into
+`platforms/apple/Sources/WestronContract/Generated/<Component>+Contract.swift`, a module that imports nothing, so that
+a product's shared code names them without SwiftUI; `WestronUI` re-exports it. The SwiftUI side goes into
+`platforms/apple/Sources/WestronUI/Generated/<Component>+Contract.swift`: the overload of the base control's style
+modifier (`.buttonStyle(.primary, size: .m)`), which applies the hand-written `<Component>VariantStyle`, and the tables
+that style reads (the `controlSize` mapping, each OS's fallbacks, the states). Its exact form is in
 [`spec/conventions.md`](../conventions.md). A draft contract generates nothing.
 
 An approved `own-component` names the shape of its API in `platforms.apple.form`, which the schema requires of it and
 forbids on a style or an extension: `modifier`, a modifier on `View` named after the component (`.surface(.raised)`), or
-`view`, a `View` named after it (`Rule(axis: .vertical)`). The generator writes the enums of its enum options alone into
-`WestronUI/Generated/<Component>+Contract.swift` (`SurfaceVariant`, `RuleAxis`); the modifier or the view is
+`view`, a `View` named after it (`Rule(axis: .vertical)`). The generator writes the enums of its enum options into
+`WestronContract/Generated/<Component>+Contract.swift` (`SurfaceVariant`, `RuleAxis`), and its states and forms, when
+it has any, into `WestronUI/Generated/<Component>+Contract.swift`, and no signature; the modifier or the view is
 hand-written, and the API parity lint expects its signature from the contract: the variant unlabeled first and every
 other option labeled with its default for a modifier, every option labeled with its default for a view's `init`, which
 conforms to `View` alone and has `public var body: some View`. States, a `size` option, an option whose values are

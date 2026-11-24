@@ -43,13 +43,12 @@ private let root = "WestronUI"
 /// The fixture module: the generated file of the fixture contract, and the hand-written initializers.
 private func lint(_ initializers: String, yaml: String = checkFixture) throws -> [String] {
     let contract = try ComponentContract(yaml: yaml, source: checkSource)
-    let generated = try #require(try AppleComponents.file(for: contract, source: checkSource)).contents
-    let files = [
-        (path: "\(root)/Generated/Check+Contract.swift", text: generated),
-        (path: "\(root)/Check/Toggle+AccessibilityLabel.swift", text: initializers),
-    ]
+    let files =
+        try generatedSources(contract, source: checkSource)
+        + [(path: "\(root)/Check/Toggle+AccessibilityLabel.swift", text: initializers)]
     let item = APIParity.Contract(contract: contract, source: checkSource, text: yaml)
-    return APIParity.check(contracts: [item], files: files, sourceRoot: root).problems.map(\.description)
+    return APIParity.check(contracts: [item], files: files, sourceRoot: root, contractRoot: "WestronContract").problems
+        .map(\.description)
 }
 
 /// What WestronUI declares for Checkbox's check with no drawn label.

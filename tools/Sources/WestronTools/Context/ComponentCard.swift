@@ -126,11 +126,15 @@ struct ComponentCard {
         for entry in byExtension {
             out += ["extension \(entry.extends) {"] + entry.lines + ["}"]
         }
-        for item in enums {
-            let cases = item.values.map(SwiftName.declared).joined(separator: ", ")
-            out.append("public enum \(item.type): String, CaseIterable, Sendable { case \(cases) }")
-        }
         return out
+    }
+
+    /// The enums of its options and marks, as WestronContract declares them (decisions/0017).
+    func vocabularyDeclarations() -> [String] {
+        enums.map { item in
+            let cases = item.values.map(SwiftName.declared).joined(separator: ", ")
+            return "public enum \(item.type): String, CaseIterable, Sendable { case \(cases) }"
+        }
     }
 
     /// A placeholder argument of a type, for an example call: the first value of a westron enum, a name of the icon
@@ -325,11 +329,19 @@ struct ComponentCard {
 
     func external(_ text: String) -> String { ContextMarkdown.withoutTooling(text) }
 
-    /// The prose a card keeps: without the sentences on westron's tooling, and without those that name a token
-    /// binding, which say how westron draws the component (the details file keeps them).
+    /// The prose a card keeps: without the sentences on westron's tooling, and without a token binding's name, which
+    /// says how westron draws the component (the details file keeps it). The fact a sentence states stays: the phrase
+    /// that names the binding goes, "indented by container.indent for each level" reads "indented for each level", and
+    /// so does a clause after "; " that still names one; a sentence goes only when nothing is left of it.
     func usable(_ text: String) -> String {
-        ContextMarkdown.sentences(external(text)).filter { sentence in
-            !bindings.contains { ContextMarkdown.names(sentence, $0) }
+        ContextMarkdown.sentences(external(text)).compactMap { sentence in
+            var kept = sentence
+            for binding in bindings {
+                kept = ContextMarkdown.removingPhrases(naming: binding, in: kept)
+            }
+            return ContextMarkdown.withoutClauses(kept) { clause in
+                bindings.contains { ContextMarkdown.names(clause, $0) }
+            }
         }.joined(separator: " ")
     }
 
@@ -386,14 +398,28 @@ struct ComponentCard {
             out +=
                 ["`import WestronUI`. A call writes at least:", "", "```swift"] + examples.flatMap { $0 } + ["```", ""]
         }
-        out += ["What WestronUI declares for it:", "", "```swift"] + declarations() + ["```"]
+        let declarations = declarations()
+        if !declarations.isEmpty {
+            out += ["What WestronUI declares for it:", "", "```swift"] + declarations + ["```"]
+        }
+        let vocabulary = vocabularyDeclarations()
+        if !vocabulary.isEmpty {
+            out +=
+                (declarations.isEmpty ? [] : [""])
+                + ContextMarkdown.wrap(
+                    "Its enums are in `WestronContract`, which `WestronUI` re-exports, so a view needs no other import. "
+                        + "A product's shared code, which cannot import SwiftUI, imports `WestronContract` instead, and "
+                        + "its models keep these values, never a size, a color or a font:")
+                + ["", "```swift"] + vocabulary + ["```"]
+        }
         if let apple = contract.apple, !apple.unavailable.isEmpty, let condition = apple.availabilityCondition {
             let names = apple.unavailable.compactMap { AppleComponents.osNames[$0] }
             out +=
                 [""]
                 + ContextMarkdown.wrap(
                     "Not on \(ContextMarkdown.list(names)): SwiftUI has no base control there, so WestronUI declares all of "
-                        + "it under `#if \(condition)`, and a product's call stands under the same condition.")
+                        + "it, and `WestronContract` its enums, under `#if \(condition)`; a product's call, and a model "
+                        + "that names its enums, stand under the same condition.")
         }
         if let apple = contract.apple {
             for (option, api) in apple.systemOptions.sorted(by: { $0.key < $1.key }) {

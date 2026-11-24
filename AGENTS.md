@@ -28,6 +28,7 @@ Button slice on Apple (phase 2), before a second component (`reports/`, section 
 | `spec/conventions.md` | How each contract concept maps to platform API: SwiftUI authoritative, web, GTK and Compose provisional |
 | `spec/icons/icons.yaml` | Icon registry: westron's icon names, what each glyph draws, its SF Symbol, the default (decisions/0011) |
 | `platforms/apple/Sources/WestronTokens/` | Token values as plain Swift with no imports, generated (decisions/0010) |
+| `platforms/apple/Sources/WestronContract/` | The contracts' vocabulary: the generated option enums (`ButtonVariant`, `RuleAxis`), with no imports, for a product's shared code; `WestronUI` re-exports it (decisions/0017) |
 | `platforms/apple/Sources/WestronUI/` | SwiftUI styles, components and token accessors: what products import |
 | `platforms/apple/Sources/WestronCatalog/` | Registry of catalog entries and its host, and the snapshot matrices generated from the contracts |
 | `platforms/apple/Tests/WestronSnapshotTests/` | The snapshot matrix rendered in-process: a package test on macOS, and the catalog's hosted unit-test bundle `CatalogSnapshotTests` on iOS |
@@ -79,7 +80,7 @@ tools/check.sh                    # build and test tools/, then the checks below
 tools/check.sh spec api-parity    # some of its steps: tools raw-values generate tokens contrast icons spec api-parity
                                   # locks audit-scope
 tools/westron lint raw-values     # no raw values in WestronUI
-tools/westron lint api-parity     # WestronUI's public API is exactly the component API the contracts give
+tools/westron lint api-parity     # WestronUI's and WestronContract's public API is exactly what the contracts give
 tools/westron generate            # regenerate code from the sources
 tools/westron generate --check    # generated code matches a fresh generation
 tools/westron icons check         # the icon registry spec/icons/icons.yaml is valid
@@ -156,5 +157,6 @@ them to that branch.
 - [0014](decisions/0014-core-components-and-composition.md) a small core of components; products compose the rest
 - [0015](decisions/0015-glass.md) glass: a floating Button on the system's glass; the bars are the system's
 - [0016](decisions/0016-agent-context.md) agent context: skills and generated files, no MCP server; two channels
+- [0017](decisions/0017-westron-contract.md) WestronContract: the contracts' option enums, no imports, for shared code
 
 The final research report, with sources: `reports/`.

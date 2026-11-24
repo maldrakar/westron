@@ -1,12 +1,13 @@
 ---
 name: westron
-description: The westron design system's components, tokens, icons and rules. Use when writing or changing UI in a product that uses westron (it imports WestronUI or WestronTokens) - a screen, a view, a row, a sheet's content, layout, colors, spacing, text styles, icons or motion - and before building any control or style of the product's own.
+description: The westron design system's components, tokens, icons and rules. Use when writing or changing UI in a product that uses westron (it imports WestronUI, WestronTokens or WestronContract) - a screen, a view, a row, a sheet's content, layout, colors, spacing, text styles, icons or motion - and before building any control or style of the product's own.
 ---
 
 # westron
 
-westron is the design system this product's UI is built from. On Apple it is `import WestronUI` (SwiftUI) and
-`WestronTokens` (plain values). This file holds the rules; `context/` holds the reference, generated from westron's
+westron is the design system this product's UI is built from. On Apple it is `import WestronUI` (SwiftUI), which
+re-exports `WestronTokens` (plain values) and `WestronContract` (the components' option enums). This file holds the
+rules; `context/` holds the reference, generated from westron's
 contracts, tokens and design language. Paths here are relative to this file.
 
 ## Reading the reference
@@ -56,6 +57,11 @@ generated with; where the product's pinned WestronUI differs, the package's decl
 6. **Follow the card.** Its "Do not" list and its constraints hold: a forbidden combination of options is a bug even
    where it compiles. States the system lacks are westron's modifiers, `.selected(_:)`, `.loading(_:)`,
    `.dropTarget(_:)`; the rest are the system's, such as `.disabled(_:)`.
+7. **A model keeps westron's vocabulary, not its values.** A model in shared code, which cannot import SwiftUI, names
+   the option enums of `WestronContract` (`ButtonVariant`, `RuleAxis`) and `Westron.Icon` and `Westron.Category` of
+   `WestronTokens`, both modules with no imports, and holds no size, color, font, radius, spacing or duration. A view
+   passes that vocabulary to westron's API, `.buttonStyle(row.action)`, and never turns a product's own value into a
+   raw color or size: no `switch` to a color.
 
 ## When westron lacks something
 

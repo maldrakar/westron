@@ -25,11 +25,18 @@ extension View {
     public func disclosureAlignsLeaves(_: Bool = true) -> some View
     public func disclosureGroupStyle(_: DisclosureVariant) -> some View
 }
+```
+
+Its enums are in `WestronContract`, which `WestronUI` re-exports, so a view needs no other import. A product's shared
+code, which cannot import SwiftUI, imports `WestronContract` instead, and its models keep these values, never a size, a
+color or a font:
+
+```swift
 public enum DisclosureVariant: String, CaseIterable, Sendable { case chevron }
 ```
 
-Not on watchOS: SwiftUI has no base control there, so WestronUI declares all of it under `#if !os(watchOS)`, and a
-product's call stands under the same condition.
+Not on watchOS: SwiftUI has no base control there, so WestronUI declares all of it, and `WestronContract` its enums,
+under `#if !os(watchOS)`; a product's call, and a model that names its enums, stand under the same condition.
 
 ## Options
 

@@ -60,7 +60,8 @@ func lintRawValues(_ paths: [String]) throws -> Int32 {
     return 0
 }
 
-/// The API parity lint (#21): WestronUI's public API against the contracts and spec/conventions.md.
+/// The API parity lint (#21): the public API of WestronUI and WestronContract against the contracts and
+/// spec/conventions.md.
 func lintAPIParity() throws -> Int32 {
     let report = try APIParity.run()
     for problem in report.problems { printError(problem.description) }

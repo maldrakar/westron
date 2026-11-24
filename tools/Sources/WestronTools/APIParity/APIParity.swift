@@ -1,14 +1,15 @@
 import Foundation
 
-/// The API parity lint (#21): the public API of `WestronUI` holds exactly the component API that the contracts give
-/// through `spec/conventions.md`, so hand-written code cannot quietly add, rename or drop it (AGENTS.md, rules 4
-/// and 5). The generator (#20) makes the names equal by construction; this lint checks the result independently, from
+/// The API parity lint (#21): the public API of `WestronUI` and `WestronContract` holds exactly the component API that
+/// the contracts give through `spec/conventions.md`, so hand-written code cannot quietly add, rename or drop it
+/// (AGENTS.md, rules 4 and 5). The generator (#20) makes the names equal by construction; this lint checks the result independently, from
 /// the sources, with Swift's own parser.
 ///
 /// **What it expects** from each contract that is approved or later and styled on an Apple system control:
 /// - `public enum <Component><Option>: String, CaseIterable, Sendable` for each enum option that
 ///   `platforms.apple.systemOptions` does not give to the system, with the contract's values as its cases, in order,
-///   their raw values the values as written, and no other public member;
+///   their raw values the values as written, and no other public member; declared in `WestronContract`, the module of
+///   the contracts' vocabulary, and not in `WestronUI`, which re-exports it (decisions/0017);
 /// - the overload of the base control's style modifier in `extension View`: the variant first and unlabeled, then the
 ///   other options in the contract's order, labeled; a contract default as the argument's default (none for the
 ///   variant when the contract has none), `size: <Component>Size? = nil`, a bool option `<name>: Bool = <default>`;
@@ -46,6 +47,8 @@ import Foundation
 /// - in the hand-written `TokenAdapters.swift`, any public declaration that is not one of the reviewed adapters
 ///   (`adapters`); in the generated token files (`generatedTokenFiles`), a new public top-level type;
 /// - any other public declaration: nothing else in `WestronUI` may be public without a contract;
+/// - in `WestronContract`, any declaration, of any access, that is not one of the enums the contracts give or its
+///   cases, and any `import`: the module imports nothing, so that it builds wherever a product's shared code does;
 /// - any public declaration under `#if`: a component's public API is the same on every Apple OS, and the contract's
 ///   `platforms.apple.<os>` entries act through the style's fallbacks, not through the API (spec/conventions.md). The
 ///   one exception is a component that does not exist on some Apple OS (`platforms.apple.<os>.status: unavailable`):
@@ -60,6 +63,9 @@ import Foundation
 public enum APIParity {
     /// The sources it reads, relative to the repository root.
     public static let defaultSources = "platforms/apple/Sources/WestronUI"
+
+    /// The sources of `WestronContract`, the contracts' vocabulary, relative to the repository root (decisions/0017).
+    public static let defaultContractSources = "platforms/apple/Sources/WestronContract"
 
     /// The exception marker, followed by a reason.
     public static let allowMarker = "westron-api-parity: allow"
@@ -443,14 +449,35 @@ public enum APIParity {
 
     // MARK: - Check
 
-    /// Compares the declarations of `files` with the contracts. `sourceRoot` is the directory the files are in, as it
-    /// prefixes their paths; the token files are relative to it.
+    /// Compares the declarations of `files` with the contracts. `sourceRoot` is the directory of WestronUI's files, as
+    /// it prefixes their paths; the token files are relative to it. `contractRoot` is the directory of
+    /// WestronContract's: a file whose path starts with it is in that module, where the enums of the contracts belong
+    /// and nothing else does. Without it, the files are one module's, which may declare the enums (a check of a
+    /// single module's sources).
     public static func check(
-        contracts: [Contract], files: [(path: String, text: String)], sourceRoot: String
+        contracts: [Contract], files: [(path: String, text: String)], sourceRoot: String, contractRoot: String? = nil
     ) -> Report {
         let declarations = SwiftDeclarations(files: files).declarations
         let expected = expected(contracts)
         var problems = expected.problems
+        let contractPrefix = contractRoot.map { $0.hasSuffix("/") ? $0 : $0 + "/" }
+        /// Whether a file is WestronContract's.
+        func inContract(_ file: String) -> Bool { contractPrefix.map { file.hasPrefix($0) } ?? false }
+        // WestronContract imports nothing, not even Foundation (decisions/0017): no import, whatever its attributes
+        // (`@_exported`, `@preconcurrency`) or its access level (`public import Foundation`).
+        let accessLevels: Set<Substring> = ["public", "package", "internal", "fileprivate", "private"]
+        for file in files where inContract(file.path) {
+            for (index, line) in file.text.split(separator: "\n", omittingEmptySubsequences: false).enumerated() {
+                let words = line.split(separator: " ").filter { !$0.hasPrefix("@") }
+                guard words.drop(while: { accessLevels.contains($0) }).first == "import" else { continue }
+                problems.append(
+                    Problem(
+                        file: file.path, line: index + 1,
+                        "WestronContract imports nothing, not even Foundation, so that it builds wherever a product's "
+                            + "shared code does, WebAssembly and Linux included (decisions/0017): "
+                            + "`\(line.trimmingCharacters(in: .whitespaces))`"))
+            }
+        }
         /// Indexes of declarations that expected API accounts for, or that a problem already names.
         var accounted: Set<Int> = []
         /// By index of a declaration that a contract's expected API accounts for, the condition it may stand under: the
@@ -484,11 +511,12 @@ public enum APIParity {
             }
             let contract = "\(item.contract.component)'s option \(item.option) (\(item.contract.source))"
             guard let index = found.first else {
+                let module = contractRoot == nil ? "" : " in WestronContract"
                 problems.append(
                     Problem(
                         file: item.contract.source, line: item.contract.line(of: item.option),
-                        "missing: public enum \(item.type) for \(item.contract.component)'s option \(item.option); "
-                            + "run tools/westron generate"))
+                        "missing: public enum \(item.type)\(module) for \(item.contract.component)'s option "
+                            + "\(item.option); run tools/westron generate"))
                 continue
             }
             for extra in found.dropFirst() {
@@ -498,6 +526,13 @@ public enum APIParity {
             accounted.insert(index)
             expectedCount += 1
             let d = declarations[index]
+            if contractRoot != nil, !inContract(d.file) {
+                problem(
+                    d,
+                    "\(item.type) is declared in WestronUI; \(contract) gives it to WestronContract, the module of the "
+                        + "contracts' vocabulary that a product's shared code imports without SwiftUI, and WestronUI "
+                        + "re-exports it (decisions/0017); run tools/westron generate")
+            }
             if d.kind != .enum {
                 problem(d, "\(item.type) is a \(d.kind.rawValue); \(contract) makes it a public enum")
             }
@@ -516,6 +551,19 @@ public enum APIParity {
             }
             accounted.formUnion(cases)
             allowCondition([index] + cases, of: [item.contract])
+            // A component an Apple OS lacks has its vocabulary only where it exists: the enum in WestronContract stands
+            // under the contract's condition, as its API in WestronUI does (decisions/0017, open point 1). Under
+            // another condition it is reported below, as any public API is.
+            if contractRoot != nil, inContract(d.file), !d.allowed, d.conditions.isEmpty,
+                let condition = item.contract.contract.apple?.availabilityCondition
+            {
+                problem(
+                    d,
+                    "\(item.type) stands under no #if; \(item.contract.component) does not exist on every Apple OS "
+                        + "(\(item.contract.source), platforms.apple), so its vocabulary in WestronContract stands "
+                        + "under `#if \(condition)`, as its API in WestronUI does (decisions/0017); run "
+                        + "tools/westron generate")
+            }
             expectedCount += cases.count
             let names = cases.map { declarations[$0].name }
             if names != item.values {
@@ -709,9 +757,10 @@ public enum APIParity {
         for (index, d) in declarations.enumerated() {
             let isPublic =
                 d.kind == .extension ? !d.inheritance.isEmpty && isPublicType(d, in: declarations) : d.access.isPublic
-            guard isPublic else { continue }
-            if d.kind != .extension { publicCount += 1 }
-            if !d.conditions.isEmpty, !d.allowed, d.conditions != allowedConditions[index].map({ [$0] }) {
+            let contractModule = inContract(d.file)
+            guard isPublic || contractModule else { continue }
+            if isPublic, d.kind != .extension { publicCount += 1 }
+            if isPublic, !d.conditions.isEmpty, !d.allowed, d.conditions != allowedConditions[index].map({ [$0] }) {
                 problem(
                     d,
                     "public API under \(d.conditions.joined(separator: ", ")): a component's public API is the same "
@@ -720,6 +769,17 @@ public enum APIParity {
             }
             guard !accounted.contains(index), !d.allowed else { continue }
             if reportedTypes.contains(where: { d.container == $0 || d.container.hasPrefix($0 + ".") }) { continue }
+            if contractModule {
+                let described =
+                    d.kind == .extension
+                    ? "extension \(d.qualifiedName)" : "\(d.access) \(d.kind.rawValue) \(d.qualifiedName)"
+                problem(
+                    d,
+                    "\(described): WestronContract declares only the enums the contracts give, the vocabulary of their "
+                        + "options, and their cases; their SwiftUI side is WestronUI's (decisions/0017); \(allow)")
+                if d.kind.isType { reportedTypes.insert(d.qualifiedName) }
+                continue
+            }
             // The adapters come first: a contract named `label` or `text` does not claim `Label.init(_:icon:)`.
             if isAdapter(d) { continue }
             let what =
@@ -777,7 +837,8 @@ public enum APIParity {
     /// Paths in the report start as the arguments do.
     /// - Throws: `ContractProblem` for a contract that cannot be read; a file system error.
     public static func run(
-        contractsDirectory: String = ContractCheck.defaultDirectory, sourceRoot: String = defaultSources
+        contractsDirectory: String = ContractCheck.defaultDirectory, sourceRoot: String = defaultSources,
+        contractRoot: String? = defaultContractSources
     ) throws -> Report {
         var contracts: [Contract] = []
         for file in try ContractCheck.files(in: contractsDirectory) {
@@ -785,10 +846,9 @@ public enum APIParity {
             contracts.append(
                 Contract(contract: try ComponentContract(yaml: text, source: file), source: file, text: text))
         }
-        let files = try swiftFiles(in: sourceRoot).map {
-            (path: $0, text: try String(contentsOfFile: $0, encoding: .utf8))
-        }
-        return check(contracts: contracts, files: files, sourceRoot: sourceRoot)
+        let paths = try swiftFiles(in: sourceRoot) + (try contractRoot.map(swiftFiles(in:)) ?? [])
+        let files = try paths.map { (path: $0, text: try String(contentsOfFile: $0, encoding: .utf8)) }
+        return check(contracts: contracts, files: files, sourceRoot: sourceRoot, contractRoot: contractRoot)
     }
 
     /// The `.swift` files under a directory, sorted, so that the report does not depend on traversal order.

@@ -50,13 +50,20 @@ extension View {
     public func selected(_: Bool) -> some View
     public func dropTarget(_: Bool) -> some View
 }
+```
+
+Its enums are in `WestronContract`, which `WestronUI` re-exports, so a view needs no other import. A product's shared
+code, which cannot import SwiftUI, imports `WestronContract` instead, and its models keep these values, never a size, a
+color or a font:
+
+```swift
 public enum ListRowInsertionEdge: String, CaseIterable, Sendable { case top, bottom }
 ```
 
 ## Options
 
 - `level`, `Int`: a whole number, at least 0; by default `0`. The row's nesting level: 0 at the top of a tree, one more
-  for each level below.
+  for each level below. The row is indented for each level and, with guides on, draws one guide per level above it.
 - `guides`, `Bool`: by default `true`. Whether a row at level 1 or deeper draws its guides. A tree draws them; a picker
   that indents its rows by level to show where a choice stands, as the pilot's "Move to…" sheet does, may leave them
   out. A row at level 0 draws none either way.

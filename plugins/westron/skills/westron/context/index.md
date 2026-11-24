@@ -12,6 +12,10 @@ are in `../SKILL.md`.
 `import WestronUI`. Each line: the card, the shortest call, what the component is. A card ends with a
 pointer to its details file, the contract's prose, for cases the card does not settle.
 
+The option enums the cards list (`ButtonVariant`, `ButtonSize`, …) are in `WestronContract`, which `WestronUI`
+re-exports. A product's shared code, which cannot import SwiftUI, imports `WestronContract` instead, and `WestronTokens`
+for `Westron.Icon` and `Westron.Category`; neither imports anything.
+
 - [Button](components/button.md), `.buttonStyle(…)`: A push button that runs an action: westron's style on the platform's own button, with a label and a leading icon.
 - [Checkbox](components/checkbox.md), `.toggleStyle(…)`: The round check that marks a task or a subtask done: westron's style on the platform's own toggle, which keeps its role, its value and its keyboard.
 - [Chip](components/chip.md), `.toggleStyle(…)`, `.buttonStyle(…)` or `.labelStyle(…)`: A compact capsule with a short label and an optional leading icon: a tag, a filter, a value.

@@ -130,6 +130,10 @@ struct AgentContextTests {
         #expect(!index.contents.contains(".details.md"))
         #expect(!llms.contents.contains(".details.md"))
         #expect(index.contents.split(separator: "\n").count < 80)
+        // Where the option enums come from, for views and for shared code (decisions/0017).
+        let indexText = index.contents.replacingOccurrences(of: "\n", with: " ")
+        #expect(indexText.contains("are in `WestronContract`, which `WestronUI` re-exports"))
+        #expect(indexText.contains("`WestronTokens` for `Westron.Icon` and `Westron.Category`"))
     }
 
     @Test("a card has the call, the declarations, the options, the states, the name and the constraints")
@@ -146,6 +150,13 @@ struct AgentContextTests {
             ))
         #expect(card.contains("    public func loading(_: Bool) -> some View"))
         #expect(card.contains("public enum PillVariant: String, CaseIterable, Sendable { case solid, quiet }"))
+        // The enums apart from WestronUI's API: they are WestronContract's, which shared code imports alone.
+        let joined = card.replacingOccurrences(of: "\n", with: " ")
+        #expect(joined.contains("Its enums are in `WestronContract`, which `WestronUI` re-exports"))
+        #expect(joined.contains("imports `WestronContract` instead"))
+        let vocabulary = try #require(card.range(of: "Its enums are in `WestronContract`"))
+        #expect(card[vocabulary.upperBound...].contains("public enum PillVariant"))
+        #expect(!card[..<vocabulary.lowerBound].contains("public enum PillVariant"))
         // The options, with their values, defaults and descriptions; a sentence naming a binding is left out.
         #expect(card.contains("- `variant`, `PillVariant`: `.solid`, `.quiet`; no default. The fill."))
         #expect(card.contains("- `size`, `PillSize?`: `.s`, `.m`; left out, the size comes from `controlSize`"))
@@ -310,5 +321,34 @@ struct AgentContextTests {
         #expect(ContextMarkdown.names("by container.gap.", "container.gap"))
         #expect(!ContextMarkdown.names("by container.gapX", "container.gap"))
         #expect(!ContextMarkdown.names("by subcontainer.gap", "container.gap"))
+    }
+
+    @Test("a filter keeps the fact: a binding's phrase goes, a tooling clause goes, a test's aside goes")
+    func filtersKeepFacts() throws {
+        #expect(
+            ContextMarkdown.removingPhrases(
+                naming: "container.indent", in: "The row is indented by container.indent for each level.")
+                == "The row is indented for each level.")
+        #expect(
+            ContextMarkdown.removingPhrases(naming: "container.gap", in: "Spaced by container.gapX.")
+                == "Spaced by container.gapX.")
+        #expect(
+            ContextMarkdown.withoutTooling("It holds (TextFieldLineTests, #115). Kept as is; the matrix draws no slot")
+                == "It holds. Kept as is.")
+        #expect(ContextMarkdown.withoutTooling("The matrix draws it; a product sets it.") == "")
+        #expect(
+            ContextMarkdown.withoutClauses("A (b; c); d.") { $0 == "d." } == "A (b; c).")
+        // The real cards: ListRow's level says the row is indented, so that an agent does not indent it again.
+        let files = try generator().run()
+        let row = try #require(files.first { $0.path == AgentContext.outputDirectory + "/components/list-row.md" })
+        let text = row.contents.replacingOccurrences(of: "\n  ", with: " ")
+        #expect(text.contains("The row is indented for each level and, with guides on, draws one guide per level"))
+        let swiftUI = try #require(files.first { $0.path == AgentContext.outputDirectory + "/swiftui.md" })
+        #expect(
+            swiftUI.contents.replacingOccurrences(of: "\n", with: " ").contains(
+                "the initializers that take the slot leave those options out (Rule: `Rule(\"Work\")` takes no axis"))
+        let details = try #require(
+            files.first { $0.path == AgentContext.outputDirectory + "/components/text-field.details.md" })
+        #expect(!details.contents.contains("Tests"))
     }
 }

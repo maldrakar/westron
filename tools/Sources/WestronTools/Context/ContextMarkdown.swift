@@ -97,20 +97,85 @@ enum ContextMarkdown {
     /// What a sentence about westron's own testing and tooling names, in any case; a product agent has none of it.
     /// "The catalog" is westron's catalog app; WestronUI's "string catalog" is not.
     static let toolingMarks = ["snapshot matrix", "the matrix", "the catalog", "tools/"]
-    /// A parenthesis that names a test or a tool of westron's, `(CatalogUITests/ChipBehaviorTests)`: it goes, and the
-    /// sentence around it stays.
+    /// A parenthesis that names a test or a tool of westron's, `(CatalogUITests/ChipBehaviorTests)`,
+    /// `(TextFieldLineTests, #115)`: it goes, and the sentence around it stays. A test is a name that ends in `Tests`.
     private static let toolingAside = try! NSRegularExpression(
-        pattern: #"\s?\([^()]*(?:UITests|BehaviorTests|AccessibilityFrameTests|tools/)[^()]*\)"#)
+        pattern: #"\s?\([^()]*(?:[A-Z]\w*Tests\b|tools/)[^()]*\)"#)
 
     /// The prose without the asides and the sentences on westron's own testing and tooling: the snapshot matrix, the
-    /// catalog app, the tools.
+    /// catalog app, the tools. A sentence whose clause after "; " is about them keeps its other clauses.
     static func withoutTooling(_ text: String) -> String {
         let text = toolingAside.stringByReplacingMatches(
             in: text, range: NSRange(location: 0, length: NSString(string: text).length), withTemplate: "")
-        return sentences(text).filter { sentence in
-            let lowered = sentence.lowercased()
-            return !toolingMarks.contains { lowered.contains($0) }
+        return sentences(text).compactMap { sentence in
+            withoutClauses(sentence) { clause in
+                let lowered = clause.lowercased()
+                return toolingMarks.contains { lowered.contains($0) }
+            }
         }.joined(separator: " ")
+    }
+
+    /// A sentence without its clauses that `drop` matches, the clauses split at "; " outside parentheses and code
+    /// spans; nil when the first goes, since the others lean on it. A sentence the cut shortens ends as it did, or
+    /// with a period where it had none, as a table cell's last sentence.
+    static func withoutClauses(_ sentence: String, drop: (String) -> Bool) -> String? {
+        var clauses: [String] = []
+        var current = ""
+        var depth = 0
+        var code = false
+        let characters = Array(sentence)
+        var index = 0
+        while index < characters.count {
+            let character = characters[index]
+            if character == "`" { code.toggle() }
+            if !code, character == "(" { depth += 1 }
+            if !code, character == ")" { depth = max(0, depth - 1) }
+            if !code, depth == 0, character == ";", index + 1 < characters.count, characters[index + 1] == " " {
+                clauses.append(current)
+                current = ""
+                index += 2
+                continue
+            }
+            current.append(character)
+            index += 1
+        }
+        clauses.append(current)
+        guard let first = clauses.first, !drop(first) else { return nil }
+        let kept = clauses.filter { !drop($0) }
+        guard kept.count < clauses.count else { return sentence }
+        var out = kept.joined(separator: "; ").trimmingCharacters(in: .whitespaces)
+        if let last = out.last, !".!?".contains(last) {
+            let ending = sentence.trimmingCharacters(in: .whitespaces).last
+            out.append(ending.map { ".!?".contains($0) } == true ? ending! : ".")
+        }
+        return out
+    }
+
+    /// The prepositions of a phrase that names a token binding, which a sentence reads as well without: "indented by
+    /// container.indent", "drawn in ring.color".
+    static let bindingPrepositions = ["by", "in", "at", "with", "from", "to"]
+
+    /// The text without each phrase "<preposition> <name>", with or without backticks around the name: the fact stays
+    /// and the name goes. A name the text holds otherwise is left for the caller.
+    static func removingPhrases(naming name: String, in text: String) -> String {
+        var out = text
+        for preposition in bindingPrepositions {
+            for written in [name, "`\(name)`"] {
+                let phrase = " \(preposition) \(written)"
+                var search = out.startIndex..<out.endIndex
+                while let range = out.range(of: phrase, range: search) {
+                    let after = range.upperBound == out.endIndex ? nil : out[range.upperBound]
+                    // A longer name that starts with this one, `container.indentX`, is another binding.
+                    if after.map({ $0.isLetter || $0.isNumber }) ?? false {
+                        search = range.upperBound..<out.endIndex
+                        continue
+                    }
+                    out.removeSubrange(range)
+                    search = range.lowerBound..<out.endIndex
+                }
+            }
+        }
+        return out
     }
 
     /// Whether the text names `name` as a whole: not as part of a longer name, `container.gapX` or `xcontainer.gap`.

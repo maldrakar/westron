@@ -1,20 +1,13 @@
 // Generated from spec/components/chip/chip.spec.yaml by `tools/westron generate`. Do not edit: change the contract and
 // generate again (spec/conventions.md).
 //
-// Chip's API from its contract: the enums of its options, an overload of each form's style modifier that products call,
-// `toggleStyle`, `buttonStyle` and `labelStyle`, each applying its hand-written style, `ChipToggleStyle`,
-// `ChipButtonStyle` and `ChipLabelStyle` (decisions/0001), and the tables those styles read.
+// Chip's API from its contract: an overload of each form's style modifier that products call, `toggleStyle`,
+// `buttonStyle` and `labelStyle`, each applying its hand-written style, `ChipToggleStyle`, `ChipButtonStyle` and
+// `ChipLabelStyle` (decisions/0001), and the tables those styles read. The enums of its options are in
+// WestronContract/Generated/Chip+Contract.swift (decisions/0017).
 
 import SwiftUI
-
-/// Chip's option `variant`, from its contract.
-///
-/// The chip; the only variant, so that a call reads .toggleStyle(.chip), .buttonStyle(.chip) and .labelStyle(.chip). No
-/// system style of the three bases is named chip, and neither is a value of Button's or Checkbox's variant, which share
-/// two of the modifiers (decisions/0003; decisions/0001, P3).
-public enum ChipVariant: String, CaseIterable, Sendable {
-    case chip
-}
+import WestronContract
 
 extension View {
     /// Applies westron's Chip style in its form `selectable`, from its contract, to the system's `Toggle` in this view:

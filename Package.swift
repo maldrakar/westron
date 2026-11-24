@@ -14,7 +14,12 @@ let package = Package(
         // westron's token values as plain Swift, with no SwiftUI and no Foundation: for a product's shared code,
         // which may build for WebAssembly and Linux (decisions/0006, 0010).
         .library(name: "WestronTokens", targets: ["WestronTokens"]),
-        // westron styles and components, and the SwiftUI accessors of the tokens. Products depend on it.
+        // The contracts' vocabulary: the option enums the component contracts give (ButtonVariant, ButtonSize, …), as
+        // plain Swift with no imports at all, for a product's shared code, whose models name westron's options and
+        // cannot import SwiftUI (decisions/0017). WestronUI re-exports it.
+        .library(name: "WestronContract", targets: ["WestronContract"]),
+        // westron styles and components, and the SwiftUI accessors of the tokens. Products depend on it; it re-exports
+        // WestronTokens and WestronContract.
         .library(name: "WestronUI", targets: ["WestronUI"]),
         // Catalog entries, their host and snapshots. Only the catalog app depends on it,
         // in platforms/apple/Catalog; the product exists because an Xcode project sees a package only through
@@ -27,12 +32,18 @@ let package = Package(
             name: "WestronTokens",
             path: "platforms/apple/Sources/WestronTokens"
         ),
+        // Generated/ is written by `tools/westron generate` from spec/components/; nothing else is declared there
+        // (`tools/westron lint api-parity`).
+        .target(
+            name: "WestronContract",
+            path: "platforms/apple/Sources/WestronContract"
+        ),
         // Generated/ and Tokens.xcassets are written by `tools/westron generate`. Fonts/ holds the fonts westron
         // ships, each with its license (decisions/0011). Localizable.xcstrings holds the strings westron's components
         // show or announce.
         .target(
             name: "WestronUI",
-            dependencies: ["WestronTokens"],
+            dependencies: ["WestronTokens", "WestronContract"],
             path: "platforms/apple/Sources/WestronUI",
             resources: [.process("Tokens.xcassets"), .copy("Fonts"), .process("Localizable.xcstrings")]
         ),

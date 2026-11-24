@@ -80,14 +80,11 @@ private let ruleSwift = """
     """
 
 private func parity(_ swift: String, yaml: String = labelledYAML) throws -> [String] {
-    var sources: [(path: String, text: String)] = []
-    if let file = try AppleComponents.file(for: try labelledContract(yaml), source: labelledSource) {
-        sources.append(("WestronUI/Generated/Rule+Contract.swift", file.contents))
-    }
+    var sources = try generatedSources(try labelledContract(yaml), source: labelledSource)
     sources.append(("WestronUI/Rule/Rule.swift", swift))
     return APIParity.check(
         contracts: [APIParity.Contract(contract: try labelledContract(yaml), source: labelledSource, text: yaml)],
-        files: sources, sourceRoot: "WestronUI"
+        files: sources, sourceRoot: "WestronUI", contractRoot: "WestronContract"
     ).problems.map(\.description)
 }
 
@@ -247,7 +244,7 @@ struct LabelledViewTests {
 
     @Test("the generated file names both enums and the hand-written view")
     func generatedFile() throws {
-        let file = try #require(try AppleComponents.file(for: try labelledContract(), source: labelledSource))
+        let file = try #require(try AppleComponents.contractFile(for: try labelledContract(), source: labelledSource))
         #expect(file.contents.contains("public enum RulePurpose: String, CaseIterable, Sendable {"))
         #expect(file.contents.contains("    case separator\n    case insertion\n}"))
     }

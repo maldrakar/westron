@@ -348,7 +348,9 @@ struct FormsTests {
     func apiParity() throws {
         let directory = repositoryRoot.appendingPathComponent(ContractCheck.defaultDirectory).path
         let sources = repositoryRoot.appendingPathComponent(APIParity.defaultSources).path
-        let report = try APIParity.run(contractsDirectory: directory, sourceRoot: sources)
+        let report = try APIParity.run(
+            contractsDirectory: directory, sourceRoot: sources,
+            contractRoot: repositoryRoot.appendingPathComponent(APIParity.defaultContractSources).path)
         #expect(report.problems.isEmpty, "\(report.problems)")
         // Without the generated label style overload, the lint reports the static form's.
         let item = APIParity.Contract(

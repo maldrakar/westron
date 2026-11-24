@@ -98,14 +98,14 @@ private let rowSwift = """
 
     """
 
-private let root = "/westron/platforms/apple/Sources/WestronUI"
+private let root = "/westron/WestronUI"
 
 private func parity(_ swift: String = rowSwift, yaml: String = rowYAML) throws -> [String] {
-    let generated = try #require(try AppleComponents.file(for: try rowContract(yaml), source: rowSource))
+    let generated = try generatedSources(try rowContract(yaml), source: rowSource, prefix: "/westron/")
     return APIParity.check(
         contracts: [APIParity.Contract(contract: try rowContract(yaml), source: rowSource, text: yaml)],
-        files: [("\(root)/ListRow/ListRow.swift", swift), ("\(root)/\(generated.path)", generated.contents)],
-        sourceRoot: root
+        files: [("\(root)/ListRow/ListRow.swift", swift)] + generated,
+        sourceRoot: root, contractRoot: "/westron/WestronContract"
     ).problems.map(\.description)
 }
 
@@ -213,7 +213,7 @@ struct OwnViewSlotsTests {
         #expect(own.marks.map(\.name) == ["insertionMark"])
         #expect(own.marks[0].enums.map(\.type) == ["ListRowInsertionEdge"])
         #expect(own.marks[0].parameters.map(\.description) == ["_: ListRowInsertionEdge?", "level: Int = 0"])
-        let file = try #require(try AppleComponents.file(for: try rowContract(), source: rowSource))
+        let file = try #require(try AppleComponents.contractFile(for: try rowContract(), source: rowSource))
         #expect(file.contents.contains("public enum ListRowInsertionEdge: String, CaseIterable, Sendable"))
         let noEnum = replacing(
             "      edge: { type: enum, values: [top, bottom] }\n", with: "")
