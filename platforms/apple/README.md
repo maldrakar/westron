@@ -545,6 +545,24 @@ git diff --name-only main...HEAD | tools/apple/audit-scope.sh   # the entries a 
   screenful instead (`a11y: deferred in …`), but only when the next drag brings it whole into view; if the page ends
   there after all, it counts. On the CI runner "Report not sent" on `color-in-use`, 18 pt of it on screen, failed
   contrast once in `testAccessibilityDynamicType` and passed on the rerun (#74).
+- The audit of a screenful sometimes gives up ("Audit failed to complete in time", -56) after 15 s, where it
+  otherwise takes 0.2–3.5 s; the log has each audit's time (`a11y: <entry>, screen <n>: audit completed in 0.36 s`).
+  Some scroll positions make the contrast audit give up every time (#127): measured on 2026-11-24 (iOS 26.3, iPhone
+  17), `list-row` at accessibility5 gave up at screen 14 on every try and completed 7 pt further. A page of its four
+  drag-sample rows alone gave up with the third row's top at 15 pt on screen and completed at every other whole point
+  from 0 to 60, and so did four plain SwiftUI buttons, each a glyph, a title and a count, with no westron in them. It
+  is the position of the page's elements, not the pixels (the rows drawn transparent gave up the same way) and not a
+  scroll view (the rows offset in a plain stack did too); one text alone at that place did not. So the test first runs
+  a screenful's audit once more where it is (a stalled simulator), then moves the page by a few points
+  (`auditMoved`): on by f points, measured from the elements' frames, which scrolls a strip of f points off the top,
+  and, if need be, back to b points before where it was, which scrolls a strip off the bottom. From one snapshot of
+  the page's elements before the move, it checks that every element the screenful showed whole was seen whole by a
+  moved audit, or, for one in the top strip, by the screenful before (from screen 2; f is less than the 24 pt by which
+  a deferred element clears the top). The log says so (`a11y: <entry>, screen <n>: audited whole with the page moved
+  (moved on by 9.7 pt: completed)…`). When the moved audits do not cover the screenful (an element within f points of
+  the top of a page, or of the bottom of its last screenful, or an audit that gives up again), the entry fails for
+  infrastructure, naming the elements not audited, and the script audits it again in a run of its own. A position
+  that gives up is about a point wide, so a page does not need a rule on what one screenful may hold.
 - The Dynamic Type and text clipped audits enlarge the page's text. A dragged scroll view goes back to its top when
   its content grows, so after a drag they would measure only the top of the page; and after them, the page's
   accessibility tree and its pixels disagree for a while, so that the next audit reads every text as failing
@@ -585,9 +603,9 @@ git diff --name-only main...HEAD | tools/apple/audit-scope.sh   # the entries a 
   otherwise stays a finding), a UI
   query ("Failed to get matching snapshot: Timed out while evaluating UI query"; in the same local experiment also
   a drag and a screenshot, "Timed out while synthesizing event", "… requesting screenshot"), the audit ("Audit
-  failed to complete in time", -56, which the test retries once on the spot) or the entry not rendering within
-  30 s. XCTest stops the test method at a failed terminate, launch, query or drag, so the rest of the shard went
-  unaudited and the leg failed.
+  failed to complete in time", -56, which the test runs once more on the spot and then with the page moved, above)
+  or the entry not rendering within 30 s. XCTest stops the test method at a failed terminate, launch, query or drag,
+  so the rest of the shard went unaudited and the leg failed.
   - The test prints which entries it audits, when each starts and finishes, and each failure with its kind:
     `infrastructure` when its message starts as one of those (`CatalogAccessibilityAuditTests.isInfrastructure`;
     never by text further in, where a page's labels can appear), `finding` otherwise.
