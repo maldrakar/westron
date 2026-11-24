@@ -1,9 +1,11 @@
 import XCTest
 
 /// Button's behavior that a unit test cannot reach, on the catalog's `button-behavior` entry: a loading button refuses
-/// presses and stays enabled; an icon-only button reads as its title; the hit area of a small button.
+/// presses and stays enabled; an icon-only button reads as its title; the hit area of a small button; hover at the
+/// drawn shape on macOS.
 ///
-/// The entry counts accepted presses in a text, `ButtonCatalogID.count` in WestronCatalog.
+/// The entry counts accepted presses in a text, `ButtonCatalogID.count` in WestronCatalog, and says which buttons the
+/// style draws under the pointer in another, `ButtonCatalogID.hover`.
 final class ButtonBehaviorTests: XCTestCase {
     /// Must match `ButtonCatalogID` in WestronCatalog.
     private enum ID {
@@ -19,6 +21,8 @@ final class ButtonBehaviorTests: XCTestCase {
         static let secondNeighbor = "button.live.neighbor-second"
         static let neighbors = "button.live.neighbors"
         static let count = "button.live.count"
+        static let large = "button.live.large"
+        static let hover = "button.live.hover"
     }
 
     private var app: XCUIApplication!
@@ -264,6 +268,100 @@ final class ButtonBehaviorTests: XCTestCase {
         #endif
     }
 
+    // MARK: - Hover at the drawn shape (#130)
+
+    /// Where the pointer went over one button, and what the hover readout said there.
+    private struct HoverOutcome {
+        let place: String
+        let expected: Bool
+        let readout: String
+    }
+
+    /// Moves the pointer to `place` and waits on the readout `id`: when `expected`, until it reads "hover: `name`",
+    /// within 5 s; otherwise for 1 s, in which it must never read so. Returns what it reads after the wait.
+    @MainActor
+    private func hover(_ place: XCUICoordinate, readout id: String, name: String, expected: Bool) -> String {
+        place.hover()
+        let hovered = "hover: \(name)"
+        let predicate = NSPredicate(format: "label == %@ OR value == %@", hovered, hovered)
+        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: app.staticTexts[id])
+        expectation.isInverted = !expected
+        _ = XCTWaiter().wait(for: [expectation], timeout: expected ? 5 : 1)
+        return text(id)
+    }
+
+    /// Hovers one button, `element`, named `name` in the readout `id`, with the pointer: away from it (on `away`); in
+    /// its frame's top-left and bottom-right corners, 2 pt in from the side and 1 pt in from the top or bottom, outside
+    /// the drawn shape's round end; 1.5 pt inside the round end, on the diagonal toward the top-left corner; back in a
+    /// corner; in its middle; in the other corner; away. Every shape Button draws is a capsule of radius half its
+    /// height, a circle when icon-only, so each corner point lies outside it at every size. Prints each outcome,
+    /// `MEASURE hover: …`, and returns them.
+    @MainActor
+    private func measureHover(_ element: XCUIElement, name: String, readout id: String, away: XCUIElement)
+        -> [HoverOutcome]
+    {
+        let frame = element.frame
+        let radius = frame.height / 2
+        let origin = element.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+        func point(_ x: CGFloat, _ y: CGFloat) -> XCUICoordinate { origin.withOffset(CGVector(dx: x, dy: y)) }
+        let inRoundEnd = radius - (radius - 1.5) / 2.squareRoot()
+        let awayPoint = away.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        let places: [(String, XCUICoordinate, Bool)] = [
+            ("away", awayPoint, false),
+            ("in the top-left corner", point(2, 1), false),
+            ("in the bottom-right corner", point(frame.width - 2, frame.height - 1), false),
+            ("inside the round end", point(inRoundEnd, inRoundEnd), true),
+            ("back in the top-left corner", point(2, 1), false),
+            ("in the middle", point(frame.width / 2, frame.height / 2), true),
+            ("back in the bottom-right corner", point(frame.width - 2, frame.height - 1), false),
+            ("away again", awayPoint, false),
+        ]
+        return places.map { place, coordinate, expected in
+            let now = hover(coordinate, readout: id, name: name, expected: expected)
+            print("MEASURE hover: \(name), frame \(frame), pointer \(place): \(now)")
+            return HoverOutcome(place: place, expected: expected, readout: now)
+        }
+    }
+
+    /// Fails for each outcome that differs from what is expected: "hover: `name`" inside the drawn shape, "hover:
+    /// none" outside it.
+    private func assertHover(_ outcomes: [(name: String, outcomes: [HoverOutcome])]) {
+        for (name, list) in outcomes {
+            for outcome in list {
+                XCTAssertEqual(
+                    outcome.readout, outcome.expected ? "hover: \(name)" : "hover: none",
+                    "\(name), the pointer \(outcome.place)")
+            }
+        }
+    }
+
+    /// macOS: hover starts and ends at the drawn shape, not at the corners of its frame (#130). The pointer in the
+    /// frame's corner, outside the capsule's round end, leaves the button at rest; 1.5 pt inside the round end, and in
+    /// the middle, it is hovered. Sizes s, m and l with a label, and icon-only, a circle, at s and m. Each outcome is
+    /// measured before any is asserted, and printed (`measureHover`).
+    @MainActor
+    func testHoverAtTheDrawnShape() throws {
+        #if os(macOS)
+            let away = app.staticTexts[ID.count]
+            XCTAssertEqual(text(ID.hover), "hover: none", "a button is hovered with the pointer away")
+            var outcomes: [(name: String, outcomes: [HoverOutcome])] = []
+            for (id, name) in [
+                (ID.small, "small"), (ID.rest, "rest"), (ID.large, "large"), (ID.firstNeighbor, "neighbor-first"),
+                (ID.iconOnly, "icon-only"),
+            ] {
+                let element = button(id)
+                XCTAssertTrue(element.isHittable, "\(name) is not on screen")
+                outcomes.append((name, measureHover(element, name: name, readout: ID.hover, away: away)))
+            }
+            for id in [ID.firstNeighbor, ID.iconOnly] {
+                XCTAssertEqual(button(id).frame.width, button(id).frame.height, accuracy: 0.5, "\(id) is not a circle")
+            }
+            assertHover(outcomes)
+        #else
+            throw XCTSkip("a pointer's hover is measured on macOS")
+        #endif
+    }
+
     // MARK: - Floating (#121, decisions/0015), on the `button-floating` entry
 
     /// Must match `ButtonFloatingID` in WestronCatalog.
@@ -276,6 +374,7 @@ final class ButtonBehaviorTests: XCTestCase {
         static func overList(_ size: String) -> String { "button.floating.over-list.\(size)" }
         static let overListRow = "button.floating.over-list.row"
         static let overListCount = "button.floating.over-list.count"
+        static let hover = "button.floating.live.hover"
     }
 
     /// Relaunches the catalog on the `button-floating` entry.
@@ -308,6 +407,55 @@ final class ButtonBehaviorTests: XCTestCase {
             press(floating)
             XCTAssertEqual(acceptedFloating, count, "a press on the floating \(name) did not reach it")
         }
+    }
+
+    /// macOS: a floating button's hover starts and ends at its drawn capsule too, as `testHoverAtTheDrawnShape`
+    /// measures: Back, icon-only at size m, and the buttons over a list at s, m and l, on the system's glass from OS 26,
+    /// and Add, a floating primary on its fill. The glass is interactive and answers the pointer itself
+    /// (decisions/0015): Back's own pixels are compared, the pointer away, in the frame's corner and in the middle, and
+    /// what changed is printed, `MEASURE glass: …`, not asserted, since the response is the system's.
+    @MainActor
+    func testFloatingHoverAtTheDrawnShape() throws {
+        #if os(macOS)
+            launchFloating()
+            let away = app.staticTexts[FloatingID.count]
+            XCTAssertEqual(text(FloatingID.hover), "hover: none", "a button is hovered with the pointer away")
+            var outcomes: [(name: String, outcomes: [HoverOutcome])] = []
+            for (id, name) in [
+                (FloatingID.back, "back"), (FloatingID.add, "add"), (FloatingID.overList("s"), "over-list-s"),
+                (FloatingID.overList("m"), "over-list-m"), (FloatingID.overList("l"), "over-list-l"),
+            ] {
+                let element = button(id)
+                XCTAssertTrue(element.isHittable, "\(name) is not on screen")
+                outcomes.append((name, measureHover(element, name: name, readout: FloatingID.hover, away: away)))
+            }
+            // The glass's own answer to the pointer, on Back.
+            let back = button(FloatingID.back)
+            let awayPoint = away.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            func shot(_ place: XCUICoordinate, _ name: String) -> NSImage {
+                place.hover()
+                // The glass's response, and westron's fade if any, settle.
+                Thread.sleep(forTimeInterval: 1)
+                let image = back.screenshot().image
+                let attachment = XCTAttachment(image: image)
+                attachment.name = "Back, the pointer \(name)"
+                attachment.lifetime = .keepAlways
+                add(attachment)
+                return image
+            }
+            let rest = shot(awayPoint, "away")
+            let corner = shot(
+                back.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0)).withOffset(CGVector(dx: 2, dy: 1)),
+                "in the corner")
+            let middle = shot(back.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)), "in the middle")
+            let restAgain = shot(awayPoint, "away again")
+            for (name, image) in [("away again", restAgain), ("in the corner", corner), ("in the middle", middle)] {
+                print("MEASURE glass: Back, the pointer \(name), against away: \(PixelDifference(rest, image))")
+            }
+            assertHover(outcomes)
+        #else
+            throw XCTSkip("a pointer's hover is measured on macOS")
+        #endif
     }
 
     /// A disabled floating button on glass is announced as unavailable and takes no press.
@@ -428,3 +576,55 @@ final class ButtonBehaviorTests: XCTestCase {
         #endif
     }
 }
+
+#if os(macOS)
+    /// How many pixels of two screenshots of one element differ by more than two levels in any channel, of how many,
+    /// and by how much at most.
+    private struct PixelDifference: CustomStringConvertible {
+        let changed: Int
+        let total: Int
+        let largest: Int
+
+        init(_ a: NSImage, _ b: NSImage) {
+            let first = Self.pixels(a)
+            let second = Self.pixels(b)
+            guard first.width == second.width, first.height == second.height, !first.bytes.isEmpty else {
+                changed = -1
+                total = 0
+                largest = 0
+                return
+            }
+            var changed = 0
+            var largest = 0
+            for index in stride(from: 0, to: first.bytes.count, by: 4) {
+                var most = 0
+                for channel in 0..<4 {
+                    most = max(most, abs(Int(first.bytes[index + channel]) - Int(second.bytes[index + channel])))
+                }
+                if most > 2 { changed += 1 }
+                largest = max(largest, most)
+            }
+            self.changed = changed
+            self.total = first.width * first.height
+            self.largest = largest
+        }
+
+        var description: String {
+            changed < 0 ? "not comparable" : "\(changed) of \(total) px differ, by up to \(largest) levels"
+        }
+
+        private static func pixels(_ image: NSImage) -> (width: Int, height: Int, bytes: [UInt8]) {
+            guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return (0, 0, []) }
+            let width = cgImage.width
+            let height = cgImage.height
+            var bytes = [UInt8](repeating: 0, count: width * height * 4)
+            bytes.withUnsafeMutableBytes { buffer in
+                let context = CGContext(
+                    data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+                    space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+                context?.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+            }
+            return (width, height, bytes)
+        }
+    }
+#endif
