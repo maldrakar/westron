@@ -284,6 +284,20 @@ struct ListRowTests {
                 blue: Float(bytes[index + 2]) / 255, opacity: Float(bytes[index + 3]) / 255)
         }
 
+        /// The most opaque pixel's alpha, 0 to 1, in the columns from `minX` up to `maxX`, in points: on a transparent
+        /// ground, how opaque the most opaque thing drawn there is.
+        func maxAlpha(fromX minX: CGFloat = 0, toX maxX: CGFloat = .infinity) -> Double {
+            let first = max(0, Int((minX * Self.scale).rounded(.down)))
+            let last = min(width, maxX.isFinite ? Int((maxX * Self.scale).rounded(.up)) : width)
+            var most: UInt8 = 0
+            for row in 0..<height {
+                for column in first..<max(first, last) {
+                    most = max(most, bytes[(row * width + column) * 4 + 3])
+                }
+            }
+            return Double(most) / 255
+        }
+
         /// Whether the pixel at a point is a token's light colour, within three 8-bit steps in each channel.
         func shows(_ token: Westron.Color, x: CGFloat, y: CGFloat) -> Bool {
             guard let pixel = color(x: x, y: y) else { return false }
@@ -370,6 +384,100 @@ struct ListRowTests {
             drawn.shows(.background.selected, x: x, y: below),
             "\(String(describing: drawn.color(x: x, y: below)))")
     }
+
+    // MARK: - A disabled row dims its content once
+
+    /// How far two alphas of the same drawing may differ: two 8-bit steps of rounding and antialiasing.
+    static let alphaTolerance = 2.0 / 255 + 0.005
+
+    /// The reference is the same control disabled alone, drawn the same way: SwiftUI's opacity on a container reaches
+    /// each layer drawn inside it, so a control dimmed once by the row and the control dimmed once by itself draw the
+    /// same pixels, however many layers the control draws, and the test does not assume the check's alpha is
+    /// `opacity.disabled` times its enabled one. Measured here and by Core Animation's renderer (DisabledRowPixelTests):
+    /// alone 1.0, disabled alone 0.4, in a disabled row 0.4, where the row dimmed it a second time 0.16.
+    @Test("a Checkbox at the start of a disabled row is dimmed once: as a disabled Checkbox alone")
+    func disabledRowDimsTheCheckOnce() throws {
+        func check() -> some View {
+            Toggle(isOn: .constant(false), accessibilityLabel: "Call the plumber").toggleStyle(.check)
+        }
+        func row(disabled: Bool) -> some View {
+            ListRow {
+                Text("Call the plumber")
+            } leading: {
+                check()
+            }
+            .disabled(disabled)
+            .frame(width: 320)
+        }
+        // The check's hit area at the row's start, clear of the title after it.
+        let end = CGFloat(ListRowMetrics.paddingHorizontal) + max(CGFloat.size.target.minimum, .size.control.m)
+        let enabledAlone = try draw(check()).maxAlpha()
+        let disabledAlone = try draw(check().disabled(true)).maxAlpha()
+        let enabledRow = try draw(row(disabled: false)).maxAlpha(toX: end)
+        let disabledRow = try draw(row(disabled: true)).maxAlpha(toX: end)
+        print(
+            String(
+                format: "MEASURE list-row: check alpha: alone %.3f, alone disabled %.3f, in a row %.3f, "
+                    + "in a disabled row %.3f", enabledAlone, disabledAlone, enabledRow, disabledRow))
+        #expect(enabledAlone > 0.9, "no check drawn: \(enabledAlone)")
+        #expect(abs(enabledRow - enabledAlone) < Self.alphaTolerance, "\(enabledRow) against \(enabledAlone)")
+        #expect(
+            abs(disabledRow - disabledAlone) < Self.alphaTolerance,
+            "the check in a disabled row \(disabledRow), the check disabled alone \(disabledAlone)")
+    }
+
+    // Disclosure does not exist on watchOS (its contract's platforms block).
+    #if !os(watchOS)
+        /// The chevron's look follows its group's state, whatever the label (the contracts' disabled). The references
+        /// are the chevron after a text label: disabled alone, the label leaves it enabled and whole; in a disabled
+        /// group it is dimmed once, by itself, at `opacity.disabled`, and as the chevron is one layer, that is the
+        /// enabled chevron's alpha times `opacity.disabled`. A row disabled alone draws its chevron as the text label's;
+        /// a disabled group's row as the disabled group's after the text: dimmed once, never by the row too.
+        @Test("the chevron in a disabled row is drawn as after a text label: whole, or dimmed once in a disabled group")
+        func disabledRowDimsTheChevronOnce() throws {
+            let width: CGFloat = 320
+            // The cell's place at the row's end; after a text label it stands at the header's end, inside this too.
+            let cellStart = width - CGFloat(ListRowMetrics.paddingHorizontal) - DisclosureMetrics.minimumHitSide - 1
+            func chevron(groupDisabled: Bool = false, @ViewBuilder _ label: () -> some View) throws -> Double {
+                try draw(
+                    DisclosureGroup(isExpanded: .constant(false)) {
+                        EmptyView()
+                    } label: {
+                        label()
+                    }
+                    .disclosureGroupStyle(.chevron)
+                    .disabled(groupDisabled)
+                    .frame(width: width)
+                )
+                .maxAlpha(fromX: cellStart)
+            }
+            let enabled = try chevron { ListRow(action: {}) { Text("Work") } }
+            let textDisabled = try chevron { Text("Work").disabled(true) }
+            let groupAfterText = try chevron(groupDisabled: true) { Text("Work") }
+            let pressableDisabled = try chevron { ListRow(action: {}) { Text("Work") }.disabled(true) }
+            let staticDisabled = try chevron { ListRow { Text("Work") }.disabled(true) }
+            let groupDisabled = try chevron(groupDisabled: true) { ListRow(action: {}) { Text("Work") } }
+            print(
+                String(
+                    format: "MEASURE list-row: chevron alpha: enabled %.3f, after a disabled text label %.3f, a "
+                        + "disabled group's after a text %.3f, in a disabled pressable row %.3f, in a disabled static "
+                        + "row %.3f, a disabled group's row %.3f",
+                    enabled, textDisabled, groupAfterText, pressableDisabled, staticDisabled, groupDisabled))
+            #expect(enabled > 0.9, "no chevron drawn: \(enabled)")
+            let dimmed = Double(Westron.Number.opacity.disabled)
+            #expect(
+                abs(groupAfterText - enabled * dimmed) < Self.alphaTolerance,
+                "\(groupAfterText) against \(enabled) × \(dimmed)")
+            for (name, alpha) in [("pressable", pressableDisabled), ("static", staticDisabled)] {
+                #expect(
+                    abs(alpha - textDisabled) < Self.alphaTolerance,
+                    "a disabled \(name) row: \(alpha), after a disabled text label \(textDisabled)")
+            }
+            #expect(
+                abs(groupDisabled - groupAfterText) < Self.alphaTolerance,
+                "a disabled group's row: \(groupDisabled), a disabled group's after a text \(groupAfterText)")
+        }
+    #endif
 
     @Test("the highlight and the mark change in their motion tokens, which Reduce Motion keeps")
     func motion() {
@@ -538,6 +646,100 @@ struct ListRowTests {
         #else
             #expect(abs(size.height - .size.target.minimum) < 0.5, "\(size)")
         #endif
+    }
+
+    /// A row's height at a text size, at a width of 320.
+    func rowHeight(_ size: DynamicTypeSize = .large, @ViewBuilder _ row: () -> some View) -> CGFloat {
+        fittingSize(row().dynamicTypeSize(size), in: CGSize(width: 320, height: 2000)).height
+    }
+
+    /// A static Chip, a list's tag.
+    func tag() -> some View {
+        Label("Home", icon: .hash).labelStyle(.chip)
+    }
+
+    /// At the default size and at the largest size below the accessibility ones, where the trailing slot still stands
+    /// at the end (macOS has no Dynamic Type: both are the same there).
+    @Test(
+        "a slot at the end stands in the row's padding as one at the start does: a static Chip at the end grows no row",
+        arguments: [DynamicTypeSize.large, .xxxLarge])
+    func trailingSlotStandsInThePadding(size: DynamicTypeSize) {
+        let plain = rowHeight(size) { ListRow(action: {}) { Text("Groceries") } }
+        let chipEnd = rowHeight(size) {
+            ListRow(action: {}) {
+                Text("Groceries")
+            } trailing: {
+                tag()
+            }
+        }
+        let chipStart = rowHeight(size) {
+            ListRow(action: {}) {
+                Text("Groceries")
+            } leading: {
+                tag()
+            }
+        }
+        let iconEnd = rowHeight(size) {
+            ListRow(action: {}) {
+                Text("Groceries")
+            } trailing: {
+                Icon(.hash)
+            }
+        }
+        let second = rowHeight(size) {
+            ListRow(action: {}) {
+                Text("Groceries")
+            } subtitle: {
+                Text("Due today")
+            }
+        }
+        let secondChip = rowHeight(size) {
+            ListRow(action: {}) {
+                Text("Groceries")
+            } subtitle: {
+                Text("Due today")
+            } trailing: {
+                tag()
+            }
+        }
+        let tall = 3 * plain
+        let tallEnd = rowHeight(size) {
+            ListRow(action: {}) {
+                Text("Groceries")
+            } trailing: {
+                Color.clear.frame(width: 20, height: tall)
+            }
+        }
+        print(
+            "MEASURE list-row: heights at \(size): plain \(plain), static chip at the end \(chipEnd), at the start "
+                + "\(chipStart), Icon at the end \(iconEnd), second line \(second), second line and chip \(secondChip), "
+                + "a slot \(tall) high at the end \(tallEnd)")
+        #expect(abs(chipEnd - plain) < 0.5, "a static Chip at the end grew the row: \(chipEnd), plain \(plain)")
+        #expect(abs(chipEnd - chipStart) < 0.5, "the end and the start differ: \(chipEnd), \(chipStart)")
+        #expect(abs(iconEnd - plain) < 0.5, "\(iconEnd), plain \(plain)")
+        #expect(abs(secondChip - second) < 0.5, "\(secondChip), without the chip \(second)")
+        // A slot really taller than the row still grows it.
+        #expect(tallEnd >= tall - 0.5, "a slot \(tall) high at the end: the row is \(tallEnd)")
+    }
+
+    /// The lists screen's row (decisions/0014, the pilot's main composition): an IconTile at body text is 1.5 lines,
+    /// shorter than the line and its padding, so it stands in the row's padding and the row is as high as the title
+    /// alone: 28 pt on macOS and the 44 pt minimum on iOS at the default size.
+    @Test("a row with an IconTile at the start is as high as the title alone: 28 pt on macOS, 44 on iOS")
+    func iconTileRowHeight() {
+        let plain = rowHeight { ListRow(action: {}) { Text("Inbox") } }
+        let tile = rowHeight {
+            ListRow(action: {}) {
+                Text("Inbox")
+            } leading: {
+                IconTile(.tray)
+            } trailing: {
+                Text("12").textRole(.subheadline.regular)
+            }
+        }
+        print("MEASURE list-row: an IconTile row \(tile), the title alone \(plain)")
+        #expect(abs(tile - plain) < 0.5, "\(tile), plain \(plain)")
+        #expect(abs(tile - .size.target.minimum) < 0.5, "\(tile)")
     }
 
     @Test("at the accessibility sizes the trailing slot moves under the text; at the others it stays on the first line")

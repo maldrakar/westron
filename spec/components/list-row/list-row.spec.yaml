@@ -45,8 +45,9 @@ description: >-
   from the title's leading edge, so that the title keeps the row's width (design-language/08, "a row that runs out of
   width stacks its parts"); the chevron's cell stays on the first line at the end. The row is at least
   size.target.minimum high, 44 pt on iOS and watchOS and 28 on macOS, and grows with its text: its text is padded
-  container.paddingVertical above and below, a slot's frame taller than the title's first line, such as a Checkbox's
-  hit area, may stand in that padding, and the row grows further only where such a frame would cross its edge. Its
+  container.paddingVertical above and below, a slot's frame taller than the title's first line, at the start or at
+  the end, such as a Checkbox's hit area or a static Chip, may stand in that padding, and the row grows further only
+  where such a frame would cross its edge, so that a single-line row with a tag at its end is as high as one without. Its
   content is padded container.paddingHorizontal at either side, inside its highlight; the leading slot is
   container.gap before the title and the trailing slot container.trailingGap after it. The spacing scales with the
   person's text size relative to the title's text style, as spacing that belongs to text does (design-language/06),
@@ -86,6 +87,15 @@ description: >-
   it. The ring means a drop target only, in every theme. A pressed row is drawn pressed also when it is selected; a
   selected row keeps its highlight under the pointer. A disabled row never enters hover, pressed or dropTarget: it is
   drawn whole at opacity.disabled, its slots and its highlight with it, with no colors of its own, and takes no press.
+  A disabled row dims what it holds once: a control in its slots, such as the Checkbox at its start, is not dimmed
+  again by its own disabled state while it is inside a disabled row, so that it stands at opacity.disabled as the same
+  control disabled alone does, and keeps its other disabled behaviour, no hover, no press and announced as
+  unavailable. Disabling a row does not lock its branch's fold: a disabled row is not pressable, but folding a branch
+  is navigation. The Disclosure chevron's cell, which is not a slot, takes its enabled state and its look from its
+  DisclosureGroup, not from the row, as it does after any other label: a row disabled while its group is not keeps a
+  chevron that folds and unfolds the branch, drawn whole, as an enabled control meets its contrast; a disabled group
+  disables its chevron, which then dims itself once at opacity.disabled while the row dims the rest (the Disclosure
+  contract's disabled). Neither the cell nor a control in a slot is ever dimmed twice.
   A selected row draws a bar at its highlight's leading edge, inside it: bar.width wide, in bar.color, from the
   highlight's top to its bottom each inset by container.radius, so that it reads as a bar on the highlight's straight
   side, with round ends, in every theme. Selection is so shown by a mark that is neither the tint, which stands 1.16:1
@@ -295,8 +305,9 @@ platforms:
     macos:
       description: >-
         A row is at least 28 pt high, size.target.minimum; with a Checkbox at the start it is 32, the check's hit
-        area's size.control.m (measured); with an IconTile at body text it would stand within the text's padding
-        (decisions/0001, "Sizes": computed before IconTile existed, #118, not measured). The guides are stroke.thin.
+        area's size.control.m (measured); with an IconTile at body text the tile stands within the text's padding and
+        the row is 28, as the title alone, and so is a row with a static Chip at its end (measured, decisions/0001,
+        "Revision after the review of phase 4"). The guides are stroke.thin.
         Keyboard focus follows the system's buttons, as Checkbox's and Chip's do: with the Mac's keyboard navigation
         on, Tab reaches the row's action and the controls nested in it, and Space activates them; the arrow keys move
         between rows only in a List, and a tree outside a List gets them from the product's container (decisions/0001,

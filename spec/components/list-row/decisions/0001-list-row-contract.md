@@ -110,13 +110,14 @@ below, not taken. No pilot row stands in a SwiftUI `List`.
 
 Computed from the tokens at the default text size (iOS body 17 pt on a 22 pt line, footnote on 18; macOS body 13 on
 16, footnote on 13; IconTile 1.5 lines; the check's hit area the larger of `size.target.minimum` and `size.control.m`),
-against the pilot's. The IconTile rows are computed for a component that is not on this branch (#118) and are not
-verified; the check's rows are measured by the unit tests (44 on iOS, 32 on macOS):
+against the pilot's. The IconTile rows were computed for a component that was not on this branch (#118); measured
+since (below, "Revision after the review of phase 4"), the IconTile row is the title alone's height, 44 on iOS and 28
+on macOS, not the 45 computed for iOS. The check's rows are measured by the unit tests (44 on iOS, 32 on macOS):
 
 | Row | iOS | pilot phone | macOS | pilot Mac |
 |---|---|---|---|---|
 | Title only | 44 | — | 28 | — |
-| IconTile and title (a list's row, a picker's) | 45 | 46 | 28 | 30 |
+| IconTile and title (a list's row, a picker's) | 44 (computed 45) | 46 | 28 | 30 |
 | Check and title (a subtask, a task without meta) | 44 | 44 | 32 | 30 / 36 |
 | Check, title and a second line (a task with meta) | about 57 | about 61 | about 45 | about 50 |
 | Indent per level | 24, scaled | 22 | 24, scaled | 16 |
@@ -634,6 +635,64 @@ product marks both rows beside the place, whose halves meet in one line; on iOS 
 gap. The 8 pt between the List's cells on iOS also parts the rows' highlights there, which a row outside a List does
 not show; why the List sets its 44 pt rows 8 pt apart (its default minimum row height or its own spacing) is not
 measured, and the swipe and the presses measured in that entry are not affected by it.
+
+## Revision after the review of phase 4 (2026-11-24)
+
+A review of the whole phase put the components together and found two defects that only show when they are composed,
+and a gap: the lists screen's row was drawn nowhere.
+
+**A disabled row dimmed what it holds twice.** The row drew everything at `opacity.disabled`, the Disclosure
+chevron's cell and a Checkbox in its slot included, and each of them, reading the row's `isEnabled`, applied
+`opacity.disabled` again: measured on main by the most opaque pixel on a transparent ground, in-process, the chevron
+in a disabled row 0.16 against 1.0 enabled and 0.4 in a disabled group after a text label, and the check at the start
+of a disabled row 0.16 against 0.4 for a disabled check alone (`ImageRenderer` on iOS and macOS and Core Animation's
+renderer on macOS agree; the reviewer's own probe read 0.29 and 0.64 for the check, which neither renderer here
+reproduces). And the cell, disabled with the row, locked the branch's fold, while a disabled label of any other kind
+leaves the chevron enabled. Neither contract said the opposite; together they gave the second dimming, and nothing
+decided the fold. The rule now in this contract and in Disclosure's and Checkbox's:
+
+- A disabled row dims what it holds once. The row no longer lays one opacity over its whole content: it dims its
+  slots, its words, its guides and its highlight (`listRowOpacity`), and tells the controls inside it that it does
+  (`listRowDimsContent`, package-internal), so that a Checkbox at its start draws no opacity of its own for disabled;
+  the check keeps every other part of being disabled. A row inside a disabled row's slot does not dim again either.
+  Since SwiftUI's opacity reaches each layer drawn, the parts dimmed one by one draw the same pixels as the whole
+  dimmed at once: no sheet without a chevron changes.
+- Disabling a row does not lock its branch's fold. A disabled row is not pressable, but folding a branch is
+  navigation, and the reviewer's case is the same call, `.disabled(true)` on the label, doing two things to the
+  chevron depending on the label. The cell takes its enabled state and its look from its DisclosureGroup (Disclosure's
+  revision): a row disabled alone keeps a chevron that folds and is drawn whole, as an active control meets its 3:1
+  non-text contrast, which a chevron at `opacity.disabled` would not; a disabled group disables the chevron, which dims
+  itself once while the row dims the rest. Chosen over the other reading, the chevron dimmed with the row but still
+  folding, which would leave an operable control below its contrast.
+
+Measured after, on iOS (iPhone 17 simulator, iOS 26) and macOS alike: the check in a disabled row 0.4, as alone
+disabled; the chevron in a row disabled alone 1.0, as after a disabled text label, and in a disabled group's row 0.4,
+as a disabled group's after a text label (`ListRowTests.disabledRowDimsTheCheckOnce` and
+`disabledRowDimsTheChevronOnce`; `DisabledRowPixelTests` on macOS with Core Animation's renderer). The fold:
+`DisclosureStyleTests.disabledLabelKeepsTheFold` (and once, on the iOS simulator, a behaviour test on a live sample
+the catalog does not keep: Disclosure's decisions/0001, its revision).
+
+**A static Chip at the end made a row taller.** The trailing slot stood inside the words' column, which was padded by
+`container.paddingVertical`, so its frame could not stand in that padding as the leading slot's does, which the
+contract allowed for any slot. Measured on macOS on main: the title alone 28, an Icon at the end 28, a static Chip at
+the end 36, the same Chip at the start 28, a check at the start 32; with a second line 43, and 45.5 with a Chip at
+the end. Now only the title and the second line are padded and the trailing slot stands beside them on the first line,
+as the leading slot does: a static Chip at the end 28, with a second line 43, and a slot really taller than the row
+still grows it (84 pt high: 93). On iOS (iPhone 17 simulator) the 44 pt minimum hid it on one line at the default
+size, but not at xxxLarge, the largest size where the slot stays at the end (45.7 against 44), nor under a second
+line (52.3 against 50 at the default size); now the Chip at the end is 44 at both sizes and 50 and 69.3 with a second
+line, as without it. `ListRowTests.trailingSlotStandsInThePadding` holds both platforms at both sizes. One existing
+sheet changes with it, on iOS alone: in `long-title`, where the row is given less width than its title needs at
+level 4, the count at the end is squeezed onto two lines, and that frame, taller than the title's one line, now stands
+in the padding too, so the row is about 46 pt high instead of 52, the count still inside it. Every other sheet keeps
+its layout pixel for pixel; a row whose trailing slot stacks under its text, at the accessibility sizes, keeps its
+padding around the whole column as before.
+
+**The lists screen's row.** Nothing drew a ListRow with an IconTile at its start, the pilot's main composition. The
+supplement `composition` draws IconTiles at the start, a count and a static Chip at the end, then the same rows as a
+Disclosure branch with a leaf and a collapsed branch whose row is disabled alone, its chevron whole; and the row with an IconTile at the start, computed in
+"Sizes" before IconTile existed, is measured: the title alone's height, 28 on macOS and 44 on iOS
+(`ListRowTests.iconTileRowHeight`).
 
 ## Open points
 

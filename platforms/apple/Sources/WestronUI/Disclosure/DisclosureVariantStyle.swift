@@ -40,11 +40,17 @@
         @State private var labelTookCell = false
 
         @Environment(\.accessibilityReduceMotion) private var reduceMotion
+        /// The group's enabled state, which the cell takes wherever it is drawn.
+        @Environment(\.isEnabled) private var isEnabled
 
         var body: some View {
+            // Disabled is the group's, not the label's (the contract's disabled): inside a ListRow label the cell would
+            // otherwise take the row's state, so a row disabled alone would lock its branch's fold, which a disabled
+            // label of any other kind does not. Folding is navigation; the row's own action stays disabled.
             let cell = DisclosureCell(isExpanded: configuration.$isExpanded) {
                 configuration.label
             }
+            .environment(\.isEnabled, isEnabled)
             VStack(alignment: .leading, spacing: 0) {
                 // Whether a ListRow label took the cell is known in the same update that draws the label, so that a
                 // branch never shows a second cell beside its row, not for one frame: the cell is drawn after any
@@ -93,6 +99,7 @@
         @Environment(\.layoutDirection) private var layoutDirection
         @Environment(\.disclosureToggleObserver) private var toggleObserver
         @Environment(\.listRowDisclosureCellName) private var rowTitle
+        @Environment(\.isEnabled) private var isEnabled
 
         var body: some View {
             Button {
@@ -103,6 +110,7 @@
             }
             .buttonStyle(DisclosureCellLook())
             .preference(key: DisclosureCellsDrawn.self, value: 1)
+            .preference(key: DisclosureCellsEnabled.self, value: isEnabled ? 1 : 0)
             #if os(macOS)
                 // An outline's disclosure triangle: Right expands and Left collapses, mirrored right to left.
                 .onMoveCommand { direction in
@@ -388,6 +396,7 @@
                     // The system's focus ring follows the drawn circle, not the hit area around it.
                     .contentShape(.focusEffect, shape)
                 #endif
+                // Only here: a ListRow that draws the cell does not dim it (the ListRow contract's disabled).
                 .opacity(tokens.opacity.map(Double.init) ?? 1)
                 // The press's motion reaches the scale alone, never the chevron's turn when a press ends in the update
                 // that folds the group.
@@ -451,6 +460,16 @@
             .allowsHitTesting(false)
             .accessibilityHidden(true)
             .transformPreference(DisclosureCellsDrawn.self) { $0 = 0 }
+            .transformPreference(DisclosureCellsEnabled.self) { $0 = 0 }
+        }
+    }
+
+    /// How many chevron cells a view draws enabled, the hidden copies left out: what the unit tests read to see that a
+    /// cell takes its group's enabled state, not its label's (DisclosureStyleTests). Package-internal.
+    struct DisclosureCellsEnabled: PreferenceKey {
+        static let defaultValue = 0
+        static func reduce(value: inout Int, nextValue: () -> Int) {
+            value += nextValue()
         }
     }
 

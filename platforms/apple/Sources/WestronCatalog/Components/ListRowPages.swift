@@ -201,6 +201,63 @@ struct ListRowCellColumn: View {
     }
 }
 
+/// The lists screen's rows (the `composition` supplement): a list's IconTile at the start, a count or a static Chip at
+/// the end, flat and then as a Disclosure branch with a leaf and a collapsed branch whose row is disabled.
+struct ListRowComposition: View {
+    var body: some View {
+        VStack(spacing: 0) {
+            ListRow(action: {}) {
+                Text(verbatim: ListRowSample.title)
+            } leading: {
+                IconTile(.tray)
+            } trailing: {
+                count(ListRowSample.count)
+            }
+            ListRow(action: {}) {
+                Text(verbatim: "Groceries")
+            } leading: {
+                IconTile(.bag).category(.green)
+            } trailing: {
+                Label("Shared", icon: .hash).labelStyle(.chip)
+            }
+            ListRowBranch(isExpanded: true) {
+                ListRow(action: {}) {
+                    Text(verbatim: "Work")
+                } leading: {
+                    IconTile(.briefcase).category(.blue)
+                } trailing: {
+                    count("9")
+                }
+            } content: {
+                ListRow(level: 1, action: {}) {
+                    Text(verbatim: "Errands")
+                } leading: {
+                    IconTile(.bag).category(.green)
+                } trailing: {
+                    Label("Today", icon: .sun).labelStyle(.chip)
+                }
+                // A branch whose row is disabled alone: the row dims its words and slots once, and its chevron,
+                // which takes its group's state, is drawn whole and still folds (the contracts' disabled).
+                ListRowBranch {
+                    ListRow(level: 1, action: {}) {
+                        Text(verbatim: "Archive")
+                    } leading: {
+                        IconTile(.logbook)
+                    } trailing: {
+                        Label("Old", icon: .hash).labelStyle(.chip)
+                    }
+                    .disabled(true)
+                }
+            }
+        }
+        .listRowLeavesAligned()
+    }
+
+    private func count(_ words: String) -> some View {
+        Text(verbatim: words).textRole(.subheadline.regular).foregroundStyle(.text.secondary)
+    }
+}
+
 /// Rows with the insertion mark over the top edge at level 0 and over the bottom edge at level 2, the row under that
 /// mark selected and not a drop target, so that its highlight shows the mark drawn above it, and a drop target.
 struct ListRowDragSamples: View {
@@ -598,9 +655,27 @@ extension ComponentMatrix.Supplement {
         .matrixCellTakesOfferedWidth()
     }
 
+    /// The lists screen's rows, composed as the pilot composes them (decisions/0014): IconTiles at the start, a count or
+    /// a static Chip at the end, then the same rows as a branch, a leaf and a branch in a Disclosure, one row disabled.
+    static let listRowComposition = ComponentMatrix.Supplement(
+        component: "list-row", id: "composition", title: "the lists screen's rows, composed",
+        note: "IconTile at the start of every row; Inbox ends with a count, Groceries with a static Chip, both as high "
+            + "as a row with the title alone. Below, the same rows as a Disclosure branch, Work, expanded, a leaf and a "
+            + "collapsed branch, lined up with .disclosureAlignsLeaves(); Archive's row is disabled alone: its words "
+            + "and slots dimmed once, its chevron whole, since it still folds. Drawn at most at xxxLarge: at accessibility5 five rows with stacked trailing slots are taller than "
+            + "a phone's screen; the sheet accessibility5 shows a row there.",
+        keeps: ["form": "pressable"], columns: ["true"], rowsPerPicture: 2, splitsAtEverySize: true,
+        columnsPerPicture: 1
+    ) { combination in
+        ListRowComposition()
+            .listRowCatalogState(state(combination))
+            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+            .matrixCellTakesOfferedWidth()
+    }
+
     /// Every ListRow supplement, in order.
     static let listRowAll: [Self] = [
         .listRowSelected, .listRowTree, .listRowSlots, .listRowTask, .listRowLongTitle, .listRowLargeText,
-        .listRowDrag, .listRowRightToLeft,
+        .listRowDrag, .listRowRightToLeft, .listRowComposition,
     ]
 }
