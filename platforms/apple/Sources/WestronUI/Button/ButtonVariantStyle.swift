@@ -318,8 +318,10 @@ private struct ButtonContent<Label: View>: View {
             .textRole(metrics.iconFont)
             .imageScale(ButtonMetrics.iconScale)
             .hidden()
-            .accessibilityHidden(true)
             .overlay { ButtonProgress(color: tokens.progress) }
+            // With its indicator: `.accessibilityHidden(true)` alone left the indicator an activity indicator under
+            // the button on iOS (#131).
+            .modifier(DecorativeGlyph())
     }
 
     private func styled(isLoading: Bool) -> some View {
@@ -417,16 +419,18 @@ private struct ButtonLabelStyle: LabelStyle {
         Group {
             if iconOnly {
                 // The glyph is hidden from accessibility, or its own traits would leak into the button's (the
-                // checkmark reads as "Selected"); the button takes its name from `ButtonName`.
+                // checkmark reads as "Selected"); the button takes its name from `ButtonName`. `DecorativeGlyph`, not
+                // `.accessibilityHidden(true)` alone, which left the glyph an image under the button on iOS (#131).
                 icon(configuration)
-                    .accessibilityHidden(true)
+                    .modifier(DecorativeGlyph())
                     .background { ButtonName(title: configuration.title) }
             } else {
                 // The icon sits on the label's first text baseline, not centered on it (the contract's description):
                 // a symbol's baseline is its glyph's, so it lines up with the words as a letter would.
                 HStack(alignment: .firstTextBaseline, spacing: gap) {
+                    // Decorative, with the indicator over it in loading (`DecorativeGlyph`, #131).
                     icon(configuration)
-                        .accessibilityHidden(true)
+                        .modifier(DecorativeGlyph())
                     configuration.title
                         .textRole(metrics.labelFont)
                         .foregroundStyle(tokens.label)

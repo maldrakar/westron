@@ -418,3 +418,16 @@ screen, locked when the revision was made, could run the catalog again:
   above. An unlit sample at rest first in its own row moved the page so that the audit's second screenful reported
   "potentially inaccessible text" with no element; the sample stands beside the lit one in the row of `checked`
   instead, and the audit passes.
+
+### Note of 2026-11-24: the glyphs leave no element (#131)
+
+Chip's glyph modifier moved to WestronUI as `DecorativeGlyph`, which Button's icon now uses too, with its two
+modifiers the other way round: hidden, then represented by nothing. In that order XCUITest lists nothing under the
+pressable chip, neither the empty elements of type other of the table above nor the words as a text, as under a
+button whose label is only text; the button's own element is what it was (iOS 26.3, `ButtonBehaviorTests`'
+`testIconIsNoElement` and `ChipBehaviorTests`). What VoiceOver speaks is not measured.
+
+On macOS the glyphs are hidden alone, as Button's were before #131: there the empty representation last made a loading
+Button's value read twice, "Loading, Loading", through the progress indicator before its label, and hidden alone lists
+nothing under the pressable chip or a westron Button either (macOS 26.7, the same tests; `DecorativeGlyph` records
+the measurement).
