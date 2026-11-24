@@ -158,5 +158,6 @@ them to that branch.
 - [0015](decisions/0015-glass.md) glass: a floating Button on the system's glass; the bars are the system's
 - [0016](decisions/0016-agent-context.md) agent context: skills and generated files, no MCP server; two channels
 - [0017](decisions/0017-westron-contract.md) WestronContract: the contracts' option enums, no imports, for shared code
+- [0018](decisions/0018-patterns.md) patterns: compositions of westron's components, written as sources (proposed)
 
 The final research report, with sources: `reports/`.
