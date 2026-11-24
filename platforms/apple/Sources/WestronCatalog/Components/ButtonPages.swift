@@ -113,6 +113,41 @@ enum ButtonCatalogID {
     static let neighbors = "button.live.neighbors"
     /// The text with the number of accepted presses: "Accepted presses: 3".
     static let count = "button.live.count"
+    /// A primary button of size l, focused on macOS.
+    static let large = "button.live.large"
+    /// The text that says which buttons the style draws under the pointer, by `ButtonHoverName`: "hover: none",
+    /// "hover: small".
+    static let hover = "button.live.hover"
+}
+
+/// The names the hover readouts give the buttons they watch (`ButtonCatalogID.hover`, `ButtonFloatingID.hover`).
+enum ButtonHoverName {
+    static let rest = "rest"
+    static let small = "small"
+    static let iconOnly = "icon-only"
+    static let neighbor = "neighbor-first"
+    static let large = "large"
+    static let back = "back"
+    static let add = "add"
+    static func overList(_ size: ButtonSize) -> String { "over-list-\(size.rawValue)" }
+}
+
+/// What a hover readout says: "hover: none", or the names of the buttons drawn hovered, in order.
+func hoverReadout(_ hovered: Set<String>) -> String {
+    "hover: " + (hovered.isEmpty ? "none" : hovered.sorted().joined(separator: ", "))
+}
+
+extension View {
+    /// Keeps `name` in `hovered` while the westron button in this view is drawn hovered.
+    fileprivate func readsHover(_ name: String, into hovered: Binding<Set<String>>) -> some View {
+        onButtonHover { isHovered in
+            if isHovered {
+                hovered.wrappedValue.insert(name)
+            } else {
+                hovered.wrappedValue.remove(name)
+            }
+        }
+    }
 }
 
 /// Presses a view through the accessibility API, as VoiceOver, Switch Control and Voice Control do: the element with the
@@ -534,6 +569,7 @@ private struct ButtonBehaviorPage: View {
     @State private var neighborPresses = (first: 0, second: 0)
     /// What the last accessibility press did, for the UI test: "" before any, then `AccessibilityPress`'s report.
     @State private var accessibilityPress = ""
+    @State private var hovered: Set<String> = []
     @FocusState private var isFocused: Bool
     @FocusState private var isLargeFocused: Bool
 
@@ -549,6 +585,10 @@ private struct ButtonBehaviorPage: View {
                     .textRole(.body.regular)
                     .foregroundStyle(.text.primary)
                     .accessibilityIdentifier(ButtonCatalogID.count)
+                Text(verbatim: hoverReadout(hovered))
+                    .textRole(.footnote.regular)
+                    .foregroundStyle(.text.secondary)
+                    .accessibilityIdentifier(ButtonCatalogID.hover)
                 // Above the buttons, not below them: ButtonBehaviorTests taps 8 pt below "Add", and a control closer
                 // than about 16 pt to a button shares the system's touch tolerance with it (#102).
                 FlowLayout(spacing: .space200) {
@@ -570,6 +610,7 @@ private struct ButtonBehaviorPage: View {
                 FlowLayout(spacing: .space200) {
                     Button("Save") { accepted += 1 }
                         .buttonStyle(.primary)
+                        .readsHover(ButtonHoverName.rest, into: $hovered)
                         .accessibilityIdentifier(ButtonCatalogID.rest)
                     // A label without an icon: while loading, the indicator goes before the whole label and the
                     // button widens (P13).
@@ -606,6 +647,7 @@ private struct ButtonBehaviorPage: View {
                         Label("Save", icon: .check)
                     }
                     .buttonStyle(.primary, iconOnly: true)
+                    .readsHover(ButtonHoverName.iconOnly, into: $hovered)
                     .accessibilityIdentifier(ButtonCatalogID.iconOnly)
                     // Last, so that it is on the flow's last line and no control lies within 16 pt of the tap 8 pt
                     // below it: below are the next section's title and, off to the side, its buttons (#102).
@@ -615,6 +657,7 @@ private struct ButtonBehaviorPage: View {
                         Label("Add", icon: .plus)
                     }
                     .buttonStyle(.secondary, size: .s)
+                    .readsHover(ButtonHoverName.small, into: $hovered)
                     .accessibilityIdentifier(ButtonCatalogID.small)
                 }
             }
@@ -626,6 +669,7 @@ private struct ButtonBehaviorPage: View {
                         Label("First", icon: .plus)
                     }
                     .buttonStyle(.secondary, size: .s, iconOnly: true)
+                    .readsHover(ButtonHoverName.neighbor, into: $hovered)
                     .accessibilityIdentifier(ButtonCatalogID.firstNeighbor)
                     Button {
                         neighborPresses.second += 1
@@ -653,6 +697,8 @@ private struct ButtonBehaviorPage: View {
                             .buttonStyle(.primary, size: .l)
                             .focusable()
                             .focused($isLargeFocused)
+                            .readsHover(ButtonHoverName.large, into: $hovered)
+                            .accessibilityIdentifier(ButtonCatalogID.large)
                     }
                     .onAppear { isFocused = true }
                 }
@@ -693,6 +739,9 @@ enum ButtonFloatingID {
     static let disabled = "button.floating.live.disabled"
     /// The text with the number of accepted presses: "Accepted presses: 3".
     static let count = "button.floating.live.count"
+    /// The text that says which of Back, Add and the buttons over the list the style draws under the pointer, by
+    /// `ButtonHoverName`: "hover: none", "hover: back".
+    static let hover = "button.floating.live.hover"
     /// Floating secondaries on glass over a pressable list, by size, `button.floating.over-list.m`.
     static func overList(_ size: ButtonSize) -> String { "button.floating.over-list.\(size.rawValue)" }
     /// The middle row of that list, under the floating buttons.
@@ -840,6 +889,7 @@ private struct ButtonFloatingPage: View {
     @State private var accepted = 0
     @State private var rowPresses = 0
     @State private var floatingPresses = 0
+    @State private var hovered: Set<String> = []
     @FocusState private var isFocused: Bool
 
     /// A row of the states: the states it forces or sets; loading has a section of its own, last, since its
@@ -914,14 +964,20 @@ private struct ButtonFloatingPage: View {
                 .textRole(.body.regular)
                 .foregroundStyle(.text.primary)
                 .accessibilityIdentifier(ButtonFloatingID.count)
+            Text(verbatim: hoverReadout(hovered))
+                .textRole(.footnote.regular)
+                .foregroundStyle(.text.secondary)
+                .accessibilityIdentifier(ButtonFloatingID.hover)
             FloatingPanel {
                 HStack(spacing: .space200) {
                     live("Back", icon: .chevronLeft, variant: .secondary, id: ButtonFloatingID.back)
+                        .readsHover(ButtonHoverName.back, into: $hovered)
                     live("More", icon: .ellipsis, variant: .secondary, id: ButtonFloatingID.more)
                     live("Share", icon: .expand, variant: .secondary, id: ButtonFloatingID.disabled)
                         .disabled(true)
                     Spacer(minLength: 0)
                     live("Add", icon: .plus, variant: .primary, id: ButtonFloatingID.add)
+                        .readsHover(ButtonHoverName.add, into: $hovered)
                 }
             }
         }
@@ -978,6 +1034,7 @@ private struct ButtonFloatingPage: View {
                             Label("Back", icon: .chevronLeft)
                         }
                         .buttonStyle(.secondary, size: size, iconOnly: true, floating: true)
+                        .readsHover(ButtonHoverName.overList(size), into: $hovered)
                         .accessibilityIdentifier(ButtonFloatingID.overList(size))
                     }
                 }

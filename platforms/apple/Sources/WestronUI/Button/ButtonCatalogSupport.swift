@@ -1,5 +1,6 @@
 // Hand-written. CATALOG ONLY: what the westron catalog (WestronCatalog, in this package) needs to show Button's states
-// that a screenshot cannot produce, hover, pressed and focus, and a floating button's look before OS 26 on a newer OS.
+// that a screenshot cannot produce, hover, pressed and focus, a floating button's look before OS 26 on a newer OS, and a
+// readout of the hover the style draws, which its UI tests read.
 // Everything here is `package`, visible to the targets of this Swift package and never to a product that imports
 // WestronUI: it is not public API, and the parity lint (#21) does not see it.
 
@@ -10,6 +11,8 @@ extension EnvironmentValues {
     @Entry var forcedButtonStates: Set<ButtonState> = []
     /// Whether floating buttons draw the look of an OS without glass, before 26, on an OS that has it. Catalog only.
     @Entry var drawsButtonsWithoutGlass = false
+    /// Called when a westron button's hover state changes, with the new state. Catalog only: a product never sets it.
+    @Entry var buttonHoverObserver: (@MainActor @Sendable (Bool) -> Void)? = nil
 }
 
 /// One of Button's states from its contract, as the catalog names it. Catalog only.
@@ -92,5 +95,12 @@ extension View {
     /// the tests would never draw the look of the minimum OS versions. On an OS without glass it changes nothing.
     package func drawingButtonsWithoutGlass(_ without: Bool = true) -> some View {
         environment(\.drawsButtonsWithoutGlass, without)
+    }
+
+    /// Calls `action` when a westron button in this view enters or leaves hover, the state the style draws from the
+    /// pointer over its drawn shape, so that the catalog can show it and its UI tests read it (ButtonBehaviorTests).
+    /// Catalog only: it changes nothing a button does.
+    package func onButtonHover(_ action: @escaping @MainActor @Sendable (Bool) -> Void) -> some View {
+        environment(\.buttonHoverObserver, action)
     }
 }

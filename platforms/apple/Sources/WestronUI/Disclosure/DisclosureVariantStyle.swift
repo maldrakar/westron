@@ -400,7 +400,7 @@
     }
 
     /// Tracks the pointer over the drawn circle, not over the hit area around it nor the corners of the circle's frame,
-    /// as Chip's `ChipHover` tracks its capsule: `onHover` reports the whole frame whatever the content shape.
+    /// as `ShapeHover` tracks Chip's and Button's capsules: `onHover` reports the whole frame whatever the content shape.
     private struct DisclosureHover: ViewModifier {
         let diameter: CGFloat
         let onHover: (Bool) -> Void
