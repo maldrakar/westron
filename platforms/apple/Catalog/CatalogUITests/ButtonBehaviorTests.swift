@@ -592,21 +592,35 @@ final class ButtonBehaviorTests: XCTestCase {
     /// localized ("Добавить" for plus in a Russian simulator), despite `.accessibilityHidden(true)`; the check with the
     /// trait selected; a progress indicator as activity indicators; the words as a text; and under an icon-only button
     /// an element named with its title (`ButtonName`). With `DecorativeGlyph` nothing is under any of them, as under a
-    /// button whose label is only text, and the button's own element (type, label, value, identifier, selected,
-    /// enabled, frame) is what it was. Covered: a label and an icon at sizes s, m and l in each variant, and icon-only
-    /// (`button`, the check); the same in the destructive role (`button-destructive`); each state, disabled and loading
-    /// among them (`button-states`); the live buttons (`button-behavior`); floating primaries on their fill and
-    /// secondaries on glass, with a label and icon-only, one disabled (`button-floating`, `button-floating-sizes`).
-    /// Each button's tree is printed, `MEASURE icon tree: …`, before any assertion.
+    /// button whose label is only text. Of the button's own element this test asserts what is above, its type, words,
+    /// selected and value; its identifier, enabled and frame are printed, not asserted. On macOS the value is read
+    /// once: with the glyphs as on iOS a loading button's was "Loading, Loading" (`DecorativeGlyph`). Covered: a label
+    /// and an icon at sizes s, m and l in each variant, and icon-only (`button`, the check); the same in the
+    /// destructive role (`button-destructive`); each state, disabled and loading among them (`button-states`), and in
+    /// the destructive role (`button-states-destructive`, `button-states-destructive-disabled`); the live buttons
+    /// (`button-behavior`); floating primaries on their fill and secondaries on glass, with a label and icon-only, one
+    /// disabled (`button-floating`, `button-floating-sizes`), in each state on glass (`button-floating-states`), and in
+    /// each state before OS 26 and loading (`button-floating-before-26`). Each button's tree is printed,
+    /// `MEASURE icon tree: …`, before any assertion.
     @MainActor
     func testIconIsNoElement() throws {
         let samples: [(entry: String, names: Set<String>, least: Int)] = [
             ("button", ["Save"], 27),
             ("button-destructive", ["Delete"], 27),
             ("button-states", ["Save"], 36),
+            // The enabled rows, 9, and the disabled rows, 3, in each variant.
+            ("button-states-destructive", ["Delete"], 27),
+            ("button-states-destructive-disabled", ["Delete"], 9),
             ("button-behavior", ["Publish", "Export", "Save", "Add", "First", "Second"], 7),
             ("button-floating", ["Back", "More", "Share", "Add"], 9),
             ("button-floating-sizes", ["Back", "Edit", "Open", "Add", "New", "Delete"], 24),
+            // Five states, three buttons each; before OS 26 the secondary with a label says its state, and loading adds
+            // three buttons on glass and three before OS 26.
+            ("button-floating-states", ["Back", "Edit", "Add"], 15),
+            (
+                "button-floating-before-26",
+                ["Back", "Rest", "Hover", "Focus", "Pressed", "Disabled", "Add", "Edit", "Loading", "New"], 21
+            ),
         ]
         var trees: [ButtonTree] = []
         for (entry, names, least) in samples {

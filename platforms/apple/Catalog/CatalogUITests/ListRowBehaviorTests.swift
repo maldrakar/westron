@@ -202,7 +202,8 @@ final class ListRowBehaviorTests: XCTestCase {
         print(line("archived", archived))
         XCTAssertFalse(archived.isEnabled, "the disabled row is not announced as unavailable")
         // Each row's words are read once, as the row's name: no text outside the button repeats them. XCUITest lists the
-        // words under the button as texts too, as under a westron Button (ChipBehaviorTests); those are the button's.
+        // words under the button as texts too, which are the button's; under a westron Button, since #131, it lists
+        // nothing (ButtonBehaviorTests' `testIconIsNoElement`).
         // The samples above the live rows repeat Inbox, so only the words that are the live rows' alone are counted.
         for name in ["Today", "Call the plumber, Tomorrow"] {
             XCTAssertEqual(app.buttons.matching(NSPredicate(format: "label == %@", name)).count, 1, "\(name) twice")
