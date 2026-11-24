@@ -1,0 +1,194 @@
+<!-- Generated from spec/components/button/button.spec.yaml by `tools/westron generate`. Do not edit: change the source
+and generate again (decisions/0016). -->
+
+# Button
+
+`button` · approved · a style on `SwiftUI.Button` · used by todo-app/lists-screen, todo-app/list-screen
+
+A push button that runs an action: westron's style on the platform's own button, with a label and a leading icon.
+
+## In SwiftUI
+
+`import WestronUI`. A call writes at least:
+
+```swift
+Button(…)
+    .buttonStyle(.primary)
+….loading(isLoading)
+```
+
+What WestronUI declares for it:
+
+```swift
+extension View {
+    public func buttonStyle(
+        _: ButtonVariant,
+        size: ButtonSize? = nil,
+        iconOnly: Bool = false,
+        floating: Bool = false
+    ) -> some View
+    public func loading(_: Bool) -> some View
+}
+public enum ButtonVariant: String, CaseIterable, Sendable { case primary, secondary, tertiary }
+public enum ButtonSize: String, CaseIterable, Sendable { case s, m, l }
+```
+
+The option `role` is the system's own `SwiftUI.ButtonRole`: the product sets it where SwiftUI takes it, and westron
+reads it from there. westron adds no argument for it.
+
+## Options
+
+- `variant`, `ButtonVariant`: `.primary`, `.secondary`, `.tertiary`; no default. No default: every use names its
+  variant. primary is filled with the accent, the one main action on a screen; secondary is filled with a quiet gray,
+  the muted fill; tertiary has no background and an accent label.
+- `size`, `ButtonSize?`: `.s`, `.m`, `.l`; left out, the size comes from `controlSize` (`regular` is `.m`). The height
+  is size.control.s, m or l: 24, 32 and 40 with a pointer (macOS), 28, 36 and 50 on iOS and iPadOS, and 44, the only
+  size, on watchOS. It is a minimum, so the button grows with its text. The hit area is at least size.target.minimum,
+  the platform's recommended target (chapter 08), also where the drawn height is smaller, except where the contract's
+  platforms block says otherwise (on macOS the drawn button; on iOS the system's touch tolerance, which a control nearby
+  shares). Where an OS lacks a value: on watchOS it draws `s` as `m` and `l` as `m`.
+- `role`, the system's `SwiftUI.ButtonRole`: the values `default`, `destructive`; by default `default`. destructive
+  recolors any variant in the danger colors; it is not a variant of its own.
+- `iconOnly`, `Bool`: by default `false`. The same button showing only its icon: a circle whose diameter equals its
+  height; padding and gap do not apply. The label is still there as the accessible label.
+- `floating`, `Bool`: by default `false`. The button stands over content, outside the layout and any bar, rather than
+  among it: secondary on the system's glass from OS 26 and on a raised surface before it, primary on its own fill with a
+  shadow. Not for a button in a system bar, toolbar or tab bar, whose glass is the bar's. The snapshot matrix names it
+  only where it is true, so the sheets of a button that does not float keep the names and pictures they had before it
+  (decisions/0015).
+
+## Slots
+
+`label` and `icon`: through the system control's own initializer and label, never a westron parameter. `label` and
+`icon` are the title and the icon of a `Label` in it: `Label("…", icon: .tray)` (`../icons.md`).
+
+## States
+
+- `hover`: the system's, under a pointer: a Mac, an iPad with a pointer; touch never enters it. Never entered on
+  watchOS.
+- `focus`: the system's keyboard focus.
+- `pressed`: the system's, while a press is held.
+- `disabled`: `.disabled(_:)`, the system's.
+- `loading`: `.loading(_:)`, westron's modifier, on the component: the product passes its own state.
+
+## Accessibility
+
+- Role: `button`. A person can activate it. Announced: `disabled` as disabled, `loading` as busy.
+- **The caller gives every instance a label**: it is the accessible name, also where it is not drawn. Name what it does
+  or holds, never what it looks like.
+
+The label is the accessible name, also when iconOnly hides it, and names the action ("More", not "Ellipsis"). An icon
+beside a visible label is decorative and hidden. In loading, assistive technology announces the label and busy; in
+disabled, the button is announced as unavailable.
+
+## Do not
+
+- **Never**: `floating: true` with `variant` other than `.primary` or `.secondary`. tertiary has no fill, so it has no
+  ground to float on.
+- **Never**: `variant: .secondary` and `floating: true` with `role` other than `` .`default` ``. The danger words read
+  too faintly on the system's glass: color.status.danger.text measured 2.96:1 in the light theme and 2.79 to 4.18:1 in
+  the dark one over a busy ground (decisions/0015). A floating destructive primary, on its opaque fill, stays.
+
+## Behavior
+
+It is the platform's capsule at every variant and size, its ends round at any height, so it stays a capsule when the
+text grows (design-language/04); icon-only is a circle. Every fill is flat and opaque, in westron's colors, with no
+glass or material, but for one exception, a floating secondary from OS 26 (below). primary is filled with the accent,
+secondary with color.background.muted and no outline, tertiary has no fill. Under the pointer and pressed, secondary's
+fill darkens towards its words, a step each; with the destructive role it darkens only as far as the danger words still
+read, which is much less (the owner's decision of 2026-11-20). In the high-contrast themes a secondary button also draws
+an outline, color.border.strong (color.status.danger.border with the destructive role) at stroke.thin, over its fill, in
+every state: the muted fill alone sets it off from the canvas by about 1.1:1, and a control a person must find meets the
+non-text target there (design-language/02, 08). The bindings below cannot say this, since a case has no contrast key, so
+this description is the contract for it, as Surface's is for its line. The icon beside the label is the symbol's small
+scale in the label's text role, its baseline on the label's first text baseline, not centered on it. Hover and pressed
+tint the container in motion.fade and motion.press, and a press also scales it down to 98 %, which Reduce Motion drops
+(chapter 05). Disabled draws the whole button at opacity.disabled, with no colors of its own. A disabled or loading
+button never enters hover or pressed: its fill stays as at rest and it does not scale, on every platform;
+container.background's leading cases bind that. Loading puts a progress indicator in the icon's place, and in icon-only
+in place of the icon, so the width does not change; when there is no icon, the indicator goes before the label and the
+button widens by the indicator and the gap, so the label is neither truncated nor hidden (the owner's decision of
+2026-11-17, decisions/0001, P13). The label stays, presses are not accepted, and the button does not dim. The button is
+not meant for a width smaller than its label's longest word: the label wraps only between words, and the product
+provides the room, by stacking buttons, giving the button the full width, a shorter label, or icon-only. In a narrower
+container the label breaks inside a word; that is unsupported, not a behavior of this contract (decisions/0001). A
+floating button stands over content, outside any bar, such as a way back and a "…" over a list or a round "+" in a
+screen's corner (decisions/0015). A floating secondary is the one exception to the flat fills: from iOS 26, macOS 26 and
+watchOS 26 it stands on the system's glass, regular, in the button's capsule, with no fill, outline, shadow, hover or
+pressed tint and no press scale of westron's, since the glass answers the pointer and the press itself. The glass is
+laid after the button's content, padding, frame and background, and the disabled opacity outside it, so a disabled
+button dims its glass with it. The glass answers a touch or the pointer (it is interactive) only while the button takes
+presses: not while disabled or loading. Before those versions it stands on color.background.surface and casts
+shadow.overlay, tinted and scaled under the pointer and pressed as the bindings say, and draws secondary's outline in
+the high-contrast themes. A floating primary, destructive or not, keeps its opaque fill, its tints and its scale on
+every version and casts shadow.overlay. The bindings cannot name an OS version, so container.shadow's floating case and
+container.background's floating secondary cases are the look where there is no glass: before OS 26, and in the snapshot
+matrix, which draws the bindings on every OS; on glass the label and the icon keep their colors and the disabled button
+its opacity.disabled. The glass adapts its luminosity to what passes beneath it and follows Reduce Transparency,
+Increase Contrast and the person's choice of the glass's look by itself, while the label's and the icon's colors,
+westron's, follow the theme, not the glass. So the contract promises no contrast ratio for text.primary on glass: what
+lies beneath is the product's content, which tokens do not name. Over content of the tone opposite to the theme, such as
+a light photo or map under a floating button in the dark theme, or a dark one in the light theme, the label can fall
+below 4.5:1: measured 3.8:1 in the dark theme over a wide light ground on iOS 26.3. That is a recorded limitation, not a
+defect: the owner kept westron's colors on glass rather than the system's adaptive foreground (decisions/0015, Q5,
+2026-11-23). Over content whose tone it does not control, a product uses a floating primary, whose fill is opaque, or
+keeps the content beneath in the theme's tone. The danger words read too faintly on glass (measured 2.8 to 4.2:1 over a
+busy ground in the standard themes, decisions/0015), so a floating secondary does not take the destructive role. Two
+combinations are forbidden, each by a constraint below: a floating tertiary, which has no ground to float on, and a
+floating destructive secondary. A platform that is given one anyway draws the button that does not float, the same
+variant and role in the layout's look, with no warning at run time (spec/conventions.md, open question 3). A button in a
+system bar, toolbar or tab bar never floats: the bar draws its own glass (design-language/09).
+
+## On Apple
+
+role is SwiftUI's own ButtonRole, so no enum is generated for it, which would collide with SwiftUI's: a product writes
+Button(role: .destructive), and the style reads configuration.role; any other role draws as default. iconOnly is a
+labeled argument of the style, .buttonStyle(.primary, iconOnly: true): the style hides the title, keeps it as the
+accessible label and draws the circle. A product's own .labelStyle(.iconOnly) is not the way to it: the style's label
+style overrides it, and the style cannot read it to draw the circle (spec/conventions.md). A call without size: takes it
+from controlSize (spec/conventions.md). The focus ring is the system's, so the focusRing bindings do not apply. The
+shape is SwiftUI's Capsule with its default continuous ends, as the prototype the owner chose drew it; in icon-only's
+square frame it draws a circle. The icon beside the label is set to .imageScale(.small) and laid out with the label in
+an HStack aligned on .firstTextBaseline; icon-only draws the glyph at the same small scale. The high-contrast outline
+follows colorSchemeContrast, as Surface's line does. floating is a labeled argument too, .buttonStyle(.secondary, size:
+.l, iconOnly: true, floating: true). A floating secondary's glass is glassEffect(.regular.interactive(isInteractive),
+in: Capsule()) inside if #available(iOS 26, macOS 26, watchOS 26, *), isInteractive false while the button is disabled
+or loading. It is applied after the content, the padding, the frame and the background, as glassEffect asks, and before
+the content shapes and the disabled opacity, which so dims the glass too; the else branch draws the surface, the shadow
+and the tints of the bindings. A floating tertiary or destructive secondary, which the constraints forbid, draws as the
+same button not floating, silently: no assertionFailure, while spec/conventions.md's open question 3 is open. These two
+looks by OS version are one contract: the platforms block has no field for an OS version, so this description is the
+record of the difference (decisions/0015). westron adds no GlassEffectContainer, glassEffectID or glassEffectUnion: a
+product that sets floating buttons side by side, or morphs one into another, writes the system's own around them from OS
+26. The shadow is View.shadow(_:), as Surface's.
+
+### iOS
+
+Hover only with a pointer, on iPad; an iPhone never enters it. The hit area is the system's touch tolerance around the
+drawn button, which westron does not grow: measured on iOS 26.3 it reached 16 pt past a 32 pt button (#23), and with no
+other control near it reaches 16 to 19 pt past a button of size s or m on iOS 26.3 and 27.0 alike (#102). The catalog's
+ButtonBehaviorTests taps 8 pt below the 28 pt size s, the edge of size.target.minimum, 44 pt, and 4 pt below the 36 pt
+size m, the edge of the same target; both reach the button. Another control closer than about 16 pt shares the gap with
+the button, which gets only part of it: in the measured cases 10 pt of a 20 pt gap, 7 of 16, and, with a Toggle row 12
+pt below a size s button, 8 pt on iOS 26.3 and 7.67 on 27.0, one pixel less, so the test's tap at 8 pt failed on 27.0
+until the catalog moved the row away. So a size s button reaches the full target only where no other control is within
+about 16 pt of it (the owner's decision of 2026-11-21, decisions/0001). A floating button over content a person presses,
+a list's rows, gets no tolerance at all: on iOS 26.3 a press half a point inside its drawn edge reaches it and a press 1
+or 4 pt past it, below or beside, reaches the row, at sizes s, m and l alike (ButtonBehaviorTests, decisions/0015). So
+over pressable content its hit area is what it draws, and only size l, 50 pt, reaches size.target.minimum: use size l
+for a floating button over pressable content on iOS.
+
+### macOS
+
+Return triggers the default action and Escape the cancel action. The hit area is the drawn button, so size s takes
+clicks in its 24 pt, below the recommended 28 (the owner's decision of 2026-11-18, decisions/0001): a click outside the
+system button's frame misses, a frame grown with an outset and taken back by a negative padding takes clicks inside a
+neighbor closer than 4 pt, and a layout frame of 28 breaks the alignment size s is for. A pointer is precise, and the
+system's own small controls take clicks in their frame only. The drawn button is a capsule, so the corners of its frame
+outside the capsule take no click: less than the rounded rectangle of radius.control took before 2026-11-20 (on
+icon-only at s, a click 3 pt in from two edges misses), which follows from the owner's two decisions and waits for the
+owner's confirmation (decisions/0003).
+
+### watchOS
+
+One size, m: the Swift enum keeps every size and the style falls back to m. No pointer, so no hover.

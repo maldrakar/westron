@@ -87,19 +87,24 @@ catalog_inputs="$package_manifest|^platforms/apple/Catalog/|^platforms/apple/Sou
 
 # The steps of tools/check.sh, each with what its command reads by default (tools/Sources, but for locks). The data:
 # the token files, the resolver and the palette; the contracts, their schema and the icon registry; not the Markdown
-# beside them. The tools' own tests read the repository too (`repositoryRoot` in tools/Tests: the tokens, the
-# contracts and their schema, the icon registry, WestronUI's sources and the generated Swift, .xcode-version), so they
-# run for those as well. The step locks reads only the lock and its test, plain bash; the step audit-scope reads the
+# beside them, but for the two documents the agent context reads, spec/conventions.md and the design language, and its
+# output, skills/westron/context/ and llms.txt (generate). The tools' own tests read the repository too
+# (`repositoryRoot` in tools/Tests: the tokens, the contracts and their schema, the icon registry, the two documents,
+# WestronUI's sources and the generated Swift, .xcode-version), so they run for those as well. The step locks reads only the lock and its test, plain bash; the step audit-scope reads the
 # script, its test and the sources it maps (the catalog, WestronUI's components, the contracts), plain bash too. A
 # change of the tools or of the toolchain selects them all the same, as it selects every step, and the hook then runs
 # plain tools/check.sh.
 tokens='^tokens/.*\.json$'
 spec='^spec/(components/[^/]+/[^/]+\.spec\.yaml$|schema/|icons/)'
 generated='^platforms/apple/Sources/(WestronTokens/Generated/|WestronUI/Generated/|WestronUI/Tokens\.xcassets/|WestronCatalog/Generated/)'
+# The agent context (decisions/0016): the generator also reads the platform conventions and the design language, and
+# writes the bundle under skills/westron/context/ and llms.txt at the root.
+agent_context_inputs='^(spec/conventions\.md|design-language/)'
+agent_context_outputs='^(skills/westron/context/|llms\.txt$)'
 tools_steps=(
-  "tools|$tokens|$spec|$westron_ui|^platforms/apple/Sources/WestronTokens/"
+  "tools|$tokens|$spec|$westron_ui|^platforms/apple/Sources/WestronTokens/|$agent_context_inputs"
   "raw-values|$westron_ui"
-  "generate|$tokens|$spec|$generated"
+  "generate|$tokens|$spec|$generated|$agent_context_inputs|$agent_context_outputs"
   "tokens|$tokens"
   "contrast|$tokens"
   "icons|^spec/icons/"

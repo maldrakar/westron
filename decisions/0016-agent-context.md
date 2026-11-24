@@ -84,6 +84,15 @@ None is settled here; the first two are #37's.
    ```
 
    The skills in `.claude/skills/` stay what they are: the process for working on westron, not context for products.
+
+   *Settled on 2026-11-24 by #37, as built:* the layout above, without `.claude-plugin/`, which is #38's. Two changes:
+   the tables of tokens are split by kind, `tokens/color.md`, `typography.md`, `layout.md` and
+   `motion-and-shadow.md`, since one table of every token ran to several hundred lines; and `swiftui.md`, how a
+   contract's concepts become SwiftUI, is generated from `spec/conventions.md`, its section on the system's controls
+   and the SwiftUI column of its table. The copied chapters keep their links to each other and to the bundle's files;
+   a link to the rest of westron's repository is left as its text. The generator is `AgentContext`
+   (`tools/Sources/WestronTools/Context/`); the bundle's directory is owned by it, so a file it no longer writes is
+   stale.
 2. **The version a consumer reads.** A product pins westron through SwiftPM, and a plugin can be newer than the pinned
    checkout. How a consumer gets the context of exactly the version its package is pinned to, for example by reading
    the bundle from its SwiftPM checkout rather than from the plugin.

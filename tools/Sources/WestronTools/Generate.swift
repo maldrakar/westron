@@ -36,7 +36,7 @@ public enum Generate {
     public static let sourceGenerators: [any Generator] = [PaletteTokens()]
     /// The generator registry, in order.
     public static let generators: [any Generator] =
-        sourceGenerators + [AppleTokens(), AppleIcons(), AppleComponents(), AppleSnapshotMatrix()]
+        sourceGenerators + [AppleTokens(), AppleIcons(), AppleComponents(), AppleSnapshotMatrix(), AgentContext()]
 
     /// The files of all generators and the directories they own.
     public struct Output: Equatable, Sendable {
