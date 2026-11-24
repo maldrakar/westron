@@ -338,7 +338,10 @@ final class ButtonBehaviorTests: XCTestCase {
     /// macOS: hover starts and ends at the drawn shape, not at the corners of its frame (#130). The pointer in the
     /// frame's corner, outside the capsule's round end, leaves the button at rest; 1.5 pt inside the round end, and in
     /// the middle, it is hovered. Sizes s, m and l with a label, and icon-only, a circle, at s and m. Each outcome is
-    /// measured before any is asserted, and printed (`measureHover`).
+    /// measured before any is asserted, and printed (`measureHover`). A guard of behaviour that held before #130 too:
+    /// with `onHover` in place of `ShapeHover`, these buttons, whose interaction shape on macOS is the capsule, read no
+    /// hover in their frames' corners, and this test passed (the review of #146). The test that fails without the fix
+    /// is `testFloatingHoverAtTheDrawnShape`.
     @MainActor
     func testHoverAtTheDrawnShape() throws {
         #if os(macOS)
