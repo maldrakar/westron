@@ -554,15 +554,23 @@ git diff --name-only main...HEAD | tools/apple/audit-scope.sh   # the entries a 
   is the position of the page's elements, not the pixels (the rows drawn transparent gave up the same way) and not a
   scroll view (the rows offset in a plain stack did too); one text alone at that place did not. So the test first runs
   a screenful's audit once more where it is (a stalled simulator), then moves the page by a few points
-  (`auditMoved`): on by f points, measured from the elements' frames, which scrolls a strip of f points off the top,
-  and, if need be, back to b points before where it was, which scrolls a strip off the bottom. From one snapshot of
-  the page's elements before the move, it checks that every element the screenful showed whole was seen whole by a
-  moved audit, or, for one in the top strip, by the screenful before (from screen 2; f is less than the 24 pt by which
-  a deferred element clears the top). The log says so (`a11y: <entry>, screen <n>: audited whole with the page moved
-  (moved on by 9.7 pt: completed)…`). When the moved audits do not cover the screenful (an element within f points of
-  the top of a page, or of the bottom of its last screenful, or an audit that gives up again), the entry fails for
-  infrastructure, naming the elements not audited, and the script audits it again in a run of its own. A position
-  that gives up is about a point wide, so a page does not need a rule on what one screenful may hold.
+  (`auditMoved`): on by f points, which scrolls a strip of f points off the top, and, if need be, back to b points
+  before where it was, which scrolls a strip off the bottom. A slow drag of 20 pt with a hold before the release
+  usually moves the page 10 pt (the touch slop takes the rest; 30 of 30 such drags on 2026-11-24, also right after an
+  audit gave up), but once it moved the page 146.3 pt, for a reason not found. So the move is not trusted: it is
+  measured from the elements' frames after every drag, and a drag that lands outside 1–16 pt is corrected by another
+  toward 10 pt, at most four drags in all; only a move measured within 1–16 pt is audited (16 pt is the page's margin,
+  so at the top of a page no element starts in the strip). The log has every drag (`a11y: <entry>, screen <n>: moving
+  on, drag 1 asked 20.0 pt from 0.0 pt, the page is now 10.0 pt from where it was …`). From one snapshot of the
+  page's elements before the move, it checks that every element the screenful showed whole was seen whole by a moved
+  audit, or, for one in the top strip, by the screenful before (from screen 2; f is at most 16 pt, less than the 24 pt
+  by which a deferred element clears the top). The log says so (`a11y: <entry>, screen <n>: audited whole with the
+  page moved (moved on by 10.0 pt: completed)…`). An issue on an element both moved audits see is reported once
+  (`a11y: reported already in …` for the second). When the moved audits do not cover the screenful (an element within
+  f points of the top of a page, or of the bottom of its last screenful, a move that does not land within the bound,
+  or an audit that gives up again), the entry fails for infrastructure, naming the elements not audited, and the
+  script audits it again in a run of its own. A position that gives up is about a point wide, so a page does not need
+  a rule on what one screenful may hold.
 - The Dynamic Type and text clipped audits enlarge the page's text. A dragged scroll view goes back to its top when
   its content grows, so after a drag they would measure only the top of the page; and after them, the page's
   accessibility tree and its pixels disagree for a while, so that the next audit reads every text as failing

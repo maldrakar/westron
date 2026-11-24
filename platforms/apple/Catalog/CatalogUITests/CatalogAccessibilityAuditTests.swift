@@ -343,12 +343,23 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
     }
 
     #if os(iOS)
-        /// How far `auditMoved` asks a drag to move the page. A slow drag moves it about 10 pt less (the touch slop):
-        /// measured on 2026-11-24, 17.5 pt asked moved it 7.3 pt. Far enough to leave a position where the audit gives
-        /// up (about a point wide, #127), and short of the page's margin (`space.200`, 16 pt) and of `dragMargin`.
-        private static let moveDistance: CGFloat = 20
+        /// How far from where the screenful was `auditMoved` aims to move the page: far enough to leave a position
+        /// where the audit gives up (about a point wide, #127).
+        private static let moveTarget: CGFloat = 10
+        /// How much less than asked a slow drag moves the page (the touch slop): measured on 2026-11-24, 17.5 pt asked
+        /// moved it 7.3 pt, 20 pt asked 9.7 and 10.0 pt. A drag asks for the move it wants plus this.
+        private static let touchSlop: CGFloat = 10
         /// The least move that counts: a drag that moved the page less did not leave the position.
         private static let leastMove: CGFloat = 1
+        /// The most the page may be moved for an audit, measured: the page's margin (`space.200`, 16 pt), so that at
+        /// the top of a page no element starts in the strip a move on scrolls off; and less than `dragMargin`. The
+        /// same slow drag, held before its release, has moved the page 146.3 pt once, for a reason not found (30 of
+        /// 30 moved it 10.0 pt on 2026-11-24, also right after an audit gave up, with no motion after the release).
+        /// So a move is not trusted: it is measured after every drag and corrected until it lies within this bound
+        /// (`move(_:_:screen:from:direction:)`), and a page outside it is not audited.
+        private static let maxMove: CGFloat = 16
+        /// The most drags a move may take to land within `leastMove...maxMove`; beyond them, that side is not audited.
+        private static let moveAttempts = 4
 
         /// Audits a screenful whose audit gave up twice where the page is, at position P, with the page moved by a few
         /// points: on 2026-11-24 the contrast audit of `list-row` at accessibility5 gave up at screen 14 on every try,
@@ -359,22 +370,26 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         /// A moved audit sees the screenful less a strip at one edge, so the test works out which of the elements that
         /// P showed whole it did not see whole, and the screenful passes only when every one of them is seen whole by
         /// another audit:
-        /// - the page is first moved on by f points (`moveDistance`, measured), which scrolls a strip of f points off
-        ///   the top. An element that P showed whole is seen whole moved on unless it starts in that strip;
+        /// - the page is first moved on by f points, which scrolls a strip of f points off the top. f is measured from
+        ///   the elements' frames, and the page is audited there only when f is within `leastMove...maxMove` (`move`).
+        ///   An element that P showed whole is seen whole moved on unless it starts in that strip;
         /// - an element in the strip was seen whole on the screenful before, when there is one (the drags of
         ///   `auditScreens`, from screen 2) and it showed the element whole: the drag between them is `nextDrag`, give
         ///   or take `dragMargin`, and since f is less than `dragMargin`, no element in the strip was deferred to this
         ///   screenful (`cutByBottom`). Screen 1, and every window of the Dynamic Type pass, has none;
-        /// - for what is still not seen whole, the page is moved back to b points before P, which scrolls a strip of b
-        ///   points off the bottom: an element is seen whole there unless it ends in that strip.
+        /// - for what is still not seen whole, the page is moved back to b points before P (b measured and held within
+        ///   the same bounds), which scrolls a strip of b points off the bottom: an element is seen whole there unless
+        ///   it ends in that strip.
+        /// When both moved audits complete, an issue on an element both see is reported once (`ReportedIssues`).
         /// The elements are the page's, from one snapshot of the tree at P (`pageElements`), less those that stay put
         /// when the page moves (`moving`).
         /// Elements the edges of P cut are judged as on any screenful: the one before showed the ones at the top whole,
         /// and the ones at the bottom are deferred to the next. The issues deferred to the next screenful are the last
         /// audit's, which the next drag starts from. When the moved audits do not see every element whole (the top of
-        /// a page whose first element starts within f points of it, the bottom of the last screenful, an audit that
-        /// gives up again), the entry fails for infrastructure, naming the elements; `tools/apple/check.sh a11y` then
-        /// audits it again in a run of its own, and the run goes on to the next entry.
+        /// a page whose first element starts within f points of it, the bottom of the last screenful, a move that does
+        /// not land within the bounds, an audit that gives up again), the entry fails for infrastructure, naming the
+        /// elements; `tools/apple/check.sh a11y` then audits it again in a run of its own, and the run goes on to the
+        /// next entry.
         @MainActor
         private func auditMoved(
             _ app: XCUIApplication, _ entryID: String, _ configuration: Configuration,
@@ -392,46 +407,45 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             var unseen = atP.filter { $0.frame.minY >= visible.minY && $0.frame.maxY <= visible.maxY }
             var deferred: [String]?
             var tried: [String] = []
+            let reported = ReportedIssues()
 
             // Moved on: a strip of f points off the top.
-            nudge(entry, by: Self.moveDistance)
-            settle(entry, entryID, screen: screen)
-            let afterForward = pageElements(entry)
-            let forward = Self.shift(from: atP, to: afterForward)
-            unseen = Self.moving(unseen, after: afterForward, shift: forward)
+            let onward = move(entry, entryID, screen: screen, from: atP, direction: 1)
+            let forward = onward.offset
+            unseen = Self.moving(unseen, after: onward.elements, shift: forward)
             let whole = unseen.count
             var seenBefore = 0
-            if forward >= Self.leastMove {
-                let label = String(format: "moved on by %.1f pt", forward)
+            let forwardLabel = String(format: "moved on by %.1f pt", forward)
+            if onward.held {
                 if let issues = try? performAudit(
-                    app, entryID, configuration, types: types, screen: screen, nextDrag: nextDrag, moved: label)
+                    app, entryID, configuration, types: types, screen: screen, nextDrag: nextDrag,
+                    moved: Moved(label: forwardLabel, offset: forward, reported: reported))
                 {
                     deferred = issues
                     unseen.removeAll { $0.frame.minY - forward >= visible.minY }
-                    tried.append("\(label): completed")
+                    tried.append("\(forwardLabel): completed")
                     if let nextDrag, screen > 1, forward < Self.dragMargin {
                         let count = unseen.count
                         unseen.removeAll { $0.frame.maxY + nextDrag + Self.dragMargin <= visible.maxY }
                         seenBefore = count - unseen.count
                     }
                 } else {
-                    tried.append("\(label): gave up again")
+                    tried.append("\(forwardLabel): gave up again")
                 }
             } else {
-                tried.append(String(format: "moved on by %.1f pt: the page did not move", forward))
+                tried.append("\(forwardLabel): \(onward.reason)")
             }
 
             // Moved back: a strip of b points off the bottom, for what is still not seen whole.
             if !unseen.isEmpty {
-                nudge(entry, by: -(max(forward, 0) + Self.moveDistance))
-                settle(entry, entryID, screen: screen)
-                let afterBackward = pageElements(entry)
-                let backward = -Self.shift(from: atP, to: afterBackward)
-                unseen = Self.moving(unseen, after: afterBackward, shift: backward)
+                let back = move(entry, entryID, screen: screen, from: atP, direction: -1)
+                let backward = -back.offset
+                unseen = Self.moving(unseen, after: back.elements, shift: backward)
                 let label = String(format: "moved back by %.1f pt", backward)
-                if backward >= Self.leastMove {
+                if back.held {
                     if let issues = try? performAudit(
-                        app, entryID, configuration, types: types, screen: screen, nextDrag: nextDrag, moved: label)
+                        app, entryID, configuration, types: types, screen: screen, nextDrag: nextDrag,
+                        moved: Moved(label: label, offset: back.offset, reported: reported))
                     {
                         deferred = issues
                         unseen.removeAll { $0.frame.maxY + backward <= visible.maxY }
@@ -440,7 +454,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                         tried.append("\(label): gave up again")
                     }
                 } else {
-                    tried.append(String(format: "moved back by %.1f pt: the page did not move", backward))
+                    tried.append("\(label): \(back.reason)")
                 }
             }
 
@@ -457,6 +471,58 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                     + "\(whole) elements it showed whole, \(whole - seenBefore) were seen whole by a moved audit and "
                     + "\(seenBefore) at the top by the screenful before")
             return deferred
+        }
+
+        /// Where a move of `auditMoved` left the page: how far from P, measured (positive on, negative back), the
+        /// page's elements there, and whether that is within `leastMove...maxMove` in the direction asked; when not,
+        /// why.
+        struct Move {
+            let offset: CGFloat
+            let elements: [PageElement]
+            let held: Bool
+            let reason: String
+        }
+
+        /// Moves the page from P, where `atP` was taken, by `moveTarget` points on (`direction` 1) or back (-1), from
+        /// wherever it is now, and measures the move after every drag. A drag that lands outside
+        /// `leastMove...maxMove` is corrected by another drag, toward `moveTarget`, up to `moveAttempts` drags in all;
+        /// a drag that does not move the page ends the tries (the end of the page). Each drag is logged with what it
+        /// asked, where it left the page and how long it took.
+        @MainActor
+        private func move(
+            _ entry: XCUIElement, _ entryID: String, screen: Int, from atP: [PageElement], direction: CGFloat
+        ) -> Move {
+            let way = direction > 0 ? "on" : "back"
+            var elements = pageElements(entry)
+            var offset = Self.shift(from: atP, to: elements)
+            var drags = 0
+            var stuck = false
+            func held() -> Bool { (Self.leastMove...Self.maxMove).contains(direction * offset) }
+            while !held() && !stuck && drags < Self.moveAttempts {
+                let gap = direction * Self.moveTarget - offset
+                let asked = gap + (gap > 0 ? Self.touchSlop : -Self.touchSlop)
+                let started = Date()
+                nudge(entry, by: asked)
+                let took = Date().timeIntervalSince(started)
+                settle(entry, entryID, screen: screen)
+                drags += 1
+                elements = pageElements(entry)
+                let next = Self.shift(from: atP, to: elements)
+                print(
+                    "a11y: \(entryID), screen \(screen): moving \(way), drag \(drags) asked "
+                        + String(format: "%.1f pt from %.1f pt, the page is now %.1f pt ", asked, offset, next)
+                        + String(format: "from where it was (the drag took %.2f s)", took))
+                stuck = abs(next - offset) < Self.leastMove
+                offset = next
+            }
+            guard !held() else { return Move(offset: offset, elements: elements, held: true, reason: "") }
+            let reason =
+                stuck
+                ? "the page did not move \(way)"
+                : String(
+                    format: "not within %.0f…%.0f pt %@ after %d drags: not audited there", Self.leastMove,
+                    Self.maxMove, way, drags)
+            return Move(offset: offset, elements: elements, held: false, reason: reason)
         }
 
         /// An element of the page, for `auditMoved`: what tells it apart, and its frame.
@@ -521,10 +587,47 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         }
     #endif
 
+    /// A moved audit of `auditMoved`: its label for the log, how far the page is from where the screenful was
+    /// (positive on, negative back), and the issues the screenful's moved audits have reported.
+    struct Moved {
+        let label: String
+        let offset: CGFloat
+        let reported: ReportedIssues
+    }
+
+    /// The issues a screenful's moved audits have reported, each by its element as it lies where the screenful was:
+    /// an issue that the audit moved on reported is not reported again by the audit moved back, which sees the same
+    /// element.
+    final class ReportedIssues {
+        /// Each issue by what tells it apart but where it is, with its element's top where the screenful was.
+        private var issues: [(key: String, top: CGFloat?)] = []
+
+        /// Records the issue; `false` when it was recorded already: the same issue on the same element, whose top
+        /// where the screenful was lies within a point (the move is measured to a third of one).
+        @MainActor
+        func insert(_ issue: XCUIAccessibilityAuditIssue, offset: CGFloat) -> Bool {
+            var key = "\(issue.auditType.rawValue)|\(issue.compactDescription)"
+            var top: CGFloat?
+            if let element = issue.element {
+                let frame = element.frame
+                key += "|\(element.elementType.rawValue)|\(element.label)|\(element.identifier)"
+                key += "|\(frame.minX)|\(frame.width)|\(frame.height)"
+                top = frame.minY + offset
+            }
+            let seen = issues.contains { old in
+                guard old.key == key else { return false }
+                guard let top, let oldTop = old.top else { return top == nil && old.top == nil }
+                return abs(top - oldTop) < 1
+            }
+            if !seen { issues.append((key, top)) }
+            return !seen
+        }
+    }
+
     @MainActor
     private func performAudit(
         _ app: XCUIApplication, _ entryID: String, _ configuration: Configuration, types: XCUIAccessibilityAuditType,
-        screen: Int, nextDrag: CGFloat?, moved: String? = nil
+        screen: Int, nextDrag: CGFloat?, moved: Moved? = nil
     ) throws -> [String] {
         let visible = visibleArea(app)
         var deferred: [String] = []
@@ -534,7 +637,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         var outcome = "gave up"
         defer {
             print(
-                "a11y: \(entryID), screen \(screen)\(moved.map { ", \($0)" } ?? ""): audit \(outcome) in "
+                "a11y: \(entryID), screen \(screen)\(moved.map { ", \($0.label)" } ?? ""): audit \(outcome) in "
                     + String(format: "%.2f s", Date().timeIntervalSince(started)))
         }
         try app.performAccessibilityAudit(for: types) { issue in
@@ -569,6 +672,13 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                     "a11y: deferred in \(entryID), screen \(screen): \(description) (cut by the bottom of the screen; "
                         + "the next screenful shows it whole)")
                 deferred.append(description)
+                return true
+            }
+            // Two moved audits of one screenful see much of it twice: an issue the first reported is not the second's.
+            if let moved, !moved.reported.insert(issue, offset: moved.offset) {
+                print(
+                    "a11y: reported already in \(entryID), screen \(screen): \(Self.describe(issue)) (\(moved.label); "
+                        + "the screenful's other moved audit reported it)")
                 return true
             }
             print("a11y: issue in \(entryID), screen \(screen): \(Self.describe(issue))")
@@ -637,7 +747,8 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
 
     #if os(iOS)
         /// Drags the page slowly by `distance` points from the middle of the entry, without momentum: up for a positive
-        /// distance, which moves the page on, down for a negative one. The page moves by less (`moveDistance`).
+        /// distance, which moves the page on, down for a negative one. The page usually moves by `touchSlop` less, but not
+        /// always: `move(_:_:screen:from:direction:)` measures it.
         @MainActor
         private func nudge(_ entry: XCUIElement, by distance: CGFloat) {
             let height = max(entry.frame.height, 1)
