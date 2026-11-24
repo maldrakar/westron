@@ -12,7 +12,8 @@ composes its screens from (decisions/0014): Chip (#117), IconTile (#118), ListRo
 TextField's icon slots (#115), Rule's label (#116) and glass (#121), which is Button's option `floating` and no glass
 Surface (decisions/0015). One pull request per issue, each contract approved under the owner's delegation and each
 pull request merged by the owner, who holds the second gate. westron has eleven components on Apple. Phase 5
-"Patterns, documentation, agent context" is next. Order matters more than speed:
+"Patterns, documentation, agent context" is next; decisions/0016 gives its order, split around phase 6 (web).
+Order matters more than speed:
 tokens (phase 1), then the contract schema, API generation, the parity lint, the snapshot matrix and the end-to-end
 Button slice on Apple (phase 2), before a second component (`reports/`, section "Work plan").
 
@@ -153,5 +154,6 @@ them to that branch.
 - [0013](decisions/0013-typography-space-shape-motion.md) typography, space, shape and motion of direction B
 - [0014](decisions/0014-core-components-and-composition.md) a small core of components; products compose the rest
 - [0015](decisions/0015-glass.md) glass: a floating Button on the system's glass; the bars are the system's
+- [0016](decisions/0016-agent-context.md) agent context: skills and generated files, no MCP server; two channels
 
 The final research report, with sources: `reports/`.
