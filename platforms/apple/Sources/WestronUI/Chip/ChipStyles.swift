@@ -199,7 +199,7 @@ private struct ChipContent<Icon: View, Title: View>: View {
                     ChipMark()
                         .opacity(marked ? 1 : 0)
                 }
-                .modifier(ChipDecorative())
+                .modifier(DecorativeGlyph())
             title
                 .textRole(ChipMetrics.labelFont)
                 .lineLimit(1)
@@ -220,23 +220,7 @@ private struct ChipMark: View {
             .imageScale(ChipMetrics.iconScale)
             .foregroundStyle(iconColor.map { AnyShapeStyle(Color($0)) } ?? AnyShapeStyle(.foreground))
             .fixedSize()
-            .modifier(ChipDecorative())
-    }
-}
-
-/// Hides a decorative glyph, the icon or the check, from assistive technology. Inside a button's label on iOS,
-/// `.accessibilityHidden(true)` alone left each glyph an image element of its own under the button, named after its
-/// symbol, the check with the trait selected, as under a westron Button with a Label (iOS 26.3, ChipBehaviorTests);
-/// so the glyph also gives an empty representation, as IconTile's symbol does (#118). XCUITest then lists it as an
-/// element of type other with no label, value or trait; `.accessibilityElement(children: .combine)` around the label
-/// did not remove it either.
-private struct ChipDecorative: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .accessibilityRepresentation {
-                EmptyView()
-            }
-            .accessibilityHidden(true)
+            .modifier(DecorativeGlyph())
     }
 }
 

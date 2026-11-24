@@ -151,18 +151,19 @@ final class ChipBehaviorTests: XCTestCase {
         }
         XCTAssertEqual(day.label, "Tue")
         XCTAssertFalse(day.isSelected)
-        // On iOS XCUITest also lists the button's own words under it as a text, as it does under a westron Button with
-        // a Label; the name is read once outside the button. The icon and the check under it are no image: under a
-        // westron Button with a Label the icon is an image named after its symbol, the check with the trait selected
-        // (measured on iOS 26.3, 2026-11-22). The chip's glyphs give an empty representation (`ChipDecorative`), and
-        // XCUITest still lists each as an element of type other with no label, no value and no trait; nothing in them
-        // is read.
+        // The icon and the check are no element under the button: with `.accessibilityHidden(true)` alone each was an
+        // image named after its symbol, the check with the trait selected (measured on iOS 26.3, 2026-11-22), and
+        // with an empty representation before it an element of type other with nothing in it. Hidden, then
+        // represented by nothing (`DecorativeGlyph`, #131), nothing is under the button, not even its words as a
+        // text, as under a westron Button with a Label; a text with its words is allowed, as XCUITest listed one.
         let inside = day.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Tue")).count
         XCTAssertEqual(named("Tue").count - inside, 1, "the pressable chip's name is read more than once")
         XCTAssertEqual(day.descendants(matching: .image).count, 0, "the pressable chip's icon is an element of its own")
+        let text = NSNumber(value: XCUIElement.ElementType.staticText.rawValue)
         XCTAssertEqual(
-            day.descendants(matching: .any).matching(NSPredicate(format: "label != %@ AND label != %@", "Tue", ""))
-                .count, 0, "the pressable chip holds an element named other than with its words")
+            day.descendants(matching: .any).matching(
+                NSPredicate(format: "NOT (elementType == %@ AND label == %@)", text, "Tue")
+            ).count, 0, "the pressable chip holds an element other than a text with its words")
         XCTAssertEqual(
             day.descendants(matching: .any).matching(NSPredicate(format: "selected == true")).count, 0,
             "an element under the pressable chip is announced as selected")

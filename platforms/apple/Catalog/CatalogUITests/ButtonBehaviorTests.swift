@@ -541,6 +541,98 @@ final class ButtonBehaviorTests: XCTestCase {
         }
     }
 
+    // MARK: - The icon is no element (#131)
+
+    /// What the accessibility hierarchy holds for one westron button: its own element and every element under it.
+    private struct ButtonTree {
+        let entry: String
+        let button: XCUIElementSnapshot
+        let descendants: [XCUIElementSnapshot]
+
+        /// One line for an element: its type, label, value, identifier, selected, enabled and frame.
+        static func line(_ element: XCUIElementSnapshot) -> String {
+            "type \(element.elementType.rawValue), label \"\(element.label)\", "
+                + "value \"\(element.value.map { "\($0)" } ?? "")\", id \"\(element.identifier)\", "
+                + "selected \(element.isSelected), enabled \(element.isEnabled), frame \(element.frame)"
+        }
+
+        /// The button's line and, indented, each element under it, `MEASURE icon tree: …`.
+        var printed: String {
+            ([("MEASURE icon tree: \(entry): button: " + Self.line(button))]
+                + descendants.map { "MEASURE icon tree: \(entry):   under it: " + Self.line($0) })
+                .joined(separator: "\n")
+        }
+    }
+
+    /// Every element under `element` in the snapshot, depth first.
+    private static func descendants(of element: XCUIElementSnapshot) -> [XCUIElementSnapshot] {
+        element.children.flatMap { [$0] + descendants(of: $0) }
+    }
+
+    /// The buttons named one of `names` on the catalog's `entry`, read from one snapshot of the hierarchy.
+    @MainActor
+    private func buttonTrees(on entry: String, named names: Set<String>) throws -> [ButtonTree] {
+        app.terminate()
+        app.launchArguments = ["-WestronEntry", entry]
+        app.launch()
+        let first = app.buttons.matching(NSPredicate(format: "label IN %@", names)).firstMatch
+        XCTAssertTrue(first.waitForExistence(timeout: 30), "the entry \(entry) did not render")
+        let root = try app.snapshot()
+        return ([root] + Self.descendants(of: root))
+            .filter { $0.elementType == .button && names.contains($0.label) }
+            .map { ButtonTree(entry: entry, button: $0, descendants: Self.descendants(of: $0)) }
+    }
+
+    /// A Button whose label is a `Label` keeps its icon from assistive technology (the contract's accessibility: an
+    /// icon beside a visible label is decorative and hidden, an icon-only button's name is its title): no element under
+    /// the button is an image or selected, and nothing is under it but, at most, a text with its words. The button
+    /// itself is a button named with its words, not selected, its value empty or "Loading".
+    ///
+    /// Before #131 XCUITest listed, on iOS 26.3, the icon under such a button as an image named after its SF Symbol,
+    /// localized ("Добавить" for plus in a Russian simulator), despite `.accessibilityHidden(true)`; the check with the
+    /// trait selected; a progress indicator as activity indicators; the words as a text; and under an icon-only button
+    /// an element named with its title (`ButtonName`). With `DecorativeGlyph` nothing is under any of them, as under a
+    /// button whose label is only text, and the button's own element (type, label, value, identifier, selected,
+    /// enabled, frame) is what it was. Covered: a label and an icon at sizes s, m and l in each variant, and icon-only
+    /// (`button`, the check); the same in the destructive role (`button-destructive`); each state, disabled and loading
+    /// among them (`button-states`); the live buttons (`button-behavior`); floating primaries on their fill and
+    /// secondaries on glass, with a label and icon-only, one disabled (`button-floating`, `button-floating-sizes`).
+    /// Each button's tree is printed, `MEASURE icon tree: …`, before any assertion.
+    @MainActor
+    func testIconIsNoElement() throws {
+        let samples: [(entry: String, names: Set<String>, least: Int)] = [
+            ("button", ["Save"], 27),
+            ("button-destructive", ["Delete"], 27),
+            ("button-states", ["Save"], 36),
+            ("button-behavior", ["Publish", "Export", "Save", "Add", "First", "Second"], 7),
+            ("button-floating", ["Back", "More", "Share", "Add"], 9),
+            ("button-floating-sizes", ["Back", "Edit", "Open", "Add", "New", "Delete"], 24),
+        ]
+        var trees: [ButtonTree] = []
+        for (entry, names, least) in samples {
+            let found = try buttonTrees(on: entry, named: names)
+            print("MEASURE icon tree: \(entry): \(found.count) buttons")
+            found.forEach { print($0.printed) }
+            XCTAssertGreaterThanOrEqual(found.count, least, "\(entry) holds fewer buttons than its samples")
+            trees += found
+        }
+        for tree in trees {
+            let name = "\(tree.entry): \(tree.button.label) at \(tree.button.frame)"
+            XCTAssertFalse(tree.button.isSelected, "\(name) is announced as selected")
+            XCTAssertTrue(
+                ["", "Loading"].contains(tree.button.value.map { "\($0)" } ?? ""), "\(name) has a value of its own")
+            XCTAssertEqual(
+                tree.descendants.filter { $0.elementType == .image }.map(ButtonTree.line), [],
+                "\(name): its icon is an element of its own")
+            XCTAssertEqual(
+                tree.descendants.filter(\.isSelected).map(ButtonTree.line), [],
+                "\(name): an element under it is announced as selected")
+            XCTAssertEqual(
+                tree.descendants.filter { $0.elementType != .staticText || $0.label != tree.button.label }
+                    .map(ButtonTree.line), [], "\(name): an element under it is other than a text with its words")
+        }
+    }
+
     /// Two size s icon-only buttons 8 pt apart: a press inside a button's drawn frame reaches it, and on iOS a tap in
     /// the gap reaches the closer one (the system's touch tolerance decides; westron adds no hit area that would hand
     /// the gap to the later sibling). On macOS a click in the gap reaches neither.
