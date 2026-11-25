@@ -18,6 +18,8 @@ final class ChoiceListSheetTests: XCTestCase {
         static let unavailable = "Core"
         static let section = "WORK"
         static let heading = "PERSONAL"
+        /// The check's label, which joins the current row's words (the pattern's rule 2, G1, #176).
+        static let mark = "Current"
     }
 
     @MainActor
@@ -45,12 +47,23 @@ final class ChoiceListSheetTests: XCTestCase {
             .allElementsBoundByIndex
     }
 
-    /// The one button labelled `label`.
+    /// The one row whose words are `title`, current or not: its label is the title, or the title and the check's label.
     @MainActor
-    private func button(_ label: String) -> XCUIElement {
-        let buttons = app.buttons.matching(NSPredicate(format: "label == %@", label))
-        XCTAssertEqual(buttons.count, 1, "not one button \(label)")
-        return buttons.firstMatch
+    private func choice(_ title: String) -> XCUIElement {
+        let rows = app.buttons.matching(
+            NSPredicate(format: "label == %@ OR label == %@", title, "\(title), \(Sample.mark)"))
+        XCTAssertEqual(rows.count, 1, "not one row \(title)")
+        return rows.firstMatch
+    }
+
+    /// Whether the row's label carries the check's: it is the current one. The selected state, which the check brings,
+    /// moves with it.
+    @MainActor
+    private func isCurrent(_ title: String) -> Bool {
+        let row = choice(title)
+        let current = row.label == "\(title), \(Sample.mark)"
+        XCTAssertEqual(row.isSelected, current, "\(title): selected does not follow the check")
+        return current
     }
 
     /// The accessibility traits of the element, as the hierarchy's snapshot holds them (iOS); nil where it holds none.
@@ -112,7 +125,8 @@ final class ChoiceListSheetTests: XCTestCase {
         for text in windows.split(separator: "\n") {
             print("choice-list-sheet: hierarchy: \(text)")
         }
-        for label in [Sample.title, "Cancel", Sample.hint, Sample.section, Sample.heading] + Sample.choices {
+        let labels = [Sample.title, "Cancel", Sample.hint, Sample.section, Sample.heading, Sample.mark]
+        for label in labels + Sample.choices + ["\(Sample.current), \(Sample.mark)"] {
             for (index, element) in named(label).enumerated() {
                 print(line("\(label) #\(index)", element))
             }
@@ -121,14 +135,23 @@ final class ChoiceListSheetTests: XCTestCase {
             print(line("image #\(index)", image))
         }
 
-        // Each choice is one button named by its words alone; the tile and the check add none.
+        // Each choice is one button named by its words; the tile adds none, and the current one's check adds its
+        // label, which joins the row's element: "Project, Current". No other row carries it. The row is not `.selected`
+        // (the pattern's rule 2), yet it is held selected on iOS and macOS (measured 2026-11-25, iOS 26.3 and
+        // macOS 26.7): the system gives the image of the SF Symbol `checkmark` the selected trait once it is not
+        // hidden, and the row's combined element takes it from the check.
         for title in Sample.choices {
-            let row = button(title)
-            XCTAssertEqual(row.isSelected, title == Sample.current, "\(title): selected is \(row.isSelected)")
+            let row = choice(title)
+            let current = title == Sample.current
+            XCTAssertEqual(row.label, current ? "\(title), \(Sample.mark)" : title, "\(title): the label")
+            XCTAssertEqual(row.isSelected, current, "\(title): selected is \(row.isSelected)")
             XCTAssertEqual(row.isEnabled, title != Sample.unavailable, "\(title): enabled is \(row.isEnabled)")
         }
+        XCTAssertEqual(
+            app.buttons.matching(NSPredicate(format: "label CONTAINS %@", Sample.mark)).count, 1,
+            "not one row carries the check's label")
         // The section that can be chosen: one button named by its label.
-        let section = button(Sample.section)
+        let section = choice(Sample.section)
         XCTAssertFalse(section.isSelected)
         // The section that is only a heading: its words, no button.
         XCTAssertEqual(app.buttons.matching(NSPredicate(format: "label == %@", Sample.heading)).count, 0)
@@ -146,12 +169,20 @@ final class ChoiceListSheetTests: XCTestCase {
         // either platform; ListRow's unit tests hold it (`ListRowLevelContent`).
         #if os(iOS)
             for title in Sample.choices {
-                let row = button(title)
+                let row = choice(title)
                 XCTAssertTrue(has(row, .button), "\(title) is no button")
                 XCTAssertFalse(has(row, .header), "\(title) is a heading")
+                // The check's: the image named "Current" is selected too.
                 XCTAssertEqual(has(row, .selected), title == Sample.current, "\(title): the selected trait")
                 XCTAssertEqual(has(row, .notEnabled), title == Sample.unavailable, "\(title): the dimmed trait")
             }
+            // The check: one image named "Current", the SF Symbol `checkmark`, selected, inside the current row.
+            let marks = app.images.matching(NSPredicate(format: "label == %@", Sample.mark))
+            XCTAssertEqual(marks.count, 1, "not one image named \(Sample.mark)")
+            XCTAssertTrue(has(marks.firstMatch, .selected), "the check is not selected")
+            XCTAssertTrue(
+                choice(Sample.current).frame.contains(marks.firstMatch.frame), "the check is not inside the current row"
+            )
             // A section that is a choice: the Rule's heading trait joins the row's one element, a button and a heading
             // at once (G3, #171).
             XCTAssertTrue(has(section, .button), "the section that can be chosen is no button")
@@ -165,10 +196,11 @@ final class ChoiceListSheetTests: XCTestCase {
             XCTAssertTrue(has(title, .header), "the bar's title is no heading")
             // The state measured today, pinned so that it is seen when it changes: beside each row with a tile, an
             // image element with no label in the row's leading half, the decorative IconTile, which its contract
-            // hides (G5, #174). The leading half leaves out the current row's check, at its end.
+            // hides (G5, #174). The current row's check is a named image inside the row's element, at its end: the
+            // empty label and the leading half each leave it out.
             let unnamedImages = app.images.allElementsBoundByIndex.filter { $0.label.isEmpty }.map(\.frame)
             for title in Sample.choices {
-                let row = button(title).frame
+                let row = choice(title).frame
                 XCTAssertTrue(
                     unnamedImages.contains { (row.minY...row.maxY).contains($0.midY) && $0.midX < row.midX },
                     "\(title): no unnamed image beside the row: issue #174 is fixed: update the pattern's "
@@ -195,20 +227,20 @@ final class ChoiceListSheetTests: XCTestCase {
         #endif
     }
 
-    /// One press takes a choice: here the current mark moves to it, where a product closes the sheet. The unavailable
-    /// row takes no press; a section that can be chosen takes one; Cancel puts the first choice back.
+    /// One press takes a choice: here the check, and its label with it, move to it, where a product closes the sheet.
+    /// The unavailable row takes no press; a section that can be chosen takes one; Cancel puts the first choice back.
     @MainActor
     func testOnePressTakesAChoice() {
         launch()
-        press(button("Inbox"))
-        XCTAssertTrue(button("Inbox").isSelected, "the press did not take Inbox")
-        XCTAssertFalse(button(Sample.current).isSelected, "two rows are current")
-        press(button(Sample.unavailable).coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)))
-        XCTAssertFalse(button(Sample.unavailable).isSelected, "the unavailable row took a press")
-        XCTAssertTrue(button("Inbox").isSelected, "the unavailable row's press moved the current mark")
-        press(button(Sample.section))
-        XCTAssertTrue(button(Sample.section).isSelected, "the press did not take the section")
-        XCTAssertFalse(button("Inbox").isSelected)
+        press(choice("Inbox"))
+        XCTAssertTrue(isCurrent("Inbox"), "the press did not take Inbox")
+        XCTAssertFalse(isCurrent(Sample.current), "two rows are current")
+        press(choice(Sample.unavailable).coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)))
+        XCTAssertFalse(isCurrent(Sample.unavailable), "the unavailable row took a press")
+        XCTAssertTrue(isCurrent("Inbox"), "the unavailable row's press moved the current mark")
+        press(choice(Sample.section))
+        XCTAssertTrue(isCurrent(Sample.section), "the press did not take the section")
+        XCTAssertFalse(isCurrent("Inbox"))
         press(app.buttons["Cancel"])
         #if os(macOS)
             // The entry presents a real sheet on macOS: Cancel closes it, and the page's button opens it again.
@@ -216,7 +248,7 @@ final class ChoiceListSheetTests: XCTestCase {
             press(app.buttons["Open the sheet"])
             XCTAssertTrue(app.buttons["Cancel"].waitForExistence(timeout: 5), "the sheet did not open again")
         #endif
-        XCTAssertTrue(button(Sample.current).isSelected, "Cancel did not put the first choice back")
-        XCTAssertFalse(button(Sample.section).isSelected)
+        XCTAssertTrue(isCurrent(Sample.current), "Cancel did not put the first choice back")
+        XCTAssertFalse(isCurrent(Sample.section))
     }
 }
