@@ -88,8 +88,8 @@ reads it from there. westron adds no argument for it.
 - **Never**: `floating: true` with `variant` other than `.primary` or `.secondary`. tertiary has no fill, so it has no
   ground to float on.
 - **Never**: `variant: .secondary` and `floating: true` with `role` other than `` .`default` ``. The danger words read
-  too faintly on the system's glass: color.status.danger.text measured 2.96:1 in the light theme and 2.79 to 4.18:1 in
-  the dark one over a busy ground (decisions/0015). A floating destructive primary, on its opaque fill, stays.
+  too faintly on the system's glass: they measured 2.96:1 in the light theme and 2.79 to 4.18:1 in the dark one over a
+  busy ground (decisions/0015). A floating destructive primary, on its opaque fill, stays.
 
 More: `button.details.md` holds how assistive technology reads it; how it behaves, sizes and draws; how WestronUI builds
 it on Apple and each OS. Read it when this card does not settle a case. A reference such as "decisions/0001" or "#120"

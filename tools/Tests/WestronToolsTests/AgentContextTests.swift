@@ -214,8 +214,43 @@ struct AgentContextTests {
             for mark in ContextMarkdown.toolingMarks {
                 #expect(!text.lowercased().contains(mark), "\(id) names \(mark)")
             }
+            // How westron draws it, token by token, is the details file's: no product writes these paths in Swift.
+            #expect(tokenPaths(text) == [], "\(id) prints token paths")
             #expect(card.details() != nil, "\(id) has details")
         }
+    }
+
+    /// The token paths of the `color.…`, `space.…`, `typography.…`, `radius.…`, `stroke.…`, `opacity.…`, `motion.…` and
+    /// `shadow.…` kind a text prints, such as `color.category.<name>.fill`; not a link to a token page
+    /// (`../tokens/color.md`) or a Swift accessor (`.space.withinGroup`, `.radius.card`). `size.…` is left out: the cards
+    /// of sized controls name a size step beside its values in points.
+    private func tokenPaths(_ text: String) -> [String] {
+        let groups = "color|space|typography|radius|stroke|opacity|motion|shadow"
+        let pattern = try! NSRegularExpression(pattern: #"(?<![\w./-])(?:"# + groups + #")(?:\.[\w<>-]+)+"#)
+        return pattern.matches(in: text, range: NSRange(text.startIndex..., in: text)).compactMap {
+            Range($0.range, in: text).map { String(text[$0]) }
+        }
+    }
+
+    @Test("the schema's names of a value a component reads are the generator's context values, no more, no fewer")
+    func readNames() throws {
+        let schema = try JSON.parse(Data(contentsOf: repositoryRoot.appendingPathComponent(ContractSchema.defaultFile)))
+        let names = try #require(schema["properties"]?["reads"]?["propertyNames"]?["enum"]?.elements)
+        #expect(names.count == Set(names.compactMap(\.string)).count)
+        #expect(Set(names.compactMap(\.string)) == Set(AppleComponents.contextValues.keys))
+    }
+
+    @Test("the check of short cards finds a token path, and not a token page or an accessor")
+    func tokenPathsFound() {
+        #expect(
+            tokenPaths("filled with color.category.<name>.fill, padded space.100, in typography.body.regular.")
+                == ["color.category.<name>.fill", "space.100", "typography.body.regular"])
+        #expect(
+            tokenPaths("a rounded rectangle of radius.150, dimmed at opacity.disabled")
+                == ["radius.150", "opacity.disabled"])
+        #expect(
+            tokenPaths("a token of `typography` (`../tokens/typography.md`), `.space.withinGroup`, `.radius.card`")
+                == [])
     }
 
     @Test("a view with several slots shows the full call; a twin keeps its attribute")
@@ -263,8 +298,17 @@ struct AgentContextTests {
         let cards = try realCards().cards
         let text = unwrapped(try #require(cards.first { $0.contract.id == "text" }).markdown())
         #expect(text.contains("takes that role with no `.textRole(_:)`"))
-        #expect(text.contains("the `title` and `subtitle` of `ListRow`"))
+        // ListRow's leading and trailing slots by their bindings, as its title and second line.
+        #expect(text.contains("the `title`, `subtitle`, `leading` and `trailing` of `ListRow`"))
         #expect(text.contains("the `label` of `Rule`"))
+        // The text card defers to the component's card on another role there; ListRow's card allows one.
+        #expect(text.contains("only where that component's card allows it"))
+        let row = unwrapped(try #require(cards.first { $0.contract.id == "list-row" }).markdown())
+        #expect(
+            row.contains(
+                "the others default to nothing. What a product puts in them takes the text role the component "
+                    + "draws there, with no `.textRole(_:)`; content that sets another role with "
+                    + "`.textRole(_:)` keeps it there."))
         // Only the card of the text role's option says it.
         let button = try #require(cards.first { $0.contract.id == "button" }).markdown()
         #expect(!button.contains("takes that role with no"))

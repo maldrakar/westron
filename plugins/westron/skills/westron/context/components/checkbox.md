@@ -45,9 +45,9 @@ public enum CheckboxVariant: String, CaseIterable, Sendable { case check }
 
 It reads `category` from its context: `.category(_:)` on the component itself, or once on any view around it, such as a
 row or a list, sets it for every westron component below that reads it, and the closest setting wins. In a list's color,
-a checked check fills its disc with color.category.<name>.control and draws its mark in
-color.category.<name>.on-control. The unchecked ring does not change. Without it, a checked check is drawn in the
-accent, its disc color.background.accent and its mark color.text.on-accent.
+a checked check fills its disc with the list's control color, the solid one a checked control takes, and draws its mark
+in the color that reads on it. The unchecked ring does not change. Without it, a checked check is drawn in the accent,
+its disc the accent's fill and its mark in the accent's words' color.
 
 ## Options
 

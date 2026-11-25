@@ -165,3 +165,11 @@ view existed, `tools/westron lint api-parity` reported exactly the missing `publ
 - ListRow (#119), the pilot's header, picker, drag card and empty screen take `IconTile` in their compositions.
 - The description of `color.background.accent-subtle` ("the tile behind an empty state's icon") no longer names a
   westron component's use; it is left as it is for a product's own composition, a token change out of this issue.
+
+## Note of 2026-11-25: the context it reads, in words (#170)
+
+Agreed on 2026-11-25 by the coordinating agent, pending the owner's review in the pull request. The `description` and
+`unset` of `reads.category` named token paths, such as `color.category.<name>.fill`, which the agent context prints into
+the component's short card, where a product's call is and no product writes a token path. They now say in words what the
+component draws with a list's color and without one; the contract's description keeps the token-level account, which the
+details file of the agent context carries. Nothing drawn changes.

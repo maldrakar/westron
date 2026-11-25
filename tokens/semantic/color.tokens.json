@@ -71,7 +71,7 @@
         "$extensions": {
           "dev.westron.usage": {
             "use": ["destructive secondary button under the pointer"],
-            "avoid": "A fill under text.primary: use background.muted-hover, which darkens more."
+            "avoid": "A fill under text.primary: use background.muted-hover, which moves further towards its words."
           }
         }
       },
@@ -81,7 +81,7 @@
         "$extensions": {
           "dev.westron.usage": {
             "use": ["pressed destructive secondary button"],
-            "avoid": "A fill under text.primary: use background.muted-pressed, which darkens more."
+            "avoid": "A fill under text.primary: use background.muted-pressed, which moves further towards its words."
           }
         }
       },

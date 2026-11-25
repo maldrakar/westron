@@ -22,9 +22,11 @@ options:
     type: tokens
     group: typography
     description: >-
-      No default: every use names its role. The values are the tokens under typography, by their path after it,
-      heading.large to code.strong, so the contract and the tokens cannot drift. A role is chosen by what the text is,
-      never by its size; a product that needs a size the roles do not have asks for a new role (design-language/03).
+      No default: every call of the role names one. A text a component draws in a slot its contract binds to a role,
+      such as a ListRow's title or a Button's label, takes that role and needs no call. The values are the tokens
+      under typography, by their path after it, heading.large to code.strong, so the contract and the tokens cannot
+      drift. A role is chosen by what the text is, never by its size; a product that needs a size the roles do not
+      have asks for a new role (design-language/03).
 
 slots: [label]
 
