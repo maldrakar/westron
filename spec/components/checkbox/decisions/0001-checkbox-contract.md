@@ -210,3 +210,11 @@ replace the adapter when a second context value appears". There are three reader
   where it may be set and what the component draws without it, from the contract's `description` and `unset`.
 
 Not here: consumer prose for every contract (`summary`, `usage`, `examples`), which the owner decided against for now.
+
+## Note of 2026-11-25: the context it reads, in words (#170)
+
+Agreed by the owner on 2026-11-25. The `description` and `unset` of `reads.category` named token paths, such as
+`color.category.<name>.fill`, which the agent context prints into the component's short card, where a product's call
+is and no product writes a token path. They now say in words what the component draws with a list's color and without
+one; the contract's description keeps the token-level account, which the details file of the agent context carries.
+Nothing drawn changes.

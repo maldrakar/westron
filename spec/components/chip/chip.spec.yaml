@@ -23,10 +23,12 @@ description: >-
   with a list's color the fill is color.category.<name>.fill and the words color.category.<name>.on-fill, the roles
   design-language/02 gives a lit tag, for each of the twelve list colors. The bindings below are the accent's, since
   the list's color is the context's and not an option; this text is the contract for a list's color, and for the
-  check, a glyph and not a token. Under the pointer and pressed, an unchecked chip's fill darkens a step each, to
-  color.background.muted-hover and muted-pressed, and a checked chip's accent fill to color.background.accent-hover
-  and accent-pressed, as the bindings say; a checked chip in a list's color keeps its fill under the pointer and
-  pressed, since the list colors have no hover or pressed fill (decisions/0001, Q4). A disabled chip never enters
+  check, a glyph and not a token. Under the pointer and pressed, an unchecked chip's fill takes
+  color.background.muted-hover and muted-pressed, a step each towards its label, darker in the light themes and
+  lighter in the dark ones, and a checked chip's accent fill takes color.background.accent-hover and accent-pressed,
+  a step each further from its words, darker in three themes and lighter in dark high contrast, where the accent is
+  light and its words dark, as the bindings say; a checked chip in a list's color keeps its fill under the pointer
+  and pressed, since the list colors have no hover or pressed fill (decisions/0001, Q4). A disabled chip never enters
   hover or pressed: its fill stays as at rest and it does not scale. A press tints the fill and scales the chip down
   to 98 % in motion.press, and Reduce Motion drops the scale and keeps the tint; a hover tint changes in motion.fade;
   checking changes the fill and the words' color and brings the check in or out, as a fade, in motion.fade, and a
@@ -87,12 +89,12 @@ forms:
 reads:
   category:
     description: >-
-      In a list's color, a checked chip, the selectable form's, is filled with color.category.<name>.fill, keeps that
-      fill under the pointer and pressed, and draws its label, icon and check in color.category.<name>.on-fill. An
-      unchecked chip, and the pressable and static forms, which are never checked, do not change.
+      In a list's color, a checked chip, the selectable form's, is filled with the list's color, keeps that fill under
+      the pointer and pressed, and draws its label, icon and check in the color that reads on it. An unchecked chip,
+      and the pressable and static forms, which are never checked, do not change.
     unset: >-
-      a checked chip is filled with the accent, color.background.accent, a step darker under the pointer and pressed,
-      and draws its label, icon and check in color.text.on-accent.
+      a checked chip is filled with the accent, a step further from its words under the pointer and another while
+      pressed, and draws its label, icon and check in the accent's words' color.
 
 tokens:
   container.height: size.control.s

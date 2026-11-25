@@ -50,10 +50,10 @@ states: [checked, pressed, focus, disabled]
 reads:
   category:
     description: >-
-      In a list's color, a checked check fills its disc with color.category.<name>.control and draws its mark in
-      color.category.<name>.on-control. The unchecked ring does not change.
+      In a list's color, a checked check fills its disc with the list's control color, the solid one a checked
+      control takes, and draws its mark in the color that reads on it. The unchecked ring does not change.
     unset: >-
-      a checked check is drawn in the accent, its disc color.background.accent and its mark color.text.on-accent.
+      a checked check is drawn in the accent, its disc the accent's fill and its mark in the accent's words' color.
 
 tokens:
   ring.color:

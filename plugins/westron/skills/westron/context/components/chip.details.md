@@ -37,28 +37,30 @@ fill is color.background.accent and the words color.text.on-accent; with a list'
 color.category.<name>.fill and the words color.category.<name>.on-fill, the roles design-language/02 gives a lit tag,
 for each of the twelve list colors. The bindings below are the accent's, since the list's color is the context's and not
 an option; this text is the contract for a list's color, and for the check, a glyph and not a token. Under the pointer
-and pressed, an unchecked chip's fill darkens a step each, to color.background.muted-hover and muted-pressed, and a
-checked chip's accent fill to color.background.accent-hover and accent-pressed, as the bindings say; a checked chip in a
-list's color keeps its fill under the pointer and pressed, since the list colors have no hover or pressed fill
-(decisions/0001, Q4). A disabled chip never enters hover or pressed: its fill stays as at rest and it does not scale. A
-press tints the fill and scales the chip down to 98 % in motion.press, and Reduce Motion drops the scale and keeps the
-tint; a hover tint changes in motion.fade; checking changes the fill and the words' color and brings the check in or
-out, as a fade, in motion.fade, and a text-only chip's width changes with them (design-language/05). With Reduce Motion
-the fades stay, and a text-only chip's width changes at once, so that nothing slides: the check fades in, and leaves at
-once with its room. In the high-contrast themes every chip also draws an outline, color.border.strong at stroke.thin,
-over its fill, in every state, as Button's secondary does: the muted fill alone stands about 1.1:1 off the canvas, and a
-list's fill is not held to a contrast on the ground (design-language/02, 08). The height is size.control.s, a minimum:
-the chip grows with the person's text size and stays a capsule. The label is one line: it never wraps. The product gives
-a chip the width its label needs, in a tag bar that scrolls or a row that wraps; truncation is the last resort, since
-the truncated words are then whole only to a screen reader: where the container gives the chip less width than its label
-needs, the label is truncated at its end with an ellipsis, and the whole label stays the accessible name. The hit area
-of the selectable and pressable forms is a laid-out frame at least size.target.minimum high and at least
-size.target.minimum across, around the drawn chip, which keeps its own size, centred in it: a chip of one or two letters
-is narrower than the target, and its hit area is still the target. Since the frame is laid out, chips side by side never
-overlap: where a short chip's frame is wider than its capsule, its neighbors move apart by the difference instead of
-sharing a gap of 6 pt. Disabled draws the whole chip at opacity.disabled, with no colors of its own. The static form
-enters no state: under .disabled(true) or its platform's equivalent it is drawn as it is, undimmed. A chip has no remove
-button, no size option and no icon-only form: the pilot needs none of them (AGENTS.md, rule 6).
+and pressed, an unchecked chip's fill takes color.background.muted-hover and muted-pressed, a step each towards its
+label, darker in the light themes and lighter in the dark ones, and a checked chip's accent fill takes
+color.background.accent-hover and accent-pressed, a step each further from its words, darker in three themes and lighter
+in dark high contrast, where the accent is light and its words dark, as the bindings say; a checked chip in a list's
+color keeps its fill under the pointer and pressed, since the list colors have no hover or pressed fill (decisions/0001,
+Q4). A disabled chip never enters hover or pressed: its fill stays as at rest and it does not scale. A press tints the
+fill and scales the chip down to 98 % in motion.press, and Reduce Motion drops the scale and keeps the tint; a hover
+tint changes in motion.fade; checking changes the fill and the words' color and brings the check in or out, as a fade,
+in motion.fade, and a text-only chip's width changes with them (design-language/05). With Reduce Motion the fades stay,
+and a text-only chip's width changes at once, so that nothing slides: the check fades in, and leaves at once with its
+room. In the high-contrast themes every chip also draws an outline, color.border.strong at stroke.thin, over its fill,
+in every state, as Button's secondary does: the muted fill alone stands about 1.1:1 off the canvas, and a list's fill is
+not held to a contrast on the ground (design-language/02, 08). The height is size.control.s, a minimum: the chip grows
+with the person's text size and stays a capsule. The label is one line: it never wraps. The product gives a chip the
+width its label needs, in a tag bar that scrolls or a row that wraps; truncation is the last resort, since the truncated
+words are then whole only to a screen reader: where the container gives the chip less width than its label needs, the
+label is truncated at its end with an ellipsis, and the whole label stays the accessible name. The hit area of the
+selectable and pressable forms is a laid-out frame at least size.target.minimum high and at least size.target.minimum
+across, around the drawn chip, which keeps its own size, centred in it: a chip of one or two letters is narrower than
+the target, and its hit area is still the target. Since the frame is laid out, chips side by side never overlap: where a
+short chip's frame is wider than its capsule, its neighbors move apart by the difference instead of sharing a gap of 6
+pt. Disabled draws the whole chip at opacity.disabled, with no colors of its own. The static form enters no state: under
+.disabled(true) or its platform's equivalent it is drawn as it is, undimmed. A chip has no remove button, no size option
+and no icon-only form: the pilot needs none of them (AGENTS.md, rule 6).
 
 ## On Apple
 

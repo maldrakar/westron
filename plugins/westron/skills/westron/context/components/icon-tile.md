@@ -35,8 +35,9 @@ extension View {
 
 It reads `category` from its context: `.category(_:)` on the component itself, or once on any view around it, such as a
 row or a list, sets it for every westron component below that reads it, and the closest setting wins. In a list's color,
-the tile is filled with color.category.<name>.fill and its glyph drawn in color.category.<name>.on-fill. Without it, the
-tile is neutral, color.background.muted with its glyph in color.text.secondary, and never takes the accent.
+the tile is filled with the list's color and its glyph drawn in the color that reads on it. Without it, the tile is
+neutral, in the quiet gray fill of a tag without a color with its glyph in the secondary ink, and never takes the
+accent.
 
 The option `scale` is the system's own `SwiftUI.Image.Scale`: the product sets it where SwiftUI takes it, and westron
 reads it from there. westron adds no argument for it.

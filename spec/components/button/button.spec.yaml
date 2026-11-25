@@ -12,8 +12,9 @@ description: >-
   It is the platform's capsule at every variant and size, its ends round at any height, so it stays a capsule when
   the text grows (design-language/04); icon-only is a circle. Every fill is flat and opaque, in westron's colors, with
   no glass or material, but for one exception, a floating secondary from OS 26 (below). primary is filled with the
-  accent, secondary with color.background.muted and no outline, tertiary has no fill. Under the pointer and pressed, secondary's fill darkens towards its words, a step each; with
-  the destructive role it darkens only as far as the danger words still read, which is much less (the owner's
+  accent, secondary with color.background.muted and no outline, tertiary has no fill. Under the pointer and pressed,
+  secondary's fill moves towards its words, a step each, darker in the light themes and lighter in the dark ones; with
+  the destructive role it moves only as far as the danger words still read, which is much less (the owner's
   decision of 2026-11-20). In the high-contrast themes a secondary button also draws an outline, color.border.strong
   (color.status.danger.border with the destructive role) at stroke.thin, over its fill, in every state: the muted
   fill alone sets it off from the canvas by about 1.1:1, and a control a person must find meets the non-text target
@@ -110,9 +111,9 @@ constraints:
     require: { role: [default] }
     severity: error
     description: >-
-      The danger words read too faintly on the system's glass: color.status.danger.text measured 2.96:1 in the light
-      theme and 2.79 to 4.18:1 in the dark one over a busy ground (decisions/0015). A floating destructive primary,
-      on its opaque fill, stays.
+      The danger words read too faintly on the system's glass: they measured 2.96:1 in the light theme and 2.79 to
+      4.18:1 in the dark one over a busy ground (decisions/0015). A floating destructive primary, on its opaque fill,
+      stays.
 
 tokens:
   container.height: { s: size.control.s, m: size.control.m, l: size.control.l }
@@ -134,9 +135,9 @@ tokens:
       - { when: { variant: primary, state: pressed }, token: color.background.accent-pressed }
       - { when: { variant: primary, state: hover }, token: color.background.accent-hover }
       - { when: { variant: primary }, token: color.background.accent }
-      # Under the danger words the muted fill darkens only as far as they still read; under text.primary it darkens
-      # more (the owner's decision of 2026-11-20, decisions/0003). A floating one stands on the surface, where the row
-      # tints read under both the danger words and text.primary (declared pairs, every theme).
+      # Under the danger words the muted fill moves towards them only as far as they still read; under text.primary
+      # it moves more (the owner's decision of 2026-11-20, decisions/0003). A floating one stands on the surface, where
+      # the row tints read under both the danger words and text.primary (declared pairs, every theme).
       - { when: { variant: secondary, floating: true, state: pressed }, token: color.background.pressed }
       - { when: { variant: secondary, floating: true, state: hover }, token: color.background.hover }
       - { when: { variant: secondary, floating: true }, token: color.background.surface }

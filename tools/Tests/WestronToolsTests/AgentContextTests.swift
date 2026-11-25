@@ -214,8 +214,36 @@ struct AgentContextTests {
             for mark in ContextMarkdown.toolingMarks {
                 #expect(!text.lowercased().contains(mark), "\(id) names \(mark)")
             }
+            // How westron draws it, token by token, is the details file's: no product writes these paths in Swift.
+            #expect(tokenPaths(text) == [], "\(id) prints token paths")
             #expect(card.details() != nil, "\(id) has details")
         }
+    }
+
+    /// The token paths of the `color.…`, `space.…` and `typography.…` kind a text prints, such as
+    /// `color.category.<name>.fill`; not a link to a token page (`../tokens/color.md`) or a Swift accessor
+    /// (`.space.withinGroup`).
+    private func tokenPaths(_ text: String) -> [String] {
+        let pattern = try! NSRegularExpression(pattern: #"(?<![\w./-])(?:color|space|typography)(?:\.[\w<>-]+)+"#)
+        return pattern.matches(in: text, range: NSRange(text.startIndex..., in: text)).compactMap {
+            Range($0.range, in: text).map { String(text[$0]) }
+        }
+    }
+
+    @Test("the schema's names of a value a component reads are the generator's context values, no more, no fewer")
+    func readNames() throws {
+        let schema = try JSON.parse(Data(contentsOf: repositoryRoot.appendingPathComponent(ContractSchema.defaultFile)))
+        let names = try #require(schema["properties"]?["reads"]?["propertyNames"]?["enum"]?.elements)
+        #expect(names.count == Set(names.compactMap(\.string)).count)
+        #expect(Set(names.compactMap(\.string)) == Set(AppleComponents.contextValues.keys))
+    }
+
+    @Test("the check of short cards finds a token path, and not a token page or an accessor")
+    func tokenPathsFound() {
+        #expect(
+            tokenPaths("filled with color.category.<name>.fill, padded space.100, in typography.body.regular.")
+                == ["color.category.<name>.fill", "space.100", "typography.body.regular"])
+        #expect(tokenPaths("a token of `typography` (`../tokens/typography.md`), `.space.withinGroup`") == [])
     }
 
     @Test("a view with several slots shows the full call; a twin keeps its attribute")

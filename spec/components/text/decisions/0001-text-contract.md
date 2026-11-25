@@ -246,3 +246,11 @@ ship `Text.textRole(_:) -> Text` marked `@_disfavoredOverload` and to record its
   - `code.regular` under Bold Text: Geist Mono SemiBold against Regular.
 - **Alternatives** left for the owner: the twin under a name of its own, so it never competes with the View
   modifier; or no twin, a part of a `Text` taking `.font(Font(role))`.
+
+## Note of 2026-11-25: a role with no call (#170)
+
+Agreed by the owner on 2026-11-25. The option `role` said "No default: every use names its role", which is not true of
+a text in a slot that a component draws in a role of its own: a ListRow's title or a Button's label takes the role its
+contract binds and names none. The sentence now reads: "No default: every call of the role names one. A text a
+component draws in a slot its contract binds to a role, such as a ListRow's title or a Button's label, takes that role
+and needs no call." Nothing drawn changes, and the API is the same.
