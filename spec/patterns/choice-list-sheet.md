@@ -59,16 +59,27 @@ stays where the system draws its own control, a menu or a wheel (the skill's rul
 
 ## Accessibility
 
-What VoiceOver is meant to read: the title and Cancel, the system's; the hint, as text; each row as one button named
-by its words, "Inbox, button"; the current one "Project, selected, button", its check decorative; an unavailable one
-"Core, dimmed, button"; a nested row's level as more content, "Level, 2" (ListRow's contract). A section that can be
-chosen should read "WORK, button" and one that is only a heading "WORK, heading": whether the Rule's heading trait
-joins the row's combined element, and how capitals are spoken, is not measured (G3, #171). At the accessibility text
-sizes the check moves under the title (ListRow's contract); no row sets one line there.
+Measured on the catalog's entry `choice-list-sheet` by its UI test `ChoiceListSheetTests` (2026-11-25, the iOS 26.3
+simulator and macOS 26.7; the traits on iOS alone, where the hierarchy holds them). The title and Cancel are the
+system's; on iOS the title is the bar's heading. The hint is text. Each choice is one button named by its words alone,
+"Inbox, button": the tile and the check add no word. The current one is selected, "Project, selected, button", its
+check decorative. An unavailable one is a button that is not enabled, "Core, dimmed, button". A nested row's level is
+ListRow's custom content, "Level, 2", which the hierarchy a UI test reads does not hold; ListRow's unit tests hold it. A
+section that can be chosen is one button named by its label as written, "WORK", and on iOS it carries the heading
+trait as well as the button's: the Rule's heading trait joins the row's combined element, so it is announced as a
+button and a heading at once (G3, #171). One that is only a heading is text with the heading trait, "PERSONAL,
+heading", and no button. How VoiceOver speaks the capitals was not listened to: the name is the label as the product
+writes it. At the accessibility text sizes the check moves under the title (ListRow's contract; the entry's screenshot
+at accessibility3); no row sets one line there. On iOS the hierarchy also lists each decorative tile as an image with
+no name beside its row, which the audit's description check does not report; whether VoiceOver stops on it was not
+listened to.
 
 ## Apple
 
-Compiled on 2026-11-24 against westron at `9f91fa1` from a scratch package, for macOS and the iOS simulator; not run.
+The catalog's entry `choice-list-sheet` runs this code (decisions/0018, stage 2):
+`platforms/apple/Sources/WestronCatalog/Patterns/ChoiceListSheet/ChoiceSheet.swift` is this block, character for
+character, and `PatternExampleTests` fails when the two differ. On iOS the entry shows the sheet's content alone, on
+macOS a real sheet over a page, where it measured 549 × 465 pt with the least size below (macOS 26.7).
 
 ```swift
 import SwiftUI
@@ -91,7 +102,7 @@ struct ChoiceSheet: View {
     let choose: (Choice) -> Void
     let cancel: () -> Void
     #if os(iOS)
-    @Environment(\.horizontalSizeClass) private var sizeClass
+        @Environment(\.horizontalSizeClass) private var sizeClass
     #endif
 
     var body: some View {
@@ -109,15 +120,15 @@ struct ChoiceSheet: View {
             }
             .navigationTitle(title)
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
+                .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel", role: .cancel, action: cancel) }
             }
         }
         #if os(macOS)
-        // westron-lint: allow the Mac sheet's least size, no token yet (spec/patterns/choice-list-sheet, G4, #172)
-        .frame(minWidth: 320, minHeight: 400)
+            // westron-lint: allow the Mac sheet's least size, no token yet (spec/patterns/choice-list-sheet, G4, #172)
+            .frame(minWidth: 320, minHeight: 400)
         #endif
     }
 
@@ -152,9 +163,9 @@ struct ChoiceSheet: View {
 
     private var pageMargin: CGFloat {
         #if os(iOS)
-        sizeClass == .compact ? .space.page.narrow : .space.page.wide
+            sizeClass == .compact ? .space.page.narrow : .space.page.wide
         #else
-        .space.page.wide
+            .space.page.wide
         #endif
     }
 }
@@ -170,8 +181,9 @@ web, with phase 6.
 
 Each is an issue against westron, opened at the owner's word on 2026-11-25; none is designed here.
 
-- **G3** (#171): a pressable row whose title is a labelled Rule may be read as a heading inside a button, unmeasured;
-  and a row whose title draws no words, an unnamed section's line, has no accessible name, since no initializer takes
+- **G3** (#171): a pressable row whose title is a labelled Rule is one element with both the button and the heading
+  traits, announced as a heading and a button at once (measured on iOS 26.3, 2026-11-25, "Accessibility" above); and a
+  row whose title draws no words, an unnamed section's line, has no accessible name, since no initializer takes
   a label. Issue: "ListRow and Rule: the name and traits of a section that is a choice".
 - **G4** (#172): no token for a sheet's least size on the Mac, where a sheet is as large as what it holds and a scroll
   view asks for no height. Issue: "Tokens: a least size for a sheet on macOS".

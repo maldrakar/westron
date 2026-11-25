@@ -141,7 +141,9 @@ every worktree and session. `tools/apple/lock-test.sh` tests the helper without 
 ## Catalog
 
 Open in Xcode 27.1: `platforms/apple/Catalog/Catalog.xcodeproj`. Without arguments, the catalog shows navigation
-across all entries. With `-WestronEntry <id>`, it shows one entry full screen; this is how
+across all entries: the components', the patterns' (a pattern's Apple example, `spec/patterns/<id>.md`, run as an entry
+of the same id from `Sources/WestronCatalog/Patterns/`, decisions/0018), the foundations' and the utilities'. With
+`-WestronEntry <id>`, it shows one entry full screen; this is how
 `tools/apple/catalog-screenshot.sh` captures it. `-WestronAppearance light|dark`, `-WestronContrast standard|high` and
 `-WestronDynamicType <size>` set the conditions, and `-WestronLegibilityWeight regular|bold` the system's Bold Text;
 `-WestronScrollAnchor <0…1>` holds a point of the entry's scroll content in view (the accessibility audit uses it).
@@ -452,12 +454,12 @@ timeout when its build and images come within about two thirds of it (the arithm
 ### Behaviour UI tests
 
 `ButtonBehaviorTests`, `CheckboxBehaviorTests`, `TextFieldBehaviorTests`, `TextFieldAccessibilityFrameTests`,
-`IconAccessibilityTests`, `IconTileAccessibilityTests`, `ChipBehaviorTests`, `ListRowBehaviorTests` and
-`DisclosureBehaviorTests`, in `Catalog/CatalogUITests`, check on
+`IconAccessibilityTests`, `IconTileAccessibilityTests`, `ChipBehaviorTests`, `ListRowBehaviorTests`,
+`DisclosureBehaviorTests` and `ChoiceListSheetTests` (the pattern's entry), in `Catalog/CatalogUITests`, check on
 the catalog's entries what a unit test cannot reach: presses, hit areas and hover, the accessibility hierarchy, the
 keyboard. Each class has branches of its own for iOS and macOS where the platforms differ. `tools/apple/check.sh
 behavior` runs them, like the audit: the build first, a step of its own, then one `xcodebuild test-without-building`
-for the classes named (all nine by default); it prints each failure with its message, each skip with its reason, the
+for the classes named (all ten by default); it prints each failure with its message, each skip with its reason, the
 test cases and the totals, and stops the simulator's test daemon afterwards. The log goes to
 `.build/logs/behavior-<platform>[-<classes>].log`, the result bundle to `.build/xcode/results/`.
 
@@ -535,7 +537,9 @@ one job runs all five tests for them (`WESTRON_ENTRY`), 55 minutes with a retry 
 entries when there are more. A path counts for a component when it is in the component's WestronUI directory, its
 generated `<Name>+Contract.swift` or `<Name>+Matrix.swift`, its catalog page `Components/<Name>Pages.swift` or its
 contract `spec/components/<id>/`, and gives the entries that page declares; a Foundations page that shares nothing
-with other files gives its own entries. A component's change also gives the entries that draw it, since components
+with other files gives its own entries; a pattern's document `spec/patterns/<id>.md` or its catalog directory
+`Patterns/<Name>/` (decisions/0018) gives the pattern's entry, which the changes of the components it draws give too
+(IconTile's and Rule's give `choice-list-sheet`). A component's change also gives the entries that draw it, since components
 draw each other: the script derives who uses whom from the sources on every run, with no list to keep (its header,
 "Use"). It splits WestronUI and the catalog's pages into units (top-level declarations, extension members, each
 entry) and follows names from unit to unit, so Checkbox's change also gives `list-row`, `list-row-in-list` and
