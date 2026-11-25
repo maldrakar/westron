@@ -287,6 +287,16 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             // The end is where a drag no longer moves the page. It is told by where the page's first text is after
             // each drag (an audit may move the page a little), not by a picture: the scroll indicator shows after
             // every drag, at the end of the page too.
+            #if os(macOS)
+                // An entry that presents a sheet on macOS (`choice-list-sheet`): the page under it takes no scroll,
+                // and the sheet, which fits at the Mac's one text size, is audited where it stands, in one screenful.
+                if app.sheets.count > 0 {
+                    for issue in deferred {
+                        XCTFail("\(entryID), screen \(screen): \(issue) (cut by the bottom of the sheet)")
+                    }
+                    return screen
+                }
+            #endif
             scrollDown(entry)
             settle(entry, entryID, screen: screen)
             let next = scrollPosition(entry)
@@ -630,6 +640,9 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         screen: Int, nextDrag: CGFloat?, moved: Moved? = nil
     ) throws -> [String] {
         let visible = visibleArea(app)
+        // The system's navigation bar of an entry that holds one; nil for every other entry.
+        let bars = app.navigationBars
+        let navigationBar = bars.count > 0 ? bars.firstMatch.frame : nil
         var deferred: [String] = []
         // Each audit's time, for the audits that give up (#127): one that completes takes 0.2–3.5 s, one that gives
         // up 15 s.
@@ -649,6 +662,17 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             {
                 print(
                     "a11y: suppressed in \(entryID): \(Self.describe(issue)) (off the screen or under the status bar)")
+                return true
+            }
+            // The same under a navigation bar, which only a pattern's entry that is a sheet's content holds
+            // (`choice-list-sheet`): the system's bar stays put and the page scrolls under it. A page's element that
+            // reaches under the bar is measured on the bar's pixels, and is judged on the screenful before; the bar's
+            // own title and buttons are measured on the page beneath them after a drag, and are judged on the first
+            // screenful, where nothing of the page is under the bar.
+            if issue.auditType == .contrast, let element = issue.element, !element.frame.isEmpty,
+                let bar = navigationBar, bar.contains(element.frame) ? screen > 1 : element.frame.minY < bar.maxY
+            {
+                print("a11y: suppressed in \(entryID): \(Self.describe(issue)) (under or in the navigation bar)")
                 return true
             }
             // A suppressed issue is not the entry's wherever it is, so it is not deferred to a screenful that may
@@ -742,7 +766,11 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
     /// Where the page's first text is on screen: it moves when the page scrolls.
     @MainActor
     private func scrollPosition(_ entry: XCUIElement) -> CGRect {
-        entry.descendants(matching: .staticText).firstMatch.frame
+        // A pattern's entry that is a sheet's content (`choice-list-sheet`) holds the system's navigation bar, whose
+        // title is the entry's first text and stays put while the page scrolls: there the page's first text is its
+        // scroll view's. Every other entry has no bar and is read as before.
+        let page = entry.navigationBars.count > 0 ? entry.scrollViews.firstMatch : entry
+        return page.descendants(matching: .staticText).firstMatch.frame
     }
 
     #if os(iOS)
@@ -797,6 +825,8 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         var description: String? = nil
         /// The configuration's theme it applies in; `nil` for both.
         var appearance: Configuration.Appearance? = nil
+        /// The configuration's `-WestronDynamicType` size it applies at; `nil` at every size, the system's included.
+        var dynamicType: String? = nil
         /// The element's accessibility value it must have, if any.
         var value: String? = nil
         /// Whether the element must be enabled, if that matters: `false` for a disabled control's.
@@ -818,7 +848,8 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
 
         init(
             _ scope: Scope, type: XCUIAccessibilityAuditType, reason: String, description: String? = nil,
-            appearance: Configuration.Appearance? = nil, value: String? = nil, enabled: Bool? = nil,
+            appearance: Configuration.Appearance? = nil, dynamicType: String? = nil, value: String? = nil,
+            enabled: Bool? = nil,
             detail: String? = nil, underKeyboard: Bool = false, elementType: XCUIElement.ElementType? = nil,
             maxWidth: CGFloat? = nil, textUnderStatusBar: Bool = false,
             label: @escaping @Sendable (String?) -> Bool
@@ -830,6 +861,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             self.reason = reason
             self.description = description
             self.appearance = appearance
+            self.dynamicType = dynamicType
             self.value = value
             self.enabled = enabled
             self.detail = detail
@@ -847,6 +879,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             guard issue.auditType == type else { return false }
             if let description, issue.compactDescription != description { return false }
             if let appearance, configuration.appearance != appearance { return false }
+            if let dynamicType, configuration.dynamicType != dynamicType { return false }
             // A value as text: iOS gives a switch's as a string, macOS a checkbox's as a number.
             if let value, issue.element?.value.map({ "\($0)" }) != value { return false }
             if let enabled, issue.element?.isEnabled != enabled { return false }
@@ -1012,12 +1045,69 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                     "Archived", "12",
                 ].contains($0 ?? "")
             },
+            // The pattern `choice-list-sheet` (spec/patterns/choice-list-sheet.md), its rows ListRow's:
+            // - Contrast on the unavailable choice, "Core", drawn whole at opacity.disabled by ListRow's contract: WCAG
+            //   exempts an inactive control (design-language chapter 08), as on `list-row`. Only an element that is not
+            //   enabled matches.
+            Suppression(.entry("choice-list-sheet"), type: .contrast, reason: "an inactive row", enabled: false) {
+                $0 == "Core"
+            },
+            // - Contrast on the sections' labels, "WORK" and "PERSONAL", each a labelled Rule as a row's title. The
+            //   row's words are one element whose frame is the whole row (ListRow's accessibility representation), so
+            //   the frame holds the Rule's line beside the label, and the audit measures that line: "Contrast failed"
+            //   in the light and dark themes and "nearly passed" in both high-contrast ones, as border.default on
+            //   background.canvas is 1.27 and 1.46:1, and 3.19 and 3.45:1 (`tools/westron tokens contrast --all`), a
+            //   separator held to no text minimum. The label itself, text.secondary on the canvas, is 5.27:1 and more,
+            //   and the same labelled Rule passes on `rule`, where its element's frame is the label's alone. Only a
+            //   text with one of the two labels matches; the pattern's other words are audited as usual.
+            Suppression(
+                .entry("choice-list-sheet"), type: .contrast,
+                reason: "a labelled Rule's line inside a row-wide frame", elementType: .staticText
+            ) { ["WORK", "PERSONAL"].contains($0 ?? "") },
+            // - "Contrast failed" at accessibility5 alone (`testAccessibilityDynamicType`) on the two rows whose tile
+            //   has a light ground, "Top level" (the neutral tile, background.muted) and "Website" (amber's fill). The
+            //   rows with a darker tile (blue, violet, teal, orange, green, pink), the same two rows at the default
+            //   size and in the other themes are not reported (measured on iOS 26.3, 2026-11-25). The cause is
+            //   inferred, not proven: the audit reports no colors, and it is taken to measure the tile's light ground
+            //   on the canvas, since at that size the tile is a large part of the row's frame; IconTile's contract
+            //   holds that ground to no contrast minimum, and the glyph carries the tile's meaning, text.secondary on
+            //   background.muted 4.74:1 and amber's on-fill on its fill 9.48:1 and more. Only those two enabled rows,
+            //   in the light theme at accessibility5, match.
+            Suppression(
+                .entry("choice-list-sheet"), type: .contrast, reason: "a light tile's ground in the row's frame",
+                appearance: .light, dynamicType: "accessibility5", enabled: true, elementType: .button
+            ) { ["Top level", "Website"].contains($0 ?? "") },
             // No suppression for the checks with no drawn label beside separate titles (the live row here, the rows
             // of `checkbox-in-list`): written with `Toggle(isOn:accessibilityLabel:)`, their label is an `EmptyView`
             // carrying the name, and the audit reports neither contrast nor clipped text on them (measured on
             // iOS 26.3, 2026-11-19, #86). Hidden with `.labelsHidden()` instead, the label was measured as if drawn in
             // the circle's square, and needed three suppressions here.
         ]
+        #if os(macOS)
+            // The pattern `choice-list-sheet` on macOS, a real sheet over the catalog's window (ChoiceListSheetPage):
+            // - "Contrast failed" on the sheet's title, "Move “Core” to…", in the light themes: the system draws it in
+            //   the sheet's bar, and its pixels in the catalog's screenshot are #464646 on white, 9.44:1 (macOS 26.7,
+            //   2026-11-25). The audit names no element by label; only that title, by the audit's detail, matches.
+            // - "Contrast failed" on the hint in the dark themes: its pixels are #8F969F on the sheet's #20212D, 5.34:1;
+            //   the hint is the scroll view's first line, right under the bar's divider, which its frame reaches.
+            // The macOS audit's other findings on this entry are not suppressed. Most come on `list-row` on the same Mac
+            // too: the catalog window's own title behind the sheet, the window's group and the menu bar with no
+            // description, the zoom button's parent, a disabled ListRow's missing action. Two are this entry's own:
+            // "Element has no description" on the sheet's group (549 × 465 pt) and on an element of type `other`
+            // inside the sheet (461 × 305 pt). Like the rest of the macOS audit, none is triaged yet, and CI runs the
+            // audit on iOS alone (platforms/apple/README.md, "Accessibility audit").
+            suppressions += [
+                Suppression(
+                    .entry("choice-list-sheet"), type: .contrast, reason: "the sheet's title, the system's, 9.44:1",
+                    appearance: .light, detail: "Contrast failed for Move “Core” to…"
+                ) { $0 == "" },
+                Suppression(
+                    .entry("choice-list-sheet"), type: .contrast,
+                    reason: "the hint under the sheet's bar, 5.34:1 by pixels", appearance: .dark,
+                    detail: "Contrast failed for Choose where the list goes."
+                ) { $0 == "" },
+            ]
+        #endif
         #if os(iOS)
             // "Text clipped", an audit of iOS alone, on the labelled rule whose name is longer than the column: the
             // Rule contract draws a label on one line and truncates it at its end, and design-language/03 allows that
@@ -1155,7 +1245,15 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             suppressions += [
                 Suppression(
                     .entry("disclosure"), type: .dynamicType, reason: "a row in a system List, which Q5 leaves out"
-                ) { $0 == "Someday" }
+                ) { $0 == "Someday" },
+                // "Dynamic Type font sizes are partially unsupported" on the sheet's Cancel in `choice-list-sheet`: a
+                // system Button at `.cancellationAction` in the navigation bar, which iOS draws at a size of its own
+                // and does not grow with the text size (the pattern's screenshot at accessibility3 shows it as at
+                // large); the pattern keeps the bar the system's (decisions/0014, 0015). Only that button matches.
+                Suppression(
+                    .entry("choice-list-sheet"), type: .dynamicType, reason: "the system's bar button",
+                    elementType: .button
+                ) { $0 == "Cancel" },
             ]
         #endif
         return suppressions

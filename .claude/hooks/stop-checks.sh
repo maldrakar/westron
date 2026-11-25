@@ -66,7 +66,8 @@ westron_ui='^platforms/apple/Sources/WestronUI/'
 westron_contract='^platforms/apple/Sources/WestronContract/'
 
 # The Apple package and its catalog (tools/apple/check.sh). The package's unit tests also read the contracts
-# (`contractFile` in platforms/apple/Tests); the catalog app and its UI tests import WestronCatalog alone, and a
+# (`contractFile` in platforms/apple/Tests), and the catalog's tests the patterns, whose Apple example the catalog runs
+# (PatternExampleTests); the catalog app and its UI tests import WestronCatalog alone, and a
 # change of WestronUI that breaks WestronCatalog fails `package` first. The catalog also compiles the snapshot tests
 # (platforms/apple/Tests/WestronSnapshotTests, its hosted bundle CatalogSnapshotTests). The four checks are targets of
 # tools/apple/check.sh, so a change of that script runs all four; simulator.sh serves only its targets the hook does not
@@ -81,7 +82,7 @@ westron_contract='^platforms/apple/Sources/WestronContract/'
 apple_script='^tools/apple/check\.sh$'
 swift_sources='^(Package\.swift|platforms/apple/.*\.swift|tools/(Package\.swift|Sources/.*\.swift|Tests/.*\.swift))$'
 format_inputs="$swift_sources|^\.swift-format$|$apple_script|$toolchain"
-package_inputs="$package_manifest|^platforms/apple/(Sources|Tests)/|^spec/components/[^/]+/[^/]+\.spec\.yaml$|$apple_script|$toolchain"
+package_inputs="$package_manifest|^platforms/apple/(Sources|Tests)/|^spec/components/[^/]+/[^/]+\.spec\.yaml$|^spec/patterns/|$apple_script|$toolchain"
 platforms_inputs="$package_manifest|^platforms/apple/Sources/|$apple_script|$toolchain"
 snapshot_tests='^platforms/apple/Tests/WestronSnapshotTests/'
 catalog_inputs="$package_manifest|^platforms/apple/Catalog/|^platforms/apple/Sources/WestronCatalog/|$snapshot_tests|$apple_script|$toolchain"
@@ -95,7 +96,7 @@ catalog_inputs="$package_manifest|^platforms/apple/Catalog/|^platforms/apple/Sou
 # Swift, .xcode-version), so they run for those as well. The lint api-parity reads WestronUI and WestronContract, the
 # module of the contracts' enums (decisions/0017). The step locks reads only the lock and its test, plain bash; the
 # step audit-scope reads the script, its test and the sources it maps (the catalog, the components of WestronUI and
-# WestronContract, the contracts), plain bash too. A
+# WestronContract, the contracts, the patterns), plain bash too. A
 # change of the tools or of the toolchain selects them all the same, as it selects every step, and the hook then runs
 # plain tools/check.sh.
 tokens='^tokens/.*\.json$'
@@ -117,7 +118,7 @@ tools_steps=(
   "spec|$spec|$tokens"
   "api-parity|$westron_ui|$westron_contract|$spec"
   "locks|^tools/apple/lock(-test)?\.sh$"
-  "audit-scope|^tools/apple/audit-scope(-test)?\.sh$|^platforms/apple/Sources/(WestronCatalog|WestronUI|WestronContract)/|^spec/components/"
+  "audit-scope|^tools/apple/audit-scope(-test)?\.sh$|^platforms/apple/Sources/(WestronCatalog|WestronUI|WestronContract)/|^spec/(components|patterns)/"
 )
 
 checks=()
