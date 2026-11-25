@@ -25,6 +25,7 @@ Button slice on Apple (phase 2), before a second component (`reports/`, section 
 | `design-language/` | Design language, chapters `00–09` (phase 1) |
 | `tokens/` | DTCG 2025.10 tokens, the mode resolver `westron.resolver.json` (decisions/0010) and `palette.json`, the anchors the color ramps are generated from (decisions/0012) |
 | `spec/components/<id>/` | Component contract `<id>.spec.yaml`, its decisions and reference screenshots (phase 2) |
+| `spec/patterns/<id>.md` | Patterns: compositions of components, system containers and tokens for one job on a screen, with rules and an example; Markdown with front matter (decisions/0018) |
 | `spec/conventions.md` | How each contract concept maps to platform API: SwiftUI authoritative, web, GTK and Compose provisional |
 | `spec/icons/icons.yaml` | Icon registry: westron's icon names, what each glyph draws, its SF Symbol, the default (decisions/0011) |
 | `platforms/apple/Sources/WestronTokens/` | Token values as plain Swift with no imports, generated (decisions/0010) |
@@ -158,5 +159,6 @@ them to that branch.
 - [0015](decisions/0015-glass.md) glass: a floating Button on the system's glass; the bars are the system's
 - [0016](decisions/0016-agent-context.md) agent context: skills and generated files, no MCP server; two channels
 - [0017](decisions/0017-westron-contract.md) WestronContract: the contracts' option enums, no imports, for shared code
+- [0018](decisions/0018-patterns.md) patterns: compositions of components for one job, written as sources in `spec/patterns/`
 
 The final research report, with sources: `reports/`.
