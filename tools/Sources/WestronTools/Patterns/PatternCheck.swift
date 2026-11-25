@@ -8,16 +8,22 @@ import Foundation
 /// - Each id of `components` has a contract, each name of `tokens` is in the token model, each of `icons` in the icon
 ///   registry.
 /// - The sections "When to use", "Parts", "Rules", "Accessibility", "Apple", "Not covered" and "Gaps", in this order,
-///   and "Questions" last only while the pattern is proposed; "Apple" holds one Swift example.
+///   and "Questions" last only while the pattern is proposed; "Apple" holds one Swift example. A section of a later
+///   platform goes in `sections` after "Apple" and in `optionalSections`, so that a pattern may lack it.
 /// - Each id of `gaps` has an entry in "Gaps", `- **G3** …`, and each entry is in `gaps`.
-/// - The westron names the example and the prose write are WestronUI's reviewed API (`PatternNames`).
+/// - The westron names every Swift block and the prose write are WestronUI's reviewed API (`PatternNames`).
 public enum PatternCheck {
     /// The patterns' directory, relative to the repository root.
     public static let defaultDirectory = "spec/patterns"
     public static let fileSuffix = ".md"
 
-    /// The fixed sections, in order (decisions/0018, point 2). A later platform adds its section after "Apple".
+    /// The sections a pattern may have, in their fixed order (decisions/0018, point 2). A later platform adds its
+    /// section after "Apple", and to `optionalSections` until every pattern has it.
     public static let sections = ["When to use", "Parts", "Rules", "Accessibility", "Apple", "Not covered", "Gaps"]
+    /// The sections of `sections` a pattern may leave out: a later platform's, while patterns gain it one by one.
+    public static let optionalSections: Set<String> = []
+    /// The sections every pattern has.
+    public static var requiredSections: [String] { sections.filter { !optionalSections.contains($0) } }
     /// The section only a proposed pattern has, last.
     public static let questions = "Questions"
     /// The section that holds the one complete example in Swift.
@@ -163,12 +169,12 @@ public enum PatternCheck {
                         + allowed.map { "\"\($0)\"" }.joined(separator: ", "))
             }
         }
-        let missing = sections.filter { !seen.contains($0) }
+        let missing = requiredSections.filter { !seen.contains($0) }
         for section in missing {
             report(
                 nil,
-                "no section \"## \(section)\"; the sections are " + sections.map { "\"\($0)\"" }.joined(separator: ", ")
-            )
+                "no section \"## \(section)\"; every pattern has "
+                    + requiredSections.map { "\"\($0)\"" }.joined(separator: ", "))
         }
         let order = found.map(\.title).filter { allowed.contains($0) }
         var unique: [String] = []
@@ -189,9 +195,11 @@ public enum PatternCheck {
                 "the section \"\(appleSection)\" holds \(examples.count) Swift examples; a pattern has one complete "
                     + "example, a fenced block ```swift")
         }
-        for example in examples {
-            for problem in references.names.problems(swift: example.code) {
-                report(example.line + problem.line - 1, "the example: " + problem.message)
+        // Every Swift block's names, the example's and any other's.
+        for block in pattern.markdown.blocks where block.info.split(separator: " ").first == "swift" {
+            let what = examples.contains { $0.line == block.line } ? "the example" : "a Swift block"
+            for problem in references.names.problems(swift: block.code) {
+                report(block.line + problem.line - 1, "\(what): " + problem.message)
             }
         }
 

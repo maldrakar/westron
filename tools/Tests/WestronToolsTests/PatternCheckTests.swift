@@ -292,4 +292,86 @@ struct PatternCheckTests {
         #expect(PatternNames.match(call(["title", "action"]), parameters) == nil)
         #expect(PatternNames.match(call([], trailing: true), parameters) == nil)
     }
+
+    @Test("a style modifier's lone `.name` is westron's variant unless it names one of the system's styles")
+    func styles() {
+        let example = { (line: String) in replacing(".buttonStyle(.plain)", with: line) }
+        for (call, value) in [
+            (".buttonStyle(.primry)", "`.primry` is not a value of `ButtonVariant`"),
+            (".textFieldStyle(.framd)", "`.framd` is not a value of `TextFieldVariant`"),
+            (".toggleStyle(.chek)", "`.chek` is not a value of"),
+            (".disclosureGroupStyle(.chevrn)", "`.chevrn` is not a value of `DisclosureVariant`"),
+        ] {
+            #expect(has(patternProblems(example(call)), value), "\(call)")
+            // In the prose too.
+            #expect(
+                has(patternProblems(replacing("Several choices at once.", with: "`Button(…)\(call)`")), value),
+                "\(call) in prose")
+        }
+        #expect(
+            has(
+                patternProblems(example("\nButton(\"Save\", action: {}).buttonStyle(.secondry)")),
+                "`.secondry` is not a value of `ButtonVariant`"))
+        // SwiftUI's own styles, a style of the product's own and westron's variants pass.
+        for call in [
+            ".buttonStyle(.bordered)", ".buttonStyle(myStyle)", ".buttonStyle(MyStyle())", ".buttonStyle(.secondary)",
+            ".toggleStyle(.switch)", ".toggleStyle(.check)", ".textFieldStyle(.roundedBorder)",
+        ] {
+            #expect(patternProblems(example(call)) == [], "\(call)")
+        }
+    }
+
+    @Test("a text role of one name is held too; SwiftUI's own two-name members are not tokens")
+    func textRolesAndSwiftUIMembers() {
+        let example = { (line: String) in replacing(".selected(true)", with: line) }
+        #expect(has(patternProblems(example("Text(\"…\").textRole(.bodyy)")), "`.bodyy` is not a text role"))
+        #expect(has(patternProblems(example("Text(\"…\").textRole(.body)")), "`.body` is not a text role"))
+        #expect(patternProblems(example("Text(\"…\").textRole(.body.regular)")) == [])
+        // Reported once where it stands, by the chain's own check: in the example and in the table's `.selected(true)`.
+        let typo = patternProblems(example("Text(\"…\").textRole(.footnote.regulr)"))
+        #expect(typo.count == 2, "\(typo)")
+        #expect(has(typo, "`.footnote.regulr` is not a token's Swift member"))
+        for call in [
+            "Image(systemName: \"x\").symbolEffect(.bounce.up)",
+            "Image(systemName: \"x\").symbolEffect(.variableColor.iterative)",
+            "Text(\"…\").foregroundStyle(.tint.secondary)", "Text(\"…\").foregroundStyle(.text.primary.opacity(0.5))",
+        ] {
+            #expect(patternProblems(example(call)) == [], "\(call)")
+        }
+        // A chain a method is called on is a chain all the same.
+        #expect(
+            has(
+                patternProblems(example("Text(\"…\").foregroundStyle(.text.primry.opacity(0.5))")),
+                "`.text.primry` is not a token's Swift member"))
+    }
+
+    @Test("an elided call, as prose writes one, is not held")
+    func elided() {
+        let prose = { (span: String) in replacing("Several choices at once.", with: span) }
+        #expect(patternProblems(prose("`ListRow(…)` and `ListRow(…) { … }`, `.buttonStyle(…)`")) == [])
+        #expect(has(patternProblems(prose("`ListRow(lvl: 1) { … }`")), "matches no initializer"))
+    }
+
+    @Test("every Swift block is held, not only the example; Apple still holds one")
+    func otherBlocks() {
+        let rules = replacing(
+            "1. One tap takes a choice.\n", with: "1. One tap takes a choice.\n\n```swift\nIcon(.tick)\n```\n")
+        let found = patternProblems(rules)
+        #expect(has(found, "a Swift block: `.tick` is not a name of the icon registry"))
+        #expect(!found.contains { $0.contains("Swift examples") })
+        // A block of another language is not Swift.
+        #expect(patternProblems(rules.replacingOccurrences(of: "```swift\nIcon", with: "```text\nIcon")) == [])
+    }
+
+    @Test("a file with CRLF line ends is read as with LF")
+    func crlf() {
+        #expect(patternProblems(patternFixture.replacingOccurrences(of: "\n", with: "\r\n")) == [])
+    }
+
+    @Test("the sections every pattern has are the fixed ones, none optional yet, in the order a pattern may have")
+    func sectionLists() {
+        #expect(PatternCheck.requiredSections == PatternCheck.sections)
+        #expect(PatternCheck.optionalSections.isSubset(of: Set(PatternCheck.sections)))
+        #expect(!PatternCheck.optionalSections.contains(PatternCheck.appleSection))
+    }
 }

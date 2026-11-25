@@ -145,11 +145,14 @@ private func patternFiles(_ pattern: String) throws -> [GeneratedFile] {
         sources, tokens: try AppleTokenModel(Resolution(resolverFile: path(TokenCheck.defaultResolver))))
 }
 
-/// The relative links of a Markdown text: `[text](target)` with no scheme and no anchor alone, the anchor dropped.
+/// The relative links of a Markdown text, inline, `[text](target)`, and reference definitions, `[label]: target`, with
+/// no scheme and no anchor alone, the anchor dropped.
 private func relativeLinks(_ text: String) -> [String] {
-    let link = try! NSRegularExpression(pattern: #"!?\[[^\]]*\]\(([^)\s]+)\)"#)
+    let link = try! NSRegularExpression(
+        pattern: #"!?\[[^\]]*\]\(([^)\s]+)\)|^ {0,3}\[[^\]]+\]:[ \t]*(\S+)"#, options: .anchorsMatchLines)
     return link.matches(in: text, range: NSRange(text.startIndex..., in: text)).compactMap { match in
-        guard let range = Range(match.range(at: 1), in: text) else { return nil }
+        let group = match.range(at: 1).location != NSNotFound ? 1 : 2
+        guard let range = Range(match.range(at: group), in: text) else { return nil }
         let target = String(text[range])
         guard !target.contains("://"), !target.hasPrefix("mailto:"), !target.hasPrefix("#") else { return nil }
         return String(target.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false)[0])
@@ -588,6 +591,37 @@ struct AgentContextTests {
                 map: map)
                 == "See [chapter 08](08-accessibility.md#targets), decisions/0013, [Rule](../components/rule.md) and "
                 + "[the HIG](https://example.com/hig).")
+    }
+
+    @Test("a pattern's links: code is left alone, a reference definition follows the inline links' rule")
+    func patternLinks() {
+        let map = ["design-language/06-layout.md": "skills/westron/context/design-language/06-layout.md"]
+        let text = """
+            See [the chapter][ch], [the decision][dec], [dec][] and [the site][web]; `[a](../../decisions/x.md)` stays.
+            Also [06](../../design-language/06-layout.md) and [0018](../../decisions/0018-patterns.md).
+
+            ```swift
+            let pills: [String](x) = []
+            ```
+
+            [ch]: ../../design-language/06-layout.md#space "The chapter"
+            [dec]: ../../decisions/0018-patterns.md
+            [web]: https://example.com
+            """
+        let rewritten = ContextMarkdown.rewritingLinksOutsideCode(
+            text, from: "spec/patterns/x.md", to: "skills/westron/context/patterns/x.md", map: map)
+        #expect(
+            rewritten == """
+                See [the chapter][ch], the decision, dec and [the site][web]; `[a](../../decisions/x.md)` stays.
+                Also [06](../design-language/06-layout.md) and 0018.
+
+                ```swift
+                let pills: [String](x) = []
+                ```
+
+                [ch]: ../design-language/06-layout.md#space "The chapter"
+                [web]: https://example.com
+                """)
     }
 
     @Test("wrapped prose never starts a Markdown block and never breaks a code span")

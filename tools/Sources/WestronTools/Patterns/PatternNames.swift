@@ -7,12 +7,18 @@ import SwiftSyntax
 /// fails `tools/westron patterns check` instead of leaving a stale name in a pattern.
 ///
 /// What it holds, in Swift read by swift-syntax:
-/// - an implicit member chain of two names or more, `.space.page.narrow`, `.text.secondary`, is a token's Swift member;
+/// - an implicit member chain of two names or more that starts as a token does, `.space.page.narrow`,
+///   `.text.secondary`, also as the base of a call, `.text.primary.opacity(…)`, is a token's Swift member; SwiftUI's
+///   own, `.bounce.up`, `.tint.secondary`, start otherwise and are left alone;
 /// - a call of a westron view, `ListRow(level:guides:action:) { … } leading: { … }`, `WestronUI.Icon(.check)`, matches
 ///   one of the initializers the API parity lint expects, by its argument labels and trailing closures;
 /// - a call of a westron function, `.selected(_:)`, `.textRole(_:)`, `.category(_:)`, matches one of its overloads;
 /// - an argument such a call passes as `.name` is a value of its parameter's type: a name of the icon registry, a list
-///   color, a text role, a value of a contract's option.
+///   color, a text role, a value of a contract's option. A style modifier's lone argument, `.buttonStyle(.plain)`, is
+///   SwiftUI's own style when it is not written `.name` (`myStyle`, `MyStyle()`) or names one of the system's styles
+///   for that modifier (`SystemStyles`); any other `.name` there is held to westron's variants.
+///
+/// A call whose arguments are elided, `ListRow(…) { … }`, as the repository's prose writes a call, is not held.
 ///
 /// In prose, a code span that reads as a token's name, `space.page.narrow` or `footnote.regular`, is a token's path or
 /// Swift member; any other code span is read as Swift and held as above. What is not westron's, SwiftUI's own calls
@@ -42,20 +48,20 @@ struct PatternNames {
         var enums: [String: Set<String>] = [:]
         for item in expected.enums { enums[item.type] = Set(item.values.map(SwiftName.declared)) }
         self.enums = enums
-    }
-
-    /// The style modifiers of the system's controls, `buttonStyle`: SwiftUI declares them too, so a call with one
-    /// unlabeled argument that is not westron's may be the system's own style.
-    static let systemStyleModifiers = Set(SystemStyles.byBase.values.map(\.modifier))
-
-    /// The first names of every token's path and Swift member, `space`, `color`, `text`, `footnote`: a code span that
-    /// starts with one and is dotted is read as a token's name.
-    var tokenHeads: Set<String> {
-        Set(
+        tokenHeads = Set(
             (Array(names.tokens.keys) + Array(names.members)).compactMap {
                 $0.split(separator: ".").first.map(String.init)
             })
     }
+
+    /// The system's own styles of each style modifier, `buttonStyle`: `plain`, `bordered`, …; SwiftUI declares the
+    /// modifier too, so its lone argument may be one of them, or a style of the product's own.
+    static let systemStyles: [String: Set<String>] = Dictionary(
+        SystemStyles.byBase.values.map { ($0.modifier, Set($0.styles)) }, uniquingKeysWith: { $0.union($1) })
+
+    /// The first names of every token's path and Swift member, `space`, `color`, `text`, `footnote`: a code span that
+    /// starts with one and is dotted is read as a token's name.
+    let tokenHeads: Set<String>
 
     // MARK: - Prose
 
@@ -162,8 +168,9 @@ struct PatternNames {
             return "`.\(value)` is not a name of the icon registry (spec/icons/icons.yaml)"
         }
         if type == AppleTokenModel.textRoleType {
-            // A name that is no token at all the chain's own check reports.
-            guard !names.textRoles.contains(value), names.members.contains(value) else { return nil }
+            guard !names.textRoles.contains(value) else { return nil }
+            // A chain of two names or more the chain's own check reports, where it is no token at all.
+            if chain.count >= 2, !names.members.contains(value), tokenHeads.contains(chain[0]) { return nil }
             return "`.\(value)` is not a text role"
         }
         if type == AppleComponents.contextValues["category"].map({ Self.unwrapped($0.type) }) {
@@ -193,23 +200,36 @@ struct PatternNames {
         }
 
         override func visit(_ node: MemberAccessExprSyntax) -> SyntaxVisitorContinueKind {
-            // The whole chain once: not a part of a longer one, not a method called on it.
+            // The whole chain once: not a part of a longer one; for a method called on it, `.text.primary.opacity(…)`,
+            // the chain it is called on.
             if let parent = node.parent?.as(MemberAccessExprSyntax.self), parent.base?.id == node.id {
                 return .visitChildren
             }
+            var chained: ExprSyntax? = ExprSyntax(node)
             if let call = node.parent?.as(FunctionCallExprSyntax.self), call.calledExpression.id == node.id {
-                return .visitChildren
+                chained = node.base
             }
-            if let chain = PatternNames.implicitChain(ExprSyntax(node)), chain.count >= 2 {
+            if let chained, let chain = PatternNames.implicitChain(chained), chain.count >= 2,
+                names.tokenHeads.contains(chain[0])
+            {
                 let value = chain.joined(separator: ".")
                 if !names.names.members.contains(value) {
-                    report(node, "`.\(value)` is not a token's Swift member (the token pages list them)")
+                    report(chained, "`.\(value)` is not a token's Swift member (the token pages list them)")
                 }
             }
             return .visitChildren
         }
 
+        /// Whether the call's arguments are elided, `ListRow(…)`: the prose's way of naming a call, not one to hold.
+        static func isElided(_ node: FunctionCallExprSyntax) -> Bool {
+            let inside =
+                node.arguments.description + (node.unexpectedBetweenLeftParenAndArguments?.description ?? "")
+                + (node.unexpectedBetweenArgumentsAndRightParen?.description ?? "")
+            return inside.contains("…")
+        }
+
         override func visit(_ node: FunctionCallExprSyntax) -> SyntaxVisitorContinueKind {
+            if Self.isElided(node) { return .visitChildren }
             var arguments = node.arguments.map {
                 Argument(label: $0.label?.text ?? "_", expression: $0.expression, isTrailingClosure: false)
             }
@@ -237,9 +257,18 @@ struct PatternNames {
             } else if view == nil, let member = callee.as(MemberAccessExprSyntax.self) {
                 let name = member.declName.baseName.text
                 if let overloads = names.functions[name] {
-                    let system = PatternNames.systemStyleModifiers.contains(name)
-                    // A lone unlabeled style, `.buttonStyle(.plain)`, may be SwiftUI's own overload.
-                    let mayBeSystem = system && arguments.count == 1 && arguments[0].label == "_"
+                    // A lone unlabeled style SwiftUI's own overload takes: `.buttonStyle(.plain)`, `myStyle`,
+                    // `MyStyle()`; any other `.name` there is westron's variant.
+                    var mayBeSystem = false
+                    if let styles = PatternNames.systemStyles[name], arguments.count == 1, arguments[0].label == "_",
+                        let expression = arguments[0].expression
+                    {
+                        if let chain = PatternNames.implicitChain(expression) {
+                            mayBeSystem = chain.count == 1 && styles.contains(chain[0])
+                        } else {
+                            mayBeSystem = true
+                        }
+                    }
                     check(
                         node, arguments, overloads: overloads, values: !mayBeSystem,
                         else: "`.\(name)\(written)` matches no overload WestronUI declares: "

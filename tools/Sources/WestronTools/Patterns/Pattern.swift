@@ -55,8 +55,12 @@ public struct Pattern: Equatable, Sendable {
 
     /// Reads a pattern's text; `source` names it in the problems. Nil when there is no front matter to read, with the
     /// problem; otherwise the pattern with what could be read, and a problem for each key that could not.
+    /// A file with Windows line ends, CRLF, is read as with LF.
     public static func read(_ text: String, source: String) -> (pattern: Pattern?, problems: [PatternProblem]) {
-        let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        let lines = text.replacingOccurrences(of: "\r\n", with: "\n").split(
+            separator: "\n", omittingEmptySubsequences: false
+        )
+        .map(String.init)
         func problem(_ line: Int?, _ message: String) -> PatternProblem {
             PatternProblem(source: source, line: line, message)
         }

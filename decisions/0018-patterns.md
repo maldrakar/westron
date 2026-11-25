@@ -96,9 +96,10 @@ Considered and rejected:
 - A gap a pattern records becomes an issue only when the owner says so. The first pattern's two gaps are issues:
   G3 is #171 and G4 is #172.
 - As built, 2026-11-25 (#35, stage 2b): `tools/westron patterns check`, a step of `tools/check.sh`, holds point 2 and
-  the names the example and the prose write (`PatternNames`, on `ContextNames`); `tools/westron generate` runs it and
-  copies each approved pattern into the bundle (point 5), lists it in `index.md` and `llms.txt` and names it on its
-  components' cards, and `SKILL.md` sends an agent to the pattern of a job (`tools/README.md`, "The pattern check").
+  the names its Swift blocks and its prose write (`PatternNames`, on `ContextNames`); `tools/westron generate` runs
+  it and copies each approved pattern into the bundle (point 5), lists it in `index.md` and `llms.txt` and names it on
+  its components' cards, and `SKILL.md` sends an agent to the pattern of a job (`tools/README.md`, "The pattern
+  check").
 
 ### Open points
 
