@@ -11,7 +11,9 @@ import Foundation
 ///   the contract's prose on behavior, accessibility and Apple;
 /// - `tokens/*.md`: the semantic tokens by kind (`ContextTokens`); `icons.md`: the icon registry;
 /// - `swiftui.md`: how a contract's concepts become SwiftUI, from spec/conventions.md;
-/// - `design-language/`: the chapters 00–09, copied, their links to the rest of the repository turned into text.
+/// - `design-language/`: the chapters 00–09, copied, their links to the rest of the repository turned into text;
+/// - `patterns/<id>.md`: each approved pattern of `spec/patterns/` (decisions/0018), copied as the chapters are
+///   (`ContextPatterns.swift`), and a line on the card of each component it uses.
 ///
 /// Paths inside the bundle are relative, so it works copied or linked into another repository. The bundle's directory
 /// is owned: a file in it that the generator no longer writes is stale.
@@ -23,12 +25,14 @@ public struct AgentContext: Generator {
     public let iconsFile: String
     public let conventionsFile: String
     public let designLanguageDirectory: String
+    public let patternsDirectory: String
 
     public init(
         contractsDirectory: String = ContractCheck.defaultDirectory, schemaFile: String = ContractSchema.defaultFile,
         resolverFile: String = TokenCheck.defaultResolver, iconsFile: String = IconRegistry.defaultFile,
         conventionsFile: String = AgentContext.conventionsFile,
-        designLanguageDirectory: String = AgentContext.designLanguageDirectory
+        designLanguageDirectory: String = AgentContext.designLanguageDirectory,
+        patternsDirectory: String = PatternCheck.defaultDirectory
     ) {
         self.contractsDirectory = contractsDirectory
         self.schemaFile = schemaFile
@@ -36,6 +40,7 @@ public struct AgentContext: Generator {
         self.iconsFile = iconsFile
         self.conventionsFile = conventionsFile
         self.designLanguageDirectory = designLanguageDirectory
+        self.patternsDirectory = patternsDirectory
     }
 
     /// The Claude Code plugin's root: an installed plugin is this directory copied, so the skill and its context live
@@ -61,16 +66,20 @@ public struct AgentContext: Generator {
         public var chapters: [(text: String, source: String)]
         /// The design language's README, whose table says what each chapter settles; nil without one.
         public var readme: String?
+        /// Each pattern's text and its path, sorted by path, proposed ones too: every one is checked.
+        public var patterns: [(text: String, source: String)]
 
         public init(
             contracts: [(text: String, source: String)], icons: IconRegistry, conventions: String,
-            chapters: [(text: String, source: String)], readme: String?
+            chapters: [(text: String, source: String)], readme: String?,
+            patterns: [(text: String, source: String)] = []
         ) {
             self.contracts = contracts
             self.icons = icons
             self.conventions = conventions
             self.chapters = chapters
             self.readme = readme
+            self.patterns = patterns
         }
     }
 
@@ -89,10 +98,13 @@ public struct AgentContext: Generator {
                 return (text: try String(contentsOfFile: path, encoding: .utf8), source: path)
             }
         let readme = try? String(contentsOfFile: designLanguageDirectory + "/README.md", encoding: .utf8)
+        let patterns = try PatternCheck.files(in: patternsDirectory).map { path in
+            (text: try String(contentsOfFile: path, encoding: .utf8), source: path)
+        }
         let sources = Sources(
             contracts: contracts, icons: try IconRegistry.load(file: iconsFile),
             conventions: try String(contentsOfFile: conventionsFile, encoding: .utf8), chapters: chapters,
-            readme: readme)
+            readme: readme, patterns: patterns)
         return try Self.files(
             sources, tokens: try AppleTokenModel(Resolution(resolverFile: resolverFile)),
             conventionsSource: conventionsFile)
@@ -103,13 +115,20 @@ public struct AgentContext: Generator {
     static func files(_ sources: Sources, tokens: AppleTokenModel, conventionsSource: String = conventionsFile) throws
         -> [GeneratedFile]
     {
-        let cards = try Self.cards(
+        var cards = try Self.cards(
             sources, textRoles: tokens.textRoles.map { AppleTokensSwift.reference($0.members) },
             categories: tokens.categories?.categories.map(\.caseName) ?? [])
         let names = ContextNames(model: tokens, functions: Set(cards.first?.expected.functions.map(\.name) ?? []))
         let tokenPages = try ContextTokens.pages(tokens, names: names)
+        let patterns = try Self.checkedPatterns(sources, cards: cards, names: names)
+        for index in cards.indices {
+            cards[index].patterns = patterns.filter { $0.components.contains(cards[index].contract.id) }.map {
+                (title: $0.title, path: Self.patternPath($0.id))
+            }
+        }
         var map: [String: String] = [:]
         for card in cards { map[card.source] = Self.outputDirectory + "/" + ComponentCard.path(card.contract.id) }
+        for pattern in patterns { map[pattern.source] = Self.outputDirectory + "/" + Self.patternPath(pattern.id) }
         for chapter in sources.chapters {
             map[chapter.source] = Self.outputDirectory + "/" + Self.chapterPath(chapter.source)
         }
@@ -126,15 +145,17 @@ public struct AgentContext: Generator {
                 summary: Self.chapterSummaries(sources.readme)[Self.fileName(chapter.source)]
             )
         }
+        let sourceList =
+            [
+                ContractCheck.defaultDirectory, tokens.resolver, IconRegistry.defaultFile, conventionsSource,
+                Self.designLanguageDirectory,
+            ] + (sources.patterns.isEmpty ? [] : [PatternCheck.defaultDirectory])
         add(
             Self.indexPath,
             Self.index(
-                cards: cards, tokens: tokenPages, icons: sources.icons,
+                cards: cards, patterns: patterns, tokens: tokenPages, icons: sources.icons,
                 chapters: chapters.map { (Self.chapterPath($0.chapter.source), $0.title, $0.summary) },
-                sources: [
-                    ContractCheck.defaultDirectory, tokens.resolver, IconRegistry.defaultFile,
-                    conventionsSource, Self.designLanguageDirectory,
-                ]))
+                sources: sourceList))
         for card in cards {
             add(ComponentCard.path(card.contract.id), card.markdown())
             if let details = card.details() { add(ComponentCard.detailsPath(card.contract.id), details) }
@@ -157,16 +178,16 @@ public struct AgentContext: Generator {
             let text = ContextMarkdown.rewritingLinks(chapter.text, from: chapter.source, to: output, map: map)
             files.append(GeneratedFile(path: output, contents: header.joined(separator: "\n") + "\n\n" + text))
         }
+        for pattern in patterns {
+            add(Self.patternPath(pattern.id), Self.pattern(pattern, cards: cards, map: map))
+        }
         files.append(
             GeneratedFile(
                 path: Self.llmsFile,
                 contents: Self.llms(
-                    cards: cards, tokens: tokenPages,
+                    cards: cards, patterns: patterns, tokens: tokenPages,
                     chapters: chapters.map { (Self.chapterPath($0.chapter.source), $0.title, $0.summary) },
-                    sources: [
-                        ContractCheck.defaultDirectory, tokens.resolver, IconRegistry.defaultFile,
-                        conventionsSource, Self.designLanguageDirectory,
-                    ])))
+                    sources: sourceList)))
         return files
     }
 
@@ -256,15 +277,16 @@ public struct AgentContext: Generator {
     // MARK: - The index
 
     static func index(
-        cards: [ComponentCard], tokens: [ContextTokens.Page], icons: IconRegistry,
+        cards: [ComponentCard], patterns: [Pattern] = [], tokens: [ContextTokens.Page], icons: IconRegistry,
         chapters: [(path: String, title: String, summary: String?)], sources: [String]
     ) -> String {
         var out = ContextMarkdown.header(sources)
         out += ["", "# westron: index", ""]
         out += ContextMarkdown.wrap(
             "westron is a design system: tokens, component contracts, a design language, and on Apple the SwiftUI "
-                + "library WestronUI. Read this file first, then only the files the task needs. Paths are relative to "
-                + "this file; the rules for using westron are in `../SKILL.md`.")
+                + "library WestronUI. Read this file first, then only the files the task needs: the cards of the "
+                + "components a screen uses, and the pattern of its job where there is one. Paths are relative to this "
+                + "file; the rules for using westron are in `../SKILL.md`.")
         out += [
             "", "## Components", "",
             "`import WestronUI`. Each line: the card, the shortest call, what the component is. A card ends with a",
@@ -284,6 +306,9 @@ public struct AgentContext: Generator {
             out.append(
                 "- [\(card.component)](\(ComponentCard.path(card.contract.id)))"
                     + (what.map { ", \($0)" } ?? "") + ": " + card.summary)
+        }
+        if !patterns.isEmpty {
+            out += ["", "## Patterns", ""] + ContextMarkdown.wrap(patternsIntro) + [""] + patternLines(patterns)
         }
         out += ["", "## Tokens", ""]
         for page in tokens { out.append("- [\(page.title)](\(page.path)): \(page.summary)") }
@@ -459,7 +484,7 @@ public struct AgentContext: Generator {
     // MARK: - llms.txt
 
     static func llms(
-        cards: [ComponentCard], tokens: [ContextTokens.Page],
+        cards: [ComponentCard], patterns: [Pattern] = [], tokens: [ContextTokens.Page],
         chapters: [(path: String, title: String, summary: String?)], sources: [String]
     ) -> String {
         let base = outputDirectory + "/"
@@ -477,7 +502,8 @@ public struct AgentContext: Generator {
                 + "repository, `.claude-plugin/marketplace.json`.")
         out += [
             "", "## Docs", "",
-            "- [Index](\(base)\(indexPath)): every component, token page, the icons and the design language, one line each",
+            "- [Index](\(base)\(indexPath)): every component, pattern, token page, the icons and the design language, "
+                + "one line each",
             "- [Rules for agents](\(AgentContext.skillDirectory)/SKILL.md): how to build UI with westron and what not to do",
             "- [westron in SwiftUI](\(base)\(swiftUIPath)): how a contract's concepts become SwiftUI API",
             "- [Icons](\(base)\(iconsPath)): the icon names and how a glyph is asked for",
@@ -486,6 +512,11 @@ public struct AgentContext: Generator {
         out += ["", "## Components", ""]
         for card in cards {
             out.append("- [\(card.component)](\(base)\(ComponentCard.path(card.contract.id))): \(card.summary)")
+        }
+        if !patterns.isEmpty {
+            out +=
+                ["", "## Patterns", ""] + ContextMarkdown.wrap(patternsIntro) + [""]
+                + patternLines(patterns, base: base)
         }
         out += ["", "## Optional", ""]
         for chapter in chapters {

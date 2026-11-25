@@ -232,6 +232,36 @@ enum ContextMarkdown {
         return result
     }
 
+    /// `rewritingLinks` on the text outside its fenced code blocks, which it leaves as they are: in Swift,
+    /// `[Choice](…)` is no link.
+    static func rewritingLinksOutsideCode(
+        _ text: String, from source: String, to output: String, map: [String: String]
+    ) -> String {
+        var out: [String] = []
+        var prose: [String] = []
+        var fence: String?
+        func flush() {
+            guard !prose.isEmpty else { return }
+            out.append(rewritingLinks(prose.joined(separator: "\n"), from: source, to: output, map: map))
+            prose = []
+        }
+        for line in text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init) {
+            let trimmed = line.drop { $0 == " " }
+            if let open = fence {
+                out.append(line)
+                if trimmed.hasPrefix(open), trimmed.allSatisfy({ $0 == open.first }) { fence = nil }
+            } else if let mark = ["```", "~~~"].first(where: { trimmed.hasPrefix($0) }) {
+                flush()
+                out.append(line)
+                fence = String(trimmed.prefix { $0 == mark.first })
+            } else {
+                prose.append(line)
+            }
+        }
+        flush()
+        return out.joined(separator: "\n")
+    }
+
     /// The directory of a repository path, empty at the root.
     static func directory(of path: String) -> String {
         guard let slash = path.lastIndex(of: "/") else { return "" }

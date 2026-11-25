@@ -2,7 +2,8 @@ import Foundation
 
 /// The westron names the agent context writes in its own prose, each looked up where WestronUI's API is declared, so
 /// that a renamed token, adapter or modifier fails `tools/westron generate` instead of leaving a stale name in the
-/// bundle (decisions/0016).
+/// bundle (decisions/0016). The pattern check holds a pattern's example and prose to the same names (`PatternNames`,
+/// decisions/0018).
 ///
 /// Prose is written as a template whose placeholders name what they mean:
 /// - `{token:color.text.primary}` is the token's Swift member, `text.primary` (`AppleTokenModel`);
@@ -21,6 +22,13 @@ struct ContextNames {
     let categoryRoles: Set<String>
     /// The functions every contract's API declares.
     let functions: Set<String>
+    /// The text roles' Swift members, `footnote.regular`.
+    let textRoles: Set<String>
+    /// The list colors' cases, `amber`.
+    let categories: Set<String>
+
+    /// Every token's Swift member, `space.withinGroup`.
+    var members: Set<String> { Set(tokens.values) }
 
     init(model: AppleTokenModel, functions: Set<String>) {
         var tokens: [String: String] = [:]
@@ -35,6 +43,8 @@ struct ContextNames {
         self.tokens = tokens
         categoryRoles = Set(model.categories?.roles.map(\.name) ?? [])
         self.functions = functions
+        textRoles = Set(model.textRoles.map { AppleTokensSwift.reference($0.members) })
+        categories = Set(model.categories?.categories.map(\.caseName) ?? [])
     }
 
     struct Missing: Error, CustomStringConvertible {

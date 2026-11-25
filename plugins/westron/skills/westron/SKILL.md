@@ -12,13 +12,18 @@ contracts, tokens and design language. Paths here are relative to this file.
 
 ## Reading the reference
 
-1. Read `context/index.md` first, every time: one line per component, token page, the icons and each chapter.
+1. Read `context/index.md` first, every time: one line per component, pattern, token page, the icons and each
+   chapter.
 2. Read the card of every component you use, `context/components/<id>.md`, and only those: how it is called, its
    options, states, slots, what accessibility needs from the caller and what not to do. Its details file,
    `<id>.details.md`, holds how it behaves and how Apple's OSes differ: read it when the card does not settle a case.
 3. Lay out with the token pages, `context/tokens/*.md`; ask for glyphs by `context/icons.md`.
 4. `context/swiftui.md` maps a card's concepts to SwiftUI; `context/design-language/` says why westron is as it is.
    Read a chapter when a card points to it or nothing else settles a case.
+5. Before composing a screen for a job, such as choosing one of many, read the pattern for it when the index lists
+   one, `context/patterns/<id>.md`: which component takes which part, with which options, what stays the system's,
+   what assistive technology hears, and one complete example. A pattern is rules plus one example, not an API: follow
+   its rules, fit the example to the product's models and words, and take each call from the cards.
 
 A call that neither a card nor a token page shows is not westron's API. The reference is the westron version it was
 generated with; where the product's pinned WestronUI differs, the package's declarations win.
@@ -49,9 +54,9 @@ generated with; where the product's pinned WestronUI differs, the package's decl
    SwiftUI gives them, with no westron surface, shadow or glass on them (the bars take the system's own glass; a
    control floating over content is `Button`'s `floating`). What stands inside is composed from westron's components:
    a list of choices in a sheet, such as a "Move to…" picker, is `ListRow`s with `IconTile`s and a check `Icon` on
-   the chosen one, not a SwiftUI `Picker`; a menu's trigger is a westron `Button`; an empty state's image is an
-   `IconTile`. A system `Picker` or `DatePicker` stays only where the system draws its own control, such as a wheel
-   or a pop-up menu.
+   the chosen one (the pattern `choice-list-sheet`), not a SwiftUI `Picker`; a menu's trigger is a westron
+   `Button`; an empty state's image is an `IconTile`. A system `Picker` or `DatePicker` stays only where the system
+   draws its own control, such as a wheel or a pop-up menu.
 5. **Accessibility is part of the call.** Give each control the label its card requires, an icon-only button too; a
    check beside its own title takes `Toggle(isOn:accessibilityLabel:)`; an icon that means something takes `label:`;
    a heading takes `.accessibilityAddTraits(.isHeader)`. Never fix a height that text must grow out of: text follows

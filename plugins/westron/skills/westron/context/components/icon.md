@@ -8,6 +8,8 @@ generate again (decisions/0016). -->
 An icon of westron's registry, drawn as the platform's own glyph image: westron adds the names, how a glyph is drawn and
 what assistive technology hears of it (design-language/07, decisions/0011).
 
+Patterns that use it: [A list of choices in a sheet](../patterns/choice-list-sheet.md).
+
 ## In SwiftUI
 
 `import WestronUI`. A call writes at least:

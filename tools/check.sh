@@ -4,9 +4,11 @@
 #
 #   tools/check.sh            every step below, in this order: build and test tools/ (tools), the raw-values lint
 #                             (raw-values), generate --check (generate), tokens check (tokens) and contrast
-#                             (contrast), icons check (icons), spec check (spec), the API parity lint (api-parity,
-#                             after spec check, since it reads the contracts), the test of the lock the Apple scripts
-#                             queue on (locks: tools/apple/lock-test.sh, plain bash, so CI keeps it alive on Linux),
+#                             (contrast), icons check (icons), spec check (spec), patterns check (patterns, after
+#                             spec check, since it reads the contracts, the tokens and the icon registry), the API
+#                             parity lint (api-parity, after spec check, since it reads the contracts), the test of the
+#                             lock the Apple scripts queue on (locks: tools/apple/lock-test.sh, plain bash, so CI keeps
+#                             it alive on Linux),
 #                             the test of the pull request audit's scope (audit-scope: tools/apple/audit-scope-test.sh,
 #                             plain bash over the catalog's sources), the test of the snapshot matrix's comparison
 #                             (pages: tools/apple/snapshot-pages-test.sh, macOS only, as it reads PNGs with ImageIO;
@@ -17,7 +19,7 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 
-all_steps="tools raw-values generate tokens contrast icons spec api-parity locks audit-scope pages"
+all_steps="tools raw-values generate tokens contrast icons spec patterns api-parity locks audit-scope pages"
 for step in "$@"; do
   if [[ " $all_steps " != *" $step "* ]]; then
     echo "tools/check.sh: no step \"$step\"; the steps: $all_steps" >&2
@@ -60,6 +62,10 @@ fi
 if selected spec; then
   echo "== spec check"
   tools/westron spec check
+fi
+if selected patterns; then
+  echo "== patterns check"
+  tools/westron patterns check
 fi
 if selected api-parity; then
   echo "== api-parity lint"

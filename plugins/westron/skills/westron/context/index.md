@@ -1,11 +1,12 @@
-<!-- Generated from spec/components, tokens/westron.resolver.json, spec/icons/icons.yaml, spec/conventions.md and
-design-language by `tools/westron generate`. Do not edit: change the source and generate again (decisions/0016). -->
+<!-- Generated from spec/components, tokens/westron.resolver.json, spec/icons/icons.yaml, spec/conventions.md,
+design-language and spec/patterns by `tools/westron generate`. Do not edit: change the source and generate again
+(decisions/0016). -->
 
 # westron: index
 
 westron is a design system: tokens, component contracts, a design language, and on Apple the SwiftUI library WestronUI.
-Read this file first, then only the files the task needs. Paths are relative to this file; the rules for using westron
-are in `../SKILL.md`.
+Read this file first, then only the files the task needs: the cards of the components a screen uses, and the pattern of
+its job where there is one. Paths are relative to this file; the rules for using westron are in `../SKILL.md`.
 
 ## Components
 
@@ -27,6 +28,15 @@ for `Westron.Icon` and `Westron.Category`; neither imports anything.
 - [Surface](components/surface.md), `content.surface(.raised)`: The ground a card or a panel stands on, which westron draws behind content the product lays out: a background, a corner and, where it stands off what is under it, a shadow.
 - [Text](components/text.md), `Text("…").textRole(.body.regular)`: A text role on the platform's own text view: westron adds no text type of its own, only the role.
 - [TextField](components/text-field.md), `.textFieldStyle(…)`: A field a person types text into: westron's style on the platform's own text field, which keeps editing, selection, input methods, the keyboard and the system's text input.
+
+## Patterns
+
+A pattern composes westron's components, the system's containers and tokens for one job on a screen: which component
+takes which part, with which options, what stays the system's, what assistive technology hears, and one complete SwiftUI
+example. It is rules and an example, not an API: its calls are the cards'. Read the pattern for a job before composing
+its screen.
+
+- [A list of choices in a sheet](patterns/choice-list-sheet.md): Pick one place or value from a list or a tree in a system sheet; the current choice checked, one tap takes one.
 
 ## Tokens
 
