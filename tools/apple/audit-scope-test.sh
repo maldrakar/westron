@@ -8,12 +8,13 @@
 #
 # Cases:
 #   - a changed path of each kind gives exactly the entries it should (a WestronUI component's file, its generated
-#     contract and matrix, its catalog page, its contract, a self-contained Foundations page) or none (the registry,
-#     the generated registry of matrices, a shared file of WestronUI, a token file, the package manifest);
+#     contract and matrix, its catalog page, its contract, a self-contained Foundations page, a pattern's document
+#     and its catalog source) or none (a pattern with no example in the catalog yet, the registry, the generated
+#     registry of matrices, a shared file of WestronUI, a token file, the package manifest);
 #   - use: a component's change also gives exactly the entries that draw it (Disclosure's: list-row; Checkbox's:
-#     list-row, list-row-in-list, disclosure), not the entries that reach it only through a base component (Rule's:
-#     color-in-use, not list-row, whose insertion mark is ListRow's), and not the entries that call a system style or
-#     another component's of the same name (Button's change does not give disclosure, whose page calls
+#     list-row, list-row-in-list, disclosure; IconTile's: the pattern entry choice-list-sheet), not the entries that
+#     reach it only through a base component (Rule's: color-in-use and choice-list-sheet, not list-row, whose
+#     insertion mark is ListRow's), and not the entries that call a system style or another component's of the same name (Button's change does not give disclosure, whose page calls
 #     `.buttonStyle(.plain)`; Checkbox's does not give chip, `.toggleStyle(.chip)`);
 #   - the declared base components and every component's count beyond its own entries, pinned (`--uses`): a change
 #     of either fails here and asks for a look at the cut and the limit;
@@ -59,7 +60,7 @@ expect() {
 expect "$ui/Generated/Disclosure+Contract.swift" list-row,disclosure
 # Its enums in WestronContract (decisions/0017): the same entries as the component's other generated file.
 expect "$contract/Generated/Disclosure+Contract.swift" list-row,disclosure
-expect "$contract/Generated/Rule+Contract.swift" rule,color-in-use
+expect "$contract/Generated/Rule+Contract.swift" rule,choice-list-sheet,color-in-use
 expect "$catalog/Generated/Chip+Matrix.swift" chip
 expect "$catalog/Components/DisclosurePages.swift" disclosure
 expect spec/components/text-field/text-field.spec.yaml \
@@ -67,7 +68,7 @@ expect spec/components/text-field/text-field.spec.yaml \
 # Use, exactly.
 expect "$ui/Disclosure/DisclosureVariantStyle.swift" list-row,disclosure
 # Not through a base component: list-row draws Rule only inside ListRow (its insertion mark).
-expect "$ui/Rule/Rule.swift" rule,color-in-use
+expect "$ui/Rule/Rule.swift" rule,choice-list-sheet,color-in-use
 # Not a use: the system's `.buttonStyle(.plain)` (Disclosure's page) and Chip's `.toggleStyle(.chip)`.
 expect "$ui/Button/ButtonVariantStyle.swift" "button,button-destructive,button-states,button-states-destructive,\
 button-states-destructive-disabled,button-behavior,button-floating,button-floating-sizes,button-floating-states,\
@@ -90,6 +91,13 @@ for base in Icon ListRow; do
 done
 # A Foundations page that shares nothing.
 expect "$catalog/Foundations/MotionPage.swift" motion
+# A pattern (decisions/0018): its document and each file of its catalog directory give its entry; a pattern with no
+# directory in the catalog gives nothing; a component its entry draws gives it too.
+expect spec/patterns/choice-list-sheet.md choice-list-sheet
+expect "$catalog/Patterns/ChoiceListSheet/ChoiceSheet.swift" choice-list-sheet
+expect "$catalog/Patterns/ChoiceListSheet/ChoiceListSheetPage.swift" choice-list-sheet
+expect spec/patterns/no-such-pattern.md ""
+expect "$ui/IconTile/IconTile.swift" icon-tile,choice-list-sheet
 # Shared paths and paths outside any component.
 expect "$catalog/Catalog.swift" ""
 expect "$catalog/Generated/ComponentMatrix+All.swift" ""
@@ -111,11 +119,11 @@ Disclosure impl: 1
 Disclosure page: 0
 Icon impl: 0 (base component
 Icon page: 0 (base component
-IconTile impl: 0
+IconTile impl: 1
 IconTile page: 0
 ListRow impl: 0 (base component
 ListRow page: 0 (base component
-Rule impl: 1
+Rule impl: 2
 Rule page: 0
 Surface impl: 5
 Surface page: 0
@@ -201,7 +209,7 @@ rule_page="$catalog/Components/RulePages.swift"
 chip_page="$catalog/Components/ChipPages.swift"
 fresh_copy
 add_to_entry "$chip_page" chip 'Rule()'
-expect "$ui/Rule/Rule.swift" rule,chip,color-in-use "$copy_script" \
+expect "$ui/Rule/Rule.swift" rule,chip,choice-list-sheet,color-in-use "$copy_script" \
   "a type (the chip entry draws a Rule): Rule.swift"
 fresh_copy
 echo 'let auditScopeProbe = ChipVariant.chip' >> "$copy/$catalog/Foundations/AdaptiveGrid.swift"

@@ -1,6 +1,7 @@
 /// The registry of catalog entries.
 ///
-/// A new component adds its entry here in the same pull request as its implementation.
+/// A new component adds its entry here in the same pull request as its implementation, and so does a pattern with its
+/// Apple example (decisions/0018, stage 2).
 /// The accessibility audit (`CatalogAccessibilityAuditTests`) iterates over the same entries, so the registry lives in
 /// the package, not in the app. The snapshot matrix (#24) has a registry of its own, `ComponentMatrix.all`, generated
 /// from the contracts, so its sheets are not audited.
@@ -36,13 +37,14 @@ public enum Catalog {
         return entries
     }()
 
-    /// The entries after the components that some OS lacks.
+    /// The entries after the components that some OS lacks: the last components, the patterns, then the rest.
     private static let rest: [CatalogEntry] = [
         .textField,
         .textFieldGlyphs,
         .textFieldBehavior,
         .textFieldFocusFramed,
         .textFieldFocusInline,
+        .choiceListSheet,
         .colorBackgrounds,
         .colorForegrounds,
         .colorCategories,
