@@ -571,6 +571,20 @@ struct ComponentCard {
         return parts.isEmpty ? "" : " Where an OS lacks a value: " + parts.joined(separator: "; ") + "."
     }
 
+    /// For a view whose slots are closures its contract binds to text roles: the role is their content's with no call,
+    /// as a role a view sets in SwiftUI's environment is, and content that sets its own keeps it (ListRow: a count in
+    /// its trailing slot). The text card's list of such slots defers to this sentence.
+    private var closureTextRoles: String {
+        guard let slots = AgentContext.textRoleSlots(contract, document),
+            let modifier = expected.functions.first(where: {
+                $0.extends == "View" && $0.parameters.first?.type == AppleTokenModel.textRoleType
+            })?.name
+        else { return "" }
+        let which = slots == contract.slots ? "them" : ContextMarkdown.list(slots.map { "`\($0)`" })
+        return " What a product puts in \(which) takes the text role the component draws there, with no "
+            + "`.\(modifier)(_:)`; content that sets another role with `.\(modifier)(_:)` keeps it there."
+    }
+
     private func slotsSection() -> [String] {
         guard !contract.slots.isEmpty, let apple = contract.apple else { return [] }
         let slots = ContextMarkdown.list(contract.slots.map { "`\($0)`" })
@@ -591,7 +605,7 @@ struct ComponentCard {
             if contract.slots.count > 1 {
                 text =
                     "\(slots): each a `@ViewBuilder` closure named after it; `\(contract.slots[0])` is the content "
-                    + "every instance has, the others default to nothing."
+                    + "every instance has, the others default to nothing." + closureTextRoles
             } else if views.contains(where: {
                 $0.initializers.contains { $0.parameters.first?.type == AppleIcons.iconType }
             }) {

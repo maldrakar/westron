@@ -44,12 +44,12 @@ value or an opacity laid on a token to make a new color. The design language: `.
 - `color.background.muted-hover-colored` → `.background.mutedHoverColored`: The muted fill of a control filled with it
   and labelled in colored words, such as a destructive secondary button, under the pointer: halfway between
   background.muted and muted-pressed-colored. Use for: destructive secondary button under the pointer. Avoid: A fill
-  under text.primary: use background.muted-hover, which darkens more.
+  under text.primary: use background.muted-hover, which moves further towards its words.
 - `color.background.muted-pressed-colored` → `.background.mutedPressedColored`: The muted fill of a control filled with
   it and labelled in colored words, such as a destructive secondary button, while it is pressed: background.muted moved
   towards its words as far as every colored word, step 11 of every ramp, still reads on it, which is about step 5's tone
   (decisions/0012, 0013). Use for: pressed destructive secondary button. Avoid: A fill under text.primary: use
-  background.muted-pressed, which darkens more.
+  background.muted-pressed, which moves further towards its words.
 - `color.background.selected` → `.background.selected`: A selected row or item, tinted with the accent. Use for:
   selected row, selected item. Avoid: Color alone: a selected row also shows a mark that is not a color, in every theme,
   such as a check or ListRow's border.focus bar at its leading edge.

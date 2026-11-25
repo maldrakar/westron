@@ -220,11 +220,13 @@ struct AgentContextTests {
         }
     }
 
-    /// The token paths of the `color.…`, `space.…` and `typography.…` kind a text prints, such as
-    /// `color.category.<name>.fill`; not a link to a token page (`../tokens/color.md`) or a Swift accessor
-    /// (`.space.withinGroup`).
+    /// The token paths of the `color.…`, `space.…`, `typography.…`, `radius.…`, `stroke.…`, `opacity.…`, `motion.…` and
+    /// `shadow.…` kind a text prints, such as `color.category.<name>.fill`; not a link to a token page
+    /// (`../tokens/color.md`) or a Swift accessor (`.space.withinGroup`, `.radius.card`). `size.…` is left out: the cards
+    /// of sized controls name a size step beside its values in points.
     private func tokenPaths(_ text: String) -> [String] {
-        let pattern = try! NSRegularExpression(pattern: #"(?<![\w./-])(?:color|space|typography)(?:\.[\w<>-]+)+"#)
+        let groups = "color|space|typography|radius|stroke|opacity|motion|shadow"
+        let pattern = try! NSRegularExpression(pattern: #"(?<![\w./-])(?:"# + groups + #")(?:\.[\w<>-]+)+"#)
         return pattern.matches(in: text, range: NSRange(text.startIndex..., in: text)).compactMap {
             Range($0.range, in: text).map { String(text[$0]) }
         }
@@ -243,7 +245,12 @@ struct AgentContextTests {
         #expect(
             tokenPaths("filled with color.category.<name>.fill, padded space.100, in typography.body.regular.")
                 == ["color.category.<name>.fill", "space.100", "typography.body.regular"])
-        #expect(tokenPaths("a token of `typography` (`../tokens/typography.md`), `.space.withinGroup`") == [])
+        #expect(
+            tokenPaths("a rounded rectangle of radius.150, dimmed at opacity.disabled")
+                == ["radius.150", "opacity.disabled"])
+        #expect(
+            tokenPaths("a token of `typography` (`../tokens/typography.md`), `.space.withinGroup`, `.radius.card`")
+                == [])
     }
 
     @Test("a view with several slots shows the full call; a twin keeps its attribute")
@@ -294,6 +301,14 @@ struct AgentContextTests {
         // ListRow's leading and trailing slots by their bindings, as its title and second line.
         #expect(text.contains("the `title`, `subtitle`, `leading` and `trailing` of `ListRow`"))
         #expect(text.contains("the `label` of `Rule`"))
+        // The text card defers to the component's card on another role there; ListRow's card allows one.
+        #expect(text.contains("only where that component's card allows it"))
+        let row = unwrapped(try #require(cards.first { $0.contract.id == "list-row" }).markdown())
+        #expect(
+            row.contains(
+                "the others default to nothing. What a product puts in them takes the text role the component "
+                    + "draws there, with no `.textRole(_:)`; content that sets another role with "
+                    + "`.textRole(_:)` keeps it there."))
         // Only the card of the text role's option says it.
         let button = try #require(cards.first { $0.contract.id == "button" }).markdown()
         #expect(!button.contains("takes that role with no"))
