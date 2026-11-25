@@ -71,7 +71,8 @@ public enum ListRowInsertionEdge: String, CaseIterable, Sendable { case top, bot
 ## Slots
 
 `title`, `subtitle`, `leading` and `trailing`: each a `@ViewBuilder` closure named after it; `title` is the content
-every instance has, the others default to nothing.
+every instance has, the others default to nothing. What a product puts in them takes the text role the component draws
+there, with no `.textRole(_:)`; content that sets another role with `.textRole(_:)` keeps it there.
 
 ## States
 

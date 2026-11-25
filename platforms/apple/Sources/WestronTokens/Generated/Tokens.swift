@@ -100,7 +100,7 @@ extension Westron.Color {
         /// button, under the pointer: halfway between background.muted and muted-pressed-colored.
         ///
         /// Use for: destructive secondary button under the pointer. Avoid: A fill under text.primary: use
-        /// background.muted-hover, which darkens more.
+        /// background.muted-hover, which moves further towards its words.
         public static let mutedHoverColored = Westron.Color(
             name: "color.background.muted-hover-colored",
             light: Westron.RGB(hex: 0xE8ECF1),
@@ -113,7 +113,7 @@ extension Westron.Color {
         /// of every ramp, still reads on it, which is about step 5's tone (decisions/0012, 0013).
         ///
         /// Use for: pressed destructive secondary button. Avoid: A fill under text.primary: use
-        /// background.muted-pressed, which darkens more.
+        /// background.muted-pressed, which moves further towards its words.
         public static let mutedPressedColored = Westron.Color(
             name: "color.background.muted-pressed-colored",
             light: Westron.RGB(hex: 0xE5E9EE),

@@ -125,6 +125,8 @@ struct ListRowTests {
             "subtitle.font": ListRowMetrics.subtitleFont.name,
             "subtitle.color": ListRowMetrics.subtitleColor.name,
             "subtitle.gap": ListRowMetrics.subtitleGap.name,
+            "leading.font": ListRowMetrics.slotRole.name,
+            "trailing.font": ListRowMetrics.slotRole.name,
             "guide.color": ListRowMetrics.guideColor.name,
             "guide.width": "stroke.thin",
         ]

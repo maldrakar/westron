@@ -431,3 +431,25 @@ On macOS the glyphs are hidden alone, as Button's were before #131: there the em
 Button's value read twice, "Loading, Loading", through the progress indicator before its label, and hidden alone lists
 nothing under the pressable chip or a westron Button either (macOS 26.7, the same tests; `DecorativeGlyph` records
 the measurement).
+
+### Note of 2026-11-25: the hover and pressed steps in every theme (#170)
+
+The owner agreed on 2026-11-25 to correct the direction of these steps. The contract said that the fill "darkens a step"
+under the pointer and pressed, and the `unset` text of `reads` that the accent is "a step darker". The bindings are
+unchanged; the tokens they name are not darker in every theme:
+
+| Theme | `muted` → `muted-hover` → `muted-pressed` | `accent` → `accent-hover` → `accent-pressed` | `text.on-accent` |
+|---|---|---|---|
+| light | `#EBEEF4` → `#DEE1E7` → `#D1D4DA` | `#2863D7` → `#1C56C9` → `#0F4ABC` | `#FFFFFF` |
+| dark | `#22272D` → `#2C3037` → `#363B41` | `#2863D7` → `#1C56C9` → `#0F4ABC` | `#FFFFFF` |
+| light, high contrast | `#EBEEF4` → `#DEE1E7` → `#D1D4DA` | `#1651C3` → `#0844B6` → `#0038A5` | `#FFFFFF` |
+| dark, high contrast | `#22272D` → `#2C3037` → `#363B41` | `#6A9EFF` → `#7EACFF` → `#93B9FF` | `#101318` |
+
+The muted fill moves towards its label, `text.primary`, in every theme: darker in the light themes, lighter in the dark
+ones. The accent fill moves away from its words in every theme: darker in three, lighter in dark high contrast, where
+the accent is light and its words dark (design-language/02, "A filled control darkens as it is pressed", says so of dark
+high contrast). The description now says that, and the `reads` entry says it in words, without token paths, as the short
+card of the agent context prints it; the description keeps the token-level account. The table of "Already decided by the
+documents" above keeps its summary of the time. Taking the token paths out of the `reads` entry, beyond its "a step
+darker", was agreed on 2026-11-25 by the coordinating agent under the owner's delegation (decisions/0014, "Process"),
+pending the owner's review in the pull request, as for Checkbox and IconTile (#170).

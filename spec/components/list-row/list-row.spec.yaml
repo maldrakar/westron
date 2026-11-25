@@ -220,6 +220,8 @@ tokens:
   subtitle.font: typography.footnote.regular
   subtitle.color: color.text.secondary
   subtitle.gap: space.25
+  leading.font: typography.body.regular
+  trailing.font: typography.body.regular
   guide.color: color.border.guide
   guide.width: stroke.thin
 

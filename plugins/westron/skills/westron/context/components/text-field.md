@@ -56,10 +56,11 @@ from there. westron adds no argument for it.
   `s` as `m` and `l` as `m`.
 - `lines`, the system's `SwiftUI.Axis`: the values `single`, `multiple`; by default `single`. single is a field of one
   line, whose text scrolls sideways, such as a list's name; multiple is a field whose text wraps and which grows a line
-  at a time, such as a card's notes. framed draws single as a capsule and multiple as a rounded rectangle of radius.150,
-  its lines held off its top and bottom edges by a padding that, at the default text size, makes a field of one line as
-  tall as a single one of its size, and that does not grow with the text, as the minimum heights do not; inline draws
-  both alike. On Apple it is the system field's own axis (platforms.apple.systemOptions).
+  at a time, such as a card's notes. framed draws single as a capsule and multiple as a rounded rectangle, whose corners
+  do not cut into its lines as a capsule's ends would, its lines held off its top and bottom edges by a padding that, at
+  the default text size, makes a field of one line as tall as a single one of its size, and that does not grow with the
+  text, as the minimum heights do not; inline draws both alike. On Apple it is the system field's own axis
+  (platforms.apple.systemOptions).
 - `leadingIcon`, `Westron.Icon?`: a name of the icon registry (`../icons.md`); by default `nil`, no glyph. The glyph at
   the field's start, a name of the icon registry that names what the field is for, never an action, or none, which draws
   no glyph there and gives the text that room. A search field's magnifier. It is decoration and says nothing to

@@ -29,13 +29,15 @@ extension Text {
 
 ## Options
 
-- `role`, `Westron.TextRole`: a token of `typography` (`../tokens/typography.md`); no default. No default: every use
-  names its role. The values are the tokens under typography, by their path after it, heading.large to code.strong, so
-  the contract and the tokens cannot drift. A role is chosen by what the text is, never by its size; a product that
-  needs a size the roles do not have asks for a new role (design-language/03). What a product puts in a slot that a
-  westron component draws in a role of its own, a text or an icon, takes that role with no `.textRole(_:)`: the `label`
-  and `icon` of `Button`, the `label` and `icon` of `Chip`, the `title` and `subtitle` of `ListRow` and the `label` of
-  `Rule`; a call sets another role there only where that component's card allows it.
+- `role`, `Westron.TextRole`: a token of `typography` (`../tokens/typography.md`); no default. No default: every call of
+  the role names one. A text a component draws in a slot its contract binds to a role, such as a ListRow's title or a
+  Button's label, takes that role and needs no call. The values are the tokens under typography, by their path after it,
+  heading.large to code.strong, so the contract and the tokens cannot drift. A role is chosen by what the text is, never
+  by its size; a product that needs a size the roles do not have asks for a new role (design-language/03). What a
+  product puts in a slot that a westron component draws in a role of its own, a text or an icon, takes that role with no
+  `.textRole(_:)`: the `label` and `icon` of `Button`, the `label` and `icon` of `Chip`, the `title`, `subtitle`,
+  `leading` and `trailing` of `ListRow` and the `label` of `Rule`; a call sets another role there only where that
+  component's card allows it.
 
 ## Slots
 

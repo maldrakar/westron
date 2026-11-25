@@ -20,46 +20,47 @@ It is the platform's capsule at every variant and size, its ends round at any he
 text grows (design-language/04); icon-only is a circle. Every fill is flat and opaque, in westron's colors, with no
 glass or material, but for one exception, a floating secondary from OS 26 (below). primary is filled with the accent,
 secondary with color.background.muted and no outline, tertiary has no fill. Under the pointer and pressed, secondary's
-fill darkens towards its words, a step each; with the destructive role it darkens only as far as the danger words still
-read, which is much less (the owner's decision of 2026-11-20). In the high-contrast themes a secondary button also draws
-an outline, color.border.strong (color.status.danger.border with the destructive role) at stroke.thin, over its fill, in
-every state: the muted fill alone sets it off from the canvas by about 1.1:1, and a control a person must find meets the
-non-text target there (design-language/02, 08). The bindings below cannot say this, since a case has no contrast key, so
-this description is the contract for it, as Surface's is for its line. The icon beside the label is the symbol's small
-scale in the label's text role, its baseline on the label's first text baseline, not centered on it. Hover and pressed
-tint the container in motion.fade and motion.press, and a press also scales it down to 98 %, which Reduce Motion drops
-(chapter 05). Disabled draws the whole button at opacity.disabled, with no colors of its own. A disabled or loading
-button never enters hover or pressed: its fill stays as at rest and it does not scale, on every platform;
-container.background's leading cases bind that. Loading puts a progress indicator in the icon's place, and in icon-only
-in place of the icon, so the width does not change; when there is no icon, the indicator goes before the label and the
-button widens by the indicator and the gap, so the label is neither truncated nor hidden (the owner's decision of
-2026-11-17, decisions/0001, P13). The label stays, presses are not accepted, and the button does not dim. The button is
-not meant for a width smaller than its label's longest word: the label wraps only between words, and the product
-provides the room, by stacking buttons, giving the button the full width, a shorter label, or icon-only. In a narrower
-container the label breaks inside a word; that is unsupported, not a behavior of this contract (decisions/0001). A
-floating button stands over content, outside any bar, such as a way back and a "…" over a list or a round "+" in a
-screen's corner (decisions/0015). A floating secondary is the one exception to the flat fills: from iOS 26, macOS 26 and
-watchOS 26 it stands on the system's glass, regular, in the button's capsule, with no fill, outline, shadow, hover or
-pressed tint and no press scale of westron's, since the glass answers the pointer and the press itself. The glass is
-laid after the button's content, padding, frame and background, and the disabled opacity outside it, so a disabled
-button dims its glass with it. The glass answers a touch or the pointer (it is interactive) only while the button takes
-presses: not while disabled or loading. Before those versions it stands on color.background.surface and casts
-shadow.overlay, tinted and scaled under the pointer and pressed as the bindings say, and draws secondary's outline in
-the high-contrast themes. A floating primary, destructive or not, keeps its opaque fill, its tints and its scale on
-every version and casts shadow.overlay. The glass adapts its luminosity to what passes beneath it and follows Reduce
-Transparency, Increase Contrast and the person's choice of the glass's look by itself, while the label's and the icon's
-colors, westron's, follow the theme, not the glass. So the contract promises no contrast ratio for text.primary on
-glass: what lies beneath is the product's content, which tokens do not name. Over content of the tone opposite to the
-theme, such as a light photo or map under a floating button in the dark theme, or a dark one in the light theme, the
-label can fall below 4.5:1: measured 3.8:1 in the dark theme over a wide light ground on iOS 26.3. That is a recorded
-limitation, not a defect: the owner kept westron's colors on glass rather than the system's adaptive foreground
-(decisions/0015, Q5, 2026-11-23). Over content whose tone it does not control, a product uses a floating primary, whose
-fill is opaque, or keeps the content beneath in the theme's tone. The danger words read too faintly on glass (measured
-2.8 to 4.2:1 over a busy ground in the standard themes, decisions/0015), so a floating secondary does not take the
-destructive role. Two combinations are forbidden, each by a constraint below: a floating tertiary, which has no ground
-to float on, and a floating destructive secondary. A platform that is given one anyway draws the button that does not
-float, the same variant and role in the layout's look, with no warning at run time (spec/conventions.md, open question
-3). A button in a system bar, toolbar or tab bar never floats: the bar draws its own glass (design-language/09).
+fill moves towards its words, a step each, darker in the light themes and lighter in the dark ones; with the destructive
+role it moves only as far as the danger words still read, which is much less (the owner's decision of 2026-11-20). In
+the high-contrast themes a secondary button also draws an outline, color.border.strong (color.status.danger.border with
+the destructive role) at stroke.thin, over its fill, in every state: the muted fill alone sets it off from the canvas by
+about 1.1:1, and a control a person must find meets the non-text target there (design-language/02, 08). The bindings
+below cannot say this, since a case has no contrast key, so this description is the contract for it, as Surface's is for
+its line. The icon beside the label is the symbol's small scale in the label's text role, its baseline on the label's
+first text baseline, not centered on it. Hover and pressed tint the container in motion.fade and motion.press, and a
+press also scales it down to 98 %, which Reduce Motion drops (chapter 05). Disabled draws the whole button at
+opacity.disabled, with no colors of its own. A disabled or loading button never enters hover or pressed: its fill stays
+as at rest and it does not scale, on every platform; container.background's leading cases bind that. Loading puts a
+progress indicator in the icon's place, and in icon-only in place of the icon, so the width does not change; when there
+is no icon, the indicator goes before the label and the button widens by the indicator and the gap, so the label is
+neither truncated nor hidden (the owner's decision of 2026-11-17, decisions/0001, P13). The label stays, presses are not
+accepted, and the button does not dim. The button is not meant for a width smaller than its label's longest word: the
+label wraps only between words, and the product provides the room, by stacking buttons, giving the button the full
+width, a shorter label, or icon-only. In a narrower container the label breaks inside a word; that is unsupported, not a
+behavior of this contract (decisions/0001). A floating button stands over content, outside any bar, such as a way back
+and a "…" over a list or a round "+" in a screen's corner (decisions/0015). A floating secondary is the one exception to
+the flat fills: from iOS 26, macOS 26 and watchOS 26 it stands on the system's glass, regular, in the button's capsule,
+with no fill, outline, shadow, hover or pressed tint and no press scale of westron's, since the glass answers the
+pointer and the press itself. The glass is laid after the button's content, padding, frame and background, and the
+disabled opacity outside it, so a disabled button dims its glass with it. The glass answers a touch or the pointer (it
+is interactive) only while the button takes presses: not while disabled or loading. Before those versions it stands on
+color.background.surface and casts shadow.overlay, tinted and scaled under the pointer and pressed as the bindings say,
+and draws secondary's outline in the high-contrast themes. A floating primary, destructive or not, keeps its opaque
+fill, its tints and its scale on every version and casts shadow.overlay. The glass adapts its luminosity to what passes
+beneath it and follows Reduce Transparency, Increase Contrast and the person's choice of the glass's look by itself,
+while the label's and the icon's colors, westron's, follow the theme, not the glass. So the contract promises no
+contrast ratio for text.primary on glass: what lies beneath is the product's content, which tokens do not name. Over
+content of the tone opposite to the theme, such as a light photo or map under a floating button in the dark theme, or a
+dark one in the light theme, the label can fall below 4.5:1: measured 3.8:1 in the dark theme over a wide light ground
+on iOS 26.3. That is a recorded limitation, not a defect: the owner kept westron's colors on glass rather than the
+system's adaptive foreground (decisions/0015, Q5, 2026-11-23). Over content whose tone it does not control, a product
+uses a floating primary, whose fill is opaque, or keeps the content beneath in the theme's tone. The danger words read
+too faintly on glass (measured 2.8 to 4.2:1 over a busy ground in the standard themes, decisions/0015), so a floating
+secondary does not take the destructive role. Two combinations are forbidden, each by a constraint below: a floating
+tertiary, which has no ground to float on, and a floating destructive secondary. A platform that is given one anyway
+draws the button that does not float, the same variant and role in the layout's look, with no warning at run time
+(spec/conventions.md, open question 3). A button in a system bar, toolbar or tab bar never floats: the bar draws its own
+glass (design-language/09).
 
 ## On Apple
 
