@@ -55,7 +55,9 @@ import Foundation
 ///   the API its contract gives stands under exactly its `#if !os(watchOS)`, and nothing else does.
 ///
 /// Each context setting of a contract that gives API (`context`, spec/conventions.md, "Context a component sets") adds
-/// its hand-written modifier on `View`: `public func disclosureAlignsLeaves(_: Bool = true) -> some View`.
+/// its hand-written modifier on `View`: `public func disclosureAlignsLeaves(_: Bool = true) -> some View`. Each value of
+/// westron's shared context that such contracts read (`reads`, "Context a style reads") adds its one shared modifier,
+/// hand-written, as a state the system lacks adds one: `public func category(_: Westron.Category?) -> some View`.
 ///
 /// A declaration marked `// westron-api-parity: allow <reason>`, on its line or a comment line just above, is a
 /// deliberate exception to all but the first; expected API is always checked. The marker is this lint's own, so the
@@ -100,14 +102,6 @@ public enum APIParity {
         "Label": ["init"],
         "Westron.Theme": ["init"],
     ]
-
-    /// The reviewed adapters outside `adaptersFile`, by file relative to `defaultSources`, then as `adapters` lists
-    /// them, held to the same rule: each takes a `Westron.*` value. `Category.swift` (#31) declares
-    /// `View.category(_: Westron.Category?)`, the list color of a subtree, which a westron style reads where its
-    /// contract takes the list's color from the context, as the checked Checkbox does. It is to westron's controls what
-    /// `View.tint(_: Westron.Color)` is to the system's, and no contract option can give it: the color is the
-    /// context's, not one control's (spec/conventions.md, "Context a style reads").
-    public static let otherAdapters: [String: [String: Set<String>]] = ["Category.swift": ["View": ["category"]]]
 
     /// The one attribute a twin on the base may carry beyond `harmlessExtras`: `@_disfavoredOverload`, so that on the
     /// base itself the call takes the modifier on `View`, which reads the environment, and the twin only where nothing
@@ -304,7 +298,17 @@ public enum APIParity {
     static func expected(_ contracts: [Contract]) -> Expected {
         var expected = Expected()
         var stateOwners: [(state: String, contracts: [Contract])] = []
+        var readers: [(value: String, contracts: [Contract])] = []
         for item in contracts where item.hasAPI {
+            // Each value of the shared context it reads, whose one modifier its readers share
+            // (spec/conventions.md, "Context a style reads").
+            for value in item.contract.reads {
+                if let index = readers.firstIndex(where: { $0.value == value }) {
+                    readers[index].contracts.append(item)
+                } else {
+                    readers.append((value, [item]))
+                }
+            }
             // Each context setting's modifier, hand-written (spec/conventions.md, "Context a component sets").
             for setting in item.contract.context {
                 expected.functions.append(
@@ -443,6 +447,22 @@ public enum APIParity {
                     what: "the state modifier of \(state)", contracts: owners, name: state,
                     parameters: [.init(label: "_", type: "Bool")], types: [],
                     line: (owners[0].source, owners[0].line(of: "states"))))
+        }
+        for (value, owners) in readers {
+            guard let parameter = AppleComponents.contextValues[value] else {
+                for owner in owners {
+                    expected.problems.append(
+                        Problem(
+                            file: owner.source, line: owner.line(of: "reads"),
+                            "the lint cannot derive the modifier of the context value \(value), which westron's shared "
+                                + "context does not have (AppleComponents.contextValues); spec check reports it too"))
+                }
+                continue
+            }
+            expected.functions.append(
+                ExpectedFunction(
+                    what: "the shared context modifier of \(value)", contracts: owners, name: value,
+                    parameters: [parameter], types: [], line: (owners[0].source, owners[0].line(of: "reads"))))
         }
         return expected
     }
@@ -742,11 +762,10 @@ public enum APIParity {
 
         let root = sourceRoot.hasSuffix("/") ? sourceRoot : sourceRoot + "/"
         func relative(_ file: String) -> String { file.hasPrefix(root) ? String(file.dropFirst(root.count)) : file }
-        /// One of the reviewed adapters in `adaptersFile` or `otherAdapters`.
+        /// One of the reviewed adapters in `adaptersFile`.
         func isAdapter(_ d: SwiftDeclarations.Declaration) -> Bool {
-            let file = relative(d.file)
-            guard let listed = file == adaptersFile ? adapters : otherAdapters[file], d.inExtension, !d.isStatic,
-                d.kind == .func || d.kind == .initializer, listed[d.container]?.contains(d.name) == true
+            guard relative(d.file) == adaptersFile, d.inExtension, !d.isStatic,
+                d.kind == .func || d.kind == .initializer, adapters[d.container]?.contains(d.name) == true
             else { return false }
             return d.container.hasPrefix("Westron.") || d.parameters.contains { $0.type.hasPrefix("Westron.") }
         }
@@ -793,8 +812,8 @@ public enum APIParity {
                 problem(
                     d,
                     "\(what): a public modifier on View that no contract gives: one is a component's style overload, "
-                        + "a state modifier, or a reviewed adapter in \(adaptersFile) (APIParity.adapters) or in "
-                        + "\(otherAdapters.keys.sorted().joined(separator: ", ")) (APIParity.otherAdapters); \(allow)")
+                        + "a state modifier, a context's modifier, or a reviewed adapter in \(adaptersFile) "
+                        + "(APIParity.adapters); \(allow)")
             } else if generatedTokenFiles.contains(file) {
                 guard (d.kind.isType || d.kind == .typealias) && d.container.isEmpty else { continue }
                 problem(

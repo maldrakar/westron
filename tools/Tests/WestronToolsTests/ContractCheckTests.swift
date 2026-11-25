@@ -168,6 +168,34 @@ struct ContractCheckTests {
                 "options.variant.defualt", "unknown key"))
     }
 
+    @Test("the schema checks the context a component reads: a shared value's name, what it draws with it and without")
+    func reads() throws {
+        func reading(_ entry: String) -> String {
+            replacing("\naccessibility:", with: "\nreads:\n" + entry + "accessibility:")
+        }
+        let valid = reading(
+            "  category:\n    description: In a list's color, the fill is the list's.\n    unset: the accent.\n")
+        #expect(contractProblems(valid) == [])
+        #expect(try ComponentContract(yaml: valid, source: contractSource).reads == ["category"])
+        // Only a value of westron's shared context, which its one shared modifier sets.
+        #expect(
+            has(
+                contractProblems(reading("  alignsLeaves:\n    description: A leaf.\n    unset: no cell.\n")),
+                "reads.alignsLeaves", "is not one of the allowed values: \"category\""))
+        // What it draws without the value is required, and nothing else is allowed.
+        #expect(
+            has(
+                contractProblems(reading("  category:\n    description: In a list's color.\n")), "reads.category",
+                "'unset' is missing"))
+        #expect(
+            has(
+                contractProblems(
+                    reading("  category:\n    description: In a list's color.\n    unset: the accent.\n    from: x\n")),
+                "reads.category.from", "unknown key"))
+        // An empty block says nothing.
+        #expect(has(contractProblems(replacing("\naccessibility:", with: "\nreads: {}\naccessibility:")), "reads", ""))
+    }
+
     @Test("the schema checks options: an enum has values and may have a default name, a bool a boolean default")
     func optionShapes() {
         // Without a default, every use names a value, as the SwiftUI variant does (spec/conventions.md).

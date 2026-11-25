@@ -37,10 +37,12 @@ generated with; where the product's pinned WestronUI differs, the package's decl
    its value.
 3. **A system control with westron's style before a custom view.** Write the system control and add westron's style:
    `Button { … } label: { Label("Move", icon: .tray) }.buttonStyle(.secondary)`, `Toggle(…).toggleStyle(.check)`,
-   `TextField(…).textFieldStyle(.framed)`. No wrapper types; never redraw a control westron styles, and never restyle
-   a westron component from outside (no `.font`, `.foregroundStyle`, `.background` or `.clipShape` on it to change
-   what its style draws). What a card leaves to the product, such as a slot's content or a title's text role, is
-   the product's.
+   `TextField(…).textFieldStyle(.framed)`. No wrapper types, and never redraw a control westron styles. What a
+   westron style or view draws is its own: no `.font`, `.foregroundStyle`, `.background` or `.clipShape` to change a
+   button's fill, a check's disc or a tile's colors. What a card or its details file says comes from the context is
+   set there, the way it says: an `Icon`'s color with `.foregroundStyle(.text.secondary)` around it and its size
+   with a text role or `.imageScale(.small)`, a text's color with `.foregroundStyle`, a list's color with
+   `.category(_:)`, a slot's content and a title's role where the card leaves them to the product.
 4. **The container is the system's; its content is westron's.** Navigation stacks and split views, navigation bars,
    toolbars and tab bars, `.sheet`, popovers, `.alert` and `.confirmationDialog`, `Menu` and `.contextMenu`,
    `.swipeActions`, `.searchable`, `ContentUnavailableView`, scrolling and the system's focus ring: write them as

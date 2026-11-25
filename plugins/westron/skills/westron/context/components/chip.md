@@ -18,6 +18,9 @@ Button(…)
     .buttonStyle(.chip)
 Label(…)
     .labelStyle(.chip)
+Toggle(…)
+    .toggleStyle(.chip)
+    .category(.blue)
 ```
 
 What WestronUI declares for it:
@@ -27,6 +30,7 @@ extension View {
     public func toggleStyle(_: ChipVariant) -> some View
     public func buttonStyle(_: ChipVariant) -> some View
     public func labelStyle(_: ChipVariant) -> some View
+    public func category(_: Westron.Category?) -> some View
 }
 ```
 
@@ -37,6 +41,14 @@ color or a font:
 ```swift
 public enum ChipVariant: String, CaseIterable, Sendable { case chip }
 ```
+
+It reads `category` from its context: `.category(_:)` on the component itself, or once on any view around it, such as a
+row or a list, sets it for every westron component below that reads it, and the closest setting wins. In a list's color,
+a checked chip, the selectable form's, is filled with color.category.<name>.fill, keeps that fill under the pointer and
+pressed, and draws its label, icon and check in color.category.<name>.on-fill. An unchecked chip, and the pressable and
+static forms, which are never checked, do not change. Without it, a checked chip is filled with the accent,
+color.background.accent, a step darker under the pointer and pressed, and draws its label, icon and check in
+color.text.on-accent.
 
 ## Options
 

@@ -49,6 +49,14 @@ options:
 
 slots: [label]
 
+reads:
+  category:
+    description: >-
+      In a list's color, the tile is filled with color.category.<name>.fill and its glyph drawn in
+      color.category.<name>.on-fill.
+    unset: >-
+      the tile is neutral, color.background.muted with its glyph in color.text.secondary, and never takes the accent.
+
 tokens:
   tile.background: color.background.muted
   glyph.color: color.text.secondary

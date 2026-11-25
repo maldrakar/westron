@@ -84,6 +84,16 @@ forms:
       states: {}
     description: A value shown and not acted on; its label is read as text.
 
+reads:
+  category:
+    description: >-
+      In a list's color, a checked chip, the selectable form's, is filled with color.category.<name>.fill, keeps that
+      fill under the pointer and pressed, and draws its label, icon and check in color.category.<name>.on-fill. An
+      unchecked chip, and the pressable and static forms, which are never checked, do not change.
+    unset: >-
+      a checked chip is filled with the accent, color.background.accent, a step darker under the pointer and pressed,
+      and draws its label, icon and check in color.text.on-accent.
+
 tokens:
   container.height: size.control.s
   container.shape: capsule

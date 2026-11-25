@@ -17,6 +17,11 @@ struct ComponentCard {
     let exampleIcon: String
     /// A text role's member, `body.regular`, for examples of a role.
     let exampleTextRole: String
+    /// A list color's case, `amber`, for examples of `Westron.Category`; empty where the tokens have none.
+    var exampleCategory = ""
+    /// The other components that draw a slot of theirs in a text role their contract binds there, each with those
+    /// slots in the contract's order: the text a product puts there takes that role with no call.
+    var textRoleSlots: [(component: String, slots: [String])] = []
 
     /// `ListRow` for `list-row`.
     var component: String { AppleComponents.typeName(contract.id) }
@@ -149,6 +154,8 @@ struct ComponentCard {
         case AppleComponents.Own.actionType: return "{ … }"
         case "Binding<Bool>": return "$isOn"
         case AppleTokenModel.textRoleType: return "." + exampleTextRole
+        case AppleComponents.contextValues["category"]?.type ?? "" where !exampleCategory.isEmpty:
+            return "." + exampleCategory
         case "Bool": return "true"
         default: return "…"
         }
@@ -177,7 +184,10 @@ struct ComponentCard {
         if let apple = contract.apple, apple.strategy == SystemStyles.extensionStrategy,
             let control = apple.base?.split(separator: ".").last
         {
-            for function in functions where function.extends == "View" && stateModifier(function.name) == nil {
+            for function in functions
+            where function.extends == "View" && stateModifier(function.name) == nil
+                && !readModifiers.contains(where: { $0.name == function.name })
+            {
                 let arguments = function.parameters.map { $0.defaultValue ?? example($0) }
                 out.append(["\(control)(\"…\")", "    .\(function.name)(\(arguments.joined(separator: ", ")))"])
             }
@@ -211,6 +221,12 @@ struct ComponentCard {
                 }
             }
         }
+        // The context it reads, on the first call: `IconTile(.tray).category(.amber)`.
+        if let call = out.first {
+            for modifier in readModifiers {
+                out.append(call + ["    .\(modifier.name)(\(requiredArguments(modifier.parameters).joined()))"])
+            }
+        }
         for mark in markModifiers {
             out.append(["….\(mark.name)(\(requiredArguments(mark.parameters).joined(separator: ", ")))"])
         }
@@ -238,6 +254,13 @@ struct ComponentCard {
     var contextModifiers: [APIParity.ExpectedFunction] {
         contract.context.compactMap { setting in
             functions.first { $0.name == AppleComponents.contextModifier(setting, of: contract.id) }
+        }
+    }
+
+    /// The shared modifiers of the context values the contract reads, `.category(_:)`, as the API declares them.
+    var readModifiers: [APIParity.ExpectedFunction] {
+        contract.reads.compactMap { value in
+            functions.first { $0.name == value && $0.extends == "View" && stateModifier($0.name) == nil }
         }
     }
 
@@ -412,6 +435,16 @@ struct ComponentCard {
                         + "its models keep these values, never a size, a color or a font:")
                 + ["", "```swift"] + vocabulary + ["```"]
         }
+        for modifier in readModifiers {
+            let entry = document["reads"]?[modifier.name]
+            var text =
+                "It reads `\(modifier.name)` from its context: `.\(modifier.name)(_:)` on the component itself, or "
+                + "once on any view around it, such as a row or a list, sets it for every westron component below "
+                + "that reads it, and the closest setting wins."
+            if let description = entry?["description"]?.string { text += " " + usable(description) }
+            if let unset = entry?["unset"]?.string { text += " Without it, " + usable(unset) }
+            out += [""] + ContextMarkdown.wrap(text)
+        }
         if let apple = contract.apple, !apple.unavailable.isEmpty, let condition = apple.availabilityCondition {
             let names = apple.unavailable.compactMap { AppleComponents.osNames[$0] }
             out +=
@@ -496,10 +529,26 @@ struct ComponentCard {
                     + (optional ? "by default `nil`, no glyph." : "every use names one.")
             }
             if let description = option.description { text += " " + usable(description) }
+            text += textRoleSlotsNote(option)
             text += restrictions(option)
             out += ContextMarkdown.item(text)
         }
         return out
+    }
+
+    /// For the option of text roles on a system view, the slots other components draw in a role their contracts bind
+    /// there: a text a product puts in one takes that role with no call of its own, so "every use" is every call.
+    private func textRoleSlotsNote(_ option: ComponentContract.Option) -> String {
+        guard case .tokenGroup(let group, _) = option.kind, group == AppleTokenModel.textRoleGroup,
+            contract.apple?.strategy == SystemStyles.extensionStrategy, !textRoleSlots.isEmpty,
+            let modifier = functions.first(where: { $0.extends == "View" && stateModifier($0.name) == nil })?.name
+        else { return "" }
+        let slots = textRoleSlots.map { entry in
+            "the " + ContextMarkdown.list(entry.slots.map { "`\($0)`" }) + " of `\(entry.component)`"
+        }
+        return " What a product puts in a slot that a westron component draws in a role of its own, a text or an "
+            + "icon, takes that role with no `.\(modifier)(_:)`: " + ContextMarkdown.list(slots)
+            + "; a call sets another role there only where that component's card allows it."
     }
 
     /// What each Apple OS draws for the values it does not offer, from the contract's `platforms` block.

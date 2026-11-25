@@ -163,8 +163,8 @@ value or an opacity laid on a token to make a new color. The design language: `.
 
 A list's color is a `Westron.Category`, kept by its name and read back with `Westron.Category(rawValue: list.color)`:
 `blue`, `sky`, `teal`, `emerald`, `green`, `olive`, `amber`, `orange`, `red`, `pink`, `violet`, `indigo`.
-`.category(_:)` on an ancestor draws the westron controls that take a list's color in it, such as a checked Checkbox and
-an IconTile; nil keeps each control's own default. A product's own drawing reads a role of the category, a
+`.category(_:)` on a control or on any view around it draws in that color the westron controls that read it, whose cards
+show it in their call; nil keeps each control's own default. A product's own drawing reads a role of the category, a
 `Westron.Color`, by what the call draws: `.foregroundStyle(category.text)` for text, `.background(category.background)`
 for a ground. The roles:
 

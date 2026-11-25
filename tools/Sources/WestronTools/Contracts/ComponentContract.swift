@@ -221,6 +221,9 @@ public struct ComponentContract: Equatable, Sendable {
     public let marks: [Mark]
     /// The names of its context settings, bools a product sets on an ancestor (`context`), in the contract's order.
     public let context: [String]
+    /// The values of westron's shared context it reads (`reads`), each set by the shared modifier named after it, in
+    /// the contract's order: `category`, a list's color (spec/conventions.md, "Context a style reads").
+    public let reads: [String]
     /// `accessibility.intents`: what a person does with the component.
     public let intents: [String]
     /// The states some case of a token binding names in its `when` (`state: pressed`), in the contract's order of
@@ -237,9 +240,10 @@ public struct ComponentContract: Equatable, Sendable {
         id: String, status: String, options: [Option], states: [String], apple: Apple?,
         constraints: [Constraint] = [], boundStates: [String]? = nil, slots: [String] = [],
         accessibilityLabel: String? = nil, hiddenLabel: Bool = false, forms: [Form] = [], marks: [Mark] = [],
-        intents: [String] = [], context: [String] = []
+        intents: [String] = [], context: [String] = [], reads: [String] = []
     ) {
         self.context = context
+        self.reads = reads
         self.forms = forms
         self.marks = marks
         self.intents = intents
@@ -362,7 +366,8 @@ public struct ComponentContract: Equatable, Sendable {
             slots: document["slots"]?.elements?.compactMap(\.string) ?? [],
             accessibilityLabel: document["accessibility"]?["label"]?.string,
             hiddenLabel: document["accessibility"]?["hiddenLabel"] == .bool(true), forms: forms, marks: marks,
-            intents: intents, context: (document["context"]?.members ?? []).map(\.key))
+            intents: intents, context: (document["context"]?.members ?? []).map(\.key),
+            reads: (document["reads"]?.members ?? []).map(\.key))
     }
 
     /// One option, or one parameter of a mark, which takes an option's shape.

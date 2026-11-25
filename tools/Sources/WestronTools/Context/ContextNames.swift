@@ -6,9 +6,10 @@ import Foundation
 ///
 /// Prose is written as a template whose placeholders name what they mean:
 /// - `{token:color.text.primary}` is the token's Swift member, `text.primary` (`AppleTokenModel`);
-/// - `{adapter:View.foregroundStyle}` is a reviewed adapter of `TokenAdapters.swift` or `Category.swift`
-///   (`APIParity.adapters`, `APIParity.otherAdapters`), written as its name;
-/// - `{api:textRole}` is a function of a contract's API (`APIParity.expected`), written as its name;
+/// - `{adapter:View.foregroundStyle}` is a reviewed adapter of `TokenAdapters.swift` (`APIParity.adapters`), written
+///   as its name;
+/// - `{api:textRole}` is a function of a contract's API (`APIParity.expected`), written as its name, a context's
+///   shared modifier too (`{api:category}`);
 /// - `{category:text}` is a role of the list colors, `{icon:fallback}` and `{icon:systemName}` the icon API's members
 ///   (`AppleIcons`).
 ///
@@ -82,8 +83,7 @@ struct ContextNames {
         case .adapter:
             let parts = name.split(separator: ".", maxSplits: 1).map(String.init)
             guard parts.count == 2 else { throw missing }
-            let other = APIParity.otherAdapters.values.contains { $0[parts[0]]?.contains(parts[1]) == true }
-            guard APIParity.adapters[parts[0]]?.contains(parts[1]) == true || other else { throw missing }
+            guard APIParity.adapters[parts[0]]?.contains(parts[1]) == true else { throw missing }
             return parts[1]
         case .api:
             guard functions.contains(name) else { throw missing }

@@ -103,7 +103,9 @@ public struct AgentContext: Generator {
     static func files(_ sources: Sources, tokens: AppleTokenModel, conventionsSource: String = conventionsFile) throws
         -> [GeneratedFile]
     {
-        let cards = try Self.cards(sources, textRoles: tokens.textRoles.map { AppleTokensSwift.reference($0.members) })
+        let cards = try Self.cards(
+            sources, textRoles: tokens.textRoles.map { AppleTokensSwift.reference($0.members) },
+            categories: tokens.categories?.categories.map(\.caseName) ?? [])
         let names = ContextNames(model: tokens, functions: Set(cards.first?.expected.functions.map(\.name) ?? []))
         let tokenPages = try ContextTokens.pages(tokens, names: names)
         var map: [String: String] = [:]
@@ -199,8 +201,10 @@ public struct AgentContext: Generator {
     /// The text role an example call names, where the model has it.
     static let exampleTextRole = "body.regular"
 
-    /// - Parameter textRoles: the text roles' members, `body.regular`, for examples.
-    static func cards(_ sources: Sources, textRoles: [String]) throws -> [ComponentCard] {
+    /// - Parameters:
+    ///   - textRoles: the text roles' members, `body.regular`, for examples.
+    ///   - categories: the list colors' cases, `amber`, for examples.
+    static func cards(_ sources: Sources, textRoles: [String], categories: [String] = []) throws -> [ComponentCard] {
         var lint: [APIParity.Contract] = []
         var documents: [JSON] = []
         for entry in sources.contracts {
@@ -213,11 +217,40 @@ public struct AgentContext: Generator {
         let expected = APIParity.expected(lint)
         let icon = sources.icons.icons.first?.name ?? sources.icons.fallback
         let role = textRoles.contains(Self.exampleTextRole) ? Self.exampleTextRole : textRoles.first ?? ""
+        let slots: [(component: String, slots: [String])] = zip(lint, documents).compactMap { item, document in
+            textRoleSlots(item.contract, document).map {
+                (component: AppleComponents.typeName(item.contract.id), slots: $0)
+            }
+        }
         return zip(lint, documents).map { item, document in
             ComponentCard(
                 contract: item.contract, document: document, source: item.source, expected: expected,
-                exampleIcon: icon, exampleTextRole: role)
+                exampleIcon: icon, exampleTextRole: role, exampleCategory: categories.first ?? "",
+                textRoleSlots: slots.filter { $0.component != AppleComponents.typeName(item.contract.id) })
         }
+    }
+
+    /// The slots a contract binds to text roles, `label.font: typography.body.strong`: every token a binding
+    /// `<slot>.<property>` gives, in any value or case, is one of `typography`. Nil when it binds none.
+    static func textRoleSlots(_ contract: ComponentContract, _ document: JSON) -> [String]? {
+        func tokens(_ value: JSON) -> [String] {
+            if let token = value.string { return [token] }
+            let cases = value["cases"]?.elements?.compactMap { $0["token"] } ?? []
+            if value["token"] != nil || !cases.isEmpty {
+                return ([value["token"]].compactMap { $0 } + cases).compactMap(\.string)
+            }
+            return (value.members ?? []).compactMap(\.value.string)
+        }
+        let prefix = AppleTokenModel.textRoleGroup + "."
+        var slots: [String] = []
+        for binding in document["tokens"]?.members ?? [] {
+            guard let part = binding.key.split(separator: ".").first.map(String.init), contract.slots.contains(part),
+                !slots.contains(part)
+            else { continue }
+            let bound = tokens(binding.value)
+            if !bound.isEmpty, bound.allSatisfy({ $0.hasPrefix(prefix) }) { slots.append(part) }
+        }
+        return slots.isEmpty ? nil : contract.slots.filter(slots.contains)
     }
 
     // MARK: - The index

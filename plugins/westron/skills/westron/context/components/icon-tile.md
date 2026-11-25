@@ -15,6 +15,8 @@ row, a screen header, a picker and the card a drag carries, and alone above the 
 ```swift
 IconTile(.tray)
 IconTile(.tray, label: "…")
+IconTile(.tray)
+    .category(.blue)
 ```
 
 What WestronUI declares for it:
@@ -26,7 +28,15 @@ public struct IconTile: View {
     @_disfavoredOverload public init<S: StringProtocol>(_: Westron.Icon, label: S)
     public var body: some View
 }
+extension View {
+    public func category(_: Westron.Category?) -> some View
+}
 ```
+
+It reads `category` from its context: `.category(_:)` on the component itself, or once on any view around it, such as a
+row or a list, sets it for every westron component below that reads it, and the closest setting wins. In a list's color,
+the tile is filled with color.category.<name>.fill and its glyph drawn in color.category.<name>.on-fill. Without it, the
+tile is neutral, color.background.muted with its glyph in color.text.secondary, and never takes the accent.
 
 The option `scale` is the system's own `SwiftUI.Image.Scale`: the product sets it where SwiftUI takes it, and westron
 reads it from there. westron adds no argument for it.
