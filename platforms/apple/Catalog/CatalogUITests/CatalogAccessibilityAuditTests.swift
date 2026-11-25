@@ -825,6 +825,8 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         var description: String? = nil
         /// The configuration's theme it applies in; `nil` for both.
         var appearance: Configuration.Appearance? = nil
+        /// The configuration's `-WestronDynamicType` size it applies at; `nil` at every size, the system's included.
+        var dynamicType: String? = nil
         /// The element's accessibility value it must have, if any.
         var value: String? = nil
         /// Whether the element must be enabled, if that matters: `false` for a disabled control's.
@@ -846,7 +848,8 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
 
         init(
             _ scope: Scope, type: XCUIAccessibilityAuditType, reason: String, description: String? = nil,
-            appearance: Configuration.Appearance? = nil, value: String? = nil, enabled: Bool? = nil,
+            appearance: Configuration.Appearance? = nil, dynamicType: String? = nil, value: String? = nil,
+            enabled: Bool? = nil,
             detail: String? = nil, underKeyboard: Bool = false, elementType: XCUIElement.ElementType? = nil,
             maxWidth: CGFloat? = nil, textUnderStatusBar: Bool = false,
             label: @escaping @Sendable (String?) -> Bool
@@ -858,6 +861,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             self.reason = reason
             self.description = description
             self.appearance = appearance
+            self.dynamicType = dynamicType
             self.value = value
             self.enabled = enabled
             self.detail = detail
@@ -875,6 +879,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             guard issue.auditType == type else { return false }
             if let description, issue.compactDescription != description { return false }
             if let appearance, configuration.appearance != appearance { return false }
+            if let dynamicType, configuration.dynamicType != dynamicType { return false }
             // A value as text: iOS gives a switch's as a string, macOS a checkbox's as a number.
             if let value, issue.element?.value.map({ "\($0)" }) != value { return false }
             if let enabled, issue.element?.isEnabled != enabled { return false }
@@ -1059,17 +1064,18 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                 .entry("choice-list-sheet"), type: .contrast,
                 reason: "a labelled Rule's line inside a row-wide frame", elementType: .staticText
             ) { ["WORK", "PERSONAL"].contains($0 ?? "") },
-            // - "Contrast failed" at accessibility5 alone on the two rows whose tile has a light ground, "Top level"
-            //   (the neutral tile, background.muted) and "Website" (amber's fill): at that size the tile is a large
-            //   part of the row's frame, and the audit, which reports no colors, is taken to measure that ground on
-            //   the canvas, which IconTile's contract holds to no contrast minimum; the glyph carries the tile's
-            //   meaning, text.secondary on background.muted 4.74:1 and amber's on-fill on its fill 9.48:1 and more.
-            //   The rows with a darker tile (blue, violet, teal, orange, green, pink), the same two rows at the
-            //   default size and in the other themes are not reported (measured on iOS 26.3, 2026-11-25). Only those
-            //   two enabled rows in the light theme match.
+            // - "Contrast failed" at accessibility5 alone (`testAccessibilityDynamicType`) on the two rows whose tile
+            //   has a light ground, "Top level" (the neutral tile, background.muted) and "Website" (amber's fill). The
+            //   rows with a darker tile (blue, violet, teal, orange, green, pink), the same two rows at the default
+            //   size and in the other themes are not reported (measured on iOS 26.3, 2026-11-25). The cause is
+            //   inferred, not proven: the audit reports no colors, and it is taken to measure the tile's light ground
+            //   on the canvas, since at that size the tile is a large part of the row's frame; IconTile's contract
+            //   holds that ground to no contrast minimum, and the glyph carries the tile's meaning, text.secondary on
+            //   background.muted 4.74:1 and amber's on-fill on its fill 9.48:1 and more. Only those two enabled rows,
+            //   in the light theme at accessibility5, match.
             Suppression(
                 .entry("choice-list-sheet"), type: .contrast, reason: "a light tile's ground in the row's frame",
-                appearance: .light, enabled: true, elementType: .button
+                appearance: .light, dynamicType: "accessibility5", enabled: true, elementType: .button
             ) { ["Top level", "Website"].contains($0 ?? "") },
             // No suppression for the checks with no drawn label beside separate titles (the live row here, the rows
             // of `checkbox-in-list`): written with `Toggle(isOn:accessibilityLabel:)`, their label is an `EmptyView`
@@ -1084,10 +1090,12 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             //   2026-11-25). The audit names no element by label; only that title, by the audit's detail, matches.
             // - "Contrast failed" on the hint in the dark themes: its pixels are #8F969F on the sheet's #20212D, 5.34:1;
             //   the hint is the scroll view's first line, right under the bar's divider, which its frame reaches.
-            // The macOS audit's other findings on this entry (the catalog window's own title behind the sheet, the
-            // window's group and the menu bar with no description, the zoom button's parent, a disabled ListRow's
-            // missing action) come on `list-row` on the same Mac too: the macOS audit is not triaged yet
-            // (platforms/apple/README.md, "Accessibility audit").
+            // The macOS audit's other findings on this entry are not suppressed. Most come on `list-row` on the same Mac
+            // too: the catalog window's own title behind the sheet, the window's group and the menu bar with no
+            // description, the zoom button's parent, a disabled ListRow's missing action. Two are this entry's own:
+            // "Element has no description" on the sheet's group (549 × 465 pt) and on an element of type `other`
+            // inside the sheet (461 × 305 pt). Like the rest of the macOS audit, none is triaged yet, and CI runs the
+            // audit on iOS alone (platforms/apple/README.md, "Accessibility audit").
             suppressions += [
                 Suppression(
                     .entry("choice-list-sheet"), type: .contrast, reason: "the sheet's title, the system's, 9.44:1",

@@ -8,7 +8,7 @@ components: [list-row, icon-tile, icon, rule, text]
 tokens: [space.page.narrow, space.page.wide, space.within-group, typography.footnote.regular, color.text.secondary,
   color.text.primary]
 icons: [check]
-gaps: [G3, G4]
+gaps: [G3, G4, G5]
 ---
 
 # A list of choices in a sheet
@@ -71,15 +71,17 @@ button and a heading at once (G3, #171). One that is only a heading is text with
 heading", and no button. How VoiceOver speaks the capitals was not listened to: the name is the label as the product
 writes it. At the accessibility text sizes the check moves under the title (ListRow's contract; the entry's screenshot
 at accessibility3); no row sets one line there. On iOS the hierarchy also lists each decorative tile as an image with
-no name beside its row, which the audit's description check does not report; whether VoiceOver stops on it was not
-listened to.
+no name beside its row, against IconTile's contract, which the audit's description check does not report (G5, #174);
+whether VoiceOver stops on it was not listened to.
 
 ## Apple
 
 The catalog's entry `choice-list-sheet` runs this code (decisions/0018, stage 2):
 `platforms/apple/Sources/WestronCatalog/Patterns/ChoiceListSheet/ChoiceSheet.swift` is this block, character for
 character, and `PatternExampleTests` fails when the two differ. On iOS the entry shows the sheet's content alone, on
-macOS a real sheet over a page, where it measured 549 × 465 pt with the least size below (macOS 26.7).
+macOS a real sheet over a page, where it measured 549 × 465 pt with the least size below (macOS 26.7). The iOS entry
+draws no sheet's ground, so the contrast its audit and screenshots see there is against the page's ground, not a
+sheet's.
 
 ```swift
 import SwiftUI
@@ -112,6 +114,7 @@ struct ChoiceSheet: View {
                     Text(hint)
                         .textRole(.footnote.regular)
                         .foregroundStyle(.text.secondary)
+                        .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
                         .padding(.bottom, .space.withinGroup)
                     ForEach(choices) { row($0) }
@@ -187,3 +190,7 @@ Each is an issue against westron, opened at the owner's word on 2026-11-25; none
   a label. Issue: "ListRow and Rule: the name and traits of a section that is a choice".
 - **G4** (#172): no token for a sheet's least size on the Mac, where a sheet is as large as what it holds and a scroll
   view asks for no height. Issue: "Tokens: a least size for a sheet on macOS".
+- **G5** (#174): a decorative IconTile in a ListRow's leading slot is an unnamed image element beside the row on iOS,
+  against IconTile's contract; whether VoiceOver stops on it has not been listened to (measured on iOS 26.3,
+  2026-11-25, "Accessibility" above; `ChoiceListSheetTests` pins it). Issue: "ListRow and IconTile: a decorative tile
+  in a row's leading slot is an unnamed image element on iOS".

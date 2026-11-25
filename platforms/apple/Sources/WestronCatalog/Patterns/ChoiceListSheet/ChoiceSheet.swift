@@ -31,6 +31,7 @@ struct ChoiceSheet: View {
                     Text(hint)
                         .textRole(.footnote.regular)
                         .foregroundStyle(.text.secondary)
+                        .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
                         .padding(.bottom, .space.withinGroup)
                     ForEach(choices) { row($0) }

@@ -8,7 +8,8 @@ import WestronUI
 // not a `.sheet` presented over a page: the sheet's page would be modal and hide the entry from the accessibility
 // audit and the screenshot, which find an entry by its container (`CatalogAccessibilityID.entry`). On an iPhone the
 // sheet is as wide as the screen, so the rows stand as they do in it; what is not drawn is the system's presentation
-// around them, the sheet's rounded top and the page dimmed behind it.
+// around them, the sheet's rounded top and the page dimmed behind it, nor the system's sheet ground: so on iOS the
+// contrast the audit and the screenshots see is against the page's ground, not a sheet's.
 //
 // On macOS a NavigationStack that is the window's content gives its title and toolbar to the window, and the entry's
 // container is lost with it, so there the entry is a page that presents the sheet, a real `.sheet` with the pattern's

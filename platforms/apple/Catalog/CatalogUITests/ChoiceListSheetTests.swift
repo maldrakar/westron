@@ -163,6 +163,17 @@ final class ChoiceListSheetTests: XCTestCase {
             let title = app.navigationBars.staticTexts[Sample.title]
             XCTAssertTrue(title.exists, "the title is not in the bar")
             XCTAssertTrue(has(title, .header), "the bar's title is no heading")
+            // The state measured today, pinned so that it is seen when it changes: beside each row with a tile, an
+            // image element with no label in the row's leading half, the decorative IconTile, which its contract
+            // hides (G5, #174). The leading half leaves out the current row's check, at its end.
+            let unnamedImages = app.images.allElementsBoundByIndex.filter { $0.label.isEmpty }.map(\.frame)
+            for title in Sample.choices {
+                let row = button(title).frame
+                XCTAssertTrue(
+                    unnamedImages.contains { (row.minY...row.maxY).contains($0.midY) && $0.midX < row.midX },
+                    "\(title): no unnamed image beside the row: issue #174 is fixed: update the pattern's "
+                        + "Accessibility section and remove this pin")
+            }
         #endif
     }
 
