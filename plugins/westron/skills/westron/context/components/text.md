@@ -35,8 +35,9 @@ extension Text {
   heading.large to code.strong, so the contract and the tokens cannot drift. A role is chosen by what the text is, never
   by its size; a product that needs a size the roles do not have asks for a new role (design-language/03). What a
   product puts in a slot that a westron component draws in a role of its own, a text or an icon, takes that role with no
-  `.textRole(_:)`: the `label` and `icon` of `Button`, the `label` and `icon` of `Chip`, the `title` and `subtitle` of
-  `ListRow` and the `label` of `Rule`; a call sets another role there only where that component's card allows it.
+  `.textRole(_:)`: the `label` and `icon` of `Button`, the `label` and `icon` of `Chip`, the `title`, `subtitle`,
+  `leading` and `trailing` of `ListRow` and the `label` of `Rule`; a call sets another role there only where that
+  component's card allows it.
 
 ## Slots
 

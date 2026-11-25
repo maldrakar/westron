@@ -291,7 +291,8 @@ struct AgentContextTests {
         let cards = try realCards().cards
         let text = unwrapped(try #require(cards.first { $0.contract.id == "text" }).markdown())
         #expect(text.contains("takes that role with no `.textRole(_:)`"))
-        #expect(text.contains("the `title` and `subtitle` of `ListRow`"))
+        // ListRow's leading and trailing slots by their bindings, as its title and second line.
+        #expect(text.contains("the `title`, `subtitle`, `leading` and `trailing` of `ListRow`"))
         #expect(text.contains("the `label` of `Rule`"))
         // Only the card of the text role's option says it.
         let button = try #require(cards.first { $0.contract.id == "button" }).markdown()
