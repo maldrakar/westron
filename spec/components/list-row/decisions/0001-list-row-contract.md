@@ -703,13 +703,12 @@ Disclosure branch with a leaf and a collapsed branch whose row is disabled alone
 
 ## Revision of 2026-11-25: the slots' role, bound (#170)
 
-Agreed on 2026-11-25 by the coordinating agent under the owner's delegation (decisions/0014, "Process"), pending the
-owner's review in the pull request. The description already said that the leading and the trailing slot take
-`typography.body.regular`, the title's role at rest, and WestronUI applies it to both (`ListRowMetrics.slotRole`); the
-`tokens` block said it of the title and the second line only. It now binds `leading.font` and `trailing.font` to
-`typography.body.regular` as well, so that every source that reads the bindings, such as the agent context's list of
-slots that take a role with no call, finds all four. Nothing drawn changes, and no generated file under
-`platforms/apple/` does.
+Agreed on 2026-11-25 by the coordinating agent, pending the owner's review in the pull request. The description already
+said that the leading and the trailing slot take `typography.body.regular`, the title's role at rest, and WestronUI
+applies it to both (`ListRowMetrics.slotRole`); the `tokens` block said it of the title and the second line only. It now
+binds `leading.font` and `trailing.font` to `typography.body.regular` as well, so that every source that reads the
+bindings, such as the agent context's list of slots that take a role with no call, finds all four. Nothing drawn
+changes, and no generated file under `platforms/apple/` does.
 
 ## Open points
 

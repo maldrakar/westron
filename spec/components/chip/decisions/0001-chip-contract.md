@@ -451,5 +451,5 @@ the accent is light and its words dark (design-language/02, "A filled control da
 high contrast). The description now says that, and the `reads` entry says it in words, without token paths, as the short
 card of the agent context prints it; the description keeps the token-level account. The table of "Already decided by the
 documents" above keeps its summary of the time. Taking the token paths out of the `reads` entry, beyond its "a step
-darker", was agreed on 2026-11-25 by the coordinating agent under the owner's delegation (decisions/0014, "Process"),
-pending the owner's review in the pull request, as for Checkbox and IconTile (#170).
+darker", was agreed on 2026-11-25 by the coordinating agent, pending the owner's review in the pull request, as for
+Checkbox and IconTile (#170).
