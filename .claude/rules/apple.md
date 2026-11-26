@@ -108,6 +108,10 @@ paths:
 - Every component adds an entry to `Catalog.entries` (`platforms/apple/Sources/WestronCatalog/Catalog.swift`)
   in the same pull request; the entry's `id` equals the component's `id` in the contract. The accessibility audit
   (`tools/apple/check.sh a11y`) walks every entry, not the matrix sheets.
+- A pattern (`spec/patterns/<id>.md`, decisions/0018) with its Apple example in the catalog has an entry of the same
+  `id` in the section `patterns`, in `WestronCatalog/Patterns/<Name>/`: one file there is the document's swift block as
+  written (`PatternExampleTests` holds them equal), another the entry and its sample. It has no matrix; a change to
+  the document or that directory puts the entry in a pull request's audit (`tools/apple/audit-scope.sh`).
 - The entry renders the matrix of variants, sizes and states from the contract, with no navigation inside.
 - The snapshot matrix (#24) is generated from the contract into `WestronCatalog/Generated/<Component>+Matrix.swift`;
   the component adds the hand-written `<Component>MatrixCell` (in `WestronCatalog/Components/<Component>Pages.swift`),

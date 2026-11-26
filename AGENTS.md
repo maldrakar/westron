@@ -31,7 +31,7 @@ Button slice on Apple (phase 2), before a second component (`reports/`, section 
 | `platforms/apple/Sources/WestronTokens/` | Token values as plain Swift with no imports, generated (decisions/0010) |
 | `platforms/apple/Sources/WestronContract/` | The contracts' vocabulary: the generated option enums (`ButtonVariant`, `RuleAxis`), with no imports, for a product's shared code; `WestronUI` re-exports it (decisions/0017) |
 | `platforms/apple/Sources/WestronUI/` | SwiftUI styles, components and token accessors: what products import |
-| `platforms/apple/Sources/WestronCatalog/` | Registry of catalog entries and its host, and the snapshot matrices generated from the contracts |
+| `platforms/apple/Sources/WestronCatalog/` | Registry of catalog entries and its host, and the snapshot matrices generated from the contracts; a pattern's Apple example runs there as an entry of its own, `Patterns/<Name>/`, its source the pattern's swift block (decisions/0018) |
 | `platforms/apple/Tests/WestronSnapshotTests/` | The snapshot matrix rendered in-process: a package test on macOS, and the catalog's hosted unit-test bundle `CatalogSnapshotTests` on iOS |
 | `platforms/apple/Snapshots/` | The matrix's references, recorded on the CI runner: PNGs in Git LFS and the environment they were made in |
 | `platforms/apple/Catalog/` | Catalog app (iOS + macOS) and its UI tests: screenshots, the accessibility audit, behaviour; the project is `project.xcproj` in Xcode 27 format, not `project.pbxproj` |
@@ -54,7 +54,7 @@ tools/apple/check.sh a11y         # accessibility audit of every catalog entry o
                                   # a11y ios <test>… runs some of its five tests, WESTRON_ENTRY=<id>,… some entries
                                   # WESTRON_ENTRY_SHARD=<i>/<n> then every n-th of those entries, from the i-th
 tools/apple/check.sh behavior     # the behaviour UI tests (Button, Checkbox, TextField, Icon, IconTile, Chip, ListRow,
-                                  # Disclosure)
+                                  # Disclosure, the pattern choice-list-sheet)
                                   # on the simulator; behavior macos on the Mac, behavior ios <Class>… some classes;
                                   # CI: nightly
 tools/apple/check.sh format       # swift format lint; to fix: tools/apple/check.sh fix-format
