@@ -81,7 +81,10 @@ heading", and no button. How VoiceOver speaks the capitals was not listened to: 
 writes it. At the accessibility text sizes the check moves under the title (ListRow's contract; the entry's screenshot
 at accessibility3); no row sets one line there. On iOS the hierarchy also lists each decorative tile as an image with
 no name beside its row, against IconTile's contract, which the audit's description check does not report (G5, #174);
-whether VoiceOver stops on it was not listened to.
+whether VoiceOver stops on it was not listened to. The accessibility audit fails Cancel's contrast on the CI
+runner's iOS 27.0 simulator, in every theme and text size, and not on iOS 26.3, where its pixels are black on white
+glass; the button and its ground are the system's, so the catalog suppresses the finding, and a product's audit of its
+own sheet on iOS 27 may meet it too.
 
 ## Apple
 
