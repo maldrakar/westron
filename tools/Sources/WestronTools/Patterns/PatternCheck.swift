@@ -218,9 +218,11 @@ public enum PatternCheck {
         }
 
         // The names the prose writes.
-        for line in pattern.markdown.prose {
-            for span in PatternNames.spans(line.text) {
-                for message in references.names.problems(span: span) { report(line.line, message) }
+        for paragraph in PatternNames.paragraphs(pattern.markdown.prose) {
+            for span in PatternNames.spans(paragraph.text) {
+                for message in references.names.problems(span: span.span) {
+                    report(paragraph.line + span.line, message)
+                }
             }
         }
         return (pattern, problems)

@@ -231,10 +231,14 @@ enum ContextMarkdown {
     }
 
     /// A relative target as the bundle writes it, relative to `output` with its anchor kept, when the bundle holds the
-    /// file; nil for any other file of the repository.
+    /// file; nil for any other file of the repository. A target in angle brackets, `<../06-layout.md>`, keeps them.
     static func rewrittenTarget(_ target: String, from source: String, to output: String, map: [String: String])
         -> String?
     {
+        if target.count > 1, target.hasPrefix("<"), target.hasSuffix(">") {
+            return rewrittenTarget(String(target.dropFirst().dropLast()), from: source, to: output, map: map)
+                .map { "<\($0)>" }
+        }
         let parts = target.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false)
         guard let resolved = resolve(String(parts[0]), from: directory(of: source)), let mapped = map[resolved]
         else { return nil }

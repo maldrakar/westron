@@ -593,7 +593,7 @@ struct AgentContextTests {
                 + "[the HIG](https://example.com/hig).")
     }
 
-    @Test("a pattern's links: code is left alone, a reference definition follows the inline links' rule")
+    @Test("a pattern's links: code is left alone, a reference definition follows the inline links' rule, in <> too")
     func patternLinks() {
         let map = ["design-language/06-layout.md": "skills/westron/context/design-language/06-layout.md"]
         let text = """
@@ -606,6 +606,7 @@ struct AgentContextTests {
 
             [ch]: ../../design-language/06-layout.md#space "The chapter"
             [dec]: ../../decisions/0018-patterns.md
+            [ang]: <../../design-language/06-layout.md>
             [web]: https://example.com
             """
         let rewritten = ContextMarkdown.rewritingLinksOutsideCode(
@@ -620,6 +621,7 @@ struct AgentContextTests {
                 ```
 
                 [ch]: ../design-language/06-layout.md#space "The chapter"
+                [ang]: <../design-language/06-layout.md>
                 [web]: https://example.com
                 """)
     }

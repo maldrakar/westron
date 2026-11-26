@@ -86,6 +86,11 @@ private func replacing(_ old: String, with new: String, in text: String = patter
     return text.replacingOccurrences(of: old, with: new)
 }
 
+/// The fixture's line, from 1, of the first line that contains `text`.
+private func patternLine(_ text: String) -> Int {
+    (patternFixture.split(separator: "\n", omittingEmptySubsequences: false).firstIndex { $0.contains(text) } ?? -1) + 1
+}
+
 /// Whether one problem's message contains `text`. Records the problems found when none does.
 private func has(_ problems: [String], _ text: String, sourceLocation: SourceLocation = #_sourceLocation) -> Bool {
     let found = problems.contains { $0.contains(text) }
@@ -272,6 +277,22 @@ struct PatternCheckTests {
                 "matches no initializer"))
         // A dotted name that is no token's, such as a file, is not read as one.
         #expect(patternProblems(replacing("Several choices at once.", with: "Not in `index.md`.")) == [])
+        // A code span wrapped over two lines is one span, a line break in it a space, reported on its first line.
+        let wrapped = patternProblems(
+            replacing(
+                "Several choices at once.", with: "Several choices, as `IconTile(.tray)\n  .category(.ambr)` in one."))
+        #expect(has(wrapped, "`.ambr` is not a list color"))
+        #expect(wrapped.first?.hasPrefix("\(patternLine("Several choices")): ") == true, "\(wrapped)")
+        // A span does not cross from one list item, table row or paragraph to the next.
+        for separator in ["\n- ", "\n| ", "\n\n"] {
+            let text = "- One `IconTile(.tray)" + separator + ".category(.ambr)` two."
+            #expect(patternProblems(replacing("Several choices at once.", with: text)) == [], "\(separator)")
+        }
+        #expect(
+            has(
+                patternProblems(
+                    replacing("Several choices at once.", with: "- One `IconTile(.tray)\n.category(.ambr)`")),
+                "`.ambr` is not a list color"))
     }
 
     @Test("the arguments of a call fit an overload: labels in order, defaults left out, a trailing closure")
@@ -312,6 +333,11 @@ struct PatternCheckTests {
             has(
                 patternProblems(example("\nButton(\"Save\", action: {}).buttonStyle(.secondry)")),
                 "`.secondry` is not a value of `ButtonVariant`"))
+        // A value no overload takes names what each takes: Checkbox's variants and Chip's.
+        let toggle = patternProblems(example(".toggleStyle(.primary)"))
+        #expect(toggle.count == 1, "\(toggle)")
+        #expect(has(toggle, "`.primary` is not a value of `CheckboxVariant`: "))
+        #expect(has(toggle, "; nor of `ChipVariant`: "))
         // SwiftUI's own styles, a style of the product's own and westron's variants pass.
         for call in [
             ".buttonStyle(.bordered)", ".buttonStyle(myStyle)", ".buttonStyle(MyStyle())", ".buttonStyle(.secondary)",
@@ -345,11 +371,23 @@ struct PatternCheckTests {
                 "`.text.primry` is not a token's Swift member"))
     }
 
-    @Test("an elided call, as prose writes one, is not held")
+    @Test("an elided call, as prose writes one, is not held; an `…` in a string or a closure elides nothing")
     func elided() {
         let prose = { (span: String) in replacing("Several choices at once.", with: span) }
-        #expect(patternProblems(prose("`ListRow(…)` and `ListRow(…) { … }`, `.buttonStyle(…)`")) == [])
+        #expect(
+            patternProblems(prose("`ListRow(…)` and `ListRow(…) { … }`, `ListRow(level: 1, …)`, `.buttonStyle(…)`"))
+                == [])
+        #expect(
+            patternProblems(
+                prose("`ListRow(level: 1, guides: false, action: { … }) { … }`, `Icon(.check, label: \"…\")`")) == [])
         #expect(has(patternProblems(prose("`ListRow(lvl: 1) { … }`")), "matches no initializer"))
+        #expect(
+            has(patternProblems(prose("`IconTile(.tik, label: \"Move to…\")`")), "`.tik` is not a name of the icon"))
+        #expect(has(patternProblems(prose("`Icon(.tick, label: \"More…\")`")), "`.tick` is not a name of the icon"))
+        #expect(
+            has(
+                patternProblems(prose("`ListRow(level: 1, gudes: false, action: { show(\"Move to…\") }) { … }`")),
+                "`ListRow(level:gudes:action:) { … }` matches no initializer"))
     }
 
     @Test("every Swift block is held, not only the example; Apple still holds one")

@@ -18,9 +18,10 @@ import SwiftSyntax
 ///   SwiftUI's own style when it is not written `.name` (`myStyle`, `MyStyle()`) or names one of the system's styles
 ///   for that modifier (`SystemStyles`); any other `.name` there is held to westron's variants.
 ///
-/// A call whose arguments are elided, `ListRow(…) { … }`, as the repository's prose writes a call, is not held.
+/// A call whose arguments are elided, `ListRow(…) { … }`, as the repository's prose writes a call, is not held; an
+/// `…` in a string literal or a closure elides nothing.
 ///
-/// In prose, a code span that reads as a token's name, `space.page.narrow` or `footnote.regular`, is a token's path or
+/// In prose, a code span wrapped over two lines is read as one, its line break a space. A code span that reads as a token's name, `space.page.narrow` or `footnote.regular`, is a token's path or
 /// Swift member; any other code span is read as Swift and held as above. What is not westron's, SwiftUI's own calls
 /// and the product's, is left alone: it cannot be told from a typo without the SDK, and the catalog's example, which
 /// compiles, covers it.
@@ -67,15 +68,56 @@ struct PatternNames {
 
     /// A dotted name such as `space.page.narrow` or `footnote.regular`.
     private static let dotted = try! NSRegularExpression(pattern: #"^[a-z][A-Za-z0-9-]*(\.[A-Za-z0-9-]+)+$"#)
-    /// A code span on one line.
-    private static let span = try! NSRegularExpression(pattern: #"`([^`\n]+)`"#)
+    /// A code span, which may wrap onto the next line of its paragraph.
+    private static let span = try! NSRegularExpression(pattern: #"`([^`]+)`"#)
+    /// A line break inside a code span and the indent after it.
+    private static let lineBreak = try! NSRegularExpression(pattern: #"[ \t]*\n[ \t]*"#)
 
-    /// The code spans of a line of prose.
-    static func spans(_ line: String) -> [String] {
-        let ns = NSString(string: line)
-        return span.matches(in: line, range: NSRange(location: 0, length: ns.length)).map {
-            ns.substring(with: $0.range(at: 1))
+    /// The code spans of a paragraph of prose, each with the index of the line it starts on; a line break inside a
+    /// span is a space, as Markdown reads it.
+    static func spans(_ paragraph: String) -> [(span: String, line: Int)] {
+        let ns = NSString(string: paragraph)
+        return span.matches(in: paragraph, range: NSRange(location: 0, length: ns.length)).map { match in
+            let text = ns.substring(with: match.range(at: 1))
+            let before = ns.substring(to: match.range.location)
+            return (
+                lineBreak.stringByReplacingMatches(
+                    in: text, range: NSRange(location: 0, length: NSString(string: text).length), withTemplate: " "),
+                before.filter { $0 == "\n" }.count
+            )
         }
+    }
+
+    /// The prose's paragraphs, each as its lines joined and the file's line of its first: the lines between blank
+    /// ones, a heading, a table's row and a list item each starting a paragraph of its own, since a code span does
+    /// not cross into them.
+    static func paragraphs(_ prose: [Pattern.Line]) -> [(text: String, line: Int)] {
+        var out: [(text: String, line: Int)] = []
+        var current: [Pattern.Line] = []
+        // A heading or a table's row is a paragraph of one line.
+        var lastWasSingle = false
+        func flush() {
+            if let first = current.first {
+                out.append((current.map(\.text).joined(separator: "\n"), first.line))
+            }
+            current = []
+        }
+        for line in prose {
+            let trimmed = line.text.drop { $0 == " " }
+            if trimmed.isEmpty || current.last.map({ $0.line + 1 != line.line }) == true {
+                flush()
+                if trimmed.isEmpty { continue }
+            }
+            let single = trimmed.hasPrefix("#") || trimmed.hasPrefix("|")
+            let starts =
+                single || trimmed.hasPrefix("- ") || trimmed.hasPrefix("* ") || trimmed.hasPrefix("+ ")
+                || trimmed.range(of: #"^\d+[.)] "#, options: .regularExpression) != nil
+            if starts || lastWasSingle { flush() }
+            current.append(line)
+            lastWasSingle = single
+        }
+        flush()
+        return out
     }
 
     /// The problems of one code span of prose.
@@ -220,12 +262,28 @@ struct PatternNames {
             return .visitChildren
         }
 
-        /// Whether the call's arguments are elided, `ListRow(…)`: the prose's way of naming a call, not one to hold.
+        /// Whether the call's arguments are elided, `ListRow(…)` or `ListRow(level: 1, …)`: the prose's way of naming
+        /// a call, not one to hold. Only an `…` the arguments write as Swift counts: not one in a string literal,
+        /// `label: "Move to…"`, nor in a closure, `action: { … }`, nor in the trailing closures, `ListRow(level: 1)
+        /// { … }`, whose arguments are written and held.
         static func isElided(_ node: FunctionCallExprSyntax) -> Bool {
-            let inside =
-                node.arguments.description + (node.unexpectedBetweenLeftParenAndArguments?.description ?? "")
-                + (node.unexpectedBetweenArgumentsAndRightParen?.description ?? "")
-            return inside.contains("…")
+            let parts: [Syntax?] = [
+                node.unexpectedBetweenLeftParenAndArguments.map(Syntax.init), Syntax(node.arguments),
+                node.unexpectedBetweenArgumentsAndRightParen.map(Syntax.init),
+            ]
+            return parts.compactMap { $0 }.contains { part in
+                part.tokens(viewMode: .sourceAccurate).contains { token in
+                    guard token.text.contains("…") else { return false }
+                    var ancestor = token.parent
+                    while let current = ancestor, current.id != part.id {
+                        if current.is(StringLiteralExprSyntax.self) || current.is(ClosureExprSyntax.self) {
+                            return false
+                        }
+                        ancestor = current.parent
+                    }
+                    return true
+                }
+            }
         }
 
         override func visit(_ node: FunctionCallExprSyntax) -> SyntaxVisitorContinueKind {
@@ -290,9 +348,10 @@ struct PatternNames {
                 return
             }
             guard values else { return }
-            // A value is wrong only where every overload the call fits rejects it.
-            var found: [(node: ExprSyntax, message: String)]?
-            for pairs in matches {
+            // A value is wrong only where every overload the call fits rejects it; the message names what each
+            // overload that rejects it takes, `.toggleStyle(.primary)` both `CheckboxVariant` and `ChipVariant`.
+            var found: [(node: ExprSyntax, messages: [String])] = []
+            for (index, pairs) in matches.enumerated() {
                 let wrong = pairs.compactMap { argument, parameter -> (ExprSyntax, String)? in
                     guard let expression = argument.expression,
                         let message = names.valueProblem(expression, type: parameter.type)
@@ -300,9 +359,30 @@ struct PatternNames {
                     return (expression, message)
                 }
                 if wrong.isEmpty { return }
-                if found == nil { found = wrong }
+                if index == 0 {
+                    found = wrong.map { ($0.0, [$0.1]) }
+                    continue
+                }
+                for (node, message) in wrong {
+                    guard let at = found.firstIndex(where: { $0.node.id == node.id }),
+                        !found[at].messages.contains(message)
+                    else { continue }
+                    found[at].messages.append(message)
+                }
             }
-            for item in found ?? [] { report(item.node, item.message) }
+            for item in found { report(item.node, Self.joined(item.messages)) }
+        }
+
+        /// One value's problems on several overloads as one message: "`.primary` is not a value of `CheckboxVariant`:
+        /// `.check`; nor of `ChipVariant`: `.filter`".
+        static func joined(_ messages: [String]) -> String {
+            guard let first = messages.first else { return "" }
+            let marker = " is not a value of "
+            let head = first.range(of: marker).map { String(first[..<$0.upperBound]) }
+            return messages.dropFirst().reduce(first) { out, message in
+                if let head, message.hasPrefix(head) { return out + "; nor of " + message.dropFirst(head.count) }
+                return out + "; " + message
+            }
         }
     }
 }

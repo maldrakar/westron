@@ -167,24 +167,26 @@ derives from the contracts, and prints `file:line: message` for each problem, ex
     a token's Swift member; SwiftUI's own (`.bounce.up`, `.tint.secondary`) start otherwise and are not held;
   - a call of a westron view (`ListRow(level:guides:action:) { … } leading: { … }`, `WestronUI.Icon(.check)`) or
     function (`.selected(_:)`, `.textRole(_:)`) fits one of its declared initializers or overloads by labels, defaults
-    and trailing closures; a call whose arguments are elided, `ListRow(…)`, as prose names a call, is not held;
+    and trailing closures; a call whose arguments are elided, `ListRow(…)`, as prose names a call, is not held, but an
+    `…` in a string or a closure elides nothing (`Icon(.tick, label: "More…")`, `ListRow(lvl: 1) { … }` are held);
   - an argument written `.name` is a value of its parameter's type: an icon, a list color, a text role (`.body` alone
     is none), an option's value. The lone argument of a style modifier, `.buttonStyle(…)`, is SwiftUI's own style when
     it is not written `.name` (`myStyle`, `MyStyle()`) or names one of that modifier's system styles
     (`SystemStyles.byBase[…].styles`: `.plain`, `.bordered`, `.switch`); any other `.name` is held to westron's
-    variants, so `.buttonStyle(.primry)` fails.
+    variants, so `.buttonStyle(.primry)` fails. A value that every overload rejects names what each takes:
+    `.toggleStyle(.primary)` is neither a `CheckboxVariant` nor a `ChipVariant`.
 
-  In the prose, a code span that starts with a token's first name and is dotted (`footnote.regular`,
-  `space.within-group`) is a token's path or Swift member, and any other code span is read as Swift and held as above.
-  SwiftUI's own calls and the product's names are not checked: without the SDK they cannot be told from a typo, and the
-  pattern's catalog example compiles them.
+  In the prose, a code span wrapped over two lines is read as one, its line break a space. A code span that starts
+  with a token's first name and is dotted (`footnote.regular`, `space.within-group`) is a token's path or Swift
+  member, and any other code span is read as Swift and held as above. SwiftUI's own calls and the product's names are
+  not checked: without the SDK they cannot be told from a typo, and the pattern's catalog example compiles them.
 
 `tools/westron generate` runs the same check on every pattern, proposed ones too, before it writes the bundle, and
 copies only the approved ones (`Sources/WestronTools/Context/ContextPatterns.swift`): to `context/patterns/<id>.md`
 without the front matter, with a line under the title of its id, status, consumers and links to its components' cards,
 its links rewritten as the chapters' are (a link to a file the bundle holds points to the copy, any other link to the
 repository becomes its text); fenced blocks and code spans are left alone, and a reference definition,
-`[ch]: ../../design-language/06-layout.md`, follows the same rule: rewritten where the bundle holds the file, otherwise
-dropped with its full and collapsed links, `[the chapter][ch]`, made their text. One line per pattern goes in the
-index's and `llms.txt`'s section "Patterns", from `title` and `summary`, and a line "Patterns that use it" on the card
-of each component in `components`.
+`[ch]: ../../design-language/06-layout.md`, its target in angle brackets or not, follows the same rule: rewritten
+where the bundle holds the file, otherwise dropped with its full and collapsed links, `[the chapter][ch]`, made their
+text. One line per pattern goes in the index's and `llms.txt`'s section "Patterns", from `title` and `summary`, and a
+line "Patterns that use it" on the card of each component in `components`.
