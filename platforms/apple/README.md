@@ -455,13 +455,13 @@ timeout when its build and images come within about two thirds of it (the arithm
 
 `ButtonBehaviorTests`, `CheckboxBehaviorTests`, `TextFieldBehaviorTests`, `TextFieldAccessibilityFrameTests`,
 `IconAccessibilityTests`, `IconTileAccessibilityTests`, `ChipBehaviorTests`, `ListRowBehaviorTests`,
-`DisclosureBehaviorTests` and `ChoiceListSheetTests` (the pattern's entry), in `Catalog/CatalogUITests`, check on
-the catalog's entries what a unit test cannot reach: presses, hit areas and hover, the accessibility hierarchy, the
-keyboard. Each class has branches of its own for iOS and macOS where the platforms differ. `tools/apple/check.sh
-behavior` runs them, like the audit: the build first, a step of its own, then one `xcodebuild test-without-building`
-for the classes named (all ten by default); it prints each failure with its message, each skip with its reason, the
-test cases and the totals, and stops the simulator's test daemon afterwards. The log goes to
-`.build/logs/behavior-<platform>[-<classes>].log`, the result bundle to `.build/xcode/results/`.
+`DisclosureBehaviorTests`, `ChoiceListSheetTests` and `EmptyStateTests` (the patterns' entries), in
+`Catalog/CatalogUITests`, check on the catalog's entries what a unit test cannot reach: presses, hit areas and hover,
+the accessibility hierarchy, the keyboard. Each class has branches of its own for iOS and macOS where the platforms
+differ. `tools/apple/check.sh behavior` runs them, like the audit: the build first, a step of its own, then one
+`xcodebuild test-without-building` for the classes named (all eleven by default); it prints each failure with its
+message, each skip with its reason, the test cases and the totals, and stops the simulator's test daemon afterwards. The
+log goes to `.build/logs/behavior-<platform>[-<classes>].log`, the result bundle to `.build/xcode/results/`.
 
 A run whose log gains no line for `WESTRON_BEHAVIOR_STALL_LIMIT` seconds (default 300; xcodebuild's own `[MT]`
 messages do not count) has stopped making progress: the script stops it, says so in its output and the log, and

@@ -96,8 +96,11 @@ expect "$catalog/Foundations/MotionPage.swift" motion
 expect spec/patterns/choice-list-sheet.md choice-list-sheet
 expect "$catalog/Patterns/ChoiceListSheet/ChoiceSheet.swift" choice-list-sheet
 expect "$catalog/Patterns/ChoiceListSheet/ChoiceListSheetPage.swift" choice-list-sheet
+expect spec/patterns/empty-state.md empty-state
+expect "$catalog/Patterns/EmptyState/EmptyState.swift" empty-state
+expect "$catalog/Patterns/EmptyState/EmptyStatePage.swift" empty-state
 expect spec/patterns/no-such-pattern.md ""
-expect "$ui/IconTile/IconTile.swift" icon-tile,choice-list-sheet
+expect "$ui/IconTile/IconTile.swift" icon-tile,choice-list-sheet,empty-state
 # Shared paths and paths outside any component.
 expect "$catalog/Catalog.swift" ""
 expect "$catalog/Generated/ComponentMatrix+All.swift" ""
