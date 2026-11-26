@@ -75,7 +75,88 @@ private func generator() -> AgentContext {
         contractsDirectory: path(ContractCheck.defaultDirectory), schemaFile: path(ContractSchema.defaultFile),
         resolverFile: path(TokenCheck.defaultResolver), iconsFile: path(IconRegistry.defaultFile),
         conventionsFile: path(AgentContext.conventionsFile),
-        designLanguageDirectory: path(AgentContext.designLanguageDirectory))
+        designLanguageDirectory: path(AgentContext.designLanguageDirectory),
+        patternsDirectory: path(PatternCheck.defaultDirectory))
+}
+
+/// A pattern on the real Rule, in a status. It is not one of westron's patterns.
+private func headingPattern(_ status: String) -> String {
+    """
+    ---
+    id: section-heading
+    title: A section heading
+    status: \(status)
+    summary: Name a group of rows.
+    consumers: [todo-app/list-screen]
+    components: [rule]
+    tokens: [space.page.narrow]
+    icons: [tray]
+    gaps: []
+    ---
+
+    # A section heading
+
+    ## When to use
+
+    A list groups its rows. See [the layout chapter](../../design-language/06-layout.md) and
+    [decisions/0018](../../decisions/0018-patterns.md).
+
+    ## Parts
+
+    A `Rule("WORK")` above the rows.
+
+    ## Rules
+
+    1. One tap.
+
+    ## Accessibility
+
+    A button.
+
+    ## Apple
+
+    ```swift
+    Rule("WORK").padding(.horizontal, .space.page.narrow)
+    let pills: [String](x) = []
+    ```
+
+    ## Not covered
+
+    Nothing.
+
+    ## Gaps
+
+    None.
+
+    """
+}
+
+/// The bundle's files from the real contracts and icon registry, a chapter and one pattern.
+private func patternFiles(_ pattern: String) throws -> [GeneratedFile] {
+    let contracts = try ContractCheck.files(in: path(ContractCheck.defaultDirectory)).map { file in
+        (text: try String(contentsOfFile: file, encoding: .utf8), source: file)
+    }
+    let sources = AgentContext.Sources(
+        contracts: contracts, icons: try IconRegistry.load(file: path(IconRegistry.defaultFile)),
+        conventions: try String(contentsOfFile: path(AgentContext.conventionsFile), encoding: .utf8),
+        chapters: [(text: "# 06. Layout\n", source: "design-language/06-layout.md")], readme: nil,
+        patterns: [(pattern, "/anywhere/spec/patterns/section-heading.md")])
+    return try AgentContext.files(
+        sources, tokens: try AppleTokenModel(Resolution(resolverFile: path(TokenCheck.defaultResolver))))
+}
+
+/// The relative links of a Markdown text, inline, `[text](target)`, and reference definitions, `[label]: target`, with
+/// no scheme and no anchor alone, the anchor dropped.
+private func relativeLinks(_ text: String) -> [String] {
+    let link = try! NSRegularExpression(
+        pattern: #"!?\[[^\]]*\]\(([^)\s]+)\)|^ {0,3}\[[^\]]+\]:[ \t]*(\S+)"#, options: .anchorsMatchLines)
+    return link.matches(in: text, range: NSRange(text.startIndex..., in: text)).compactMap { match in
+        let group = match.range(at: 1).location != NSNotFound ? 1 : 2
+        guard let range = Range(match.range(at: group), in: text) else { return nil }
+        let target = String(text[range])
+        guard !target.contains("://"), !target.hasPrefix("mailto:"), !target.hasPrefix("#") else { return nil }
+        return String(target.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false)[0])
+    }
 }
 
 /// The real cards, with the names the generator's prose may use.
@@ -369,6 +450,123 @@ struct AgentContextTests {
         #expect(skill.contains("`Button`'s `floating`") && button.contract.options.contains { $0.name == "floating" })
     }
 
+    @Test("the skill sends an agent to the pattern of a job, which is rules and an example")
+    func skillPatterns() throws {
+        let skill = try String(contentsOfFile: path(AgentContext.skillDirectory + "/SKILL.md"), encoding: .utf8)
+            .replacingOccurrences(of: "\n   ", with: " ")
+        #expect(skill.contains("`context/patterns/<id>.md`"))
+        #expect(skill.contains("A pattern is rules plus one example, not an API"))
+        #expect(skill.contains("(the pattern `choice-list-sheet`)"))
+        #expect(
+            FileManager.default.fileExists(
+                atPath: path(AgentContext.outputDirectory + "/" + AgentContext.patternPath("choice-list-sheet"))))
+    }
+
+    @Test("the real bundle has each approved pattern, its index line and a line on its components' cards")
+    func realPatterns() throws {
+        let files = try generator().run()
+        func file(_ relative: String) throws -> String {
+            try #require(files.first { $0.path == AgentContext.outputDirectory + "/" + relative }).contents
+        }
+        let patterns = try PatternCheck.files(in: path(PatternCheck.defaultDirectory)).compactMap {
+            Pattern.read(try String(contentsOfFile: $0, encoding: .utf8), source: $0).pattern
+        }
+        let approved = patterns.filter(\.isApproved)
+        #expect(approved.contains { $0.id == "choice-list-sheet" })
+        let index = try file("index.md")
+        let llms = try #require(files.first { $0.path == AgentContext.llmsFile }).contents
+        #expect(index.contains("\n## Patterns\n"))
+        #expect(index.contains("It is rules and an example, not an API"))
+        for pattern in approved {
+            let copy = try file(AgentContext.patternPath(pattern.id))
+            #expect(copy.hasPrefix("<!-- Generated from spec/patterns/\(pattern.id).md by `tools/westron generate`."))
+            #expect(copy.contains("\n# \(pattern.title)\n\n`\(pattern.id)` · approved · used by "))
+            #expect(!copy.contains("\nstatus: "), "the front matter is left out")
+            #expect(copy.contains("\n## Apple\n"))
+            #expect(index.contains("\n- [\(pattern.title)](patterns/\(pattern.id).md): \(pattern.summary)\n"))
+            #expect(
+                llms.contains(
+                    "\n- [\(pattern.title)](\(AgentContext.outputDirectory)/patterns/\(pattern.id).md): \(pattern.summary)\n"
+                ))
+            for component in pattern.components {
+                let card = unwrapped(try file(ComponentCard.path(component)))
+                #expect(card.contains("Patterns that use it: "), "\(component)")
+                #expect(card.contains("[\(pattern.title)](../patterns/\(pattern.id).md)"), "\(component)")
+                #expect(copy.contains("](../components/\(component).md)"), "\(pattern.id) links \(component)'s card")
+            }
+        }
+        // A card of a component no pattern uses has no such line.
+        let used = Set(approved.flatMap(\.components))
+        for card in try realCards().cards where !used.contains(card.contract.id) {
+            #expect(!card.markdown().contains("Patterns that use it"), "\(card.contract.id)")
+        }
+        #expect(index.split(separator: "\n").count < 80)
+    }
+
+    @Test("an approved pattern is copied with its links fit for the bundle; a proposed one is checked, not copied")
+    func patternGeneration() throws {
+        let output = AgentContext.outputDirectory + "/"
+        let approved = try patternFiles(headingPattern("approved"))
+        let copy = try #require(approved.first { $0.path == output + "patterns/section-heading.md" }).contents
+        // The header names the repository path, wherever the file was read.
+        #expect(copy.hasPrefix("<!-- Generated from spec/patterns/section-heading.md by `tools/westron generate`."))
+        // A link into the bundle points to the copy; a link to the rest of the repository becomes its text; code
+        // stays code.
+        #expect(copy.contains("See [the layout chapter](../design-language/06-layout.md) and\ndecisions/0018."))
+        #expect(copy.contains("let pills: [String](x) = []"))
+        #expect(
+            copy.contains(
+                "\n# A section heading\n\n`section-heading` · approved · used by todo-app/list-screen · composes "
+                    + "[Rule](../components/rule.md)\n\n## When to use\n"))
+        let card = try #require(approved.first { $0.path == output + "components/rule.md" }).contents
+        #expect(card.contains("\nPatterns that use it: [A section heading](../patterns/section-heading.md).\n"))
+        let index = try #require(approved.first { $0.path == output + "index.md" }).contents
+        #expect(index.contains("\n- [A section heading](patterns/section-heading.md): Name a group of rows.\n"))
+        let llms = try #require(approved.first { $0.path == AgentContext.llmsFile }).contents
+        #expect(llms.contains("\n- [A section heading](\(output)patterns/section-heading.md): Name a group of rows.\n"))
+
+        let proposed = try patternFiles(headingPattern("proposed"))
+        #expect(!proposed.contains { $0.path.hasPrefix(output + "patterns/") })
+        let proposedIndex = try #require(proposed.first { $0.path == output + "index.md" }).contents
+        #expect(!proposedIndex.contains("## Patterns"))
+        let proposedCard = try #require(proposed.first { $0.path == output + "components/rule.md" }).contents
+        #expect(!proposedCard.contains("Patterns that use it"))
+        let proposedLLMs = try #require(proposed.first { $0.path == AgentContext.llmsFile }).contents
+        #expect(!proposedLLMs.contains("## Patterns"))
+
+        // A pattern the check rejects, proposed or not, fails generation.
+        #expect(throws: PatternCheck.Problems.self) {
+            try patternFiles(headingPattern("proposed").replacingOccurrences(of: "[rule]", with: "[rules]"))
+        }
+    }
+
+    @Test("no relative link of the committed bundle or of llms.txt is dead")
+    func noDeadLinks() throws {
+        let root = path(AgentContext.outputDirectory)
+        let enumerator = try #require(FileManager.default.enumerator(atPath: root))
+        var checked = 0
+        for case let relative as String in enumerator where relative.hasSuffix(".md") {
+            let file = root + "/" + relative
+            let text = try String(contentsOfFile: file, encoding: .utf8)
+            let directory = (file as NSString).deletingLastPathComponent
+            for link in relativeLinks(text) {
+                let target = ((directory as NSString).appendingPathComponent(link) as NSString).standardizingPath
+                #expect(FileManager.default.fileExists(atPath: target), "\(relative) links \(link)")
+                checked += 1
+            }
+        }
+        let llms = try String(contentsOfFile: path(AgentContext.llmsFile), encoding: .utf8)
+        for link in relativeLinks(llms) {
+            #expect(FileManager.default.fileExists(atPath: path(link)), "llms.txt links \(link)")
+            checked += 1
+        }
+        #expect(checked > 0)
+        // The pattern's links to the cards are among them.
+        let pattern = try String(
+            contentsOfFile: root + "/" + AgentContext.patternPath("choice-list-sheet"), encoding: .utf8)
+        #expect(relativeLinks(pattern).contains("../components/list-row.md"))
+    }
+
     @Test("the SwiftUI page drops pointers to sections it does not copy, and components westron lacks")
     func swiftUILine() {
         let line = AgentContext.swiftUILine(
@@ -393,6 +591,37 @@ struct AgentContextTests {
                 map: map)
                 == "See [chapter 08](08-accessibility.md#targets), decisions/0013, [Rule](../components/rule.md) and "
                 + "[the HIG](https://example.com/hig).")
+    }
+
+    @Test("a pattern's links: code is left alone, a reference definition follows the inline links' rule")
+    func patternLinks() {
+        let map = ["design-language/06-layout.md": "skills/westron/context/design-language/06-layout.md"]
+        let text = """
+            See [the chapter][ch], [the decision][dec], [dec][] and [the site][web]; `[a](../../decisions/x.md)` stays.
+            Also [06](../../design-language/06-layout.md) and [0018](../../decisions/0018-patterns.md).
+
+            ```swift
+            let pills: [String](x) = []
+            ```
+
+            [ch]: ../../design-language/06-layout.md#space "The chapter"
+            [dec]: ../../decisions/0018-patterns.md
+            [web]: https://example.com
+            """
+        let rewritten = ContextMarkdown.rewritingLinksOutsideCode(
+            text, from: "spec/patterns/x.md", to: "skills/westron/context/patterns/x.md", map: map)
+        #expect(
+            rewritten == """
+                See [the chapter][ch], the decision, dec and [the site][web]; `[a](../../decisions/x.md)` stays.
+                Also [06](../design-language/06-layout.md) and 0018.
+
+                ```swift
+                let pills: [String](x) = []
+                ```
+
+                [ch]: ../design-language/06-layout.md#space "The chapter"
+                [web]: https://example.com
+                """)
     }
 
     @Test("wrapped prose never starts a Markdown block and never breaks a code span")

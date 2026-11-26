@@ -12,6 +12,7 @@ let usage = """
            tools/westron tokens contrast [--all] [RESOLVER.json]
            tools/westron icons check [REGISTRY.yaml]
            tools/westron spec check [FILE.spec.yaml …]
+           tools/westron patterns check [FILE.md …]
     """
 
 func printError(_ message: String) {
@@ -158,6 +159,38 @@ func checkSpecs(_ files: [String]) throws -> Int32 {
     }
 }
 
+/// Patterns (decisions/0018): the given files, or every `spec/patterns/*.md`, against the contracts, the tokens, the
+/// icon registry and WestronUI's API.
+func checkPatterns(_ files: [String]) throws -> Int32 {
+    let files = files.isEmpty ? try PatternCheck.files(in: PatternCheck.defaultDirectory) : files
+    guard !files.isEmpty else {
+        print("patterns check: patterns: 0")
+        return 0
+    }
+    do {
+        let problems = try PatternCheck.run(files: files)
+        for problem in problems { printError(problem.description) }
+        if !problems.isEmpty {
+            printError("patterns check: patterns: \(files.count), problems: \(problems.count) (decisions/0018)")
+            return 1
+        }
+        print("patterns check: patterns: \(files.count), all valid")
+        return 0
+    } catch let problems as AppleComponents.Problems {
+        for problem in problems.problems { printError(problem.description) }
+        printError("patterns check: the contracts do not pass; run tools/westron spec check")
+        return 1
+    } catch let errors as TokenErrors {
+        for error in errors.errors { printError(error.description) }
+        printError("patterns check: the tokens do not load; run tools/westron tokens check")
+        return 1
+    } catch let problems as IconRegistry.Problems {
+        for problem in problems.problems { printError(problem.description) }
+        printError("patterns check: the icon registry does not load; run tools/westron icons check")
+        return 1
+    }
+}
+
 /// The WCAG 2 contrast of every declared "text/background" pair in every theme (#15). Prints the failures and a
 /// summary; with `--all`, every pair.
 func checkContrast(_ options: [String]) throws -> Int32 {
@@ -214,6 +247,8 @@ do {
         exit(try checkIcons(arguments.dropFirst(2).first))
     case ("spec", "check"):
         exit(try checkSpecs(Array(arguments.dropFirst(2))))
+    case ("patterns", "check"):
+        exit(try checkPatterns(Array(arguments.dropFirst(2))))
     default:
         printError(usage)
         exit(2)

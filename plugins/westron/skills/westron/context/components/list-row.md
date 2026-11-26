@@ -8,6 +8,8 @@ source and generate again (decisions/0016). -->
 The core row of a list or a tree: a title, a second line under it, a leading slot and a trailing slot, at a nesting
 level with guide lines, on a highlight that shows hover, pressed, selected and a drop onto it.
 
+Patterns that use it: [A list of choices in a sheet](../patterns/choice-list-sheet.md).
+
 ## In SwiftUI
 
 `import WestronUI`. A call writes at least:

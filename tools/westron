@@ -7,6 +7,8 @@
 #   tools/westron tokens check [RESOLVER.json]                 validate the tokens and resolve every mode (decisions/0010)
 #   tools/westron icons check [REGISTRY.yaml]                  validate the icon registry (decisions/0011)
 #   tools/westron spec check [FILE.spec.yaml …]                validate component contracts (spec/schema/)
+#   tools/westron patterns check [FILE.md …]                   validate patterns against the contracts, tokens, icons
+#                                                              and API (decisions/0018)
 #
 # Runs from the repository root, so paths are relative to it. On macOS it uses the Xcode from .xcode-version,
 # on Linux the swift on PATH.

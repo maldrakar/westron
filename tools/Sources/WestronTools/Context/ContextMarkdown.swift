@@ -203,13 +203,16 @@ enum ContextMarkdown {
     /// - Parameters:
     ///   - source: the repository path of the file the text comes from, which its relative links start from.
     ///   - output: the repository path of the file the text goes to.
-    static func rewritingLinks(_ text: String, from source: String, to output: String, map: [String: String])
-        -> String
-    {
+    ///   - skippingCode: leave a link inside a code span, `` `[a](b)` ``, as it is.
+    static func rewritingLinks(
+        _ text: String, from source: String, to output: String, map: [String: String], skippingCode: Bool = false
+    ) -> String {
         let ns = NSString(string: text)
+        let code = skippingCode ? codeSpans(text) : []
         var result = ""
         var last = 0
-        for match in link.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
+        for match in link.matches(in: text, range: NSRange(location: 0, length: ns.length))
+        where !code.contains(where: { NSLocationInRange(match.range.location, $0) }) {
             result += ns.substring(with: NSRange(location: last, length: match.range.location - last))
             last = match.range.location + match.range.length
             let whole = ns.substring(with: match.range)
@@ -217,19 +220,115 @@ enum ContextMarkdown {
             let target = ns.substring(with: match.range(at: 2))
             if target.contains("://") || target.hasPrefix("mailto:") || target.hasPrefix("#") {
                 result += whole
-                continue
-            }
-            let parts = target.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false)
-            let resolved = resolve(String(parts[0]), from: directory(of: source))
-            if let resolved, let mapped = map[resolved] {
-                let anchor = parts.count > 1 ? "#" + parts[1] : ""
-                result += "[\(label)](\(relative(mapped, from: directory(of: output)))\(anchor))"
+            } else if let rewritten = rewrittenTarget(target, from: source, to: output, map: map) {
+                result += "[\(label)](\(rewritten))"
             } else {
                 result += label
             }
         }
         result += ns.substring(from: last)
         return result
+    }
+
+    /// A relative target as the bundle writes it, relative to `output` with its anchor kept, when the bundle holds the
+    /// file; nil for any other file of the repository.
+    static func rewrittenTarget(_ target: String, from source: String, to output: String, map: [String: String])
+        -> String?
+    {
+        let parts = target.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false)
+        guard let resolved = resolve(String(parts[0]), from: directory(of: source)), let mapped = map[resolved]
+        else { return nil }
+        return relative(mapped, from: directory(of: output)) + (parts.count > 1 ? "#" + parts[1] : "")
+    }
+
+    /// A code span, `` `a` `` or ``` `` a ` b `` ```, inside one paragraph.
+    private static let codeSpan = try! NSRegularExpression(pattern: #"(`+)(?:[^\n]|\n(?!\n))*?\1"#)
+
+    /// The ranges of a text's code spans.
+    static func codeSpans(_ text: String) -> [NSRange] {
+        codeSpan.matches(in: text, range: NSRange(location: 0, length: NSString(string: text).length)).map(\.range)
+    }
+
+    /// A link reference definition, `[label]: target "title"`, on a line of its own.
+    private static let definition = try! NSRegularExpression(pattern: #"^ {0,3}\[([^\]]+)\]:[ \t]*(\S+)(.*)$"#)
+    /// A full or collapsed reference link, `[text][label]` or `[label][]`.
+    private static let referenceLink = try! NSRegularExpression(pattern: #"\[([^\]]*)\]\[([^\]]*)\]"#)
+
+    /// `rewritingLinks` on the text outside its fenced code blocks and code spans, which it leaves as they are: in
+    /// Swift, `[Choice](…)` is no link. A reference definition, `[ch]: ../design-language/06-layout.md`, follows the
+    /// same rule: its target is rewritten where the bundle holds the file; otherwise the definition goes, and each
+    /// full or collapsed link to it, `[the chapter][ch]`, becomes its text.
+    static func rewritingLinksOutsideCode(
+        _ text: String, from source: String, to output: String, map: [String: String]
+    ) -> String {
+        // The lines outside fenced blocks, with the reference definitions rewritten or dropped.
+        var lines: [(text: String, fenced: Bool)] = []
+        var dropped: Set<String> = []
+        var fence: String?
+        for line in text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init) {
+            let trimmed = line.drop { $0 == " " }
+            if let open = fence {
+                lines.append((line, true))
+                if trimmed.hasPrefix(open), trimmed.allSatisfy({ $0 == open.first }) { fence = nil }
+                continue
+            }
+            if let mark = ["```", "~~~"].first(where: { trimmed.hasPrefix($0) }) {
+                lines.append((line, true))
+                fence = String(trimmed.prefix { $0 == mark.first })
+                continue
+            }
+            let ns = NSString(string: line)
+            guard let match = definition.firstMatch(in: line, range: NSRange(location: 0, length: ns.length)) else {
+                lines.append((line, false))
+                continue
+            }
+            let label = ns.substring(with: match.range(at: 1))
+            let target = ns.substring(with: match.range(at: 2))
+            if target.contains("://") || target.hasPrefix("mailto:") || target.hasPrefix("#") {
+                lines.append((line, true))
+            } else if let rewritten = rewrittenTarget(target, from: source, to: output, map: map) {
+                lines.append(("[\(label)]: \(rewritten)" + ns.substring(with: match.range(at: 3)), true))
+            } else {
+                dropped.insert(label.lowercased())
+            }
+        }
+        var out: [String] = []
+        var prose: [String] = []
+        func flush() {
+            guard !prose.isEmpty else { return }
+            let chunk = rewritingLinks(
+                prose.joined(separator: "\n"), from: source, to: output, map: map, skippingCode: true)
+            out.append(withoutReferences(chunk, to: dropped))
+            prose = []
+        }
+        for line in lines {
+            if line.fenced {
+                flush()
+                out.append(line.text)
+            } else {
+                prose.append(line.text)
+            }
+        }
+        flush()
+        return out.joined(separator: "\n")
+    }
+
+    /// The text with each full or collapsed reference link to one of `labels`, outside code spans, made its text.
+    static func withoutReferences(_ text: String, to labels: Set<String>) -> String {
+        guard !labels.isEmpty else { return text }
+        let ns = NSString(string: text)
+        let code = codeSpans(text)
+        var result = ""
+        var last = 0
+        for match in referenceLink.matches(in: text, range: NSRange(location: 0, length: ns.length))
+        where !code.contains(where: { NSLocationInRange(match.range.location, $0) }) {
+            let words = ns.substring(with: match.range(at: 1))
+            let label = ns.substring(with: match.range(at: 2))
+            guard labels.contains((label.isEmpty ? words : label).lowercased()) else { continue }
+            result += ns.substring(with: NSRange(location: last, length: match.range.location - last)) + words
+            last = match.range.location + match.range.length
+        }
+        return result + ns.substring(from: last)
     }
 
     /// The directory of a repository path, empty at the root.
