@@ -4,14 +4,16 @@ The westron generators and checks are a separate SwiftPM package (decisions/0009
 
 | Path | What it does |
 |---|---|
-| `westron` | Runs the `westron` executable: `lint raw-values`, `lint api-parity`, `generate [--check]`, `tokens check`, `tokens contrast`, `icons check`, `spec check`. Builds the package if needed |
-| `check.sh` | Builds and tests the package, then runs the raw-values lint, `generate --check`, `tokens check`, `tokens contrast`, `icons check`, `spec check` and the API parity lint; CI runs it on Linux |
+| `westron` | Runs the `westron` executable: `lint raw-values`, `lint api-parity`, `generate [--check]`, `tokens check`, `tokens contrast`, `icons check`, `spec check`, `patterns check`. Builds the package if needed |
+| `check.sh` | Builds and tests the package, then runs the raw-values lint, `generate --check`, `tokens check`, `tokens contrast`, `icons check`, `spec check`, `patterns check` and the API parity lint; CI runs it on Linux |
 | `Sources/WestronTools/RawValues.swift` | The raw-values lint ("no raw values") for `WestronUI` |
 | `Sources/WestronTools/APIParity/` | The API parity lint (#21, below): `SwiftDeclarations.swift` reads declarations and their effective access with swift-syntax, `APIParity.swift` derives the expected API from the contracts and compares |
 | `Sources/WestronTools/Generate.swift` | Generator registry; `--check` compares the committed code with a fresh generation and reports stale files in the directories generators own |
 | `Sources/WestronTools/Apple/` | The Apple token generator (`tokens-apple`): `WestronTokens` values, the `WestronUI` asset catalog and SwiftUI accessors (decisions/0010) |
 | `Sources/WestronTools/Icons/` | The icon registry reader (`spec/icons/icons.yaml`, YAML through Yams) and the Apple icon generator (`icons-apple`): `Westron.Icon` and its SF Symbols (decisions/0011) |
 | `Sources/WestronTools/Contracts/` | The component contract check (`spec check`): YAML through Yams, the schema `spec/schema/component.schema.json` through swift-json-schema, then the rules a schema cannot express, such as no option value named like a system style (decisions/0003), bound tokens that exist, every case of a binding reachable (`CaseReachability.swift`) and every value reaching one each Apple OS offers (`spec/components/README.md`, "Check"). And the Swift API generator (`components-apple`, #20): it runs the same check first, then, from each approved contract styled on an Apple system control, writes the enums of its options into `WestronContract/Generated/<Component>+Contract.swift`, a module with no imports (decisions/0017), and the SwiftUI side into `WestronUI/Generated/<Component>+Contract.swift`: the style overload that applies the hand-written `<Component>VariantStyle`, the `controlSize` mapping, each OS's fallbacks and the states (`spec/conventions.md`); from each approved own component (`platforms.apple.form`, `AppleOwnComponents.swift`), the enums of its options into `WestronContract/Generated/` and its states and forms, when it has any, into `WestronUI/Generated/`. The snapshot matrix generator (`matrix-apple`, #24, `SnapshotMatrix.swift` and `AppleSnapshotMatrix.swift`) reads the same contracts and writes each one's matrix into the catalog, `WestronCatalog/Generated/<Component>+Matrix.swift`, with `ComponentMatrix+All.swift` listing them: every option value (a bool as `false` and `true`) at rest and in each state alone, less the combinations a constraint of severity `error` forbids, what each Apple OS draws differently, and the sheets `tools/apple/snapshot-matrix.sh` captures (`platforms/apple/README.md`, "Snapshot matrix"). `SwiftUITypes.swift` is generated: SwiftUI's public type names, which a generated name must not take (below) |
+| `Sources/WestronTools/Patterns/` | The pattern check (`patterns check`, decisions/0018, below): `Pattern.swift` reads a pattern's front matter through Yams and its sections, `PatternCheck.swift` holds them, `PatternNames.swift` holds the names its Swift example and prose write to WestronUI's API with swift-syntax |
+| `Sources/WestronTools/Context/` | The agent context generator (`agent-context`, decisions/0016): the bundle of the westron plugin's skill, `plugins/westron/skills/westron/context/`, and `llms.txt`; `ContextPatterns.swift` copies each approved pattern into it, lists it in the index and names it on its components' cards |
 | `Sources/WestronTools/Tokens/` | The DTCG token reader and resolver: parsing, the schema check, `dev.westron.*` keys, merging, references, modes (`Resolution`). [The supported subset](Sources/WestronTools/Tokens/README.md) |
 | `Schemas/dtcg-2025.10/` | The official DTCG 2025.10 format and resolver JSON Schemas, copied unchanged, with their source and license |
 | `Sources/WestronTools/Color/` | Color math after CSS Color 4: OkLCh, Oklab, XYZ, sRGB and Display P3, gamut mapping, hex, WCAG contrast, decimal format |
@@ -136,3 +138,55 @@ the boundary above, which `generate --check` guards.
 swift-json-schema already resolves for Swift 6.4, so the package resolves one copy. It builds from source in debug: on
 an M4 Pro with Xcode 27.1, a clean `swift build` of `tools/` went from 12 s to 18 s, `swift build --build-tests` from
 18 s to 21 s (CPU time 34 s to 76 s); a runner with fewer cores pays more.
+
+## The pattern check
+
+`tools/westron patterns check [FILE.md …]` checks every `spec/patterns/*.md`, or the files given (decisions/0018,
+point 2). It reads the contracts that pass `spec check`, the token model, the icon registry and the API the parity lint
+derives from the contracts, and prints `file:line: message` for each problem, exiting with 1:
+
+- the front matter: a block between two lines `---` at the top, a YAML mapping with exactly the keys `id`, `title`,
+  `status`, `summary`, `consumers`, `components`, `tokens`, `icons` and `gaps`; the first four non-empty strings, the
+  rest lists of strings, `consumers` and `components` not empty; `id` kebab-case and the file's name; `status`
+  `proposed` or `approved`; each consumer `<product>/<screen>`, as a contract's. A file with CRLF line ends is read as
+  with LF;
+- each id of `components` has a contract, each name of `tokens` is a token's source name in the model
+  (`space.page.narrow`, not the Swift member), each of `icons` is in the registry;
+- the first heading is the `title`; the level-two sections are "When to use", "Parts", "Rules", "Accessibility",
+  "Apple", "Not covered" and "Gaps", each once and in this order, and "Questions" only in a proposed pattern, last;
+  headings inside a fenced block are code. The sections a pattern may have (`PatternCheck.sections`, in order) and
+  those it must have (`requiredSections`: all but `optionalSections`) are apart, so that a later platform's section,
+  "Web" after "Apple", is added to `sections` and to `optionalSections` without failing the patterns that lack it yet;
+  it leaves `optionalSections` when every pattern has it;
+- "Apple" holds exactly one fenced block ```` ```swift ````, the example;
+- each id of `gaps` has an entry `- **G3** …` in "Gaps", and each entry is in `gaps`;
+- the names every ```` ```swift ```` block and the prose write are WestronUI's (`PatternNames`, on the names
+  `ContextNames` gives the bundle's own prose). In Swift, read by swift-syntax:
+  - an implicit member chain of two names or more whose first name starts a token's path or Swift member
+    (`.space.page.narrow`, `.text.secondary`), also the chain a method is called on (`.text.primary.opacity(0.5)`), is
+    a token's Swift member; SwiftUI's own (`.bounce.up`, `.tint.secondary`) start otherwise and are not held;
+  - a call of a westron view (`ListRow(level:guides:action:) { … } leading: { … }`, `WestronUI.Icon(.check)`) or
+    function (`.selected(_:)`, `.textRole(_:)`) fits one of its declared initializers or overloads by labels, defaults
+    and trailing closures; a call whose arguments are elided, `ListRow(…)`, as prose names a call, is not held, but an
+    `…` in a string or a closure elides nothing (`Icon(.tick, label: "More…")`, `ListRow(lvl: 1) { … }` are held);
+  - an argument written `.name` is a value of its parameter's type: an icon, a list color, a text role (`.body` alone
+    is none), an option's value. The lone argument of a style modifier, `.buttonStyle(…)`, is SwiftUI's own style when
+    it is not written `.name` (`myStyle`, `MyStyle()`) or names one of that modifier's system styles
+    (`SystemStyles.byBase[…].styles`: `.plain`, `.bordered`, `.switch`); any other `.name` is held to westron's
+    variants, so `.buttonStyle(.primry)` fails. A value that every overload rejects names what each takes:
+    `.toggleStyle(.primary)` is neither a `CheckboxVariant` nor a `ChipVariant`.
+
+  In the prose, a code span wrapped over two lines is read as one, its line break a space. A code span that starts
+  with a token's first name and is dotted (`footnote.regular`, `space.within-group`) is a token's path or Swift
+  member, and any other code span is read as Swift and held as above. SwiftUI's own calls and the product's names are
+  not checked: without the SDK they cannot be told from a typo, and the pattern's catalog example compiles them.
+
+`tools/westron generate` runs the same check on every pattern, proposed ones too, before it writes the bundle, and
+copies only the approved ones (`Sources/WestronTools/Context/ContextPatterns.swift`): to `context/patterns/<id>.md`
+without the front matter, with a line under the title of its id, status, consumers and links to its components' cards,
+its links rewritten as the chapters' are (a link to a file the bundle holds points to the copy, any other link to the
+repository becomes its text); fenced blocks and code spans are left alone, and a reference definition,
+`[ch]: ../../design-language/06-layout.md`, its target in angle brackets or not, follows the same rule: rewritten
+where the bundle holds the file, otherwise dropped with its full and collapsed links, `[the chapter][ch]`, made their
+text. One line per pattern goes in the index's and `llms.txt`'s section "Patterns", from `title` and `summary`, and a
+line "Patterns that use it" on the card of each component in `components`.

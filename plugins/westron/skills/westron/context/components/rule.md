@@ -8,6 +8,8 @@ generate again (decisions/0016). -->
 A straight line that separates two groups, or marks where a dragged item would land: westron's own line, the same on
 every platform, rather than the system's separator, whose thickness and color the system fixes.
 
+Patterns that use it: [A list of choices in a sheet](../patterns/choice-list-sheet.md).
+
 ## In SwiftUI
 
 `import WestronUI`. A call writes at least:

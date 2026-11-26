@@ -22,6 +22,8 @@ struct ComponentCard {
     /// The other components that draw a slot of theirs in a text role their contract binds there, each with those
     /// slots in the contract's order: the text a product puts there takes that role with no call.
     var textRoleSlots: [(component: String, slots: [String])] = []
+    /// The approved patterns that use the component (decisions/0018), each with its path inside the bundle.
+    var patterns: [(title: String, path: String)] = []
 
     /// `ListRow` for `list-row`.
     var component: String { AppleComponents.typeName(contract.id) }
@@ -287,6 +289,13 @@ struct ComponentCard {
         }
         out += ContextMarkdown.wrap(meta.joined(separator: " · "))
         out += [""] + ContextMarkdown.wrap(usable(summary))
+        if !patterns.isEmpty {
+            out +=
+                [""]
+                + ContextMarkdown.wrap(
+                    "Patterns that use it: " + ContextMarkdown.list(patterns.map { "[\($0.title)](../\($0.path))" })
+                        + ".")
+        }
         out += callSection()
         out += optionsSection()
         out += slotsSection()

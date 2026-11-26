@@ -89,11 +89,13 @@ catalog_inputs="$package_manifest|^platforms/apple/Catalog/|^platforms/apple/Sou
 
 # The steps of tools/check.sh, each with what its command reads by default (tools/Sources, but for locks). The data:
 # the token files, the resolver and the palette; the contracts, their schema and the icon registry; not the Markdown
-# beside them, but for the two documents the agent context reads, spec/conventions.md and the design language, and its
-# output, the plugin's plugins/westron/skills/westron/context/ and llms.txt (generate). The tools' own tests read the
-# repository too (`repositoryRoot` in tools/Tests: the tokens, the contracts and their schema, the icon registry, the
-# two documents, the skill's hand-written SKILL.md, the sources of WestronUI and WestronContract and the generated
-# Swift, .xcode-version), so they run for those as well. The lint api-parity reads WestronUI and WestronContract, the
+# beside them, but for the two documents the agent context reads, spec/conventions.md and the design language, the
+# patterns (spec/patterns/, decisions/0018), which it checks and copies, and its output, the plugin's
+# plugins/westron/skills/westron/context/ and llms.txt (generate). The tools' own tests read the repository too
+# (`repositoryRoot` in tools/Tests: the tokens, the contracts and their schema, the icon registry, the two documents,
+# the patterns, the skill's hand-written SKILL.md, the sources of WestronUI and WestronContract and the generated
+# Swift, .xcode-version), so they run for those as well. The step patterns reads the patterns and, to hold them, the
+# contracts, the tokens and the icon registry. The lint api-parity reads WestronUI and WestronContract, the
 # module of the contracts' enums (decisions/0017). The step locks reads only the lock and its test, plain bash; the
 # step audit-scope reads the script, its test and the sources it maps (the catalog, the components of WestronUI and
 # WestronContract, the contracts, the patterns), plain bash too. A
@@ -102,10 +104,10 @@ catalog_inputs="$package_manifest|^platforms/apple/Catalog/|^platforms/apple/Sou
 tokens='^tokens/.*\.json$'
 spec='^spec/(components/[^/]+/[^/]+\.spec\.yaml$|schema/|icons/)'
 generated='^platforms/apple/Sources/(WestronTokens/Generated/|WestronContract/Generated/|WestronUI/Generated/|WestronUI/Tokens\.xcassets/|WestronCatalog/Generated/)'
-# The agent context (decisions/0016): the generator also reads the platform conventions and the design language, and
-# writes the bundle into the skill of westron's Claude Code plugin and llms.txt at the root; the tools' tests read the
-# skill's SKILL.md.
-agent_context_inputs='^(spec/conventions\.md|design-language/)'
+# The agent context (decisions/0016): the generator also reads the platform conventions, the design language and the
+# patterns, and writes the bundle into the skill of westron's Claude Code plugin and llms.txt at the root; the tools'
+# tests read the skill's SKILL.md.
+agent_context_inputs='^(spec/conventions\.md|design-language/|spec/patterns/)'
 agent_context_outputs='^(plugins/westron/skills/westron/context/|llms\.txt$)'
 skill='^plugins/westron/skills/westron/SKILL\.md$'
 tools_steps=(
@@ -116,6 +118,7 @@ tools_steps=(
   "contrast|$tokens"
   "icons|^spec/icons/"
   "spec|$spec|$tokens"
+  "patterns|^spec/patterns/|$spec|$tokens"
   "api-parity|$westron_ui|$westron_contract|$spec"
   "locks|^tools/apple/lock(-test)?\.sh$"
   "audit-scope|^tools/apple/audit-scope(-test)?\.sh$|^platforms/apple/Sources/(WestronCatalog|WestronUI|WestronContract)/|^spec/(components|patterns)/"
