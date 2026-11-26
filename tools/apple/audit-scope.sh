@@ -12,6 +12,11 @@
 #     entries that draw what changed (see "Use" below). A component of WestronUI without that page fails the script:
 #     every component has its catalog entry (Catalog.swift). A contract without one is not implemented on Apple yet,
 #     and gives nothing;
+#   - a path of one pattern (decisions/0018): its document `spec/patterns/<id>.md` or its catalog source
+#     `platforms/apple/Sources/WestronCatalog/Patterns/<Name>/` (`choice-list-sheet` is `ChoiceListSheet`), the
+#     pattern's example and the page that shows it → the entries that directory declares, the pattern's own. A pattern
+#     whose directory declares no entry has no Apple example in the catalog yet, and gives nothing. A pattern's entry
+#     draws components, so its directory is read with the pages below (see "Use"): a component's change selects it too;
 #   - a page of WestronCatalog's Foundations, or its root, that declares entries and shares nothing with other files
 #     (every other type it declares is used by no other file of WestronCatalog, and it extends no type but
 #     CatalogEntry) → those entries;
@@ -30,7 +35,7 @@
 # TextField draws Icon), so a change to one can break another's page. The script follows use, derived from the
 # sources on every run, not from a list: there is no map to keep. It reads every Swift file of WestronUI and
 # WestronContract (whose enums tell a component's style modifier from the system's), the catalog's pages (Components/,
-# Foundations/) and its root files that declare entries, without comments and string literals,
+# Patterns/, Foundations/) and its root files that declare entries, without comments and string literals,
 # and splits them into units: each top-level declaration; each extension of a type they declare, under that type's
 # name; and each member of an extension of a type they do not declare (View, EnvironmentValues, Toggle, CatalogEntry),
 # so that every entry, `static let <name> = CatalogEntry(…)`, is a unit of its own. A unit uses another when its code
@@ -137,6 +142,14 @@ component_page() {
   fi
 }
 
+# The files of the pattern <Name>'s catalog directory that declare entries, one per line; nothing when there are none.
+pattern_pages() {
+  local file
+  for file in "$catalog/Patterns/$1"/*.swift; do
+    if [ -f "$file" ] && [ -n "$(declared "$file")" ]; then echo "$file"; fi
+  done
+}
+
 # Whether the page <file> shares nothing with the rest of WestronCatalog (see the rules above).
 self_contained() {
   local file="$1" type users
@@ -162,6 +175,7 @@ uses_table() {
   components="$(find "$catalog/Components" -name '*Pages.swift' | sed -E 's|.*/([^/]+)Pages\.swift$|\1|' | sort)"
   files="$({
     find "$ui" "$contract" "$catalog/Components" "$catalog/Foundations" -name '*.swift'
+    if [ -d "$catalog/Patterns" ]; then find "$catalog/Patterns" -name '*.swift'; fi
     for file in "$catalog"/*.swift; do
       if [ -n "$(declared "$file")" ]; then echo "$file"; fi
     done
@@ -528,14 +542,27 @@ while IFS= read -r path || [ -n "$path" ]; do
       use="$name impl"
       [ -n "$page" ] || why="the contract $id has no catalog page: not implemented on Apple yet"
       ;;
+    # Before the root's files below, whose pattern `*` would match a path in a subdirectory.
+    spec/patterns/*.md | "$catalog"/Patterns/*/*)
+      if [ "${path#spec/patterns/}" != "$path" ]; then
+        id="${path#spec/patterns/}"
+        name="$(perl -pe 's/(?:^|-)(\w)/\u$1/g' <<< "${id%.md}")"
+      else
+        name="${path#"$catalog"/Patterns/}"
+        name="${name%%/*}"
+      fi
+      page="$(pattern_pages "$name")"
+      [ -n "$page" ] || why="the pattern has no entry in $catalog/Patterns/$name: no Apple example in the catalog yet"
+      ;;
     "$catalog"/Foundations/*.swift | "$catalog"/*.swift)
       if [ -f "$path" ] && [ -n "$(declared "$path")" ] && self_contained "$path"; then
         page="$path"
       fi
       ;;
   esac
-  if [ -n "$page" ] && [ -f "$page" ]; then
-    note "$path → $(declared "$page" | cut -d' ' -f2 | paste -sd, -)"
+  # A pattern's directory may give several pages, one per line.
+  if [ -n "$page" ] && [ -f "${page%%$'\n'*}" ]; then
+    note "$path → $(while IFS= read -r file; do declared "$file"; done <<< "$page" | cut -d' ' -f2 | paste -sd, -)"
     pages+="$page"$'\n'
     if [ -n "$use" ]; then uses+="$use"$'\n'; fi
   elif [ -z "$page" ]; then
