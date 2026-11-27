@@ -204,6 +204,13 @@ final class FormTests: XCTestCase {
         XCTAssertLessThan(error.frame.maxY, app.buttons["Add"].frame.minY, "the error is not before the actions")
         XCTAssertTrue(hasFocus(field), "the refused field did not take the caret")
         XCTAssertNil(lastAction(timeout: 1), "an empty title was taken")
+        // The same refusal again, with the caret elsewhere: the field takes it back, and the sentence stands once.
+        let name = fields("Name")[0]
+        press(name)
+        XCTAssertTrue(hasFocus(name), "a tap did not focus Name")
+        press(app.buttons["Add"])
+        XCTAssertTrue(hasFocus(field), "a second refusal did not give the field the caret")
+        XCTAssertEqual(texts(Sample.emptyTitle).count, 1, "the second refusal's sentence is not one text")
         field.typeText("B")
         XCTAssertTrue(
             error.waitForNonExistence(timeout: 5), "a keystroke did not take the error away")
@@ -218,43 +225,54 @@ final class FormTests: XCTestCase {
         field.typeText("\n")
         XCTAssertTrue(texts(Sample.emptyTitle).firstMatch.waitForExistence(timeout: 5), "Return refused nothing")
         press(field)
-        field.typeText("Buy milk\n")
-        XCTAssertEqual(lastAction(), "Added “Buy milk”", "Return did not add the task")
+        field.typeText("Water the plants\n")
+        XCTAssertEqual(lastAction(), "Added “Water the plants”", "Return did not add the task")
         XCTAssertEqual(texts(Sample.emptyTitle).count, 0, "the error stayed after the title was taken")
     }
 
     /// Return moves through the service's fields in order and submits from the last; a refused field takes the caret
-    /// back with its error; a draft the product takes loads Create while it saves.
+    /// back with its error, and Create does not load; a draft the product takes loads Create while it saves.
     @MainActor
     func testReturnMovesThroughTheFieldsAndSubmitsFromTheLast() {
         launch()
         let name = fields("Name")[0]
         let repository = fields("Repository")[0]
         let branch = fields("Branch (optional)")[0]
+        let create = app.buttons["Create"]
+        // The sample opens with the address refused; a change to it, still without https, takes the error away.
+        let error = texts(Sample.notHTTPS).firstMatch
+        XCTAssertTrue(error.exists, "the sample opened without its error")
+        press(repository)
+        repository.typeText("/")
+        XCTAssertTrue(error.waitForNonExistence(timeout: 5), "a change did not take the error away")
         press(name)
         XCTAssertTrue(hasFocus(name), "a tap did not focus Name")
         name.typeText("\n")
         XCTAssertTrue(hasFocus(repository), "Return in Name did not move to Repository")
         repository.typeText("\n")
         XCTAssertTrue(hasFocus(branch), "Return in Repository did not move to Branch")
-        // Return in the last field submits: the address is still refused, and its field takes the caret back.
+        // Return in the last field submits: the address is refused, its error comes back, its field takes the caret,
+        // and Create does not load.
         branch.typeText("\n")
-        let error = texts(Sample.notHTTPS).firstMatch
-        XCTAssertTrue(error.waitForExistence(timeout: 5), "the refused address shows no error")
+        XCTAssertTrue(error.waitForExistence(timeout: 5), "Return in the last field refused nothing")
         XCTAssertTrue(hasFocus(repository), "the field in error did not take the caret")
-        // Typing in the field takes its error away; a draft the product takes saves with Create loading.
+        XCTAssertEqual(create.value as? String ?? "", "", "a refused draft loads")
+        XCTAssertNil(lastAction(timeout: 1), "a refused draft was saved")
+        // Typing in the field takes its error away; Return from the last field saves, with Create loading.
         let old = (repository.value as? String) ?? ""
         repository.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: old.count))
         repository.typeText("https://git.example.com/billing")
         XCTAssertTrue(error.waitForNonExistence(timeout: 5), "typing did not take the error away")
-        press(app.buttons["Create"])
-        XCTAssertEqual(app.buttons["Create"].value as? String, "Loading", "Create does not load while it saves")
+        repository.typeText("\n")
+        XCTAssertTrue(hasFocus(branch), "Return in Repository did not move to Branch")
+        branch.typeText("\n")
+        XCTAssertEqual(create.value as? String, "Loading", "Create does not load while it saves")
         XCTAssertTrue(app.buttons["Create"].isEnabled, "Create is not enabled while it loads")
         XCTAssertEqual(lastAction(timeout: 10), "Created “billing”", "the draft was not saved")
         XCTAssertEqual(app.buttons["Create"].value as? String ?? "", "", "Create still loads after the save")
     }
 
-    /// Cancel runs once, with nothing taken.
+    /// Cancel runs its form's action, and nothing is added.
     @MainActor
     func testCancel() {
         launch()
@@ -262,12 +280,15 @@ final class FormTests: XCTestCase {
         XCTAssertEqual(lastAction(), "Cancelled quick entry")
     }
 
-    /// A form opened to make something new focuses its field when it appears.
+    /// A form opened to make something new focuses its field when it appears, and the keyboard rises (iOS).
     @MainActor
     func testQuickEntryFocusesItsFieldOnAppear() {
         launch(["-WestronFormFocusOnAppear"])
         let field = quickEntryTitle
         let focused = expectation(for: NSPredicate(format: "hasKeyboardFocus == true"), evaluatedWith: field)
         wait(for: [focused], timeout: 5)
+        #if os(iOS)
+            XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5), "the keyboard did not rise")
+        #endif
     }
 }

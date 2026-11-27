@@ -11,7 +11,9 @@ import WestronUI
 // sheet. The second is a technical product's form of several labelled fields, opened as it stands after a Create the
 // product refused: the repository's error in its hint's place. It is live too: Return moves through its fields, and a
 // draft the page takes is saved for two seconds with the button loading. The third is the pilot's task card's title
-// and notes, inline; the card's raised Surface is the pilot's, which the sample leaves out (the pattern's "Parts").
+// and notes, inline, without the card's ground, the pilot's raised Surface: drawn here, Surface would put this entry
+// in the pull-request audit of every change to Surface, which already selects 5 entries, the limit
+// (`fan_out_limit` in tools/apple/audit-scope.sh), and would go past it.
 //
 // Every action is recorded under the samples, where a product would close the sheet, so that a UI test sees it
 // (FormTests); the line shows only after the first. Neither form takes the keyboard focus when the page appears, so
@@ -60,7 +62,7 @@ struct FormPage: View {
                     cancel: { cancel("quick entry") })
                 Rule()
                 ServiceForm(
-                    draft: $service, errors: $serviceErrors, focusesOnAppear: false, create: create,
+                    draft: $service, errors: $serviceErrors, focusesOnAppear: false, check: check, save: save,
                     cancel: { cancel("the service") })
                 Rule()
                 TaskCardFields(title: $cardTitle, notes: $notes)
@@ -79,23 +81,24 @@ struct FormPage: View {
     }
 
     /// Quick entry's Add, as the pilot's module answers it: an empty title is refused, any other is taken.
-    private func add() {
+    private func add() -> String? {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-            problem = FormSample.emptyTitle
-            return
-        }
+        guard !trimmed.isEmpty else { return FormSample.emptyTitle }
         last = "Added “\(trimmed)”"
         title = ""
+        return nil
     }
 
-    /// The service's Create: each field's rule, then a save that takes two seconds.
-    private func create() async {
+    /// The service's Create: each field's rule.
+    private func check() -> [ServiceDraft.Field: String] {
         var errors: [ServiceDraft.Field: String] = [:]
         if service.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { errors[.name] = FormSample.emptyName }
         if !service.repository.hasPrefix("https://") { errors[.repository] = FormSample.notHTTPS }
-        serviceErrors = errors
-        guard errors.isEmpty else { return }
+        return errors
+    }
+
+    /// A save that takes two seconds.
+    private func save() async {
         try? await Task.sleep(for: .seconds(2))
         last = "Created “\(service.name)”"
     }

@@ -19,7 +19,8 @@
 #                                    (ButtonBehaviorTests CheckboxBehaviorTests TextFieldBehaviorTests
 #                                    TextFieldAccessibilityFrameTests IconAccessibilityTests
 #                                    IconTileAccessibilityTests ChipBehaviorTests ListRowBehaviorTests
-#                                    DisclosureBehaviorTests ChoiceListSheetTests EmptyStateTests; default: all); a
+#                                    DisclosureBehaviorTests ChoiceListSheetTests EmptyStateTests FormTests; default:
+#                                    all); a
 #                                    run that stops
 #                                    making progress
 #                                    (WESTRON_BEHAVIOR_STALL_LIMIT=<seconds>, default 300) or fails for

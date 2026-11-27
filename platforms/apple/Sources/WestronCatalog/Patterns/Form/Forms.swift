@@ -35,8 +35,8 @@ struct FormField<Field: View>: View {
     }
 }
 
-/// The end of a form that is submitted: Cancel, then its one primary action; one under the other at the accessibility
-/// text sizes.
+/// The end of a form that is submitted: Cancel, then its one primary action; one under the other, each the form's
+/// width, at the accessibility text sizes.
 struct FormActions: View {
     let primary: String  // a verb for what the form does: "Add", "Create"
     var isLoading = false  // while the product saves
@@ -46,21 +46,27 @@ struct FormActions: View {
 
     var body: some View {
         // One layout or the other around the same buttons, so that they keep their identity as the text size changes.
+        let stacked = textSize.isAccessibilitySize
         let layout =
-            textSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(alignment: .trailing, spacing: .space.withinGroup))
+            stacked
+            ? AnyLayout(VStackLayout(spacing: .space.withinGroup))
             : AnyLayout(HStackLayout(spacing: .space.withinGroup))
         layout {
-            Button("Cancel", action: cancel)
+            Button(action: cancel) { label("Cancel", wide: stacked) }
                 .buttonStyle(.secondary, size: .m)
                 #if !os(watchOS)
                     .keyboardShortcut(.cancelAction)  // Esc
                 #endif
-            Button(primary, action: submit)
+            Button(action: submit) { label(primary, wide: stacked) }
                 .buttonStyle(.primary, size: .m)
                 .loading(isLoading)
         }
         .frame(maxWidth: .infinity, alignment: .trailing)
+    }
+
+    /// A button's words; stacked, they take the form's width, and the button with them.
+    private func label(_ words: String, wide: Bool) -> some View {
+        Text(words).frame(maxWidth: wide ? .infinity : nil)
     }
 }
 
@@ -79,9 +85,9 @@ struct FormTitle: View {
 /// The pilot's quick entry: one field that names a new task, and Add.
 struct TaskEntryForm: View {
     @Binding var title: String
-    @Binding var problem: String?  // the product's sentence refusing the title: "A title cannot be empty."
+    @Binding var problem: String?  // shown under the field: what `add` last refused the title with
     var focusesOnAppear = true  // it opens to be typed in
-    let add: () -> Void  // keeps the task and closes the sheet, or sets `problem`
+    let add: () -> String?  // keeps the task and closes the sheet; or returns why not: "A title cannot be empty."
     let cancel: () -> Void
     @FocusState private var focused: Bool
 
@@ -89,7 +95,7 @@ struct TaskEntryForm: View {
         VStack(alignment: .leading, spacing: .space.withinGroup) {
             FormTitle(text: "New task")
             FormField(error: problem) {
-                TextField("Title", text: $title, prompt: Text("Title").foregroundStyle(.text.placeholder))
+                TextField("Title", text: $title, prompt: Text("Buy milk").foregroundStyle(.text.placeholder))
                     .textFieldStyle(.framed)
                     .accessibilityLabel("Title")
                     .focused($focused)
@@ -104,9 +110,12 @@ struct TaskEntryForm: View {
     }
 
     private func submit() {
-        add()
-        if let problem {
-            AccessibilityNotification.Announcement(problem).post()
+        // What `add` returns, not what the binding reads back, which a product's model may not show until its next
+        // update.
+        let refusal = add()
+        problem = refusal
+        if let refusal {
+            AccessibilityNotification.Announcement(refusal).post()
             focused = true
         }
     }
@@ -122,9 +131,10 @@ struct ServiceDraft {
 
 struct ServiceForm: View {
     @Binding var draft: ServiceDraft
-    @Binding var errors: [ServiceDraft.Field: String]  // the product's sentences, by field
+    @Binding var errors: [ServiceDraft.Field: String]  // shown under the fields: what `check` last refused, by field
     var focusesOnAppear = true
-    let create: () async -> Void  // saves and closes the sheet, or sets `errors`
+    let check: () -> [ServiceDraft.Field: String]  // the product's sentences refusing fields; none where it takes them
+    let save: () async -> Void  // keeps the draft `check` took and closes the sheet
     let cancel: () -> Void
     @State private var isSaving = false
     @FocusState private var focused: ServiceDraft.Field?
@@ -175,15 +185,20 @@ struct ServiceForm: View {
 
     private func submit() {
         guard !isSaving else { return }  // Return while it saves
+        // What `check` returns, not what the binding reads back, which a product's model may not show until its next
+        // update.
+        let refusals = check()
+        errors = refusals
+        // The first field in error takes the caret, and its sentence is announced; a refused draft does not load.
+        if let field = ServiceDraft.Field.allCases.first(where: { refusals[$0] != nil }), let error = refusals[field] {
+            AccessibilityNotification.Announcement(error).post()
+            focused = field
+            return
+        }
         isSaving = true
         Task {
-            await create()
+            await save()
             isSaving = false
-            // The first field in error takes the caret, and its sentence is announced.
-            if let field = ServiceDraft.Field.allCases.first(where: { errors[$0] != nil }), let error = errors[field] {
-                AccessibilityNotification.Announcement(error).post()
-                focused = field
-            }
         }
     }
 }

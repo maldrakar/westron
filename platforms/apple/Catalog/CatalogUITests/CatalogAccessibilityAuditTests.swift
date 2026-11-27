@@ -1132,11 +1132,12 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             suppressions += [
                 // "Text clipped" on the field "Repository" of the pattern `form` (spec/patterns/form.md), "Text of this
                 // UITextField may be clipped at larger Dynamic Type sizes", at the default settings and at the
-                // accessibility sizes (iOS 26.3, 2026-11-27). The sample opens with an address,
-                // "http://git.example.com/billing", that nearly fills the field at the default size, and the field is
-                // of one line, whose text scrolls sideways when it is longer than the field, by TextField's contract
-                // (option lines, single). The other fields of the page, with short words, are not reported. Only a
-                // text field with that label matches; the error under it is audited as usual.
+                // accessibility sizes (iOS 26.3, 2026-11-27). The message is a forecast: at the default size the
+                // sample's address, "http://git.example.com/billing", takes about 60% of the field's width and shows
+                // whole; at accessibility3 it is cut short, "http://git.exam…". The field is of one line, whose text
+                // scrolls sideways when it is longer than the field, by TextField's contract (option lines, single).
+                // The other fields of the page, with short words, are not reported. Only a text field with that label
+                // matches; the error under it is audited as usual.
                 Suppression(
                     .entry("form"), type: .textClipped, reason: "a one-line field's text scrolls sideways",
                     elementType: .textField
