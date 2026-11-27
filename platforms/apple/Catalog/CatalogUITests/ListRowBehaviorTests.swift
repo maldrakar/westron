@@ -326,13 +326,16 @@ final class ListRowBehaviorTests: XCTestCase {
     @MainActor
     func testChosenStateRowsAreSelected() {
         launch()
-        let pressable = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "pressable, chosen"))
+        // Each row's element is named by all its words, the title and the count of its trailing slot; under it XCUITest
+        // lists the title's text too, which is the element's (iOS 26.3: "static, chosen" inside "static, chosen, 12").
+        let words = (pressable: "pressable, chosen, 12", static: "static, chosen, 12")
+        let pressable = app.buttons.matching(NSPredicate(format: "label == %@", words.pressable))
         XCTAssertEqual(pressable.count, 1, "the pressable chosen row is not one button")
         print(line("pressable chosen", pressable.firstMatch))
         XCTAssertTrue(pressable.firstMatch.isSelected, "the pressable chosen row is not announced as selected")
         // A text's string is its label on iOS and its value on macOS.
         let still = app.staticTexts.matching(
-            NSPredicate(format: "label BEGINSWITH %@ OR value BEGINSWITH %@", "static, chosen", "static, chosen"))
+            NSPredicate(format: "label == %@ OR value == %@", words.static, words.static))
         XCTAssertEqual(still.count, 1, "the static chosen row's words are not one element")
         XCTAssertEqual(
             app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "static, chosen")).count, 0,

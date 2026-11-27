@@ -897,22 +897,25 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             return label(issue.element?.label)
         }
 
-        /// Whether a static text of the catalog reaches under the iOS status bar's clock now, the element of the status
-        /// bar whose label is a time ("9:41"); `false` where the bar shows no clock, and always on macOS. What it
-        /// finds is printed, for the report.
+        /// Whether a static text of the catalog reaches under the iOS status bar's clock now: SpringBoard's text whose
+        /// label is a time ("19:39") inside the status bar's frame. The status bar's element lists no children; the
+        /// clock is found among SpringBoard's descendants (iOS 26.3: a static text 45.7 × 20.3 pt at 51.3, 22.3).
+        /// `false` where no clock is found, and always on macOS. What it finds is printed, for the report.
         @MainActor
         static func pageTextUnderClock() -> Bool {
             #if os(iOS)
-                let statusBar = XCUIApplication(bundleIdentifier: "com.apple.springboard").statusBars.firstMatch
-                guard statusBar.exists, let bar = try? statusBar.snapshot(),
+                let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+                let bar = springboard.statusBars.firstMatch
+                guard bar.exists else { return false }
+                let times = springboard.descendants(matching: .staticText).matching(
+                    NSPredicate(format: "label MATCHES %@", "^[0-9]{1,2}:[0-9]{2}.*"))
+                guard
+                    let clock = times.allElementsBoundByIndex.map(\.frame).first(where: {
+                        !$0.isEmpty && bar.frame.contains($0)
+                    }),
                     let page = try? XCUIApplication().snapshot()
-                else { return false }
-                func clock(_ element: XCUIElementSnapshot) -> CGRect? {
-                    if !element.frame.isEmpty, element.label.contains(#/^\d{1,2}:\d{2}/#) { return element.frame }
-                    return element.children.lazy.compactMap(clock).first
-                }
-                guard let clock = clock(bar) else {
-                    print("a11y: the status bar shows no clock: \(statusBar.debugDescription)")
+                else {
+                    print("a11y: no clock found in the status bar")
                     return false
                 }
                 func under(_ element: XCUIElementSnapshot) -> XCUIElementSnapshot? {
