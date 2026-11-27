@@ -2,7 +2,9 @@
 # (decisions/0014, "Process"): decisions/0001-list-row-contract.md records what the documents already decide, the
 # agent's proposals, the approver's answers to the open questions, the place of the Disclosure chevron, the pilot's rows
 # composed from ListRow, what the implementation measured, and the revisions after the review. One own view in two
-# forms, with an action and without (`forms`, spec/conventions.md, "Own components").
+# forms, with an action and without (`forms`, spec/conventions.md, "Own components"). The state chosen, the current
+# value of a single choice announced as selected without the selected look, was approved by the owner on 2026-11-27
+# (#176, decisions/0002-a-current-value-without-the-selected-look.md).
 id: list-row
 status: approved
 description: >-
@@ -31,8 +33,12 @@ description: >-
   Two forms (`forms`). Pressable, a row with an action, such as opening a list or a task: a press anywhere on the row
   that is not on the control at its start or on the chevron's cell is the row's action, the whole row's frame its hit
   area. Static, a row without an action, such as a subtask's row, whose check is its only control: it adds no action
-  and no control's role, its words one element of text, and enters no hover, focus or pressed. selected, disabled and dropTarget are set on either form by the product,
-  which knows the selection and the drag. The title is the row's first line, in typography.body.regular and
+  and no control's role, its words one element of text, and enters no hover, focus or pressed. selected, chosen, disabled and dropTarget are set on either form by the
+  product, which knows the selection, the choice and the drag. chosen is the row that holds the current value of a
+  single choice, such as the destination a list stands in now in a "Move to…" sheet: it draws nothing of its own, the
+  row drawn as at rest, and the product marks it with the platform's check, decorative, in the trailing slot
+  (spec/patterns/choice-list-sheet.md); it is announced as selected is. selected is the row that is open, its content
+  shown beside it, as in a sidebar, and draws the look below; a row both selected and chosen is drawn selected. The title is the row's first line, in typography.body.regular and
   color.text.primary; the product may set another text role on it, such as typography.callout.regular for a nested
   row's title or typography.body.strong for a row with rows inside it (design-language/03). The second line, under the
   title by subtitle.gap, is in typography.footnote.regular and color.text.secondary: a line of detail or metadata,
@@ -143,25 +149,26 @@ options:
 
 slots: [title, subtitle, leading, trailing]
 
-states: [hover, focus, pressed, selected, disabled, dropTarget]
+states: [hover, focus, pressed, selected, chosen, disabled, dropTarget]
 
 forms:
   pressable:
-    states: [hover, focus, pressed, selected, disabled, dropTarget]
+    states: [hover, focus, pressed, selected, chosen, disabled, dropTarget]
     description: >-
       A row with an action, such as opening a list or a task, or choosing a list in a picker: a button to assistive
       technology, named by its words.
   static:
-    states: [selected, disabled, dropTarget]
+    states: [selected, chosen, disabled, dropTarget]
     accessibility:
       role: text
       intents: []
       keyboardIntents: []
       label: optional
-      states: { selected: selected, disabled: disabled }
+      states: { selected: selected, chosen: selected, disabled: disabled }
     description: >-
       A row without an action, such as a subtask's row, whose check at the start is its only control: its words are
-      read as text, in one element, announced as selected while selected and as unavailable while disabled.
+      read as text, in one element, announced as selected while selected or chosen and as unavailable while
+      disabled.
 
 marks:
   insertion:
@@ -230,12 +237,13 @@ accessibility:
   intents: [activate]
   keyboardIntents: [activate]
   label: required
-  states: { selected: selected, disabled: disabled }
+  states: { selected: selected, chosen: selected, disabled: disabled }
   description: >-
     These fields are the pressable form's. Such a row is one element with the role of a button: its name is the
     title, then the second line, then the words of the trailing slot, such as a count, in reading order, so that a
     person hears "Inbox, 12"; activating it is the row's action, and a disabled row has no action to activate. It is
-    announced as selected while selected, and as unavailable while disabled. A static row is one element of text (role text):
+    announced as selected while selected or chosen, and as unavailable while disabled; chosen adds no word of its own,
+    so the check that marks it is decorative and carries no label (decisions/0002). A static row is one element of text (role text):
     it adds no action and no control's role, its title, its second line and the words of its trailing slot read as
     text, in one element, announced as selected and as unavailable as the pressable row is. The control at the start, such as the Checkbox of a task's row, stays
     its own element before the row's, and the Disclosure chevron's cell its own element after it, each keeping its own
@@ -270,14 +278,16 @@ platforms:
       (decisions/0001, "Revision of Q1 at implementation"). A Button merges its label into one element, so to assistive
       technology the row is its accessibilityRepresentation: the same layout with the leading slot's elements as they
       are, then the words, the title, the second line and the trailing slot, combined into one element
-      (accessibilityElement(children: .combine)) with the button trait, isSelected while selected, the level as custom
+      (accessibilityElement(children: .combine)) with the button trait, isSelected while selected or chosen, the level as custom
       content and, while the row is enabled, an activate action that runs the row's action, its frame the words' column
       at the row's height, at least size.target.minimum, then the chevron's cell. The representation lays the title out
       in the role the drawn row draws it in, body.strong while selected. The static row's representation is the same,
-      its words one element without the button trait. selected and dropTarget, which the system does not carry, are
-      shared state modifiers through the environment, named as the states: .selected(_:) and .dropTarget(_:), each a
-      Bool, cascading as .disabled(_:) does (spec/conventions.md, "States the system control lacks"); the product passes
-      the List's or its own selection, and the isTargeted of its .dropDestination. The mark is .insertionMark(_ edge:
+      its words one element without the button trait. selected, chosen and dropTarget, which the system does not carry, are
+      shared state modifiers through the environment, named as the states: .selected(_:), .chosen(_:) and
+      .dropTarget(_:), each a Bool, cascading as .disabled(_:) does (spec/conventions.md, "States the system control
+      lacks"); the product passes the List's or its own selection, whether the row holds the current value of a choice,
+      and the isTargeted of its .dropDestination; the representation's words carry isSelected while the row is selected
+      or chosen, and only selected reaches the drawing. The mark is .insertionMark(_ edge:
       ListRowInsertionEdge?, level: Int = 0), nil for none, which overlays Rule(purpose: .insertion) on that edge at that
       level, one overlay for each edge so that the mark fades and never slides, with a zIndex above the rows beside it
       (decisions/0001, Q4). The level, as more content, is accessibilityCustomContent with the default importance and a
@@ -323,7 +333,7 @@ platforms:
         edge and the lower row's top edge at one level: their halves meet in one whole line, as one mark draws it
         outside a List.
     watchos:
-      states: [pressed, selected, disabled]
+      states: [pressed, selected, chosen, disabled]
       description: >-
         Not designed in this phase: the watchOS subset of westron's components is #34, and the pilot has no watch
         screen with a row. No pointer, so no hover; no keyboard focus to draw; no drag and drop, so no dropTarget and
@@ -334,8 +344,9 @@ platforms:
     description: >-
       Provisional until phase 6 (#40): an element of westron's own holding the row's slots, its action a native
       <button> or a link (<a>) over the row's text, so that the control at the start stays a sibling of it; in a list
-      with role list and listitem, or in a tree with role tree, treeitem and aria-level from the level, aria-selected or
-      aria-current for selected, decided with the library's shape. :hover, :active and :focus-visible are the native
+      with role list and listitem, or in a tree with role tree, treeitem and aria-level from the level; for selected, the open row,
+      aria-current; for chosen, the current value of a choice, aria-selected on an option of a listbox or aria-checked
+      on a radio, decided with the library's shape (decisions/0002). :hover, :active and :focus-visible are the native
       element's. The insertion mark is westron's CSS rule, hidden from assistive technology.
   linux:
     status: planned

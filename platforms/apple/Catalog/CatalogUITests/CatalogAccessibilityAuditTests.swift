@@ -1178,6 +1178,17 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                     reason: "the status bar's clock over the page's text", description: "Potentially inaccessible text",
                     appearance: .light, textUnderStatusBar: true
                 ) { $0 == nil },
+                // The same on `list-row`, on its second screenful, where the row "pressable, disabled" lies under the
+                // status bar and its clock is drawn over the row's words (the audit's own screenshot of the issue shows
+                // it). Measured on iOS 26.3, 2026-11-27: it came when the state `chosen` added a row to each form's
+                // states (#176), which moved the page's rows under the bar; the page did not report it before. It is
+                // the status bar's text over the page's, not a row's: only an issue with no element, in the light
+                // appearance, while a text of the page reaches under the status bar, matches.
+                Suppression(
+                    .entry("list-row"), type: .elementDetection,
+                    reason: "the status bar's clock over the page's text", description: "Potentially inaccessible text",
+                    appearance: .light, textUnderStatusBar: true
+                ) { $0 == nil },
             ]
             // The TextField focus pages focus a field for real, so the system keyboard is up while they are audited
             // (spec/components/text-field). The keyboard's own prediction cells, empty or carrying a suggestion

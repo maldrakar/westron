@@ -162,11 +162,41 @@ struct ListRowTests {
 
     @Test("the static form enters neither hover, focus nor pressed; the pressable form enters every state")
     func formsEnterTheirStates() {
-        #expect(ListRowForm.static.states == [.selected, .disabled, .dropTarget])
+        #expect(ListRowForm.static.states == [.selected, .chosen, .disabled, .dropTarget])
         #expect(ListRowForm.pressable.states == Set(ListRowState.allCases))
         #expect(!ListRowForm.static.takesAction && ListRowForm.pressable.takesAction)
         let still = ListRowTokens(form: .static, states: [.hover, .pressed])
         #expect(still.background == nil)
+    }
+
+    @Test("chosen draws nothing: in either form, with any other states, the tokens are those without it")
+    func chosenDrawsNothing() {
+        for form in ListRowForm.allCases {
+            for states in Self.stateCombinations where !states.contains(.chosen) {
+                let chosen = ListRowTokens(form: form, states: states.union([.chosen]))
+                #expect(
+                    chosen == ListRowTokens(form: form, states: states), "\(form) in \(states.map(\.rawValue).sorted())"
+                )
+            }
+            #expect(ListRowTokens(form: form, states: [.chosen]) == ListRowTokens(form: form, states: []))
+        }
+    }
+
+    @Test("a chosen row draws no highlight, no bar and the title at rest; chosen and selected draws selected")
+    func chosenDrawnAsAtRest() throws {
+        for action in [true, false] {
+            func row() -> ListRow {
+                action
+                    ? ListRow(action: {}) { Text("Inbox") }
+                    : ListRow { Text("Inbox") }
+            }
+            let chosen = show(row().chosen(true).frame(width: 320))
+            #expect(chosen["highlight"] == nil, "action \(action)")
+            #expect(chosen["bar"] == nil, "action \(action)")
+            let both = show(row().chosen(true).selected(true).frame(width: 320))
+            #expect(both["highlight"] != nil, "action \(action)")
+            #expect(both["bar"] != nil, "action \(action)")
+        }
     }
 
     @Test("pressed over selected; a selected row keeps its highlight under the pointer")
@@ -992,7 +1022,8 @@ struct ListRowTests {
         #expect(ListRowCatalogState.all.filter(\.isForced).map(\.name) == ["hover", "focus", "pressed"])
         #expect(
             ListRowCatalogState.all.filter { $0.isEntered(by: .static) }.map(\.name)
-                == ["selected", "disabled", "dropTarget"])
+                == ["selected", "chosen", "disabled", "dropTarget"])
+        #expect(ListRowCatalogState.all.filter(\.isChosen).map(\.name) == ["chosen"])
     }
 }
 

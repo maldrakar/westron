@@ -36,9 +36,11 @@ import SwiftUI
 ///
 /// The title is the content every row has; every other slot is optional. The title and the second line hold text and
 /// decorative content, never a control: a row being renamed is replaced by the product's field for that time. A control
-/// belongs at the start; the trailing slot holds words and glyphs, which join the row's spoken name. `.selected(_:)` and
-/// `.dropTarget(_:)` set the states the system lacks, `.insertionMark(_:level:)` marks where a dragged row would land,
-/// and `.disabled(_:)` dims the row. A title on one line (`lineLimit(1)`) belongs below the accessibility text sizes
+/// belongs at the start; the trailing slot holds words and glyphs, which join the row's spoken name. `.selected(_:)`,
+/// `.chosen(_:)` and `.dropTarget(_:)` set the states the system lacks: selected is the open row, drawn with its look;
+/// chosen the row that holds the current value of a choice, drawn as at rest, marked by the product's decorative check
+/// and announced as selected. `.insertionMark(_:level:)` marks where a dragged row would land, and `.disabled(_:)` dims
+/// the row. A title on one line (`lineLimit(1)`) belongs below the accessibility text sizes
 /// only, so that at those sizes it wraps. In a `List`, give the row `.listRowInsets(EdgeInsets())`,
 /// `.listRowBackground(Color.clear)` and `.listRowSeparator(.hidden)`, and bind no `List` selection: the row draws its
 /// own.
@@ -158,12 +160,16 @@ private struct ListRowBody: View {
     @Environment(\.listRowDisclosureCell) private var disclosureCell
     @Environment(\.listRowLeafCell) private var leafCell
     @Environment(\.isSelected) private var isSelected
+    @Environment(\.isChosen) private var isChosen
     @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
         // A branch's chevron; otherwise, in a tree whose leaves line up, a leaf's empty cell.
         let cell = disclosureCell ?? leafCell
         let content = ListRowContent(level: level, guides: guides, parts: parts, cell: cell)
+        // Announced as selected while selected or chosen, once when both; only selected is drawn (the highlight reads
+        // `isSelected` alone), so chosen draws the row as at rest (decisions/0002).
+        let announcedSelected = isSelected || isChosen
         // The representation lays the title out in the role the drawn row draws it in, strong while selected, so
         // that each element's frame is where its words are drawn.
         let titleFont = ListRowTokens(form: action == nil ? .static : .pressable, states: isSelected ? [.selected] : [])
@@ -177,7 +183,7 @@ private struct ListRowBody: View {
                 .accessibilityRepresentation {
                     ListRowContent(
                         level: level, guides: false, parts: parts, cell: cell,
-                        words: .button(action: isEnabled ? action : nil, selected: isSelected)
+                        words: .button(action: isEnabled ? action : nil, selected: announcedSelected)
                     )
                     .environment(\.listRowTitleFont, titleFont)
                 }
@@ -186,7 +192,8 @@ private struct ListRowBody: View {
                     .modifier(ListRowHighlight(form: .static, isPressed: false, isHovered: false, isFocused: false))
                     .accessibilityRepresentation {
                         ListRowContent(
-                            level: level, guides: false, parts: parts, cell: cell, words: .text(selected: isSelected)
+                            level: level, guides: false, parts: parts, cell: cell,
+                            words: .text(selected: announcedSelected)
                         )
                         .environment(\.listRowTitleFont, titleFont)
                     }

@@ -21,6 +21,7 @@ ListRow { … }
 ListRow { … } subtitle: { … } leading: { … } trailing: { … }
 ….insertionMark(.top)
 ….selected(isSelected)
+….chosen(isChosen)
 ….dropTarget(isDropTarget)
 ```
 
@@ -50,6 +51,7 @@ public struct ListRow: View {
 extension View {
     public func insertionMark(_: ListRowInsertionEdge?, level: Int = 0) -> some View
     public func selected(_: Bool) -> some View
+    public func chosen(_: Bool) -> some View
     public func dropTarget(_: Bool) -> some View
 }
 ```
@@ -83,6 +85,7 @@ there, with no `.textRole(_:)`; content that sets another role with `.textRole(_
 - `focus`: the system's keyboard focus. Never entered on watchOS.
 - `pressed`: the system's, while a press is held.
 - `selected`: `.selected(_:)`, westron's modifier, on the component: the product passes its own state.
+- `chosen`: `.chosen(_:)`, westron's modifier, on the component: the product passes its own state.
 - `disabled`: `.disabled(_:)`, the system's.
 - `dropTarget`: `.dropTarget(_:)`, westron's modifier, on the component: the product passes its own state. Never entered
   on watchOS.
@@ -93,10 +96,10 @@ The same look in several forms; the product picks one by what it writes.
 
 - `pressable`: the initializer with `action:`. A row with an action, such as opening a list or a task, or choosing a
   list in a picker: a button to assistive technology, named by its words. States: `hover`, `focus`, `pressed`,
-  `selected`, `disabled`, `dropTarget`.
+  `selected`, `chosen`, `disabled`, `dropTarget`.
 - `static`: the initializer without `action:`. A row without an action, such as a subtask's row, whose check at the
-  start is its only control: its words are read as text, in one element, announced as selected while selected and as
-  unavailable while disabled. States: `selected`, `disabled`, `dropTarget`.
+  start is its only control: its words are read as text, in one element, announced as selected while selected or chosen
+  and as unavailable while disabled. States: `selected`, `chosen`, `disabled`, `dropTarget`.
 
 ## Marks
 
@@ -107,7 +110,8 @@ The same look in several forms; the product picks one by what it writes.
 
 ## Accessibility
 
-- Role: `button`. A person can activate it. Announced: `selected` as selected, `disabled` as disabled.
+- Role: `button`. A person can activate it. Announced: `selected` as selected, `chosen` as selected, `disabled` as
+  disabled.
 - **The accessible name comes from the component's content**: no initializer takes a label, and the caller adds no
   `.accessibilityLabel` of its own, which would replace that name. Which parts are read, and in what order, is in the
   details file.

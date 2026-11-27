@@ -62,6 +62,7 @@ struct ChoiceSheet: View {
             } trailing: {
                 check(choice)
             }
+            .chosen(choice.isCurrent)
             .disabled(!choice.isAvailable)
         case .section:
             ListRow(level: choice.level, guides: false, action: { choose(choice) }) {
@@ -69,6 +70,7 @@ struct ChoiceSheet: View {
             } trailing: {
                 check(choice)
             }
+            .chosen(choice.isCurrent)
             .disabled(!choice.isAvailable)
         case .heading:
             ListRow(level: choice.level, guides: false) { Rule(choice.title) }
@@ -76,7 +78,7 @@ struct ChoiceSheet: View {
     }
 
     @ViewBuilder private func check(_ choice: Choice) -> some View {
-        if choice.isCurrent { Icon(.check, label: "Current").foregroundStyle(.text.primary) }
+        if choice.isCurrent { Icon(.check).foregroundStyle(.text.primary) }
     }
 
     private var pageMargin: CGFloat {

@@ -3,7 +3,7 @@ import WestronUI
 
 // ListRow's catalog entries, from spec/components/list-row/list-row.spec.yaml: `list-row`, both forms in every state
 // each enters (the contract's `forms`), a tree of levels with guides, the insertion mark and a drop target, the
-// Disclosure chevron on a branch and a leaf's empty cell, and a live sample; `list-row-in-list`, rows in a system
+// Disclosure chevron on a branch and a leaf's empty cell, a live choice whose current row is chosen, and a live sample; `list-row-in-list`, rows in a system
 // List with swipe actions, and the insertion mark in a List. The states come from the generated `ListRowState` through `ListRowCatalogState`, so the pages follow the
 // contract.
 
@@ -42,6 +42,8 @@ enum ListRowCatalogID {
     static let listCheck = "list-row.list.check"
     /// The List page's summary: "actions: 0; done: no; deleted: none".
     static let listSummary = "list-row.list.summary"
+    /// The text that says which row of the live choice is chosen: "chosen: kitchen".
+    static let choiceSummary = "list-row.choice.summary"
 }
 
 /// The sample words of the rows: a list's title and count, and a task's.
@@ -290,7 +292,8 @@ private struct ListRowPage: View {
             summary: "ListRow(level:guides:action:) { title } subtitle: leading: trailing:, an own view: a title, a "
                 + "second line, a leading and a trailing slot, indented by space.300 per level with guides in "
                 + "border.guide; a highlight at radius.row, hover, pressed, selected (a border.focus bar at its "
-                + "leading edge, body.strong) and a drop target (accent-subtle, an insertion ring). .selected(_:), "
+                + "leading edge, body.strong) and a drop target (accent-subtle, an insertion ring); chosen, the "
+                + "current value of a choice, draws nothing and is announced as selected. .selected(_:), .chosen(_:), "
                 + ".dropTarget(_:), .insertionMark(_:level:)."
         ) {
             section("Pressable, in each state") {
@@ -318,6 +321,9 @@ private struct ListRowPage: View {
                     Icon(.folder)
                 }
                 .frame(maxWidth: ListRowSample.narrowWidth * 1.5)
+            }
+            section("A choice, live: the current row chosen, marked by a decorative check") {
+                ListRowChoice()
             }
             section("Live") {
                 VStack(spacing: 0) {
@@ -412,6 +418,43 @@ private struct ListRowPage: View {
     }
 }
 
+/// Two rows of a choice, as a "Move to…" sheet draws them (spec/patterns/choice-list-sheet.md): the row that holds the
+/// current value is `.chosen(_:)`, drawn as at rest and announced as selected, and marked by a decorative check at its
+/// end; a press makes a row the current one. The first row's start is a named Icon, its own element, which chosen leaves
+/// unselected (decisions/0002).
+private struct ListRowChoice: View {
+    @State private var chosen = "kitchen"
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ListRow(action: { chosen = "kitchen" }) {
+                Text(verbatim: "Kitchen")
+            } leading: {
+                Icon(.flag, label: "Flagged")
+            } trailing: {
+                check("kitchen")
+            }
+            .chosen(chosen == "kitchen")
+            ListRow(action: { chosen = "library" }) {
+                Text(verbatim: "Library")
+            } leading: {
+                Icon(.book)
+            } trailing: {
+                check("library")
+            }
+            .chosen(chosen == "library")
+            Text(verbatim: "chosen: \(chosen)")
+                .textRole(.footnote.regular)
+                .foregroundStyle(.text.secondary)
+                .accessibilityIdentifier(ListRowCatalogID.choiceSummary)
+        }
+    }
+
+    @ViewBuilder private func check(_ id: String) -> some View {
+        if chosen == id { Icon(.check).foregroundStyle(.text.primary) }
+    }
+}
+
 /// Rows in a system `List`, as the contract's Apple entry gives them: no insets, no background and no separator of the
 /// List's, no List selection; the List keeps its swipe actions. A row's action counts, its check toggles, and a swipe
 /// deletes. Under the summary, rows with insertion marks, where the List's cells, not one stack, decide what each mark
@@ -485,7 +528,8 @@ private struct ListRowListPage: View {
 
 /// One cell of ListRow's snapshot matrix (#24; `ComponentMatrix.listRow`, generated from the contract): the sample row
 /// at level 1, so that `guides` shows, in its form and the combination's state: hover, focus and pressed forced,
-/// selected, disabled and dropTarget through their real modifiers.
+/// selected, chosen, disabled and dropTarget through their real modifiers. chosen draws nothing, so its cell is the
+/// row at rest: the product's check marks it, which the sample row does not hold.
 struct ListRowMatrixCell: View {
     let values: ListRowMatrixValues
 
@@ -659,11 +703,11 @@ extension ComponentMatrix.Supplement {
     /// a static Chip at the end, then the same rows as a branch, a leaf and a branch in a Disclosure, one row disabled.
     static let listRowComposition = ComponentMatrix.Supplement(
         component: "list-row", id: "composition", title: "the lists screen's rows, composed",
-        note: "IconTile at the start of every row; Inbox ends with a count, Groceries with a static Chip, both as high "
-            + "as a row with the title alone. Below, the same rows as a Disclosure branch, Work, expanded, a leaf and a "
-            + "collapsed branch, lined up with .disclosureAlignsLeaves(); Archive's row is disabled alone: its words "
-            + "and slots dimmed once, its chevron whole, since it still folds. Drawn at most at xxxLarge: at accessibility5 five rows with stacked trailing slots are taller than "
-            + "a phone's screen; the sheet accessibility5 shows a row there.",
+        // Short: the sheet `form-pressable_rows-2` holds two of these tall cells unsplit, under the note, and at xSmall
+        // the note's every line counts against the iPhone's height.
+        note: "IconTiles at the start, a count or a static Chip at the end, as high as a title alone; then a "
+            + "Disclosure branch, expanded, over a leaf and a collapsed branch, Archive, disabled alone: dimmed once, "
+            + "its chevron whole. At most at xxxLarge; the sheet accessibility5 shows a row there.",
         keeps: ["form": "pressable"], columns: ["true"], rowsPerPicture: 2, splitsAtEverySize: true,
         columnsPerPicture: 1
     ) { combination in

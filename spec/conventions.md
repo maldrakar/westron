@@ -639,8 +639,9 @@ public struct Rule: View {
   ```
 - **States of an own view** (ListRow). The view carries hover, focus, pressed and disabled itself, from the system
   Button inside it, `onHover` and `.disabled(_:)` (`AppleComponents.Own.systemStates`); every other state is a shared
-  environment modifier on `View`, named after the state, `public func selected(_ isSelected: Bool) -> some View` and
-  `public func dropTarget(_ isDropTarget: Bool) -> some View`, in `WestronUI/States.swift`, which any component with
+  environment modifier on `View`, named after the state, `public func selected(_ isSelected: Bool) -> some View`,
+  `public func chosen(_ isChosen: Bool) -> some View` and `public func dropTarget(_ isDropTarget: Bool) -> some View`,
+  in `WestronUI/States.swift`, which any component with
   that state reads, as `.loading(_:)` is for a style. The generator writes the internal `<Component>State`, with
   `isEntered` per OS from the `platforms` block: a restriction of an Apple OS on an own component may name its
   `states` (ListRow's watchOS enters no hover, focus or dropTarget); one that restricts its options or names a

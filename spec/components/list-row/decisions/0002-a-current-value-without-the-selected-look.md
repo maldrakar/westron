@@ -1,9 +1,10 @@
 # 0002. A current value announced as selected, without the selected look
 
-Date: 2026-11-26 (#176). Status: proposed, for the first gate (decisions/0005). Nothing in the contract, WestronUI, the
-catalog or the pattern changes until the owner answers the questions below; "What changes when it is approved" is the
-list for that stage. The only decision the owner has made so far is his of 2026-11-25: in a list of choices the check
-alone marks the current one, and the row draws nothing of the selected look.
+Date: 2026-11-26 (#176). Status: accepted by the owner on 2026-11-27, the first gate (decisions/0005), every question
+answered as recommended ("The owner's answers", below). It amends the approved contract, `list-row.spec.yaml`, which
+now carries the state `chosen`, and the pattern `spec/patterns/choice-list-sheet.md`, whose gap G1 it closes. It rests
+on the owner's decision of 2026-11-25: in a list of choices the check alone marks the current one, and the row draws
+nothing of the selected look.
 
 ## Context
 
@@ -178,7 +179,7 @@ VoiceOver's); whether VoiceOver stops on the decorative check's image that iOS l
 label (it is a child of the combined element, not beside it as the tile of G5 is); iOS 17 and 18, macOS 14 and 15;
 watchOS.
 
-## Decision, as proposed
+## Decision
 
 A new state of ListRow, **`chosen`**: the row holds the current value of a single choice, such as the destination a
 list stands in now in "Move to…". It draws nothing: no token binds it, so the row is drawn as at rest, and the product
@@ -315,12 +316,12 @@ decided in phase 6 with the library's shape (the diff's `platforms.web`).
   would be announced selected. This is Icon's, not ListRow's (a labelled `Icon` keeps the symbol's traits); it is
   reported, not decided here.
 
-## What changes when it is approved
+## What changes with the approval
 
-For the implementation stage, one pull request (decisions/0005), none of it done now:
+For the implementation stage, one pull request (decisions/0005):
 
 1. **The contract** `spec/components/list-row/list-row.spec.yaml`: the diff above, its header comment naming this
-   decision; this decision's status set to approved with the answers.
+   decision; this decision's status set to accepted with the answers.
 2. **Generated**: `tools/westron generate` (ListRow's states and forms in `WestronUI/Generated/ListRow+Contract.swift`,
    the matrix in `WestronCatalog/Generated/ListRow+Matrix.swift`, the agent context's card and index).
 3. **WestronUI**: `States.swift`, `@Entry var isChosen` and `public func chosen(_:)` beside `.selected(_:)`, documented;
@@ -347,24 +348,19 @@ For the implementation stage, one pull request (decisions/0005), none of it done
 8. **Checks** for the pull request: `tools/check.sh`, `tools/apple/check.sh all`, `behavior ios|macos
    ListRowBehaviorTests ChoiceListSheetTests`, the audit of `list-row` and `choice-list-sheet`.
 
-## Questions for the owner
+## The owner's answers
 
-1. **How a product says the row holds the current value.**
-   - **A. A separate state `chosen`, `.chosen(_:)`, which draws nothing and is announced as selected (recommended).**
-     Measured to give the trait on the row's element alone, on iOS and macOS, in both forms, with no change to the
-     tools; and it keeps `.selected` meaning the open row.
-   - B. An argument of `.selected(_:)`, such as `.selected(true, drawn: false)`: the same tree, but the schema, the lint
-     and the conventions must learn arguments on a state modifier, and one state would carry two meanings.
-   - C. Document `.accessibilityAddTraits(.isSelected)` on the row: no API, but the trait leaks to the Checkbox and any
-     named element at the start, and the row's frame changes (measured).
-   - D. Keep the stopgap, the check labelled "Current": selected already, from the SF Symbol, with a redundant word.
-2. **The name.**
-   - **A. `chosen` (recommended):** what the row is, and it points no platform at the wrong attribute.
-   - B. `current`: the pattern's word, but the web's `aria-current` belongs to the open row, `selected`.
-   - C. `checked`: a radio's word, but Checkbox's and Chip's `checked` is a Toggle's on, and `.checked(_:)` would compile
-     on a Toggle and do nothing.
-3. **What a chosen row is on the Mac.**
-   - **A. A button announced as selected, as on iOS (recommended):** the row keeps one role on every Apple OS, and a
-     press takes the choice and closes the sheet, as a button does.
-   - B. A radio button with a value on macOS, as the system's inline Picker is there: closer to the Mac's idiom, but a
-     role per platform and a row whose press commits, which a radio does not do.
+On 2026-11-27, every question as recommended:
+
+1. **How a product says the row holds the current value: A**, a separate state `chosen`, `.chosen(_:)`, which draws
+   nothing and is announced as selected. Not an argument of `.selected(_:)` (B), which would give one state two
+   meanings and teach the schema, the lint and the conventions arguments on a state modifier; not a documented
+   `.accessibilityAddTraits(.isSelected)` on the row (C), which leaks the trait to the Checkbox and any named element
+   at the start and changes the row's frame; not the stopgap (D), the check labelled "Current", whose trait comes
+   from the SF Symbol and whose word repeats it.
+2. **The name: A**, `chosen`: what the row is, and it points no platform at the wrong attribute. Not `current` (B),
+   whose web attribute `aria-current` belongs to the open row, `selected`; not `checked` (C), Checkbox's and Chip's
+   Toggle on, whose shared modifier would compile on a Toggle and do nothing.
+3. **What a chosen row is on the Mac: A**, a button announced as selected, as on iOS: the row keeps one role on every
+   Apple OS, and a press takes the choice and closes the sheet, as a button does. Not a radio button with a value (B),
+   the Mac's inline Picker's idiom, which would be a role per platform and a row whose press commits.

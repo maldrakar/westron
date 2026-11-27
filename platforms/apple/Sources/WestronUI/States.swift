@@ -70,6 +70,8 @@ private struct LoadingModifier: ViewModifier {
 extension EnvironmentValues {
     /// Whether the components in this subtree are selected, as `.selected(_:)` sets it.
     @Entry var isSelected = false
+    /// Whether the components in this subtree hold the current value of a single choice, as `.chosen(_:)` sets it.
+    @Entry var isChosen = false
     /// Whether the components in this subtree are where a dragged item would be dropped onto, as `.dropTarget(_:)`
     /// sets it.
     @Entry var isDropTarget = false
@@ -82,6 +84,26 @@ extension View {
     /// selected. The product passes its own selection, or a List's; westron keeps none.
     public func selected(_ isSelected: Bool) -> some View {
         environment(\.isSelected, isSelected)
+    }
+
+    /// Puts the westron components in this view that have the state `chosen` into it, or takes them out of it, as
+    /// `.disabled(_:)` does for `disabled`: they hold the current value of a single choice, such as the destination a
+    /// list stands in now in a "Move to…" sheet. Each component's contract says what chosen does to it; a chosen ListRow
+    /// draws nothing of its own, drawn as at rest, and is announced as selected. The product marks it with a decorative
+    /// check in its trailing slot, which carries no label, the trait saying what a word would:
+    ///
+    ///     ListRow(action: { choose(list) }) {
+    ///         Text(list.title)
+    ///     } trailing: {
+    ///         if list == current { Icon(.check) }
+    ///     }
+    ///     .chosen(list == current)
+    ///
+    /// `.selected(_:)` is the other state: the row that is open, its content shown beside it, drawn with its look. A row
+    /// both chosen and selected is drawn selected and announced as selected once
+    /// (spec/components/list-row/decisions/0002).
+    public func chosen(_ isChosen: Bool) -> some View {
+        environment(\.isChosen, isChosen)
     }
 
     /// Puts the westron components in this view that have the state `dropTarget` into it, or takes them out of it:
