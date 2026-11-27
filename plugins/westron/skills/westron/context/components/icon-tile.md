@@ -8,7 +8,8 @@ source and generate again (decisions/0016). -->
 A list's mark: a rounded square in the list's color with the list's glyph on it, which stands beside a list's title in a
 row, a screen header, a picker and the card a drag carries, and alone above the words of an empty screen.
 
-Patterns that use it: [A list of choices in a sheet](../patterns/choice-list-sheet.md).
+Patterns that use it: [A list of choices in a sheet](../patterns/choice-list-sheet.md) and [An empty
+state](../patterns/empty-state.md).
 
 ## In SwiftUI
 

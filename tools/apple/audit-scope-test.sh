@@ -12,20 +12,23 @@
 #     and its catalog source) or none (a pattern with no example in the catalog yet, the registry, the generated
 #     registry of matrices, a shared file of WestronUI, a token file, the package manifest);
 #   - use: a component's change also gives exactly the entries that draw it (Disclosure's: list-row; Checkbox's:
-#     list-row, list-row-in-list, disclosure; IconTile's: the pattern entry choice-list-sheet), not the entries that
-#     reach it only through a base component (Rule's: color-in-use and choice-list-sheet, not list-row, whose
-#     insertion mark is ListRow's), and not the entries that call a system style or another component's of the same name (Button's change does not give disclosure, whose page calls
-#     `.buttonStyle(.plain)`; Checkbox's does not give chip, `.toggleStyle(.chip)`);
-#   - the declared base components and every component's count beyond its own entries, pinned (`--uses`): a change
+#     list-row, list-row-in-list, disclosure; IconTile's: the pattern entries choice-list-sheet and empty-state), not
+#     the entries that reach it only through a base component (Rule's: color-in-use and the two pattern entries, not
+#     list-row, whose insertion mark is ListRow's), and not the entries that call a system style or another
+#     component's of the same name (Checkbox's does not give chip, `.toggleStyle(.chip)`; in a copy with Button's cut
+#     lifted, Button's change does not give disclosure, whose page calls `.buttonStyle(.plain)`);
+#   - the declared base components (Button, Icon, ListRow), each giving its own entries only and saying so, and every
+#     component's count beyond its own entries, pinned (`--uses`): a change
 #     of either fails here and asks for a look at the cut and the limit;
 #   - the registry: every entry it holds is read from it, and every entry the catalog declares is in what the script
 #     reads, so that a change of its shape fails here, not silently in CI; a registry read as empty fails the script;
 #   - in copies of the sources, each with one use added, with no change to the script: a use through a type, a
 #     top-level `let`, an extension's property (`\.forcedChipStates`), a function (`.onChipHover { … }`), an
-#     initializer added to a system type (`Toggle(isOn:accessibilityLabel:)`) is followed; a use inside a base
-#     component (Icon) is not followed on through it; a new use that takes a component past the limit fails the
-#     script with the decision to make (`.surface(.raised)` or `.surface(flag ? .raised : .sunken)` on the chip entry,
-#     a primary Button on it), while one more entry drawing a base component (a ListRow on it) does not; a base
+#     initializer added to a system type (`Toggle(isOn:accessibilityLabel:)`) is followed; with Button's cut lifted,
+#     its implementation's and its page's users are followed (`FlowLayout`); a use inside a base component (Icon) is
+#     not followed on through it; a new use that takes a component past the limit fails the script with the decision
+#     to make (`.surface(.raised)` or `.surface(flag ? .raised : .sunken)` on the chip entry), while one more entry
+#     drawing a base component (a ListRow or a primary Button on it) does not; a base
 #     component declared within the limit fails it as stale; an entry where the scan does not look fails it.
 set -euo pipefail
 
@@ -60,7 +63,7 @@ expect() {
 expect "$ui/Generated/Disclosure+Contract.swift" list-row,disclosure
 # Its enums in WestronContract (decisions/0017): the same entries as the component's other generated file.
 expect "$contract/Generated/Disclosure+Contract.swift" list-row,disclosure
-expect "$contract/Generated/Rule+Contract.swift" rule,choice-list-sheet,color-in-use
+expect "$contract/Generated/Rule+Contract.swift" rule,choice-list-sheet,empty-state,color-in-use
 expect "$catalog/Generated/Chip+Matrix.swift" chip
 expect "$catalog/Components/DisclosurePages.swift" disclosure
 expect spec/components/text-field/text-field.spec.yaml \
@@ -68,20 +71,18 @@ expect spec/components/text-field/text-field.spec.yaml \
 # Use, exactly.
 expect "$ui/Disclosure/DisclosureVariantStyle.swift" list-row,disclosure
 # Not through a base component: list-row draws Rule only inside ListRow (its insertion mark).
-expect "$ui/Rule/Rule.swift" rule,choice-list-sheet,color-in-use
-# Not a use: the system's `.buttonStyle(.plain)` (Disclosure's page) and Chip's `.toggleStyle(.chip)`.
-expect "$ui/Button/ButtonVariantStyle.swift" "button,button-destructive,button-states,button-states-destructive,\
-button-states-destructive-disabled,button-behavior,button-floating,button-floating-sizes,button-floating-states,\
-button-floating-before-26,text-field-behavior,text-field-focus-framed,text-field-focus-inline,color-in-use,controls"
+expect "$ui/Rule/Rule.swift" rule,choice-list-sheet,empty-state,color-in-use
+# Not a use: Chip's `.toggleStyle(.chip)` (the system's `.buttonStyle(.plain)`: in a copy, below).
 expect "$ui/Checkbox/CheckboxVariantStyle.swift" checkbox,checkbox-in-list,list-row,list-row-in-list,disclosure
 expect "$ui/Chip/ChipStyles.swift" chip
-expect "$catalog/Components/ButtonPages.swift" "button,button-destructive,button-states,button-states-destructive,\
-button-states-destructive-disabled,button-behavior,button-floating,button-floating-sizes,button-floating-states,\
-button-floating-before-26,checkbox,chip,color-categories,color-in-use,controls"
 # A base component: its own entries only, and it says so.
+button_entries="button,button-destructive,button-states,button-states-destructive,button-states-destructive-disabled,\
+button-behavior,button-floating,button-floating-sizes,button-floating-states,button-floating-before-26"
+expect "$ui/Button/ButtonVariantStyle.swift" "$button_entries"
+expect "$catalog/Components/ButtonPages.swift" "$button_entries"
 expect "$ui/Icon/Icon.swift" icon
 expect "$ui/ListRow/ListRow.swift" list-row,list-row-in-list
-for base in Icon ListRow; do
+for base in Button Icon ListRow; do
   if printf '%s\n' "$ui/$base/$base.swift" | "$script" 2>&1 > /dev/null |
     grep -q "$base is a base component.*nightly run"; then
     ok "$base's change says it is a base component"
@@ -108,12 +109,12 @@ expect "$ui/TokenAdapters.swift" ""
 expect tokens/semantic/motion.tokens.json ""
 expect Package.swift ""
 
-# The declared base components and every count beyond a component's own entries. Three stand at the limit, 5, on
-# purpose (the script's header, "Use"): when one of them changes, look at the cut before you update this.
+# The declared base components and every count beyond a component's own entries. Surface stands at the limit, 5, on
+# purpose (the script's header, "Use"): when it changes, look at the cut before you update this.
 margins="$("$script" --uses 2> /dev/null | grep -v '^ ' |
   sed -E 's/^([A-Za-z]+ [a-z]+: [0-9]+( \(base component)?).*/\1/')"
-want_margins="Button impl: 5
-Button page: 5
+want_margins="Button impl: 0 (base component
+Button page: 0 (base component
 Checkbox impl: 3
 Checkbox page: 0
 Chip impl: 0
@@ -122,11 +123,11 @@ Disclosure impl: 1
 Disclosure page: 0
 Icon impl: 0 (base component
 Icon page: 0 (base component
-IconTile impl: 1
+IconTile impl: 2
 IconTile page: 0
 ListRow impl: 0 (base component
 ListRow page: 0 (base component
-Rule impl: 2
+Rule impl: 3
 Rule page: 0
 Surface impl: 5
 Surface page: 0
@@ -135,7 +136,7 @@ Text page: 0
 TextField impl: 0
 TextField page: 0"
 if [ "$margins" = "$want_margins" ]; then
-  ok "the base components (Icon, ListRow) and every count beyond a component's own entries, as pinned"
+  ok "the base components (Button, Icon, ListRow) and every count beyond a component's own entries, as pinned"
 else
   fail "the counts beyond a component's own entries changed; look at the cut and the limit, then update this:"
   diff <(echo "$want_margins") <(echo "$margins") >&2 || true
@@ -153,12 +154,11 @@ else
 fi
 duplicates="$(sort <<< "$registered" | uniq -d)"
 [ -z "$duplicates" ] || fail "entries read twice from the registry: $duplicates"
-# Every component page at once: their entries and those that use their code, in the registry's order.
-expect "$(find "$catalog/Components" -name '*Pages.swift' | sort)" "button,button-destructive,button-states,\
-button-states-destructive,button-states-destructive-disabled,button-behavior,button-floating,button-floating-sizes,\
-button-floating-states,button-floating-before-26,text,icon,icon-tile,surface,rule,checkbox,checkbox-in-list,chip,\
-list-row,list-row-in-list,disclosure,text-field,text-field-glyphs,text-field-behavior,text-field-focus-framed,\
-text-field-focus-inline,color-categories,color-in-use,controls" "" "every component page at once"
+# Every component page at once: their entries and those that use their code, in the registry's order (no page's
+# code is used by another entry but Button's, a base component's: the color pages and `controls` are not given).
+expect "$(find "$catalog/Components" -name '*Pages.swift' | sort)" "$button_entries,text,icon,icon-tile,surface,rule,\
+checkbox,checkbox-in-list,chip,list-row,list-row-in-list,disclosure,text-field,text-field-glyphs,text-field-behavior,\
+text-field-focus-framed,text-field-focus-inline" "" "every component page at once"
 
 # A registry in a shape the script cannot read fails it, rather than auditing nothing.
 work="$(mktemp -d "${TMPDIR:-/tmp}/westron-audit-scope-test.XXXXXX")"
@@ -212,7 +212,7 @@ rule_page="$catalog/Components/RulePages.swift"
 chip_page="$catalog/Components/ChipPages.swift"
 fresh_copy
 add_to_entry "$chip_page" chip 'Rule()'
-expect "$ui/Rule/Rule.swift" rule,chip,choice-list-sheet,color-in-use "$copy_script" \
+expect "$ui/Rule/Rule.swift" rule,chip,choice-list-sheet,empty-state,color-in-use "$copy_script" \
   "a type (the chip entry draws a Rule): Rule.swift"
 fresh_copy
 echo 'let auditScopeProbe = ChipVariant.chip' >> "$copy/$catalog/Foundations/AdaptiveGrid.swift"
@@ -232,13 +232,22 @@ add_to_entry "$rule_page" rule 'Toggle(isOn: .constant(true), accessibilityLabel
 expect "$ui/Checkbox/CheckboxVariantStyle.swift" rule,checkbox,checkbox-in-list,list-row,list-row-in-list,disclosure \
   "$copy_script" "an initializer on Toggle (the rule entry, Toggle(isOn:accessibilityLabel:)):"\
 " CheckboxVariantStyle.swift"
+# Button's cut lifted (and the limit raised to its count): its implementation's users are followed, but not the
+# system's `.buttonStyle(.plain)` (Disclosure's page), and so are its page's (`FlowLayout`).
+fresh_copy
+perl -0pi -e 's/^Button: .*\n(?:  .*\n)*//m; s/^fan_out_limit=5$/fan_out_limit=6/m' "$copy_script"
+expect "$ui/Button/ButtonVariantStyle.swift" "$button_entries,text-field-behavior,text-field-focus-framed,\
+text-field-focus-inline,empty-state,color-in-use,controls" "$copy_script" \
+  "Button's cut lifted, not \`.buttonStyle(.plain)\`: ButtonVariantStyle.swift"
+expect "$catalog/Components/ButtonPages.swift" "$button_entries,checkbox,chip,color-categories,color-in-use,controls" \
+  "$copy_script" "Button's cut lifted, a page's code other pages use (FlowLayout): ButtonPages.swift"
 # Icon, a base component, drawing a Chip: Chip's change selects Icon's users neither through it nor past the limit.
 fresh_copy
 printf '\nextension Icon {\n    var auditScopeProbe: ChipVariant { .chip }\n}\n' >> "$copy/$ui/Icon/Icon.swift"
 expect "$ui/Chip/ChipStyles.swift" chip "$copy_script" \
   "a use inside Icon, a base component (Icon draws ChipVariant): ChipStyles.swift"
 # The tripwire: a new use that takes a component past the limit fails the script, which says what to decide.
-decision="would select 6 entries beyond its own, more than the limit of 5.*Decide.*declare (Surface|Button) a base"
+decision="would select 6 entries beyond its own, more than the limit of 5.*Decide.*declare Surface a base"
 fresh_copy
 add_to_entry "$chip_page" chip 'EmptyView().surface(.raised)'
 expect_failure "$ui/Surface/Surface.swift" "a change to Surface $decision" \
@@ -249,15 +258,15 @@ fresh_copy
 add_to_entry "$chip_page" chip 'EmptyView().surface(flag ? .raised : .sunken)'
 expect_failure "$ui/Surface/Surface.swift" "a change to Surface $decision" \
   "a sixth entry drawing Surface with no case written out (.surface(flag ? .raised : .sunken))"
-fresh_copy
-add_to_entry "$chip_page" chip 'Button("Probe") {}.buttonStyle(.primary)'
-expect_failure "$ui/Button/ButtonVariantStyle.swift" "a change to Button $decision" \
-  "a sixth entry drawing Button (the chip entry, .buttonStyle(.primary))"
-# One more entry drawing a base component is past no limit: ListRow's change still gives its own entries only.
+# One more entry drawing a base component is past no limit: its change still gives its own entries only.
 fresh_copy
 add_to_entry "$chip_page" chip 'ListRow { Text("Probe") }'
 expect "$ui/ListRow/ListRow.swift" list-row,list-row-in-list "$copy_script" \
-  "an eighth entry drawing ListRow, a base component (the chip entry, a ListRow): ListRow.swift"
+  "a ninth entry drawing ListRow, a base component (the chip entry, a ListRow): ListRow.swift"
+fresh_copy
+add_to_entry "$chip_page" chip 'Button("Probe") {}.buttonStyle(.primary)'
+expect "$ui/Button/ButtonVariantStyle.swift" "$button_entries" "$copy_script" \
+  "a seventh entry drawing Button, a base component (the chip entry, .buttonStyle(.primary)): ButtonVariantStyle.swift"
 # A base component declared within the limit fails the script: its declaration is stale.
 fresh_copy
 perl -0pi -e 's/^(base_components=")\n/$1\nChip: a probe of the test\n/m' "$copy_script"

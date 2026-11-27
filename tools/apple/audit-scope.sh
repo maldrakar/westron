@@ -54,8 +54,10 @@
 #     `.onDisclosureToggle`), Rule's selects `color-in-use` (ColorInUsePage → TasksSample → Rule) but not `list-row`,
 #     whose way to Rule goes through ListRow, a base component (ListRowPage → ListRowDragSamples → `.insertionMark` →
 #     ListRowInsertionMark → Rule);
-#   - a change to a component's page also selects every entry that reaches a unit of the page: `FlowLayout` in
-#     ButtonPages.swift is used by the Checkbox, Chip and color pages;
+#   - a change to a component's page also selects every entry that reaches a unit of the page, unless the component is
+#     base: `FlowLayout` in ButtonPages.swift is used by the Checkbox, Chip and color pages, which a change to that page
+#     selected until Button was declared base (tools/apple/audit-scope-test.sh holds the rule in a copy with Button's
+#     cut lifted);
 #   - the cut, declared: a base component (`base_components` below, each with its reason) is drawn on so many entries
 #     that auditing them all on its pull requests would cost as much as the nightly full audit. A change to it selects
 #     its own entries only and says so; the others wait for the nightly run, as a shared file's do. The search does not
@@ -67,10 +69,12 @@
 #     page's shared code out of the page, or raise the limit and accept larger audits. A declared base component whose
 #     change would select no more than the limit fails it too: the declaration is stale and would skip entries that
 #     fit. The scan runs on every call, whatever the paths, so the pull request that adds the use that crosses the
-#     limit fails its own scope job, even when it changes only a shared file. On 2026-11-24 three counts stand at the
+#     limit fails its own scope job, even when it changes only a shared file. On 2026-11-24 three counts stood at the
 #     limit exactly (Button's implementation and page, Surface: 5 each), with no headroom on purpose: the next use of
 #     any of them asks for the decision. ListRow stood there too, until #147 took it to 7 and the owner declared it
-#     base. The counts are in tools/apple/audit-scope-test.sh, which pins them.
+#     base; Button's implementation, until the pattern `empty-state` (#35) took it to 6 and the owner declared Button
+#     base (2026-11-27), which cuts its page's 5 too. Surface still stands at the limit. The counts are in
+#     tools/apple/audit-scope-test.sh, which pins them.
 #   - Text has no directory of its own (its code is in the shared TokenAdapters.swift), so it is shared, as before.
 # The snapshot matrix (WestronCatalog/Generated/, SnapshotMatrix/) and the catalog's host (the root files that declare
 # no entry) are not read: they render the pages, and no entry draws them. A unit is the finest grain: an entry that
@@ -99,6 +103,9 @@ registry="$catalog/Catalog.swift"
 fan_out_limit=5
 # The base components (see "Use" above), "<Name>: <reason>" per line.
 base_components="
+Button: the action of every screen, drawn on 6 other entries on 2026-11-27 (TextField's three live entries,
+  color-in-use, controls and the pattern empty-state), and its page's FlowLayout on 5 (Checkbox, Chip and the color
+  pages); the owner's decision of 2026-11-27 (#35)
 Icon: every glyph of the catalog is an Icon, drawn on 13 other entries on 2026-11-24 (Chip, Disclosure, ListRow,
   TextField's glyphs, the color and status pages)
 ListRow: the row of every list, drawn on 7 other entries on 2026-11-24 (the four floating Button entries, Disclosure,

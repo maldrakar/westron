@@ -545,15 +545,18 @@ draw each other: the script derives who uses whom from the sources on every run,
 entry) and follows names from unit to unit, so Checkbox's change also gives `list-row`, `list-row-in-list` and
 `disclosure`, Rule's gives `color-in-use`, and a page's code other pages use (`FlowLayout` in ButtonPages.swift) gives
 theirs. The cut is declared: a base component, listed with its reason in the script's `base_components` (on 2026-11-24
-Icon, drawn on 13 other entries, and ListRow, drawn on 7 since #147), gives its own entries only, says so in the job's
-log, and leaves the rest to the nightly run; the search does not go on through it, so Rule's change no longer gives
-`list-row`, which draws Rule only inside ListRow (its insertion mark). The limit is a tripwire, not a switch: a
-change that would add more than 5 entries beyond its component's own (one leg) fails the scope job, naming the
-component, its count and the choices (declare it base, move a page's shared code out of the page, or raise the
-limit), and so does a declared base component back within the limit. The scan runs on every pull request, so the one
-that adds the crossing use fails its own job. Three counts stand at the limit exactly (Button's implementation and
-page, Surface), with no headroom on purpose: the next use of any of them asks for the decision. ListRow stood there
-too, until #147 took it to 7 and the owner declared it base (2026-11-24). `tools/apple/audit-scope-test.sh` pins
+Icon, drawn on 13 other entries, and ListRow, drawn on 7 since #147; on 2026-11-27 Button, drawn on 6), gives its own
+entries only, says so in the job's log, and leaves the rest to the nightly run; the search does not go on through it,
+so Rule's change no longer gives `list-row`, which draws Rule only inside ListRow (its insertion mark). The cut takes
+the component's page too: since Button is base, a change to ButtonPages.swift, `FlowLayout` included, gives Button's
+entries only, and the Checkbox, Chip and color pages that use it wait for the nightly run. The limit is a tripwire,
+not a switch: a change that would add more than 5 entries beyond its component's own (one leg) fails the scope job,
+naming the component, its count and the choices (declare it base, move a page's shared code out of the page, or raise
+the limit), and so does a declared base component back within the limit. The scan runs on every pull request, so the
+one that adds the crossing use fails its own job. Surface's count stands at the limit exactly, with no headroom on
+purpose: its next use asks for the decision. ListRow stood there too, until #147 took it to 7 and the owner declared
+it base (2026-11-24); and Button's implementation and page, until the pattern `empty-state` (#35) took the
+implementation's to 6 and the owner declared Button base (2026-11-27). `tools/apple/audit-scope-test.sh` pins
 every count; `tools/apple/audit-scope.sh --uses` prints them with the units each entry reaches the change through. Everything else gives nothing: shared paths (tokens, the shared files
 of WestronUI, the catalog's host, the audit test, the scripts) touch every entry and wait for the nightly run, or for
 a run by hand on the branch. The audit is skipped when there is nothing to audit, and on a push to `main`. The script

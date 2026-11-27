@@ -7,7 +7,8 @@ generate again (decisions/0016). -->
 
 A text role on the platform's own text view: westron adds no text type of its own, only the role.
 
-Patterns that use it: [A list of choices in a sheet](../patterns/choice-list-sheet.md).
+Patterns that use it: [A list of choices in a sheet](../patterns/choice-list-sheet.md) and [An empty
+state](../patterns/empty-state.md).
 
 ## In SwiftUI
 

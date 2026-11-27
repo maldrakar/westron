@@ -1,7 +1,7 @@
 ---
 id: empty-state
 title: An empty state
-status: proposed
+status: approved
 summary: What a screen shows when it has nothing; the system's ContentUnavailableView with the thing's IconTile, a title, a line that says what fills it and at most one action.
 consumers: [todo-app/list-screen]
 components: [icon-tile, text, button]
@@ -12,16 +12,17 @@ gaps: [G1]
 
 # An empty state
 
-Proposed by an agent on 2026-11-26 (#35, decisions/0018, point 6: the second pattern). Not approved: its questions
-are open.
+Approved by the owner on 2026-11-27 (#35, decisions/0018, point 6: the second pattern), with the recommended answer to
+each of the four questions an agent proposed it with on 2026-11-26: the tile at `.imageScale(.large)`, the action at
+`size: .m`, a search or a filter that leaves nothing in this pattern, and a title that is not a heading.
 
 ## When to use
 
 A screen, or the whole content of a pane, has nothing to show, and that is its state, not a failure and not a wait:
 the pilot's list with no task in it (todo-app's list screen, `TaskList.emptyWords`: "Nothing here yet" over "Add a
 task here, or drag one in."; Trash's "Trash is empty"; Logbook's "Nothing done yet"; a new list's "A new list"), a
-service with no deployments yet. The screen keeps its own header and bars; the empty state stands where its content
-would.
+service with no deployments yet, a search or a filter that leaves nothing (the pilot's list when its tag bar's filter
+leaves no row; rule 8). The screen keeps its own header and bars; the empty state stands where its content would.
 
 Not for:
 
@@ -35,17 +36,16 @@ Not for:
   adds to it, as the pilot's empty blocks keep "+ Add task" so that a list just added has a place to put a task. A
   tile and a title there would be a screen's state drawn inside one part of a screen, and would push the sections
   after it down by a screenful.
-- **A search or a filter that leaves nothing.** Undecided: Q3.
 
 ## Parts
 
 | Part | Built from | Why |
 |---|---|---|
 | The container | The system's `ContentUnavailableView`, its label, description and actions | The system's (decisions/0014, "What stays the system's"; chapter 09): it centres its parts, spaces them and sets their reading order. westron gives it its content, not a style: SwiftUI has no style for it |
-| The mark | `IconTile(icon)` in the label's icon, decorative, in the `.category(_:)` of the empty thing; `.imageScale(.large)` on it | The tile is the empty thing's own mark, the one its rows and header show (IconTile's contract names the empty screen). In the icon slot it takes the font the system gives that icon: at `medium` it measured 39 pt at the default text size, at `large` 52 (G1) |
+| The mark | `IconTile(icon)` in the label's icon, decorative, in the `.category(_:)` of the empty thing; `.imageScale(.large)` on it | The tile is the empty thing's own mark, the one its rows and header show (IconTile's contract names the empty screen). In the icon slot it takes the font the system gives that icon: at `medium` it measured 39 pt at the default text size, at `large` 52, which the owner chose (G1) |
 | The title | `Text` in the label's title, `.textRole(.heading.medium)` and `.foregroundStyle(.text.primary)` | `heading.medium` is the role of "the title of … an empty state" (design-language/03). The system sets its own font and color on the slot; the role and the color written on the `Text` are what hold |
 | The message | `Text` in the description, `.textRole(.subheadline.regular)` and `.foregroundStyle(.text.secondary)` | `subheadline.regular` is supporting text (design-language/03), the pilot's notes font under its empty title; `text.secondary` meets the text contrast on the canvas, which the system's own gray for the slot is not held to |
-| The action, where there is one | A `Button` in the actions, `.buttonStyle(.primary, size: .m)` | The one thing that fills the screen is its main action, and primary is "the one main action on a screen". The system sets a small control size in the slot, which drew size `s` (28 pt on iOS); the size written holds `m` (Q2) |
+| The action, where there is one | A `Button` in the actions, `.buttonStyle(.primary, size: .m)` | The one thing that fills the screen is its main action, and primary is "the one main action on a screen". The system sets a small control size in the slot, which drew size `s` (28 pt on iOS); the size written holds `m`, the size westron's buttons take elsewhere, so the action matches the screen's other buttons |
 
 ## Rules
 
@@ -81,36 +81,52 @@ Not for:
    view, as the pilot's list does, or over a `List`, which scrolls.
 7. **The empty state goes when content comes.** The product shows it when its read answers nothing and removes it on
    the first row; it is never shown beside rows.
+8. **A search or a filter that leaves nothing is an empty state too**, built the same way, not the system's
+   `ContentUnavailableView.search(text:)`, whose words take the system's font and gray, which are not held to
+   westron's contrast on the canvas. What is empty is the result, not a list: the tile is the neutral one with
+   `magnifier`, `.category(nil)`. The title names what was searched or filtered, "No tasks tagged #home"; the message
+   says how to widen it, "Clear the filter to see every task.". The action that clears the filter is given only where
+   the screen shows no other way to clear it (rule 4): the pilot's tag bar stays on its list's screen, so its filtered
+   list has none, and neither does a search, whose field stays on the screen.
 
 ## Accessibility
 
 Measured on the catalog's entry `empty-state` by its UI test `EmptyStateTests` and the accessibility audit
-(2026-11-26, the iOS 26.3 simulator; macOS: see below). The empty state is read in its order, title, message, action.
-The label is one text element named by the title, "Nothing here yet": its frame holds the tile and the title, and the
-tile adds no word; no image element stands beside it, so the decorative tile is hidden here, unlike beside a row's
-title (the first pattern's G5, #174). The title has the static text trait and no heading trait: the screen's own
-title is its heading, and the system gives the empty state's title none (Q4). The message is a text of its own,
-"Add a task here, or drag one in.". The action is one button named by its words, "Deploy, button", 90 × 36 pt at
-`size: .m` (76 × 28 pt with no size, Q2), and a press runs it once. The accessibility audit of the entry passes its
-five tests (the default settings, the dark and both high-contrast themes, the accessibility text sizes) with one
-finding suppressed: "Contrast failed" on the label of the sample with the neutral tile, "No deployments yet", in the
-four themes at the default text size. The label's element is named by the title and its frame holds the tile, and
-the finding goes when the same tile takes a list color (teal, a probe), and never comes on the first sample's teal
-tile; so the audit is taken to measure the neutral tile's ground, `background.muted` on the canvas, which IconTile's
-contract holds to no contrast minimum, while the title is `text.primary` on the canvas. A product's own audit of an
-empty state with the neutral tile may meet the same finding.
+(2026-11-26 and 2026-11-27, the iOS 26.3 simulator; macOS: see below). The empty state is read in its order, title,
+message, action. The label is one text element named by the title, "Nothing here yet": its frame holds the tile and
+the title, and the tile adds no word; no image element stands beside it, so the decorative tile is hidden here, unlike
+beside a row's title (the first pattern's G5, #174). The title has the static text trait and no heading trait: the
+screen's own title is its heading, and the system gives the empty state's title none, which the owner left so on
+2026-11-27. The message is a text of its own, "Add a task here, or drag one in.". The action is one button named by
+its words, "Deploy, button", 90 × 36 pt at `size: .m` (76 × 28 pt with no size, as the system's slot sets it), and a
+press runs it once.
 
-On macOS the entry was not measured: on 2026-11-26 the Mac's catalog rendered no entry for its screenshot UI test,
-this one or any other (the screen was not free), so the Mac's reading, the macOS audit and the Mac's screenshots are
-still to be taken.
+The accessibility audit of the entry passes its five tests (the default settings, the dark and both high-contrast
+themes, the accessibility text sizes) with one finding suppressed: "Contrast failed" on the label of each sample with
+the neutral tile, "No deployments yet" in the four themes at the default text size, "No tasks tagged #home" in the same
+four and at accessibility5. Why is inferred from a probe, not read from the audit, which reports no colors: the
+label's element is named by the title and its frame holds the tile; the finding goes when the same tile takes a list
+color (teal, a probe on each of the two samples), and never comes on the first sample's teal tile. So the audit is
+taken to measure the neutral tile's ground, `background.muted` on the canvas, which IconTile's contract holds to no
+contrast minimum, while the title is `text.primary` on the canvas. A product's own audit of an empty state with the
+neutral tile may meet the same finding.
+
+On macOS the entry is not measured yet. On 2026-11-27 one screenshot, light, showed it: the three samples centred in
+the window, the title in `heading.medium` and the message in `subheadline.regular` with more room between them than on
+iOS, the list's tile in teal drawn lighter than on iOS, and the action below the window's first screen. Every other
+run that day, while the Mac's screen was in use, launched the catalog with no window at all (the hierarchy the UI test
+read held the application and nothing in it), for this entry and for `icon-tile` alike, so the dark screenshot,
+`EmptyStateTests` and the macOS audit ran against nothing; on 2026-11-26 the same happened for every entry. They are
+still to be taken on a free screen.
 
 ## Apple
 
 The catalog's entry `empty-state` runs this code (decisions/0018, stage 2):
 `platforms/apple/Sources/WestronCatalog/Patterns/EmptyState/EmptyState.swift` is this block, character for
-character, and `PatternExampleTests` fails when the two differ. The entry shows two samples one under the other on
-the canvas: the pilot's empty list, with its tile in teal and no action, and a technical product's screen of
-deployments, with the neutral tile and the action "Deploy". A product calls it in place of its content, as the pilot
+character, and `PatternExampleTests` fails when the two differ. The entry shows three samples one under the other on
+the canvas: the pilot's empty list, with its tile in teal and no action; the same list when its tag filter leaves no
+row (rule 8), with the neutral tile, `magnifier`, and no action, since the tag bar stays on that screen; and a technical
+product's screen of deployments, with the neutral tile and the action "Deploy". A product calls it in place of its content, as the pilot
 does under its header: `if tasks.isEmpty { EmptyState(icon: list.icon, category: list.color, title: words.title,
 message: words.text) }`.
 
@@ -170,29 +186,7 @@ None is an issue yet: a gap becomes one only at the owner's word (decisions/0018
   `ContentUnavailableView`'s icon slot it takes the font the system gives that icon: 39 pt at `medium` and 52 pt at
   `large` at the default text size on the iOS 26.3 simulator, measured on the entry's screenshots, where the pilot's
   canvas draws its empty screen's tile at 64 pt (todo-app, `TaskList.Metrics`, "the tile 64 across"). No option or
-  token gives an empty screen's tile the pilot's size. Meanwhile a product writes `.imageScale(.large)` on the tile
-  (Q1). Issue, if the owner opens one: "IconTile: the size of an empty screen's tile".
+  token gives an empty screen's tile the pilot's size. Meanwhile a product writes `.imageScale(.large)` on the tile,
+  as the owner decided on 2026-11-27, which keeps the tile larger than the title below it, as the pilot's canvas does.
+  Issue, if the owner opens one: "IconTile: the size of an empty screen's tile".
 
-## Questions
-
-1. **How large is the tile?** (a) `.imageScale(.large)`, 52 pt at the default text size, as the example writes: the
-   nearest the contract's relative scale comes to the pilot's 64 pt, and it keeps the tile larger than the title
-   below it, as the pilot's canvas does. (b) The slot's own size, `medium`, 39 pt: no call, and the size the system
-   chose for its icon, but a tile not much taller than two lines of the title. (c) The pilot's 64 pt, through a
-   revision of IconTile's contract or a token (G1): the first gate, not this pattern. Recommended: (a).
-2. **Which size is the action?** (a) `size: .m`, written, 36 pt on iOS, as the example writes: the size westron's
-   buttons take by default elsewhere, so the action matches the screen's other buttons. (b) No size: the system's slot
-   sets a small control size, and the button drew `s`, 28 pt on iOS, smaller than the title above it; its hit area
-   stays the platform's. Recommended: (a).
-3. **What does a search or a filter that leaves nothing show?** The pilot's list shows its empty state when the tag
-   bar's filter leaves no row, with the words of an empty list; its search is not built yet. (a) This pattern, with
-   words that name what was searched or filtered and say how to widen it ("No tasks tagged #home", "Clear the filter
-   to see every task."), the neutral tile with `magnifier`, and the action that clears the filter where the screen
-   shows no other way: one look for every empty state, westron's colors and roles. (b) For a search, the system's
-   `ContentUnavailableView.search(text:)` as it is: localized words for nothing, but the system's font and gray, which
-   are not held to westron's contrast on the canvas, beside empty states in westron's look. (c) Neither here: the
-   search and the filter decide it in a pattern of their own. Recommended: (a).
-4. **Is the title a heading?** The system gives it no heading trait (measured, "Accessibility"). (a) Leave it so: the
-   screen's own title is its heading, and the empty state is its content, read in order after it. (b)
-   `.accessibilityAddTraits(.isHeader)` on the title, so that a person moving by headings lands on the state: but a
-   screen with a header then has two headings for one thing. Recommended: (a).

@@ -12,9 +12,10 @@ final class EmptyStateTests: XCTestCase {
 
     /// The samples' words, `EmptyStateSample` in WestronCatalog.
     private enum Sample {
-        static let titles = ["Nothing here yet", "No deployments yet"]
+        static let titles = ["Nothing here yet", "No tasks tagged #home", "No deployments yet"]
         static let messages = [
-            "Add a task here, or drag one in.", "Each deployment of this service will show up here.",
+            "Add a task here, or drag one in.", "Clear the filter to see every task.",
+            "Each deployment of this service will show up here.",
         ]
         static let action = "Deploy"
         /// The page's identifier of the press count, `EmptyStatePageID.presses`.
