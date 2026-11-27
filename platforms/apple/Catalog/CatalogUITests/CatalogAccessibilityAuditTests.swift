@@ -1208,7 +1208,10 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                 // and it came in none of two runs each. It is the status bar's text over the page's, not a sample's:
                 // the floating entries with glass did not report it in three runs (decisions/0015, "The catalog page,
                 // split in four"). Only an issue with no element, in the light appearance, while a text of the page
-                // reaches under the status bar, matches.
+                // reaches under the status bar's clock, matches. The clock's own frame, not the whole bar, since
+                // 2026-11-27 (#176): the page's title crosses it there, measured in both of two runs of the audit of
+                // this entry with `list-row` and `choice-list-sheet` (iOS 26.3), each reporting the issue once and
+                // the suppression matching it.
                 Suppression(
                     .entry("button-floating-before-26"), type: .elementDetection,
                     reason: "the status bar's clock over the page's text", description: "Potentially inaccessible text",
@@ -1219,7 +1222,12 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                 // it). Measured on iOS 26.3, 2026-11-27: it came when the state `chosen` added a row to each form's
                 // states (#176), which moved the page's rows under the bar; the page did not report it before. It is
                 // the status bar's text over the page's, not a row's: only an issue with no element, in the light
-                // appearance, while a text of the page reaches under the status bar, matches.
+                // appearance, while a text of the page reaches under the clock's own frame, matches, so that the same
+                // finding elsewhere on the page, which a fault in the row's accessibility representation would give,
+                // still fails. The evidence is three runs (iOS 26.3, 2026-11-27), the audit's default settings alone
+                // once and all five of its tests twice: in each the issue came at the default settings on the second
+                // screenful, the clock at (51.3, 22.3, 45.7 × 20.3) and the words "pressable, disabled" at
+                // (87.7, 39.1, 147.3 × 20.3) under it, and the suppression matched.
                 Suppression(
                     .entry("list-row"), type: .elementDetection,
                     reason: "the status bar's clock over the page's text", description: "Potentially inaccessible text",
