@@ -28,7 +28,8 @@ enum EmptyStateSample {
         icon: Westron.Icon.list, category: Westron.Category?.some(.teal),
         title: "Nothing here yet", message: "Add a task here, or drag one in."
     )
-    /// The pilot's list when its tag filter leaves no row: the owner's words of 2026-11-27.
+    /// The pilot's list when its tag filter leaves no row: the words of the approved answer on a filter's empty
+    /// result (rule 8), an agent's example the owner chose on 2026-11-27.
     static let filtered = (
         icon: Westron.Icon.magnifier, category: Westron.Category?.none,
         title: "No tasks tagged #home", message: "Clear the filter to see every task."

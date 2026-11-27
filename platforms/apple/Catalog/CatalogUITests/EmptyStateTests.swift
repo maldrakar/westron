@@ -119,17 +119,25 @@ final class EmptyStateTests: XCTestCase {
         }
         let buttons = app.buttons.matching(NSPredicate(format: "label == %@", Sample.action))
         XCTAssertEqual(buttons.count, 1, "not one button \(Sample.action)")
-        // The tiles are decorative: no image carries a name.
-        XCTAssertEqual(
-            app.images.allElementsBoundByIndex.filter { !$0.label.isEmpty }.count, 0, "an image carries a name")
-        let firstTitle = app.staticTexts[Sample.titles[0]].frame
-        let firstMessage = app.staticTexts[Sample.messages[0]].frame
-        XCTAssertLessThan(firstTitle.minY, firstMessage.minY, "the title does not come before the message")
+        // The tiles are decorative and hidden: no image element stands in the entry, named or not.
+        XCTAssertEqual(app.images.count, 0, "an image element stands in the entry")
+        // Each sample reads title, message, action, top to bottom.
+        for (title, message) in zip(Sample.titles, Sample.messages) {
+            XCTAssertLessThan(
+                app.staticTexts[title].frame.minY, app.staticTexts[message].frame.minY,
+                "\(title) does not come before its message")
+        }
+        let lastMessage = app.staticTexts[Sample.messages[2]].frame
+        XCTAssertLessThan(
+            lastMessage.minY, buttons.firstMatch.frame.minY, "the message does not come before the action")
         #if os(iOS)
+            // No title is a heading: the screen's own title is.
             for title in Sample.titles {
-                print("empty-state: \(title) is a heading: \(has(app.staticTexts[title], .header))")
+                XCTAssertFalse(has(app.staticTexts[title], .header), "\(title) is a heading")
             }
             XCTAssertTrue(has(buttons.firstMatch, .button))
+            // Size m, written on the button, holds against the slot's small control size.
+            XCTAssertEqual(buttons.firstMatch.frame.height, 36, accuracy: 0.5, "the action is not size m")
         #endif
     }
 

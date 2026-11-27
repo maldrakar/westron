@@ -55,7 +55,8 @@
 #     whose way to Rule goes through ListRow, a base component (ListRowPage → ListRowDragSamples → `.insertionMark` →
 #     ListRowInsertionMark → Rule);
 #   - a change to a component's page also selects every entry that reaches a unit of the page, unless the component is
-#     base: `FlowLayout` in ButtonPages.swift is used by the Checkbox, Chip and color pages, which a change to that page
+#     base: `FlowLayout` in ButtonPages.swift is used by the entries checkbox, chip, color-categories, color-in-use and
+#     controls, which a change to that page
 #     selected until Button was declared base (tools/apple/audit-scope-test.sh holds the rule in a copy with Button's
 #     cut lifted);
 #   - the cut, declared: a base component (`base_components` below, each with its reason) is drawn on so many entries
@@ -104,8 +105,8 @@ fan_out_limit=5
 # The base components (see "Use" above), "<Name>: <reason>" per line.
 base_components="
 Button: the action of every screen, drawn on 6 other entries on 2026-11-27 (TextField's three live entries,
-  color-in-use, controls and the pattern empty-state), and its page's FlowLayout on 5 (Checkbox, Chip and the color
-  pages); the owner's decision of 2026-11-27 (#35)
+  color-in-use, controls and the pattern empty-state), and its page's FlowLayout on 5 (checkbox, chip, color-categories,
+  color-in-use and controls); the owner's decision of 2026-11-27 (#35)
 Icon: every glyph of the catalog is an Icon, drawn on 13 other entries on 2026-11-24 (Chip, Disclosure, ListRow,
   TextField's glyphs, the color and status pages)
 ListRow: the row of every list, drawn on 7 other entries on 2026-11-24 (the four floating Button entries, Disclosure,

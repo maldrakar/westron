@@ -52,7 +52,8 @@ Not for:
 1. **The screen keeps what it has.** The empty state takes the content's place, not the screen's: the header, the
    bars and the floating buttons stay. In the pilot it stands under the list's header in the same scroll view, where
    the blocks would be, and on the board above the columns, as the pilot draws it; over a `List` that has no rows it
-   is the list's `.overlay`, so the list keeps its bars. It is laid out in the room it is given and centred there.
+   is the list's `.overlay`, so the list keeps its bars (rule 6 says what an overlay does at the largest text sizes).
+   It is laid out in the room it is given and centred there.
 2. **The tile is the thing's own, and decorative.** A list's empty screen shows the list's tile in the list's color,
    `IconTile(list.icon).category(Westron.Category(rawValue: list.color))`. A screen that is no list's has the neutral
    tile, `.category(nil)`, with the glyph of what would fill it (`tray` for a service's deployments). The tile carries
@@ -78,7 +79,11 @@ Not for:
    variant and its size for the same reason.
 6. **Every text size.** The tile, the title and the message grow with Dynamic Type, and the system wraps the words;
    at the accessibility sizes a tile and three lines fill a phone's screen, so the empty state stands in a scroll
-   view, as the pilot's list does, or over a `List`, which scrolls.
+   view, as the pilot's list does. As a `List`'s `.overlay` it is not part of the list's scroll content, and the
+   system's view keeps it whole by itself: measured on 2026-11-27 on the iOS 26.3 simulator (iPhone 17) at
+   accessibility5, the deployments sample over an empty `List`, the whole screen its room, fits with its tile, and a
+   probe with its message three times over scrolls within the view, from the title to the action, with the tile left
+   out. So a long message keeps its words there but loses its tile; macOS is not measured.
 7. **The empty state goes when content comes.** The product shows it when its read answers nothing and removes it on
    the first row; it is never shown beside rows.
 8. **A search or a filter that leaves nothing is an empty state too**, built the same way, not the system's
@@ -127,8 +132,8 @@ character, and `PatternExampleTests` fails when the two differ. The entry shows 
 the canvas: the pilot's empty list, with its tile in teal and no action; the same list when its tag filter leaves no
 row (rule 8), with the neutral tile, `magnifier`, and no action, since the tag bar stays on that screen; and a technical
 product's screen of deployments, with the neutral tile and the action "Deploy". A product calls it in place of its content, as the pilot
-does under its header: `if tasks.isEmpty { EmptyState(icon: list.icon, category: list.color, title: words.title,
-message: words.text) }`.
+does under its header: `if tasks.isEmpty { EmptyState(icon: list.icon, category: Westron.Category(rawValue: list.color),
+title: words.title, message: words.text) }`.
 
 ```swift
 import SwiftUI

@@ -549,7 +549,8 @@ Icon, drawn on 13 other entries, and ListRow, drawn on 7 since #147; on 2026-11-
 entries only, says so in the job's log, and leaves the rest to the nightly run; the search does not go on through it,
 so Rule's change no longer gives `list-row`, which draws Rule only inside ListRow (its insertion mark). The cut takes
 the component's page too: since Button is base, a change to ButtonPages.swift, `FlowLayout` included, gives Button's
-entries only, and the Checkbox, Chip and color pages that use it wait for the nightly run. The limit is a tripwire,
+entries only, and the five entries that use it, `checkbox`, `chip`, `color-categories`, `color-in-use` and
+`controls`, wait for the nightly run. The limit is a tripwire,
 not a switch: a change that would add more than 5 entries beyond its component's own (one leg) fails the scope job,
 naming the component, its count and the choices (declare it base, move a page's shared code out of the page, or raise
 the limit), and so does a declared base component back within the limit. The scan runs on every pull request, so the
