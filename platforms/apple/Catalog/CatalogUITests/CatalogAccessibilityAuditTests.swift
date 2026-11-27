@@ -1077,6 +1077,21 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                 .entry("choice-list-sheet"), type: .contrast, reason: "a light tile's ground in the row's frame",
                 appearance: .light, dynamicType: "accessibility5", enabled: true, elementType: .button
             ) { ["Top level", "Website"].contains($0 ?? "") },
+            // The pattern `empty-state` (spec/patterns/empty-state.md), the system's ContentUnavailableView:
+            // - "Contrast failed" on the titles of the two samples with the neutral tile: "No deployments yet" in the
+            //   light, dark and both high-contrast themes at the default text size, not at the accessibility sizes;
+            //   "No tasks tagged #home" in the same four themes and also at accessibility5 (iOS 26.3, 2026-11-26 and
+            //   2026-11-27). The label's icon and title are one element, named by the title, whose frame holds the tile
+            //   above it, and those samples' tile is the neutral one, background.muted on the canvas. The cause is
+            //   inferred, not proven: the audit reports no colors. With a list color in the same tile (teal, a probe on
+            //   each of the two samples, 2026-11-26 and 2026-11-27) the finding goes, and the first sample's teal tile
+            //   is never reported, so the audit is taken to measure the neutral tile's ground, which IconTile's contract holds
+            //   to no contrast minimum; the title itself is text.primary on the canvas, and the glyph text.secondary
+            //   on background.muted, 4.74:1. Only those two title texts match.
+            Suppression(
+                .entry("empty-state"), type: .contrast, reason: "a neutral tile's ground in the label's frame",
+                elementType: .staticText
+            ) { ["No deployments yet", "No tasks tagged #home"].contains($0 ?? "") },
             // No suppression for the checks with no drawn label beside separate titles (the live row here, the rows
             // of `checkbox-in-list`): written with `Toggle(isOn:accessibilityLabel:)`, their label is an `EmptyView`
             // carrying the name, and the audit reports neither contrast nor clipped text on them (measured on

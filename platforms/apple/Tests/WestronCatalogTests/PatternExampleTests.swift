@@ -22,7 +22,8 @@ struct PatternExampleTests {
     }
 
     static let examples = [
-        Example(id: "choice-list-sheet", file: "ChoiceListSheet/ChoiceSheet.swift")
+        Example(id: "choice-list-sheet", file: "ChoiceListSheet/ChoiceSheet.swift"),
+        Example(id: "empty-state", file: "EmptyState/EmptyState.swift"),
     ]
 
     static func text(_ path: String) throws -> String {
@@ -57,7 +58,7 @@ struct PatternExampleTests {
     @Test("Every pattern entry is an approved pattern of spec/patterns/ with its example in the catalog")
     func entries() throws {
         let ids = Catalog.entries(in: .patterns).map(\.id)
-        #expect(ids == ["choice-list-sheet"])
+        #expect(ids == ["choice-list-sheet", "empty-state"])
         #expect(
             Set(ids) == Set(Self.examples.map(\.id)),
             "a pattern entry without its example in `examples`, or the reverse")
