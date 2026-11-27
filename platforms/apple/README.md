@@ -455,11 +455,11 @@ timeout when its build and images come within about two thirds of it (the arithm
 
 `ButtonBehaviorTests`, `CheckboxBehaviorTests`, `TextFieldBehaviorTests`, `TextFieldAccessibilityFrameTests`,
 `IconAccessibilityTests`, `IconTileAccessibilityTests`, `ChipBehaviorTests`, `ListRowBehaviorTests`,
-`DisclosureBehaviorTests`, `ChoiceListSheetTests` and `EmptyStateTests` (the patterns' entries), in
+`DisclosureBehaviorTests`, `ChoiceListSheetTests`, `EmptyStateTests` and `FormTests` (the patterns' entries), in
 `Catalog/CatalogUITests`, check on the catalog's entries what a unit test cannot reach: presses, hit areas and hover,
 the accessibility hierarchy, the keyboard. Each class has branches of its own for iOS and macOS where the platforms
 differ. `tools/apple/check.sh behavior` runs them, like the audit: the build first, a step of its own, then one
-`xcodebuild test-without-building` for the classes named (all eleven by default); it prints each failure with its
+`xcodebuild test-without-building` for the classes named (all twelve by default); it prints each failure with its
 message, each skip with its reason, the test cases and the totals, and stops the simulator's test daemon afterwards. The
 log goes to `.build/logs/behavior-<platform>[-<classes>].log`, the result bundle to `.build/xcode/results/`.
 
