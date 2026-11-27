@@ -13,23 +13,24 @@ westron's tokens, how WestronUI draws the component; a product never sets them.
 These fields are the pressable form's. Such a row is one element with the role of a button: its name is the title, then
 the second line, then the words of the trailing slot, such as a count, in reading order, so that a person hears "Inbox,
 12"; activating it is the row's action, and a disabled row has no action to activate. It is announced as selected while
-selected or chosen, and as unavailable while disabled; chosen adds no word of its own, so the check that marks it is
-decorative and carries no label (decisions/0002). A static row is one element of text (role text): it adds no action and
-no control's role, its title, its second line and the words of its trailing slot read as text, in one element, announced
-as selected and as unavailable as the pressable row is. The control at the start, such as the Checkbox of a task's row,
-stays its own element before the row's, and the Disclosure chevron's cell its own element after it, each keeping its own
-role, value and name: the row never folds a control into its own element or turns it into an action of its own, since a
-system control keeps its own role and traits (design-language/08; Chip's decisions/0001, revision B). The words are
-combined into the row's one element, so the title, the second line and the trailing slot hold no control: a text field
-in the title was measured as part of the row's button, its value read as the row's, and a toggle in the trailing slot
-turned the row into a switch (decisions/0001, "Measured"). A task's check, whose name is the task's title, is written
-with Checkbox's initializer that takes no drawn label, so its name is not drawn twice (Checkbox's decisions/0002). An
-Icon with a label at the start, such as a list's kind, is its own element before the row's, read before the row's name;
-decorative content of a slot, an IconTile or an Icon without a label, and the guides are hidden. From level 1 on, the
-row carries its level as more content a person can ask for, "Level" and the level counted from 1, not spoken unless
-asked (decisions/0001, Q8): a row at level 1 gives "Level, 2". Neither the insertion mark nor dropTarget is announced.
-On a keyboard the pressable row is reached and activated as the platform's buttons are; moving between rows with the
-arrow keys is the container's, a List's or the product's tree's, not the row's.
+selected or chosen, once while it is both, and as unavailable while disabled; chosen adds no word of its own, so the
+check that marks it is decorative and carries no label (decisions/0002), and it reaches no other element of the row: a
+Checkbox or a named Icon at the start is not announced as selected. A static row is one element of text (role text): it
+adds no action and no control's role, its title, its second line and the words of its trailing slot read as text, in one
+element, announced as selected and as unavailable as the pressable row is. The control at the start, such as the
+Checkbox of a task's row, stays its own element before the row's, and the Disclosure chevron's cell its own element
+after it, each keeping its own role, value and name: the row never folds a control into its own element or turns it into
+an action of its own, since a system control keeps its own role and traits (design-language/08; Chip's decisions/0001,
+revision B). The words are combined into the row's one element, so the title, the second line and the trailing slot hold
+no control: a text field in the title was measured as part of the row's button, its value read as the row's, and a
+toggle in the trailing slot turned the row into a switch (decisions/0001, "Measured"). A task's check, whose name is the
+task's title, is written with Checkbox's initializer that takes no drawn label, so its name is not drawn twice
+(Checkbox's decisions/0002). An Icon with a label at the start, such as a list's kind, is its own element before the
+row's, read before the row's name; decorative content of a slot, an IconTile or an Icon without a label, and the guides
+are hidden. From level 1 on, the row carries its level as more content a person can ask for, "Level" and the level
+counted from 1, not spoken unless asked (decisions/0001, Q8): a row at level 1 gives "Level, 2". Neither the insertion
+mark nor dropTarget is announced. On a keyboard the pressable row is reached and activated as the platform's buttons
+are; moving between rows with the arrow keys is the container's, a List's or the product's tree's, not the row's.
 
 ## Behavior
 
@@ -58,99 +59,100 @@ not on the control at its start or on the chevron's cell is the row's action, th
 Static, a row without an action, such as a subtask's row, whose check is its only control: it adds no action and no
 control's role, its words one element of text, and enters no hover, focus or pressed. selected, chosen, disabled and
 dropTarget are set on either form by the product, which knows the selection, the choice and the drag. chosen is the row
-that holds the current value of a single choice, such as the destination a list stands in now in a "Move to…" sheet: it
-draws nothing of its own, the row drawn as at rest, and the product marks it with the platform's check, decorative, in
-the trailing slot (spec/patterns/choice-list-sheet.md); it is announced as selected is. selected is the row that is
-open, its content shown beside it, as in a sidebar, and draws the look below; a row both selected and chosen is drawn
-selected. The title is the row's first line, in typography.body.regular and color.text.primary; the product may set
-another text role on it, such as typography.callout.regular for a nested row's title or typography.body.strong for a row
-with rows inside it (design-language/03). The second line, under the title by subtitle.gap, is in
-typography.footnote.regular and color.text.secondary: a line of detail or metadata, which may hold other components,
-such as the meta items of a task, as long as none is a control. Neither line has a line limit of the row's own: both
-wrap, and a product that wants one line sets it below the accessibility text sizes only, so that at those sizes the
-title wraps instead of shrinking to a few letters; on one line the title is truncated at its end with an ellipsis and
-the whole title kept as the accessible name. The leading and trailing slots stand on the title's first line, centred on
-it, and keep their own sizes; the title takes the width they leave. At the accessibility text sizes (accessibility1 and
-larger) the trailing slot moves under the title and the second line, from the title's leading edge, so that the title
-keeps the row's width (design-language/08, "a row that runs out of width stacks its parts"); the chevron's cell stays on
-the first line at the end. The row is at least size.target.minimum high, 44 pt on iOS and watchOS and 28 on macOS, and
-grows with its text: its text is padded container.paddingVertical above and below, a slot's frame taller than the
-title's first line, at the start or at the end, such as a Checkbox's hit area or a static Chip, may stand in that
-padding, and the row grows further only where such a frame would cross its edge, so that a single-line row with a tag at
-its end is as high as one without. Its content is padded container.paddingHorizontal at either side, inside its
-highlight; the leading slot is container.gap before the title and the trailing slot container.trailingGap after it. The
-spacing scales with the person's text size relative to the title's text style, as spacing that belongs to text does
-(design-language/06), in two ways. The horizontal spacing, container.indent per level, container.paddingHorizontal,
-container.gap and container.trailingGap, and with them the insertion mark's start, scales up to the text size xxxLarge
-and stops there: at the accessibility sizes the row's structure keeps its xxxLarge width and the words take the rest,
-which they need most there (decisions/0001, "Revision after the review", D2). The vertical spacing,
-container.paddingVertical and subtitle.gap, scales at every size, as the text does. The product gives the row its width
-and places it in its page margin, as with any layout it builds (design-language/06); the row draws no separator, which
-the product adds with a Rule where it wants one. The Disclosure chevron's cell. When a row is the label of a
-DisclosureGroup in westron's chevron style (#120), the style hands the row its chevron's cell and the row draws it as
-the last item at its end, container.trailingGap after the trailing slot, inside the row's highlight, so that the row's
-hover, pressed and selected tints run under it; the cell takes its own press, folding the branch, which never runs the
-row's action, and is its own element after the row's, named by the row's title. A row that is no such label draws no
-cell. A leaf in a tree of branches, whose trailing slot should stand in the branches' column, draws the same cell empty
-and hidden, at the same width and after the same container.trailingGap, when the product sets Disclosure's context
-alignsLeaves on the tree (the Disclosure contract's `context`); without it the row reserves nothing (#120; the
-Disclosure contract's decisions/0001, "Leaf alignment"; decisions/0001, "The Disclosure chevron's place"). Level and
-guides. A row stands at a level, 0 at the top of a tree and one more for each level below; it is indented by
-container.indent for each level. A row at level n > 0 draws n guides when guides is on: one vertical line per ancestor
-level, centred under where that level's leading slot is centred, as wide as the row's own leading slot, but never closer
-than half container.gap to the start of the next level's slot, the whole height of the row, so that the rows of a branch
-join them into continuous lines, in color.border.guide at guide.width. An Icon in the slot grows with the text at every
-size while the indent stops at xxxLarge, so at the accessibility sizes a guide stands half container.gap before the next
-level's slot instead of under the slot's centre. A row without a leading slot draws its guides at the start of each
-ancestor level's slot. The guides are stroke.thin in a sidebar and on the Mac, and stroke.regular in the compact
-horizontal size class, a phone's (design-language/04, "Lines"); the bindings cannot say a size class, so this text is
-the contract for it. Guides are decorative: the indent also shows the nesting, and they are hidden from assistive
-technology. A tree wider than its container never scrolls sideways in the row: the title takes the room the indent and
-the slots leave, and is truncated at its end where the product sets one line (decisions/0001, Q3). The highlight and the
-states. At rest the row draws no background: it stands on what the product puts it on. Its highlight is a rounded
-rectangle at container.radius filling the row's frame, its corners continuous on Apple and circular elsewhere: under the
-pointer color.background.hover, pressed color.background.pressed, selected color.background.selected, and while a
-dragged item would be dropped onto it, as a child of it, color.background.accent-subtle with a ring of
-color.border.insertion at stroke.thick inside its edge, drawn over the row's content so that the guides do not cross it.
-The ring means a drop target only, in every theme. A pressed row is drawn pressed also when it is selected; a selected
-row keeps its highlight under the pointer. A disabled row never enters hover, pressed or dropTarget: it is drawn whole
-at opacity.disabled, its slots and its highlight with it, with no colors of its own, and takes no press. A disabled row
-dims what it holds once: the Checkbox at its start, the one control this contract allows in a slot, is not dimmed again
-by its own disabled state while it is inside a disabled row, so that it stands at opacity.disabled as the same control
-disabled alone does, and keeps its other disabled behaviour, no hover, no press and announced as unavailable; a row
-inside a disabled row's slot is not dimmed again either. What else the slots hold, an IconTile, an Icon, words or a
-static Chip, has no disabled look of its own. Disabling a row does not lock its branch's fold: a disabled row is not
-pressable, but folding a branch is navigation. The Disclosure chevron's cell, which is not a slot, takes its enabled
-state and its look from its DisclosureGroup, not from the row, as it does after any other label: a row disabled while
-its group is not keeps a chevron that folds and unfolds the branch, drawn whole, as an enabled control meets its
-contrast; a disabled group disables its chevron, which then dims itself once at opacity.disabled while the row dims the
-rest (the Disclosure contract's disabled). So neither the chevron's cell nor a Checkbox at the start is ever dimmed
-twice. Another control put in a slot against this contract, a Button, a selectable or pressable Chip or a TextField,
-dims itself as it does alone, inside the row's dimming: twice. A selected row draws a bar at its highlight's leading
-edge, inside it: bar.width wide, in bar.color, from the highlight's top to its bottom each inset by container.radius, so
-that it reads as a bar on the highlight's straight side, with round ends, in every theme. Selection is so shown by a
-mark that is neither the tint, which stands 1.16:1 off the canvas in light, nor the title's weight, which a product that
-sets its title's role does not get. A selected row's title is also set in typography.body.strong, its emphasized weight,
-where the product has set no other role, a second cue. A selected row that is also a drop target keeps its bar, which
-meets the ring's leading side in the same blue. A press tints the row in motion.press and does not scale it: a row is as
-wide as its list, and a scale would move its edges against the rows beside it (decisions/0001, Q6; design-language/05).
-Hover, selection and dropTarget change the highlight in motion.fade; Reduce Motion keeps these fades
-(design-language/05). Drag and drop. The place a dragged row would land between two rows is the mark `insertion`:
-Rule(purpose: insertion) (spec/components/rule, #116), drawn over the row's top or bottom edge at the level the drop
-would take, from the leading edge of that level's leading slot to the row's trailing padding; no gap opens and no dashed
-slot is drawn, on any platform (decisions/0001, Q4). The mark does not travel: moved to another edge or level, the old
-mark fades out and the new one in, in motion.fade. It is drawn above the rows beside it in one stack, so that the next
-row's highlight never covers the half of a bottom mark that stands on it, and whole beside a disabled row: it shows
-where a drop lands, which the disabled row does not own. In a List each row is a cell of its own, which the row cannot
-draw above: what a mark shows there differs by platform (platforms; decisions/0001, "The insertion mark in a List").
-What a drag carries, the lifted copy, is a ListRow on a dragged Surface; the row it was lifted from stays as the
-system's drag leaves it. Neither the mark nor dropTarget is announced: a drag has another way, a menu item or a named
-accessibility action, which is the product's (design-language/08, "Every gesture has another way"). Swipe actions are
-not this component's: they are the system's .swipeActions in a List, and the pilot's own gesture elsewhere until OS 27
-(decisions/0014, open point 3; decisions/0001, "Swipe"). In a right-to-left language the row mirrors: the leading slot
-and the indent from the right, the guides under it, the selected row's bar at the right edge, the trailing slot and the
-chevron's cell at the left. The row has no size option: the compact density's row sizes arrive with #33, and the default
-density is the only one.
+that holds the current value of a single choice, one row of a group, such as the destination a list stands in now in a
+"Move to…" sheet; a choice of several at once is not chosen but a Checkbox at each row's start, a row's on or off.
+chosen draws nothing of its own, the row drawn as at rest, and the product marks it with the platform's check,
+decorative, in the trailing slot (spec/patterns/choice-list-sheet.md); it is announced as selected, as a selected row
+is. selected is the row that is open, its content shown beside it, as in a sidebar, and draws the look below; a row both
+selected and chosen is drawn selected and announced as selected once. The title is the row's first line, in
+typography.body.regular and color.text.primary; the product may set another text role on it, such as
+typography.callout.regular for a nested row's title or typography.body.strong for a row with rows inside it
+(design-language/03). The second line, under the title by subtitle.gap, is in typography.footnote.regular and
+color.text.secondary: a line of detail or metadata, which may hold other components, such as the meta items of a task,
+as long as none is a control. Neither line has a line limit of the row's own: both wrap, and a product that wants one
+line sets it below the accessibility text sizes only, so that at those sizes the title wraps instead of shrinking to a
+few letters; on one line the title is truncated at its end with an ellipsis and the whole title kept as the accessible
+name. The leading and trailing slots stand on the title's first line, centred on it, and keep their own sizes; the title
+takes the width they leave. At the accessibility text sizes (accessibility1 and larger) the trailing slot moves under
+the title and the second line, from the title's leading edge, so that the title keeps the row's width
+(design-language/08, "a row that runs out of width stacks its parts"); the chevron's cell stays on the first line at the
+end. The row is at least size.target.minimum high, 44 pt on iOS and watchOS and 28 on macOS, and grows with its text:
+its text is padded container.paddingVertical above and below, a slot's frame taller than the title's first line, at the
+start or at the end, such as a Checkbox's hit area or a static Chip, may stand in that padding, and the row grows
+further only where such a frame would cross its edge, so that a single-line row with a tag at its end is as high as one
+without. Its content is padded container.paddingHorizontal at either side, inside its highlight; the leading slot is
+container.gap before the title and the trailing slot container.trailingGap after it. The spacing scales with the
+person's text size relative to the title's text style, as spacing that belongs to text does (design-language/06), in two
+ways. The horizontal spacing, container.indent per level, container.paddingHorizontal, container.gap and
+container.trailingGap, and with them the insertion mark's start, scales up to the text size xxxLarge and stops there: at
+the accessibility sizes the row's structure keeps its xxxLarge width and the words take the rest, which they need most
+there (decisions/0001, "Revision after the review", D2). The vertical spacing, container.paddingVertical and
+subtitle.gap, scales at every size, as the text does. The product gives the row its width and places it in its page
+margin, as with any layout it builds (design-language/06); the row draws no separator, which the product adds with a
+Rule where it wants one. The Disclosure chevron's cell. When a row is the label of a DisclosureGroup in westron's
+chevron style (#120), the style hands the row its chevron's cell and the row draws it as the last item at its end,
+container.trailingGap after the trailing slot, inside the row's highlight, so that the row's hover, pressed and selected
+tints run under it; the cell takes its own press, folding the branch, which never runs the row's action, and is its own
+element after the row's, named by the row's title. A row that is no such label draws no cell. A leaf in a tree of
+branches, whose trailing slot should stand in the branches' column, draws the same cell empty and hidden, at the same
+width and after the same container.trailingGap, when the product sets Disclosure's context alignsLeaves on the tree (the
+Disclosure contract's `context`); without it the row reserves nothing (#120; the Disclosure contract's decisions/0001,
+"Leaf alignment"; decisions/0001, "The Disclosure chevron's place"). Level and guides. A row stands at a level, 0 at the
+top of a tree and one more for each level below; it is indented by container.indent for each level. A row at level n > 0
+draws n guides when guides is on: one vertical line per ancestor level, centred under where that level's leading slot is
+centred, as wide as the row's own leading slot, but never closer than half container.gap to the start of the next
+level's slot, the whole height of the row, so that the rows of a branch join them into continuous lines, in
+color.border.guide at guide.width. An Icon in the slot grows with the text at every size while the indent stops at
+xxxLarge, so at the accessibility sizes a guide stands half container.gap before the next level's slot instead of under
+the slot's centre. A row without a leading slot draws its guides at the start of each ancestor level's slot. The guides
+are stroke.thin in a sidebar and on the Mac, and stroke.regular in the compact horizontal size class, a phone's
+(design-language/04, "Lines"); the bindings cannot say a size class, so this text is the contract for it. Guides are
+decorative: the indent also shows the nesting, and they are hidden from assistive technology. A tree wider than its
+container never scrolls sideways in the row: the title takes the room the indent and the slots leave, and is truncated
+at its end where the product sets one line (decisions/0001, Q3). The highlight and the states. At rest the row draws no
+background: it stands on what the product puts it on. Its highlight is a rounded rectangle at container.radius filling
+the row's frame, its corners continuous on Apple and circular elsewhere: under the pointer color.background.hover,
+pressed color.background.pressed, selected color.background.selected, and while a dragged item would be dropped onto it,
+as a child of it, color.background.accent-subtle with a ring of color.border.insertion at stroke.thick inside its edge,
+drawn over the row's content so that the guides do not cross it. The ring means a drop target only, in every theme. A
+pressed row is drawn pressed also when it is selected; a selected row keeps its highlight under the pointer. A disabled
+row never enters hover, pressed or dropTarget: it is drawn whole at opacity.disabled, its slots and its highlight with
+it, with no colors of its own, and takes no press. A disabled row dims what it holds once: the Checkbox at its start,
+the one control this contract allows in a slot, is not dimmed again by its own disabled state while it is inside a
+disabled row, so that it stands at opacity.disabled as the same control disabled alone does, and keeps its other
+disabled behaviour, no hover, no press and announced as unavailable; a row inside a disabled row's slot is not dimmed
+again either. What else the slots hold, an IconTile, an Icon, words or a static Chip, has no disabled look of its own.
+Disabling a row does not lock its branch's fold: a disabled row is not pressable, but folding a branch is navigation.
+The Disclosure chevron's cell, which is not a slot, takes its enabled state and its look from its DisclosureGroup, not
+from the row, as it does after any other label: a row disabled while its group is not keeps a chevron that folds and
+unfolds the branch, drawn whole, as an enabled control meets its contrast; a disabled group disables its chevron, which
+then dims itself once at opacity.disabled while the row dims the rest (the Disclosure contract's disabled). So neither
+the chevron's cell nor a Checkbox at the start is ever dimmed twice. Another control put in a slot against this
+contract, a Button, a selectable or pressable Chip or a TextField, dims itself as it does alone, inside the row's
+dimming: twice. A selected row draws a bar at its highlight's leading edge, inside it: bar.width wide, in bar.color,
+from the highlight's top to its bottom each inset by container.radius, so that it reads as a bar on the highlight's
+straight side, with round ends, in every theme. Selection is so shown by a mark that is neither the tint, which stands
+1.16:1 off the canvas in light, nor the title's weight, which a product that sets its title's role does not get. A
+selected row's title is also set in typography.body.strong, its emphasized weight, where the product has set no other
+role, a second cue. A selected row that is also a drop target keeps its bar, which meets the ring's leading side in the
+same blue. A press tints the row in motion.press and does not scale it: a row is as wide as its list, and a scale would
+move its edges against the rows beside it (decisions/0001, Q6; design-language/05). Hover, selection and dropTarget
+change the highlight in motion.fade; Reduce Motion keeps these fades (design-language/05). Drag and drop. The place a
+dragged row would land between two rows is the mark `insertion`: Rule(purpose: insertion) (spec/components/rule, #116),
+drawn over the row's top or bottom edge at the level the drop would take, from the leading edge of that level's leading
+slot to the row's trailing padding; no gap opens and no dashed slot is drawn, on any platform (decisions/0001, Q4). The
+mark does not travel: moved to another edge or level, the old mark fades out and the new one in, in motion.fade. It is
+drawn above the rows beside it in one stack, so that the next row's highlight never covers the half of a bottom mark
+that stands on it, and whole beside a disabled row: it shows where a drop lands, which the disabled row does not own. In
+a List each row is a cell of its own, which the row cannot draw above: what a mark shows there differs by platform
+(platforms; decisions/0001, "The insertion mark in a List"). What a drag carries, the lifted copy, is a ListRow on a
+dragged Surface; the row it was lifted from stays as the system's drag leaves it. Neither the mark nor dropTarget is
+announced: a drag has another way, a menu item or a named accessibility action, which is the product's
+(design-language/08, "Every gesture has another way"). Swipe actions are not this component's: they are the system's
+.swipeActions in a List, and the pilot's own gesture elsewhere until OS 27 (decisions/0014, open point 3;
+decisions/0001, "Swipe"). In a right-to-left language the row mirrors: the leading slot and the indent from the right,
+the guides under it, the selected row's bar at the right edge, the trailing slot and the chevron's cell at the left. The
+row has no size option: the compact density's row sizes arrive with #33, and the default density is the only one.
 
 ## On Apple
 
@@ -215,7 +217,10 @@ the arrow keys move between rows only in a List, and a tree outside a List gets 
 accessibility actions and to a trackpad's swipe, not measured here. In a List (macOS 26, measured) the rows' cells abut
 and each clips its row, so a mark shows only its half inside its own row, 1 pt of its 2, on either edge, beside a
 highlighted row or not. In a List on the Mac a product marks both rows beside the place, the upper row's bottom edge and
-the lower row's top edge at one level: their halves meet in one whole line, as one mark draws it outside a List.
+the lower row's top edge at one level: their halves meet in one whole line, as one mark draws it outside a List. A
+chosen row is a button announced as selected, as on iOS, while the Mac's own list of choices, an inline Picker, is a
+radio group whose chosen radio button has the value 1: the row keeps one role on every Apple OS, and its press takes the
+choice as a button's does (decisions/0002, the owner's answer 3).
 
 ### watchOS
 

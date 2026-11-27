@@ -63,7 +63,15 @@ final class ChoiceListSheetTests: XCTestCase {
         let current = row.isSelected
         #if os(iOS)
             let checks = row.descendants(matching: .image).matching(identifier: Sample.checkSymbol)
-            XCTAssertEqual(checks.count, current ? 1 : 0, "\(title): the check does not follow the selected state")
+            // A pin of a known leftover, the decorative check's image, which Icon's contract hides: no image under a
+            // current row means Icon now hides it, not that the check is missing.
+            XCTAssertEqual(
+                checks.count, current ? 1 : 0,
+                current && checks.count == 0
+                    ? "\(title): pinned leftover gone: the decorative check's image is no longer listed under the "
+                        + "current row, so Icon now hides it as its contract says: update the pattern's Accessibility "
+                        + "section and this pin"
+                    : "\(title): the check's image does not follow the selected state")
         #endif
         return current
     }
@@ -175,17 +183,24 @@ final class ChoiceListSheetTests: XCTestCase {
                 XCTAssertEqual(has(row, .notEnabled), title == Sample.unavailable, "\(title): the dimmed trait")
             }
             // The check, decorative: the hierarchy still lists its image, the SF Symbol `checkmark`, with no label,
-            // under the current row's button and inside its frame; it adds no word to the row's name (above).
+            // under the current row's button and inside its frame; it adds no word to the row's name (above). The
+            // state measured today, pinned so that it is seen when it changes, as G5's is below: Icon's contract hides
+            // a decorative Icon, so the image is a leftover, and none listed means Icon now hides it.
             let marks = app.images.matching(identifier: Sample.checkSymbol)
             for (index, mark) in marks.allElementsBoundByIndex.enumerated() {
                 print(line("check #\(index)", mark))
             }
-            XCTAssertEqual(marks.count, 1, "not one image of the check")
+            XCTAssertEqual(
+                marks.count, 1,
+                marks.count == 0
+                    ? "pinned leftover gone: the decorative check's image is no longer listed, so Icon now hides it as "
+                        + "its contract says: update the pattern's Accessibility section and this pin"
+                    : "not one image of the check")
             XCTAssertEqual(marks.firstMatch.label, "", "the check has a name")
             XCTAssertTrue(
                 choice(Sample.current).frame.contains(marks.firstMatch.frame), "the check is not inside the current row"
             )
-            XCTAssertTrue(isCurrent(Sample.current), "the check's image is not under the current row's button")
+            XCTAssertTrue(isCurrent(Sample.current), "the current row is not announced as selected")
             // A section that is a choice: the Rule's heading trait joins the row's one element, a button and a heading
             // at once (G3, #171).
             XCTAssertTrue(has(section, .button), "the section that can be chosen is no button")

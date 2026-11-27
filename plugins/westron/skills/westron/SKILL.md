@@ -54,9 +54,9 @@ generated with; where the product's pinned WestronUI differs, the package's decl
    SwiftUI gives them, with no westron surface, shadow or glass on them (the bars take the system's own glass; a
    control floating over content is `Button`'s `floating`). What stands inside is composed from westron's components:
    a list of choices in a sheet, such as a "Move to…" picker, is `ListRow`s with `IconTile`s, the current one
-   `.chosen(true)` with a decorative check `Icon` at its end (the pattern `choice-list-sheet`), not a SwiftUI `Picker`; a menu's trigger is a westron
-   `Button`; an empty state's image is an `IconTile`. A system `Picker` or `DatePicker` stays only where the system
-   draws its own control, such as a wheel or a pop-up menu.
+   `.chosen(true)` with a decorative check `Icon` at its end (the pattern `choice-list-sheet`), not a SwiftUI `Picker`;
+   a menu's trigger is a westron `Button`; an empty state's image is an `IconTile`. A system `Picker` or `DatePicker`
+   stays only where the system draws its own control, such as a wheel or a pop-up menu.
 5. **Accessibility is part of the call.** Give each control the label its card requires, an icon-only button too; a
    check beside its own title takes `Toggle(isOn:accessibilityLabel:)`; an icon that means something takes `label:`;
    a heading takes `.accessibilityAddTraits(.isHeader)`. Never fix a height that text must grow out of: text follows

@@ -40,10 +40,9 @@ import SwiftUI
 /// `.chosen(_:)` and `.dropTarget(_:)` set the states the system lacks: selected is the open row, drawn with its look;
 /// chosen the row that holds the current value of a choice, drawn as at rest, marked by the product's decorative check
 /// and announced as selected. `.insertionMark(_:level:)` marks where a dragged row would land, and `.disabled(_:)` dims
-/// the row. A title on one line (`lineLimit(1)`) belongs below the accessibility text sizes
-/// only, so that at those sizes it wraps. In a `List`, give the row `.listRowInsets(EdgeInsets())`,
-/// `.listRowBackground(Color.clear)` and `.listRowSeparator(.hidden)`, and bind no `List` selection: the row draws its
-/// own.
+/// the row. A title on one line (`lineLimit(1)`) belongs below the accessibility text sizes only, so that at those
+/// sizes it wraps. In a `List`, give the row `.listRowInsets(EdgeInsets())`, `.listRowBackground(Color.clear)` and
+/// `.listRowSeparator(.hidden)`, and bind no `List` selection: the row draws its own.
 public struct ListRow: View {
     let level: Int
     let guides: Bool

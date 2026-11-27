@@ -641,11 +641,10 @@ public struct Rule: View {
   Button inside it, `onHover` and `.disabled(_:)` (`AppleComponents.Own.systemStates`); every other state is a shared
   environment modifier on `View`, named after the state, `public func selected(_ isSelected: Bool) -> some View`,
   `public func chosen(_ isChosen: Bool) -> some View` and `public func dropTarget(_ isDropTarget: Bool) -> some View`,
-  in `WestronUI/States.swift`, which any component with
-  that state reads, as `.loading(_:)` is for a style. The generator writes the internal `<Component>State`, with
-  `isEntered` per OS from the `platforms` block: a restriction of an Apple OS on an own component may name its
-  `states` (ListRow's watchOS enters no hover, focus or dropTarget); one that restricts its options or names a
-  fallback is not derived. A modifier with states is not derived.
+  in `WestronUI/States.swift`, which any component with that state reads, as `.loading(_:)` is for a style. The
+  generator writes the internal `<Component>State`, with `isEntered` per OS from the `platforms` block: a restriction of
+  an Apple OS on an own component may name its `states` (ListRow's watchOS enters no hover, focus or dropTarget); one
+  that restricts its options or names a fallback is not derived. A modifier with states is not derived.
 - **An integer option** (ListRow's `level`). `type: integer` with a `default` and an optional `minimum`: on an own
   component a parameter `<name>: Int = <default>`, which the component clamps to its minimum; no enum, and no axis of
   the snapshot matrix, since its values are a quantity (a hand-written supplement draws the ones that matter). A

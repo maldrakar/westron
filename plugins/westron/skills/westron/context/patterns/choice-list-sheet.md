@@ -50,8 +50,8 @@ stays where the system draws its own control, a menu or a wheel (the skill's rul
    sheet keeps the shape of the tree a person knows from the screen.
 5. The check is a glyph, not a Checkbox: one choice of many is no row's on or off (Checkbox's decisions/0001, P12).
 6. The words are the product's: a title that names what moves ("Move “Core” to…", design-language/01), a section's
-   label in capitals written by the product (Rule's contract), and drawn words for an unnamed section ("Untitled area"), since a choice needs a name and a line alone would be a button with none
-   (G3).
+   label in capitals written by the product (Rule's contract), and drawn words for an unnamed section ("Untitled area"),
+   since a choice needs a name and a line alone would be a button with none (G3).
 7. On the Mac the product gives the sheet a least size of its own, under `#if os(macOS)` and marked for the
    raw-values lint, until a token exists (G4). `.presentationSizing(.form)` is not used: macOS 14 lacks it, and
    whether it gives a scroll view a height is not measured.
@@ -63,19 +63,19 @@ Measured on the catalog's entry `choice-list-sheet` by its UI test `ChoiceListSh
 simulator and macOS 26.7; the traits on iOS alone, where the hierarchy holds them, the selected state on both; the
 current choice measured again with `.chosen` on 2026-11-27, below). The title and Cancel are the system's; on iOS the
 title is the bar's heading. The hint is text. Each choice is one button named by its words, "Inbox, button": the tile
-adds no word. The current one is the button "Project", selected, "Project, selected, button": `.chosen` gives the row's
-element the selected trait, and no other row has it; the check adds no word (iOS 26.3, 2026-11-27: traits button,
-selected and static text, its frame the words' column; on macOS 26.7.1 the probe of ListRow's decisions/0002 measured
-a chosen row a button, selected, and the pattern's test was not run there again). On iOS the hierarchy still lists the decorative check under
-the row's button, inside its frame, as an image with no label, the identifier `checkmark` and the selected trait, the
-system's for that symbol; the audit reports nothing on it, and whether VoiceOver stops on it was not listened to. How
-VoiceOver speaks the trait was not listened to. When a press takes another row, the check and the selected state move
-to it. An
-unavailable one is a button that is not enabled, "Core, dimmed, button". A nested row's level is ListRow's custom
-content, "Level, 2", which the hierarchy a UI test reads does not hold; ListRow's unit tests hold it. A
-section that can be chosen is one button named by its label as written, "WORK", and on iOS it carries the heading
-trait as well as the button's: the Rule's heading trait joins the row's combined element, so it is announced as a
-button and a heading at once (G3, #171). One that is only a heading is text with the heading trait, "PERSONAL,
+adds no word. The current one is the button whose label is "Project" alone and which is selected: `.chosen` gives the
+row's element the selected trait, and no other row has it; the check adds no word (iOS 26.3, 2026-11-27: the label
+"Project", the traits button, selected and static text, the frame the words' column). On macOS nothing of `.chosen` was
+measured in this code: the pattern's test was run there on 2026-11-27 and the catalog opened no window; the prototype
+of ListRow's decisions/0002 measured a chosen row a button, selected, on macOS 26.7.1. On iOS the hierarchy still lists
+the decorative check under the row's button, inside its frame, as an image with no label, the identifier `checkmark`
+and the selected trait, the system's for that symbol; the audit reports nothing on it, and whether VoiceOver stops on
+it was not listened to. How VoiceOver speaks the trait was not listened to. When a press takes another row, the check
+and the selected state move to it. An unavailable one is a button that is not enabled, "Core, dimmed, button". A nested
+row's level is ListRow's custom content, "Level, 2", which the hierarchy a UI test reads does not hold; ListRow's unit
+tests hold it. A section that can be chosen is one button named by its label as written, "WORK", and on iOS it carries
+the heading trait as well as the button's: the Rule's heading trait joins the row's combined element, so it is announced
+as a button and a heading at once (G3, #171). One that is only a heading is text with the heading trait, "PERSONAL,
 heading", and no button. How VoiceOver speaks the capitals was not listened to: the name is the label as the product
 writes it. At the accessibility text sizes the check moves under the title (ListRow's contract; the entry's screenshot
 at accessibility3); no row sets one line there. On iOS the hierarchy also lists each decorative tile as an image with

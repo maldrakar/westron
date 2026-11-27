@@ -3,9 +3,9 @@ import XCTest
 /// ListRow's behaviour that a unit test cannot reach, on the catalog's `list-row` and `list-row-in-list` entries: what
 /// assistive technology meets (the pressable row a button named by its words, selected or not, unavailable when
 /// disabled; the static row one text element, selected; a chosen row announced as selected; the check at the start and
-/// the chevron's cell their own elements), a press anywhere on the row that runs its action, a press on the check or on the chevron's cell that
-/// neither runs nor presses the row, a row inside a system `List` with its swipe actions, and keyboard focus and Space
-/// on macOS (decisions/0001, Q2, "Revision of Q1 at implementation" and "Measured").
+/// the chevron's cell their own elements), a press anywhere on the row that runs its action, a press on the check or on
+/// the chevron's cell that neither runs nor presses the row, a row inside a system `List` with its swipe actions, and
+/// keyboard focus and Space on macOS (decisions/0001, Q2, "Revision of Q1 at implementation" and "Measured").
 ///
 /// Each entry says what its rows did in a text, `ListRowCatalogID.summary` and `ListRowCatalogID.listSummary` in
 /// WestronCatalog.
@@ -18,6 +18,7 @@ final class ListRowBehaviorTests: XCTestCase {
         static let listCheck = "list-row.list.check"
         static let listSummary = "list-row.list.summary"
         static let choiceSummary = "list-row.choice.summary"
+        static let choiceCheck = "list-row.choice.check"
     }
 
     private var app: XCUIApplication!
@@ -265,8 +266,8 @@ final class ListRowBehaviorTests: XCTestCase {
     /// A chosen row, the current value of a choice (decisions/0002): a button named by its words alone, announced as
     /// selected, though it draws nothing of the selected look, which a UI test cannot see (the unit tests and the
     /// snapshot matrix hold it); the decorative check at its end adds no word; the named Icon at its start stays its own
-    /// element and is not selected; a press on the other row moves chosen, and the selected state with it. The elements
-    /// are printed.
+    /// element and is not selected; a press on another row moves chosen, and the selected state with it; a Checkbox at
+    /// the start of a chosen row stays its own control and is not selected. The elements are printed.
     @MainActor
     func testChosenRowIsAnnouncedAsSelected() {
         launch()
@@ -299,6 +300,48 @@ final class ListRowBehaviorTests: XCTestCase {
         XCTAssertEqual(row("Library").label, "Library")
         XCTAssertFalse(row("Kitchen").isSelected, "the row no longer chosen is still announced as selected")
         XCTAssertFalse(named("Flagged").firstMatch.isSelected)
+        // A Checkbox at the start of a chosen row stays its own control, not selected: the leak of a selected trait
+        // written on the row, which decisions/0002 measured and turned down, must not come back with chosen.
+        let workshop = row("Workshop")
+        reveal(workshop)
+        press(workshop)
+        XCTAssertEqual(text(ID.choiceSummary), "chosen: workshop", "the press did not choose Workshop")
+        let chosenWorkshop = row("Workshop")
+        let packed = check(ID.choiceCheck)
+        print(line("chosen workshop", chosenWorkshop))
+        print(line("chosen workshop check", packed))
+        XCTAssertEqual(chosenWorkshop.label, "Workshop", "the check at the start joined the row's name")
+        XCTAssertTrue(chosenWorkshop.isSelected, "the chosen row is not announced as selected")
+        XCTAssertEqual(packed.label, "Pack the toolbox")
+        XCTAssertFalse(packed.isSelected, "chosen reached the Checkbox at the row's start")
+        XCTAssertLessThan(
+            packed.frame.minX, chosenWorkshop.frame.minX, "the check does not stand before the row's words")
+        XCTAssertFalse(row("Library").isSelected, "the row no longer chosen is still announced as selected")
+    }
+
+    /// The rows of the state `chosen` in the page's sections "Pressable, in each state" and "Static, in each state":
+    /// each announced as selected, the pressable one a button and the static one one text element with no button.
+    /// Neither holds a check, so the selected state comes from `.chosen(_:)` alone, not from a glyph (decisions/0002,
+    /// "What the measurements say", 1); and this is the one test of the static form's `chosen: selected`.
+    @MainActor
+    func testChosenStateRowsAreSelected() {
+        launch()
+        let pressable = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "pressable, chosen"))
+        XCTAssertEqual(pressable.count, 1, "the pressable chosen row is not one button")
+        print(line("pressable chosen", pressable.firstMatch))
+        XCTAssertTrue(pressable.firstMatch.isSelected, "the pressable chosen row is not announced as selected")
+        // A text's string is its label on iOS and its value on macOS.
+        let still = app.staticTexts.matching(
+            NSPredicate(format: "label BEGINSWITH %@ OR value BEGINSWITH %@", "static, chosen", "static, chosen"))
+        XCTAssertEqual(still.count, 1, "the static chosen row's words are not one element")
+        XCTAssertEqual(
+            app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "static, chosen")).count, 0,
+            "the static chosen row is announced as a button")
+        print(line("static chosen", still.firstMatch))
+        XCTAssertTrue(still.firstMatch.isSelected, "the static chosen row is not announced as selected")
+        // The rows at rest beside them, for contrast: the same sample, not selected.
+        let rest = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "pressable, rest"))
+        XCTAssertFalse(rest.firstMatch.isSelected, "the pressable row at rest is announced as selected")
     }
 
     /// The chevron's cell takes its own press: it folds the branch and never runs the row's action.

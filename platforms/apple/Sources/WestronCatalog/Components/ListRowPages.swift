@@ -3,9 +3,9 @@ import WestronUI
 
 // ListRow's catalog entries, from spec/components/list-row/list-row.spec.yaml: `list-row`, both forms in every state
 // each enters (the contract's `forms`), a tree of levels with guides, the insertion mark and a drop target, the
-// Disclosure chevron on a branch and a leaf's empty cell, a live choice whose current row is chosen, and a live sample; `list-row-in-list`, rows in a system
-// List with swipe actions, and the insertion mark in a List. The states come from the generated `ListRowState` through `ListRowCatalogState`, so the pages follow the
-// contract.
+// Disclosure chevron on a branch and a leaf's empty cell, a live choice whose current row is chosen, and a live sample;
+// `list-row-in-list`, rows in a system List with swipe actions, and the insertion mark in a List. The states come from
+// the generated `ListRowState` through `ListRowCatalogState`, so the pages follow the contract.
 
 extension View {
     /// Hides the List's separator under the row, where the system draws one: watchOS has no separators to hide.
@@ -44,6 +44,8 @@ enum ListRowCatalogID {
     static let listSummary = "list-row.list.summary"
     /// The text that says which row of the live choice is chosen: "chosen: kitchen".
     static let choiceSummary = "list-row.choice.summary"
+    /// The check at the start of the live choice's third row, Workshop.
+    static let choiceCheck = "list-row.choice.check"
 }
 
 /// The sample words of the rows: a list's title and count, and a task's.
@@ -280,7 +282,7 @@ struct ListRowDragSamples: View {
 }
 
 private struct ListRowPage: View {
-    @State private var chosen = "inbox"
+    @State private var selection = "inbox"
     @State private var actions = 0
     @State private var done = false
     @State private var cellPresses = 0
@@ -336,13 +338,13 @@ private struct ListRowPage: View {
                             .textRole(.subheadline.regular)
                             .foregroundStyle(.text.secondary)
                     }
-                    .selected(chosen == "inbox")
+                    .selected(selection == "inbox")
                     ListRow(level: 1, action: { choose("today") }) {
                         Text(verbatim: "Today")
                     } leading: {
                         Icon(.sun)
                     }
-                    .selected(chosen == "today")
+                    .selected(selection == "today")
                     ListRow(action: { choose("task") }) {
                         Text(verbatim: ListRowSample.task)
                     } subtitle: {
@@ -352,7 +354,7 @@ private struct ListRowPage: View {
                             .toggleStyle(.check)
                             .accessibilityIdentifier(ListRowCatalogID.check)
                     }
-                    .selected(chosen == "task")
+                    .selected(selection == "task")
                     // A branch, expanded: its chevron folds the static row under it.
                     ListRowBranch(isExpanded: true) {
                         ListRow(action: { choose("projects") }) {
@@ -360,7 +362,7 @@ private struct ListRowPage: View {
                         } leading: {
                             Icon(.folder)
                         }
-                        .selected(chosen == "projects")
+                        .selected(selection == "projects")
                         .accessibilityIdentifier(ListRowCatalogID.branch)
                     } content: {
                         ListRow(level: 1) {
@@ -382,7 +384,7 @@ private struct ListRowPage: View {
                 }
                 .listRowChevronToggles { cellPresses += 1 }
                 Text(
-                    verbatim: "selected: \(chosen); actions: \(actions); done: \(done ? "yes" : "no"); "
+                    verbatim: "selected: \(selection); actions: \(actions); done: \(done ? "yes" : "no"); "
                         + "cell: \(cellPresses); presses: \(presses)"
                 )
                 .textRole(.footnote.regular)
@@ -393,7 +395,7 @@ private struct ListRowPage: View {
     }
 
     private func choose(_ row: String) {
-        chosen = row
+        selection = row
         actions += 1
     }
 
@@ -418,12 +420,14 @@ private struct ListRowPage: View {
     }
 }
 
-/// Two rows of a choice, as a "Move to…" sheet draws them (spec/patterns/choice-list-sheet.md): the row that holds the
-/// current value is `.chosen(_:)`, drawn as at rest and announced as selected, and marked by a decorative check at its
-/// end; a press makes a row the current one. The first row's start is a named Icon, its own element, which chosen leaves
-/// unselected (decisions/0002).
+/// Three rows of a choice, as a "Move to…" sheet draws them (spec/patterns/choice-list-sheet.md): the row that holds
+/// the current value is `.chosen(_:)`, drawn as at rest and announced as selected, and marked by a decorative check at
+/// its end; a press makes a row the current one. The first row's start is a named Icon and the third's a Checkbox,
+/// each its own element, which chosen leaves unselected: the leak that turned down a selected trait written on the row
+/// (decisions/0002).
 private struct ListRowChoice: View {
     @State private var chosen = "kitchen"
+    @State private var packed = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -443,6 +447,16 @@ private struct ListRowChoice: View {
                 check("library")
             }
             .chosen(chosen == "library")
+            ListRow(action: { chosen = "workshop" }) {
+                Text(verbatim: "Workshop")
+            } leading: {
+                Toggle(isOn: $packed, accessibilityLabel: "Pack the toolbox")
+                    .toggleStyle(.check)
+                    .accessibilityIdentifier(ListRowCatalogID.choiceCheck)
+            } trailing: {
+                check("workshop")
+            }
+            .chosen(chosen == "workshop")
             Text(verbatim: "chosen: \(chosen)")
                 .textRole(.footnote.regular)
                 .foregroundStyle(.text.secondary)
@@ -564,7 +578,8 @@ extension ComponentMatrix.Supplement {
         note: "The row is selected, and in the row's state too: pressed draws pressed over selected, disabled dims "
             + "the selected highlight, a drop target draws its ring. In every theme a selected row draws a "
             + "border.focus bar at stroke.thick at its highlight's leading edge; the second row's title sets its own "
-            + "role, callout.regular, so only the bar and the tint show the selection.",
+            + "role, callout.regular, so only the bar and the tint show the selection. chosen changes nothing: a row "
+            + "both selected and chosen is drawn selected.",
         keeps: ["form": "pressable"], rowsPerPicture: 3, splitsAtEverySize: true
     ) { combination in
         VStack(spacing: 0) {
@@ -703,11 +718,13 @@ extension ComponentMatrix.Supplement {
     /// a static Chip at the end, then the same rows as a branch, a leaf and a branch in a Disclosure, one row disabled.
     static let listRowComposition = ComponentMatrix.Supplement(
         component: "list-row", id: "composition", title: "the lists screen's rows, composed",
-        // Short: the sheet `form-pressable_rows-2` holds two of these tall cells unsplit, under the note, and at xSmall
-        // the note's every line counts against the iPhone's height.
-        note: "IconTiles at the start, a count or a static Chip at the end, as high as a title alone; then a "
-            + "Disclosure branch, expanded, over a leaf and a collapsed branch, Archive, disabled alone: dimmed once, "
-            + "its chevron whole. At most at xxxLarge; the sheet accessibility5 shows a row there.",
+        // Kept short: the sheet `form-pressable_rows-2` holds two of these tall cells unsplit, under the note, and at
+        // xSmall the note's every line counts against the iPhone's height.
+        note: "Every row's end in one column: the leaves lined up with the branches by .disclosureAlignsLeaves(). "
+            + "IconTiles at the start; Inbox ends with a count, Groceries with a static Chip, both as high as a title "
+            + "alone. Then a branch, Work, expanded, over a leaf and a collapsed branch, Archive, disabled alone: its "
+            + "words and slots dimmed once, its chevron whole, since it still folds. At most at xxxLarge; the sheet "
+            + "accessibility5 shows a row there.",
         keeps: ["form": "pressable"], columns: ["true"], rowsPerPicture: 2, splitsAtEverySize: true,
         columnsPerPicture: 1
     ) { combination in

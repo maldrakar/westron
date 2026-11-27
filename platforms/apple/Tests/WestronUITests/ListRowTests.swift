@@ -197,6 +197,22 @@ struct ListRowTests {
             #expect(both["highlight"] != nil, "action \(action)")
             #expect(both["bar"] != nil, "action \(action)")
         }
+        // The title: a chosen row's is as wide as at rest, in body.regular, and narrower than a selected row's, which
+        // body.strong sets wider.
+        for action in [true, false] {
+            func width(_ states: (ListRow) -> AnyView) throws -> CGFloat {
+                let frames = Frames()
+                let title = Text("Inbox").recordingFrame("title", in: frames)
+                let row = action ? ListRow(action: {}) { title } : ListRow { title }
+                TextFieldStyleTests.show(states(row).frame(width: 320))
+                return try #require(frames["title"]).width
+            }
+            let rest = try width { AnyView($0) }
+            let chosen = try width { AnyView($0.chosen(true)) }
+            let selected = try width { AnyView($0.selected(true)) }
+            #expect(abs(chosen - rest) < 0.01, "action \(action): chosen \(chosen), rest \(rest)")
+            #expect(selected > rest + 0.5, "action \(action): selected \(selected), rest \(rest)")
+        }
     }
 
     @Test("pressed over selected; a selected row keeps its highlight under the pointer")

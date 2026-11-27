@@ -350,17 +350,20 @@ For the implementation stage, one pull request (decisions/0005):
 
 ## The owner's answers
 
-On 2026-11-27, every question as recommended:
+On 2026-11-27 the owner answered each question with its letter, "as recommended", and gave no reasons of his own. The
+reasons under each answer are the proposal's, why it recommended that letter, kept here so that the record says what
+was weighed:
 
 1. **How a product says the row holds the current value: A**, a separate state `chosen`, `.chosen(_:)`, which draws
-   nothing and is announced as selected. Not an argument of `.selected(_:)` (B), which would give one state two
-   meanings and teach the schema, the lint and the conventions arguments on a state modifier; not a documented
-   `.accessibilityAddTraits(.isSelected)` on the row (C), which leaks the trait to the Checkbox and any named element
-   at the start and changes the row's frame; not the stopgap (D), the check labelled "Current", whose trait comes
-   from the SF Symbol and whose word repeats it.
-2. **The name: A**, `chosen`: what the row is, and it points no platform at the wrong attribute. Not `current` (B),
-   whose web attribute `aria-current` belongs to the open row, `selected`; not `checked` (C), Checkbox's and Chip's
-   Toggle on, whose shared modifier would compile on a Toggle and do nothing.
-3. **What a chosen row is on the Mac: A**, a button announced as selected, as on iOS: the row keeps one role on every
-   Apple OS, and a press takes the choice and closes the sheet, as a button does. Not a radio button with a value (B),
-   the Mac's inline Picker's idiom, which would be a role per platform and a row whose press commits.
+   nothing and is announced as selected. The proposal's reasons: not an argument of `.selected(_:)` (B), which would
+   give one state two meanings and teach the schema, the lint and the conventions arguments on a state modifier; not a
+   documented `.accessibilityAddTraits(.isSelected)` on the row (C), which leaks the trait to the Checkbox and any named
+   element at the start and changes the row's frame; not the stopgap (D), the check labelled "Current", whose trait
+   comes from the SF Symbol and whose word repeats it.
+2. **The name: A**, `chosen`. The proposal's reasons: it says what the row is, and it points no platform at the wrong
+   attribute; not `current` (B), whose web attribute `aria-current` belongs to the open row, `selected`; not `checked`
+   (C), Checkbox's and Chip's Toggle on, whose shared modifier would compile on a Toggle and do nothing.
+3. **What a chosen row is on the Mac: A**, a button announced as selected, as on iOS. The proposal's reasons: the row
+   keeps one role on every Apple OS, and a press takes the choice and closes the sheet, as a button does; not a radio
+   button with a value (B), the Mac's inline Picker's idiom, which would be a role per platform and a row whose press
+   commits.

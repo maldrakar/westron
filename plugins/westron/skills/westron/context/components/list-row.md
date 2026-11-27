@@ -95,11 +95,13 @@ there, with no `.textRole(_:)`; content that sets another role with `.textRole(_
 The same look in several forms; the product picks one by what it writes.
 
 - `pressable`: the initializer with `action:`. A row with an action, such as opening a list or a task, or choosing a
-  list in a picker: a button to assistive technology, named by its words. States: `hover`, `focus`, `pressed`,
-  `selected`, `chosen`, `disabled`, `dropTarget`.
+  list in a picker: a button to assistive technology, named by its words. In a picker the row that holds the current
+  value is chosen, announced as selected, and chosen draws nothing: the product draws the check at the row's end,
+  decorative, with no label. States: `hover`, `focus`, `pressed`, `selected`, `chosen`, `disabled`, `dropTarget`.
 - `static`: the initializer without `action:`. A row without an action, such as a subtask's row, whose check at the
   start is its only control: its words are read as text, in one element, announced as selected while selected or chosen
-  and as unavailable while disabled. States: `selected`, `chosen`, `disabled`, `dropTarget`.
+  and as unavailable while disabled. chosen draws nothing here either: the product draws the check that marks it.
+  States: `selected`, `chosen`, `disabled`, `dropTarget`.
 
 ## Marks
 
