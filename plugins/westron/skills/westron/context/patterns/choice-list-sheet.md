@@ -65,7 +65,8 @@ current choice measured again with `.chosen` on 2026-11-27, below). The title an
 title is the bar's heading. The hint is text. Each choice is one button named by its words, "Inbox, button": the tile
 adds no word. The current one is the button "Project", selected, "Project, selected, button": `.chosen` gives the row's
 element the selected trait, and no other row has it; the check adds no word (iOS 26.3, 2026-11-27: traits button,
-selected and static text, its frame the words' column). On iOS the hierarchy still lists the decorative check under
+selected and static text, its frame the words' column; on macOS 26.7.1 the probe of ListRow's decisions/0002 measured
+a chosen row a button, selected, and the pattern's test was not run there again). On iOS the hierarchy still lists the decorative check under
 the row's button, inside its frame, as an image with no label, the identifier `checkmark` and the selected trait, the
 system's for that symbol; the audit reports nothing on it, and whether VoiceOver stops on it was not listened to. How
 VoiceOver speaks the trait was not listened to. When a press takes another row, the check and the selected state move
