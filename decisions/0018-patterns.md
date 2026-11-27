@@ -100,6 +100,9 @@ Considered and rejected:
   it and copies each approved pattern into the bundle (point 5), lists it in `index.md` and `llms.txt` and names it on
   its components' cards, and `SKILL.md` sends an agent to the pattern of a job (`tools/README.md`, "The pattern
   check").
+- 2026-11-27: the owner approved the second pattern, `spec/patterns/empty-state.md`, with the recommended answer to
+  each of its questions, and delegated the approval of the remaining patterns of #35 (`form`, `errors`, `loading`) to
+  the coordinating agent (point 3).
 
 ### Open points
 

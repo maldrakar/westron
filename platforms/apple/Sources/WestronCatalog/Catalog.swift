@@ -45,6 +45,7 @@ public enum Catalog {
         .textFieldFocusFramed,
         .textFieldFocusInline,
         .choiceListSheet,
+        .emptyState,
         .colorBackgrounds,
         .colorForegrounds,
         .colorCategories,

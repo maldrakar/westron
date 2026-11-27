@@ -7,6 +7,8 @@ and generate again (decisions/0016). -->
 
 A push button that runs an action: westron's style on the platform's own button, with a label and a leading icon.
 
+Patterns that use it: [An empty state](../patterns/empty-state.md).
+
 ## In SwiftUI
 
 `import WestronUI`. A call writes at least:

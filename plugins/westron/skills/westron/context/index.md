@@ -37,6 +37,7 @@ example. It is rules and an example, not an API: its calls are the cards'. Read 
 its screen.
 
 - [A list of choices in a sheet](patterns/choice-list-sheet.md): Pick one place or value from a list or a tree in a system sheet; the current choice checked, one tap takes one.
+- [An empty state](patterns/empty-state.md): What a screen shows when it has nothing; the system's ContentUnavailableView with the thing's IconTile, a title, a line that says what fills it and at most one action.
 
 ## Tokens
 
