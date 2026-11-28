@@ -8,6 +8,8 @@ source and generate again (decisions/0016). -->
 A field a person types text into: westron's style on the platform's own text field, which keeps editing, selection,
 input methods, the keyboard and the system's text input.
 
+Patterns that use it: [A form](../patterns/form.md).
+
 ## In SwiftUI
 
 `import WestronUI`. A call writes at least:

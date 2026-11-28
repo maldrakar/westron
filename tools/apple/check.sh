@@ -19,7 +19,8 @@
 #                                    (ButtonBehaviorTests CheckboxBehaviorTests TextFieldBehaviorTests
 #                                    TextFieldAccessibilityFrameTests IconAccessibilityTests
 #                                    IconTileAccessibilityTests ChipBehaviorTests ListRowBehaviorTests
-#                                    DisclosureBehaviorTests ChoiceListSheetTests EmptyStateTests; default: all); a
+#                                    DisclosureBehaviorTests ChoiceListSheetTests EmptyStateTests FormTests; default:
+#                                    all); a
 #                                    run that stops
 #                                    making progress
 #                                    (WESTRON_BEHAVIOR_STALL_LIMIT=<seconds>, default 300) or fails for
@@ -444,7 +445,7 @@ a11y() {
 # (.github/workflows/accessibility-audit.yml).
 behavior_tests=(ButtonBehaviorTests CheckboxBehaviorTests TextFieldBehaviorTests TextFieldAccessibilityFrameTests
   IconAccessibilityTests IconTileAccessibilityTests ChipBehaviorTests ListRowBehaviorTests DisclosureBehaviorTests
-  ChoiceListSheetTests EmptyStateTests)
+  ChoiceListSheetTests EmptyStateTests FormTests)
 
 # WESTRON_BEHAVIOR_DEADLINE=<minutes> from the script's start (unset: none; CI sets it a few minutes before the job's
 # timeout, since a job the timeout kills uploads no logs, and a macOS UI test run has gone silent on CI for an hour,

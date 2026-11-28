@@ -104,9 +104,9 @@ registry="$catalog/Catalog.swift"
 fan_out_limit=5
 # The base components (see "Use" above), "<Name>: <reason>" per line.
 base_components="
-Button: the action of every screen, drawn on 6 other entries on 2026-11-27 (TextField's three live entries,
-  color-in-use, controls and the pattern empty-state), and its page's FlowLayout on 5 (checkbox, chip, color-categories,
-  color-in-use and controls); the owner's decision of 2026-11-27 (#35)
+Button: the action of every screen, drawn on 7 other entries on 2026-11-27 (TextField's three live entries,
+  color-in-use, controls and the patterns empty-state and form), and its page's FlowLayout on 5 (checkbox, chip,
+  color-categories, color-in-use and controls); the owner's decision of 2026-11-27 (#35)
 Icon: every glyph of the catalog is an Icon, drawn on 13 other entries on 2026-11-24 (Chip, Disclosure, ListRow,
   TextField's glyphs, the color and status pages)
 ListRow: the row of every list, drawn on 7 other entries on 2026-11-24 (the four floating Button entries, Disclosure,
