@@ -53,17 +53,18 @@ generated with; where the product's pinned WestronUI differs, the package's decl
    `.swipeActions`, `.searchable`, `ContentUnavailableView`, scrolling and the system's focus ring: write them as
    SwiftUI gives them, with no westron surface, shadow or glass on them (the bars take the system's own glass; a
    control floating over content is `Button`'s `floating`). What stands inside is composed from westron's components:
-   a list of choices in a sheet, such as a "Move to…" picker, is `ListRow`s with `IconTile`s and a check `Icon` on
-   the chosen one (the pattern `choice-list-sheet`), not a SwiftUI `Picker`; a menu's trigger is a westron
-   `Button`; an empty state's image is an `IconTile`. A system `Picker` or `DatePicker` stays only where the system
-   draws its own control, such as a wheel or a pop-up menu.
+   a list of choices in a sheet, such as a "Move to…" picker, is `ListRow`s with `IconTile`s, the current one
+   `.chosen(true)` with a decorative check `Icon` at its end (the pattern `choice-list-sheet`), not a SwiftUI `Picker`;
+   a menu's trigger is a westron `Button`; an empty state's image is an `IconTile`. A system `Picker` or `DatePicker`
+   stays only where the system draws its own control, such as a wheel or a pop-up menu.
 5. **Accessibility is part of the call.** Give each control the label its card requires, an icon-only button too; a
    check beside its own title takes `Toggle(isOn:accessibilityLabel:)`; an icon that means something takes `label:`;
    a heading takes `.accessibilityAddTraits(.isHeader)`. Never fix a height that text must grow out of: text follows
    Dynamic Type.
 6. **Follow the card.** Its "Do not" list and its constraints hold: a forbidden combination of options is a bug even
-   where it compiles. States the system lacks are westron's modifiers, `.selected(_:)`, `.loading(_:)`,
-   `.dropTarget(_:)`; the rest are the system's, such as `.disabled(_:)`.
+   where it compiles. States the system lacks are westron's modifiers, `.selected(_:)`, `.chosen(_:)`,
+   `.loading(_:)`, `.dropTarget(_:)`; the rest are the system's, such as `.disabled(_:)`. A row that holds the current
+   value of a choice is `.chosen(_:)`, not `.selected(_:)`, which is the open row and draws its look.
 7. **A model keeps westron's vocabulary, not its values.** A model in shared code, which cannot import SwiftUI, names
    the option enums of `WestronContract` (`ButtonVariant`, `RuleAxis`) and `Westron.Icon` and `Westron.Category` of
    `WestronTokens`, both modules with no imports, and holds no size, color, font, radius, spacing or duration. A view

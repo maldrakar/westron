@@ -28,12 +28,15 @@ package struct ListRowCatalogState: Hashable, Sendable {
     package var isForced: Bool {
         switch state {
         case .hover, .focus, .pressed: true
-        case .selected, .disabled, .dropTarget: false
+        case .selected, .chosen, .disabled, .dropTarget: false
         }
     }
 
     /// Whether the catalog sets it with `.selected(_:)`.
     package var isSelected: Bool { state == .selected }
+
+    /// Whether the catalog sets it with `.chosen(_:)`.
+    package var isChosen: Bool { state == .chosen }
 
     /// Whether the catalog sets it with the system's `.disabled(_:)`.
     package var isDisabled: Bool { state == .disabled }
@@ -60,13 +63,15 @@ package struct ListRowCatalogState: Hashable, Sendable {
 
 extension View {
     /// Puts the westron rows in this view into `state`: hover, focus and pressed forced, as a screenshot cannot produce
-    /// them; selected, disabled and dropTarget through their real modifiers. nil: at rest. Catalog only: forcing
-    /// changes how a state looks, for a screenshot, and nothing a row does.
+    /// them; selected, chosen, disabled and dropTarget through their real modifiers. nil: at rest. Catalog only:
+    /// forcing changes how a state looks, for a screenshot, and nothing a row does.
     package func listRowCatalogState(_ state: ListRowCatalogState?) -> some View {
-        // selected and dropTarget only ever turn on here, so that a selection set around the cell, as a supplement's
-        // `.selected(true)`, holds in every state; `.disabled(false)` never enables what is disabled around it.
+        // selected, chosen and dropTarget only ever turn on here, so that a selection set around the cell, as a
+        // supplement's `.selected(true)`, holds in every state; `.disabled(false)` never enables what is disabled
+        // around it.
         environment(\.forcedListRowStates, state.map { $0.isForced ? [$0.state] : [] } ?? [])
             .transformEnvironment(\.isSelected) { if state?.isSelected == true { $0 = true } }
+            .transformEnvironment(\.isChosen) { if state?.isChosen == true { $0 = true } }
             .transformEnvironment(\.isDropTarget) { if state?.isDropTarget == true { $0 = true } }
             .disabled(state?.isDisabled ?? false)
     }

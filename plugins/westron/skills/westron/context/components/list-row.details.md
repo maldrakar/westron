@@ -13,22 +13,24 @@ westron's tokens, how WestronUI draws the component; a product never sets them.
 These fields are the pressable form's. Such a row is one element with the role of a button: its name is the title, then
 the second line, then the words of the trailing slot, such as a count, in reading order, so that a person hears "Inbox,
 12"; activating it is the row's action, and a disabled row has no action to activate. It is announced as selected while
-selected, and as unavailable while disabled. A static row is one element of text (role text): it adds no action and no
-control's role, its title, its second line and the words of its trailing slot read as text, in one element, announced as
-selected and as unavailable as the pressable row is. The control at the start, such as the Checkbox of a task's row,
-stays its own element before the row's, and the Disclosure chevron's cell its own element after it, each keeping its own
-role, value and name: the row never folds a control into its own element or turns it into an action of its own, since a
-system control keeps its own role and traits (design-language/08; Chip's decisions/0001, revision B). The words are
-combined into the row's one element, so the title, the second line and the trailing slot hold no control: a text field
-in the title was measured as part of the row's button, its value read as the row's, and a toggle in the trailing slot
-turned the row into a switch (decisions/0001, "Measured"). A task's check, whose name is the task's title, is written
-with Checkbox's initializer that takes no drawn label, so its name is not drawn twice (Checkbox's decisions/0002). An
-Icon with a label at the start, such as a list's kind, is its own element before the row's, read before the row's name;
-decorative content of a slot, an IconTile or an Icon without a label, and the guides are hidden. From level 1 on, the
-row carries its level as more content a person can ask for, "Level" and the level counted from 1, not spoken unless
-asked (decisions/0001, Q8): a row at level 1 gives "Level, 2". Neither the insertion mark nor dropTarget is announced.
-On a keyboard the pressable row is reached and activated as the platform's buttons are; moving between rows with the
-arrow keys is the container's, a List's or the product's tree's, not the row's.
+selected or chosen, once while it is both, and as unavailable while disabled; chosen adds no word of its own, so the
+check that marks it is decorative and carries no label (decisions/0002), and it reaches no other element of the row: a
+Checkbox or a named Icon at the start is not announced as selected. A static row is one element of text (role text): it
+adds no action and no control's role, its title, its second line and the words of its trailing slot read as text, in one
+element, announced as selected and as unavailable as the pressable row is. The control at the start, such as the
+Checkbox of a task's row, stays its own element before the row's, and the Disclosure chevron's cell its own element
+after it, each keeping its own role, value and name: the row never folds a control into its own element or turns it into
+an action of its own, since a system control keeps its own role and traits (design-language/08; Chip's decisions/0001,
+revision B). The words are combined into the row's one element, so the title, the second line and the trailing slot hold
+no control: a text field in the title was measured as part of the row's button, its value read as the row's, and a
+toggle in the trailing slot turned the row into a switch (decisions/0001, "Measured"). A task's check, whose name is the
+task's title, is written with Checkbox's initializer that takes no drawn label, so its name is not drawn twice
+(Checkbox's decisions/0002). An Icon with a label at the start, such as a list's kind, is its own element before the
+row's, read before the row's name; decorative content of a slot, an IconTile or an Icon without a label, and the guides
+are hidden. From level 1 on, the row carries its level as more content a person can ask for, "Level" and the level
+counted from 1, not spoken unless asked (decisions/0001, Q8): a row at level 1 gives "Level, 2". Neither the insertion
+mark nor dropTarget is announced. On a keyboard the pressable row is reached and activated as the platform's buttons
+are; moving between rows with the arrow keys is the container's, a List's or the product's tree's, not the row's.
 
 ## Behavior
 
@@ -55,8 +57,14 @@ typography.subheadline.regular, and a product that sets another role on its titl
 forms (`forms`). Pressable, a row with an action, such as opening a list or a task: a press anywhere on the row that is
 not on the control at its start or on the chevron's cell is the row's action, the whole row's frame its hit area.
 Static, a row without an action, such as a subtask's row, whose check is its only control: it adds no action and no
-control's role, its words one element of text, and enters no hover, focus or pressed. selected, disabled and dropTarget
-are set on either form by the product, which knows the selection and the drag. The title is the row's first line, in
+control's role, its words one element of text, and enters no hover, focus or pressed. selected, chosen, disabled and
+dropTarget are set on either form by the product, which knows the selection, the choice and the drag. chosen is the row
+that holds the current value of a single choice, one row of a group, such as the destination a list stands in now in a
+"Move to…" sheet; a choice of several at once is not chosen but a Checkbox at each row's start, a row's on or off.
+chosen draws nothing of its own, the row drawn as at rest, and the product marks it with the platform's check,
+decorative, in the trailing slot (spec/patterns/choice-list-sheet.md); it is announced as selected, as a selected row
+is. selected is the row that is open, its content shown beside it, as in a sidebar, and draws the look below; a row both
+selected and chosen is drawn selected and announced as selected once. The title is the row's first line, in
 typography.body.regular and color.text.primary; the product may set another text role on it, such as
 typography.callout.regular for a nested row's title or typography.body.strong for a row with rows inside it
 (design-language/03). The second line, under the title by subtitle.gap, is in typography.footnote.regular and
@@ -159,16 +167,18 @@ check at the start and the chevron's cell at the end, are nested in the Button's
 inner gesture winning, without pressing the row (decisions/0001, "Revision of Q1 at implementation"). A Button merges
 its label into one element, so to assistive technology the row is its accessibilityRepresentation: the same layout with
 the leading slot's elements as they are, then the words, the title, the second line and the trailing slot, combined into
-one element (accessibilityElement(children: .combine)) with the button trait, isSelected while selected, the level as
-custom content and, while the row is enabled, an activate action that runs the row's action, its frame the words' column
-at the row's height, at least size.target.minimum, then the chevron's cell. The representation lays the title out in the
-role the drawn row draws it in, body.strong while selected. The static row's representation is the same, its words one
-element without the button trait. selected and dropTarget, which the system does not carry, are shared state modifiers
-through the environment, named as the states: .selected(_:) and .dropTarget(_:), each a Bool, cascading as .disabled(_:)
-does (spec/conventions.md, "States the system control lacks"); the product passes the List's or its own selection, and
-the isTargeted of its .dropDestination. The mark is .insertionMark(_ edge: ListRowInsertionEdge?, level: Int = 0), nil
-for none, which overlays Rule(purpose: .insertion) on that edge at that level, one overlay for each edge so that the
-mark fades and never slides, with a zIndex above the rows beside it (decisions/0001, Q4). The level, as more content, is
+one element (accessibilityElement(children: .combine)) with the button trait, isSelected while selected or chosen, the
+level as custom content and, while the row is enabled, an activate action that runs the row's action, its frame the
+words' column at the row's height, at least size.target.minimum, then the chevron's cell. The representation lays the
+title out in the role the drawn row draws it in, body.strong while selected. The static row's representation is the
+same, its words one element without the button trait. selected, chosen and dropTarget, which the system does not carry,
+are shared state modifiers through the environment, named as the states: .selected(_:), .chosen(_:) and .dropTarget(_:),
+each a Bool, cascading as .disabled(_:) does (spec/conventions.md, "States the system control lacks"); the product
+passes the List's or its own selection, whether the row holds the current value of a choice, and the isTargeted of its
+.dropDestination; the representation's words carry isSelected while the row is selected or chosen, and only selected
+reaches the drawing. The mark is .insertionMark(_ edge: ListRowInsertionEdge?, level: Int = 0), nil for none, which
+overlays Rule(purpose: .insertion) on that edge at that level, one overlay for each edge so that the mark fades and
+never slides, with a zIndex above the rows beside it (decisions/0001, Q4). The level, as more content, is
 accessibilityCustomContent with the default importance and a localized "Level". The horizontal spacing scales with
 @ScaledMetric relative to the title's text style, read under a dynamicTypeSize of at most xxxLarge; the vertical spacing
 at the person's size. The leading and trailing slots stand on the title's first line by the first text baseline, which
@@ -207,7 +217,10 @@ the arrow keys move between rows only in a List, and a tree outside a List gets 
 accessibility actions and to a trackpad's swipe, not measured here. In a List (macOS 26, measured) the rows' cells abut
 and each clips its row, so a mark shows only its half inside its own row, 1 pt of its 2, on either edge, beside a
 highlighted row or not. In a List on the Mac a product marks both rows beside the place, the upper row's bottom edge and
-the lower row's top edge at one level: their halves meet in one whole line, as one mark draws it outside a List.
+the lower row's top edge at one level: their halves meet in one whole line, as one mark draws it outside a List. A
+chosen row is a button announced as selected, as on iOS, while the Mac's own list of choices, an inline Picker, is a
+radio group whose chosen radio button has the value 1: the row keeps one role on every Apple OS, and its press takes the
+choice as a button's does (decisions/0002, the owner's answer 3).
 
 ### watchOS
 

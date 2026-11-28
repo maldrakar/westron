@@ -840,9 +840,10 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
         var elementType: XCUIElement.ElementType? = nil
         /// The widest the element's frame may be, if that matters: a control's cell, not a row with the same name.
         var maxWidth: CGFloat? = nil
-        /// Whether a text of the page must reach under the iOS status bar while the issue is reported: the status bar's
-        /// own text, the clock, is then drawn over the page's. Never on macOS, which has no status bar over the page.
-        var textUnderStatusBar = false
+        /// Whether a text of the page must reach under the iOS status bar's clock while the issue is reported: the
+        /// clock's text is then drawn over the page's. The clock's own frame, not the whole bar, which some text of the
+        /// page crosses on nearly every screenful after the first. Never on macOS, which has no status bar over the page.
+        var textUnderClock = false
         /// Tells the issue by its element's label; `nil` when the audit names no element.
         let label: @Sendable (String?) -> Bool
 
@@ -851,7 +852,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             appearance: Configuration.Appearance? = nil, dynamicType: String? = nil, value: String? = nil,
             enabled: Bool? = nil,
             detail: String? = nil, underKeyboard: Bool = false, elementType: XCUIElement.ElementType? = nil,
-            maxWidth: CGFloat? = nil, textUnderStatusBar: Bool = false,
+            maxWidth: CGFloat? = nil, textUnderClock: Bool = false,
             label: @escaping @Sendable (String?) -> Bool
         ) {
             self.elementType = elementType
@@ -866,7 +867,7 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
             self.enabled = enabled
             self.detail = detail
             self.underKeyboard = underKeyboard
-            self.textUnderStatusBar = textUnderStatusBar
+            self.textUnderClock = textUnderClock
             self.label = label
         }
 
@@ -892,22 +893,42 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                     frame.maxY > keyboard.frame.minY
                 else { return false }
             }
-            if textUnderStatusBar && !Self.pageTextUnderStatusBar() { return false }
+            if textUnderClock && !Self.pageTextUnderClock() { return false }
             return label(issue.element?.label)
         }
 
-        /// Whether a static text of the catalog reaches under the iOS status bar now; always `false` on macOS.
+        /// Whether a static text of the catalog reaches under the iOS status bar's clock now: SpringBoard's text whose
+        /// label is a time ("19:39") inside the status bar's frame. The status bar's element lists no children; the
+        /// clock is found among SpringBoard's descendants (iOS 26.3: a static text 45.7 × 20.3 pt at 51.3, 22.3).
+        /// `false` where no clock is found, and always on macOS. What it finds is printed, for the report.
         @MainActor
-        static func pageTextUnderStatusBar() -> Bool {
+        static func pageTextUnderClock() -> Bool {
             #if os(iOS)
-                let statusBar = XCUIApplication(bundleIdentifier: "com.apple.springboard").statusBars.firstMatch
-                guard statusBar.exists, let page = try? XCUIApplication().snapshot() else { return false }
-                let bar = statusBar.frame
-                func reaches(_ element: XCUIElementSnapshot) -> Bool {
-                    (element.elementType == .staticText && !element.frame.isEmpty && element.frame.intersects(bar))
-                        || element.children.contains(where: reaches)
+                let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+                let bar = springboard.statusBars.firstMatch
+                guard bar.exists else { return false }
+                let times = springboard.descendants(matching: .staticText).matching(
+                    NSPredicate(format: "label MATCHES %@", "^[0-9]{1,2}:[0-9]{2}.*"))
+                guard
+                    let clock = times.allElementsBoundByIndex.map(\.frame).first(where: {
+                        !$0.isEmpty && bar.frame.contains($0)
+                    }),
+                    let page = try? XCUIApplication().snapshot()
+                else {
+                    print("a11y: no clock found in the status bar")
+                    return false
                 }
-                return reaches(page)
+                func under(_ element: XCUIElementSnapshot) -> XCUIElementSnapshot? {
+                    if element.elementType == .staticText, !element.frame.isEmpty, element.frame.intersects(clock) {
+                        return element
+                    }
+                    return element.children.lazy.compactMap(under).first
+                }
+                let text = under(page)
+                print(
+                    "a11y: the status bar's clock at \(clock): "
+                        + (text.map { "under it, \"\($0.label)\" at \($0.frame)" } ?? "no text of the page under it"))
+                return text != nil
             #else
                 return false
             #endif
@@ -1187,11 +1208,30 @@ final class CatalogAccessibilityAuditTests: XCTestCase {
                 // and it came in none of two runs each. It is the status bar's text over the page's, not a sample's:
                 // the floating entries with glass did not report it in three runs (decisions/0015, "The catalog page,
                 // split in four"). Only an issue with no element, in the light appearance, while a text of the page
-                // reaches under the status bar, matches.
+                // reaches under the status bar's clock, matches. The clock's own frame, not the whole bar, since
+                // 2026-11-27 (#176): the page's title crosses it there, measured in both of two runs of the audit of
+                // this entry with `list-row` and `choice-list-sheet` (iOS 26.3), each reporting the issue once and
+                // the suppression matching it.
                 Suppression(
                     .entry("button-floating-before-26"), type: .elementDetection,
                     reason: "the status bar's clock over the page's text", description: "Potentially inaccessible text",
-                    appearance: .light, textUnderStatusBar: true
+                    appearance: .light, textUnderClock: true
+                ) { $0 == nil },
+                // The same on `list-row`, on its second screenful, where the row "pressable, disabled" lies under the
+                // status bar and its clock is drawn over the row's words (the audit's own screenshot of the issue shows
+                // it). Measured on iOS 26.3, 2026-11-27: it came when the state `chosen` added a row to each form's
+                // states (#176), which moved the page's rows under the bar; the page did not report it before. It is
+                // the status bar's text over the page's, not a row's: only an issue with no element, in the light
+                // appearance, while a text of the page reaches under the clock's own frame, matches, so that the same
+                // finding elsewhere on the page, which a fault in the row's accessibility representation would give,
+                // still fails. The evidence is three runs (iOS 26.3, 2026-11-27), the audit's default settings alone
+                // once and all five of its tests twice: in each the issue came at the default settings on the second
+                // screenful, the clock at (51.3, 22.3, 45.7 × 20.3) and the words "pressable, disabled" at
+                // (87.7, 39.1, 147.3 × 20.3) under it, and the suppression matched.
+                Suppression(
+                    .entry("list-row"), type: .elementDetection,
+                    reason: "the status bar's clock over the page's text", description: "Potentially inaccessible text",
+                    appearance: .light, textUnderClock: true
                 ) { $0 == nil },
             ]
             // The TextField focus pages focus a field for real, so the system keyboard is up while they are audited

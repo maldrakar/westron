@@ -2,10 +2,10 @@
 // contract and generate again (spec/conventions.md).
 //
 // ListRow's API from its contract: its states and its forms. It is an own component, and the view `ListRow` and its
-// initializers, the modifier `insertionMark`, the state modifier `selected` and the state modifier `dropTarget` are
-// hand-written in WestronUI/; the API parity lint holds their signatures to the contract (spec/conventions.md, "Own
-// components"). The enums of its marks' parameters are in WestronContract/Generated/ListRow+Contract.swift
-// (decisions/0017).
+// initializers, the modifier `insertionMark`, the state modifier `selected`, the state modifier `chosen` and the state
+// modifier `dropTarget` are hand-written in WestronUI/; the API parity lint holds their signatures to the contract
+// (spec/conventions.md, "Own components"). The enums of its marks' parameters are in
+// WestronContract/Generated/ListRow+Contract.swift (decisions/0017).
 
 /// The states of a ListRow in its contract, in its order. The view carries hover, focus, pressed, disabled itself; the
 /// others are set through the environment (spec/conventions.md).
@@ -16,6 +16,7 @@ enum ListRowState: String, CaseIterable, Sendable {
     case focus
     case pressed
     case selected
+    case chosen
     case disabled
     case dropTarget
 
@@ -27,6 +28,7 @@ enum ListRowState: String, CaseIterable, Sendable {
             case .focus: return false
             case .pressed: return true
             case .selected: return true
+            case .chosen: return true
             case .disabled: return true
             case .dropTarget: return false
             }
@@ -53,8 +55,8 @@ package enum ListRowForm: String, CaseIterable, Sendable {
     /// The states the form enters (the contract's `forms`).
     var states: Set<ListRowState> {
         switch self {
-        case .pressable: [.hover, .focus, .pressed, .selected, .disabled, .dropTarget]
-        case .static: [.selected, .disabled, .dropTarget]
+        case .pressable: [.hover, .focus, .pressed, .selected, .chosen, .disabled, .dropTarget]
+        case .static: [.selected, .chosen, .disabled, .dropTarget]
         }
     }
 }
