@@ -7,7 +7,8 @@ and generate again (decisions/0016). -->
 
 A push button that runs an action: westron's style on the platform's own button, with a label and a leading icon.
 
-Patterns that use it: [An empty state](../patterns/empty-state.md) and [A form](../patterns/form.md).
+Patterns that use it: [An empty state](../patterns/empty-state.md), [Errors beyond a field](../patterns/errors.md) and
+[A form](../patterns/form.md).
 
 ## In SwiftUI
 

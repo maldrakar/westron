@@ -38,6 +38,7 @@ its screen.
 
 - [A list of choices in a sheet](patterns/choice-list-sheet.md): Pick one place or value from a list or a tree in a system sheet; the current choice checked, one tap takes one.
 - [An empty state](patterns/empty-state.md): What a screen shows when it has nothing; the system's ContentUnavailableView with the thing's IconTile, a title, a line that says what fills it and at most one action.
+- [Errors beyond a field](patterns/errors.md): How a screen says that something failed, or asks before what cannot be undone; the system's alert with a destructive action and Cancel for a confirmation, a status line in place, with a retry where one can mend it, for a failure.
 - [A form](patterns/form.md): Fields a person fills and the product keeps; framed fields with a label above, an error or a hint under each, Cancel and one primary Button at the end, or inline fields kept as they are typed.
 
 ## Tokens
