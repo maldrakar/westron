@@ -212,21 +212,23 @@ contract, `lines`); a product whose values are often longer than a phone's field
 actions in a `ViewThatFits`, the audit also reported "Dynamic Type font sizes are partially unsupported" on all four
 buttons; with `AnyLayout` (rule 7) it does not, and the cause was not established.
 
-On macOS (27.2.1, 2026-11-28, the catalog's window at 720 × 540 pt) what assistive technology meets is as above, and
-Add refused under the field with the caret given back, Return moving from Name to Repository to Branch and submitting
-from Branch, a refused draft not loading and no save begun, Create loading while the product saves, and Cancel hold
-(`FormTests`, two runs). Quick entry as the window's first content does not take the focus (rule 12): with
-`focusesOnAppear` true its field held no focus within 5 s, in three runs; the test that measures that case is skipped
-on macOS, with this reason in its message. In the sheet the page presents over its open window, the pilot's case, the
-field takes the focus as the form appears. Return in quick entry's empty field right after the launch once refused
-nothing (one run of two), and it was typed with no wait for the field's focus; the test now waits for the focus before
-it types, and with the wait Return refused it in the one run measured, whose typing of letters is not measured: the
-Mac's keyboard layout was Russian then, and XCTest timed out typing Latin letters into every field. Esc on Cancel is
-not measured. The macOS audit reports three findings, none on the form's elements:
-"Contrast failed" on the catalog window's title, "Westron Catalog", and "Element has no description" on the window's
-group and on the menu bar, in four of its five tests (the dark high-contrast theme passes); the entry `environment`
-gets the same three on this Mac. They are the catalog window's and the system's, and are not suppressed: the macOS
-audit is not triaged yet, and CI runs the audit on iOS alone (platforms/apple/README.md, "Accessibility audit").
+On macOS (27.2.1, 2026-11-28, the catalog's window at 720 × 540 pt) `FormTests` passes six of its seven tests and
+skips one, in each of three runs in a row: what assistive technology meets, as above; Add refused under the field, with
+the caret given back; Return in quick entry's empty field refusing it and Return after a title adding it; Return
+moving from Name to Repository to Branch and submitting from Branch, a refused draft not loading and no save begun,
+and Create loading while the product saves; Cancel; and quick entry in the sheet the page presents over its open
+window, the pilot's case, whose field takes the focus as the form appears and whose Return after a title adds it and
+closes the sheet. The skipped test is quick entry as the window's first content, which does not take the focus there
+(rule 12): with `focusesOnAppear` true its field held no focus within 5 s in three runs before the skip, and its message
+gives this reason. Return in quick entry's empty field once refused nothing right after the launch (one run of two
+before this change), typed with no wait for the field's focus; the test now waits for the focus before it types.
+Typing letters needs the Mac's keyboard layout to be one XCTest can type Latin letters with: with a Russian layout it
+timed out in every field. Esc on Cancel is not measured. The macOS audit reports three findings, none on the form's
+elements: "Contrast failed" on the catalog window's title, "Westron Catalog", and "Element has no description" on the
+window's group and on the menu bar, in four of its five tests (the dark high-contrast theme passes); the entry
+`environment` gets the same three on this Mac. They are the catalog window's and the system's, and are not
+suppressed: the macOS audit is not triaged yet, and CI runs the audit on iOS alone (platforms/apple/README.md,
+"Accessibility audit").
 
 ## Apple
 
