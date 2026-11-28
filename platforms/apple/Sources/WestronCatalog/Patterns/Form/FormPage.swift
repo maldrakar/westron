@@ -10,7 +10,7 @@ import WestronUI
 // module's sentence, "A title cannot be empty.", and a title it takes is cleared, where a product would close the
 // sheet. The second is a technical product's form of several labelled fields, opened as it stands after a Create the
 // product refused: the repository's error in its hint's place. It is live too: Return moves through its fields, and a
-// draft the page takes is saved for two seconds with the button loading. The third is the pilot's task card's title
+// draft the page takes is saved for two seconds with the button loading, the save recorded as it begins. The third is the pilot's task card's title
 // and notes, inline, without the card's ground, the pilot's raised Surface: drawn here, Surface would put this entry
 // in the pull-request audit of every change to Surface, which already selects 5 entries, the limit
 // (`fan_out_limit` in tools/apple/audit-scope.sh), and would go past it.
@@ -97,8 +97,11 @@ struct FormPage: View {
         return errors
     }
 
-    /// A save that takes two seconds.
+    /// A save that takes two seconds. Its start is recorded at once and stays until the next action: the form loads
+    /// Create only for the save it starts, so a UI test that reads no start knows that Create never loaded, however
+    /// briefly.
     private func save() async {
+        last = "Saving “\(service.name)”"
         try? await Task.sleep(for: .seconds(2))
         last = "Created “\(service.name)”"
     }

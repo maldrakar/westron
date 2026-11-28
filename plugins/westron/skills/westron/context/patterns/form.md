@@ -186,7 +186,8 @@ another field, gives it back to the title, the sentence still one text; a keystr
 the empty field refuses it the same way, and Return after a title adds it. "New service" opens with its address
 refused, and a change to the address takes the sentence away. Then Return moves the caret from Name to Repository to
 Branch, and from Branch submits: the address, still without https, is refused, its sentence comes back, Repository
-takes the caret, Create does not load, and nothing is saved. With the address typed again with https, Return moves on
+takes the caret, Create does not load, and no save begins: the page records a save as it begins, the one moment
+Create starts to load, so a loading however brief would leave its line. With the address typed again with https, Return moves on
 to Branch and submits from it: Create, still enabled, has the value "Loading" while the product saves, and none after.
 Cancel runs its form's action and nothing is added. Not measured: what VoiceOver says when the sentence is announced
 (`AccessibilityNotification.Announcement`), since a UI test hears nothing; whether VoiceOver's cursor follows the
@@ -220,7 +221,10 @@ pilot does. A product presents a form that is submitted in its sheet as the pilo
 `.sheet(isPresented: $isAdding) { ScrollView { TaskEntryForm(title: $draft, problem: $problem, add: add, cancel: {
 isAdding = false }).padding(.space.page.narrow) } }`, where `add` keeps the task, closes the sheet and returns nil, or
 returns its sentence; with `space.page.wide` in the regular size class and on the Mac, where the sheet also takes its
-least size (rule 2). "New service" splits the product's part in two, `check`, which returns the sentences by field,
+least size (rule 2). The pilot's view sends its gestures through a `send` that returns nothing (`QuickEntryView`'s
+`send: (QuickEntry.UserAction) -> Void`), so its `add` would check first and send after, returning the module's
+sentence for a title that trims to nothing, "A title cannot be empty.", or nil and then sending `.addButtonTapped`.
+"New service" splits the product's part in two, `check`, which returns the sentences by field,
 and `save`, which runs only for a draft `check` took (rules 9 and 10).
 
 ```swift
@@ -261,7 +265,7 @@ struct FormField<Field: View>: View {
 /// The end of a form that is submitted: Cancel, then its one primary action; one under the other, each the form's
 /// width, at the accessibility text sizes.
 struct FormActions: View {
-    let primary: String  // a verb for what the form does: "Add", "Create"
+    let primary: LocalizedStringKey  // a verb for what the form does: "Add", "Create"
     var isLoading = false  // while the product saves
     let submit: () -> Void
     let cancel: () -> Void
@@ -288,7 +292,7 @@ struct FormActions: View {
     }
 
     /// A button's words; stacked, they take the form's width, and the button with them.
-    private func label(_ words: String, wide: Bool) -> some View {
+    private func label(_ words: LocalizedStringKey, wide: Bool) -> some View {
         Text(words).frame(maxWidth: wide ? .infinity : nil)
     }
 }

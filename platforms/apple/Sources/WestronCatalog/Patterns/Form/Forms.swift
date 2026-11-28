@@ -38,7 +38,7 @@ struct FormField<Field: View>: View {
 /// The end of a form that is submitted: Cancel, then its one primary action; one under the other, each the form's
 /// width, at the accessibility text sizes.
 struct FormActions: View {
-    let primary: String  // a verb for what the form does: "Add", "Create"
+    let primary: LocalizedStringKey  // a verb for what the form does: "Add", "Create"
     var isLoading = false  // while the product saves
     let submit: () -> Void
     let cancel: () -> Void
@@ -65,7 +65,7 @@ struct FormActions: View {
     }
 
     /// A button's words; stacked, they take the form's width, and the button with them.
-    private func label(_ words: String, wide: Bool) -> some View {
+    private func label(_ words: LocalizedStringKey, wide: Bool) -> some View {
         Text(words).frame(maxWidth: wide ? .infinity : nil)
     }
 }

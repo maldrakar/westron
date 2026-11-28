@@ -73,6 +73,14 @@ final class FormTests: XCTestCase {
         return (line.value as? String).flatMap { $0.isEmpty ? nil : $0 } ?? line.label
     }
 
+    /// Whether the line that records the last action reads `words` within the timeout.
+    @MainActor
+    private func lastActionBecomes(_ words: String, timeout: TimeInterval) -> Bool {
+        let reads = NSPredicate(format: "label == %@ OR value == %@", words, words)
+        let expectation = XCTNSPredicateExpectation(predicate: reads, object: app.staticTexts[Sample.last])
+        return XCTWaiter().wait(for: [expectation], timeout: timeout) == .completed
+    }
+
     /// The accessibility traits of the element, as the hierarchy's snapshot holds them (iOS); nil where it holds none.
     @MainActor
     private func traits(_ element: XCUIElement) -> UInt64? {
@@ -257,7 +265,9 @@ final class FormTests: XCTestCase {
         XCTAssertTrue(error.waitForExistence(timeout: 5), "Return in the last field refused nothing")
         XCTAssertTrue(hasFocus(repository), "the field in error did not take the caret")
         XCTAssertEqual(create.value as? String ?? "", "", "a refused draft loads")
-        XCTAssertNil(lastAction(timeout: 1), "a refused draft was saved")
+        // The page records a save as it begins, and the form loads Create only for a save it begins; the line stays
+        // until the next action, so a loading however brief, over by the time of the check above, still shows here.
+        XCTAssertNil(lastAction(timeout: 1), "a refused draft began a save, and Create loaded")
         // Typing in the field takes its error away; Return from the last field saves, with Create loading.
         let old = (repository.value as? String) ?? ""
         repository.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: old.count))
@@ -268,7 +278,8 @@ final class FormTests: XCTestCase {
         branch.typeText("\n")
         XCTAssertEqual(create.value as? String, "Loading", "Create does not load while it saves")
         XCTAssertTrue(app.buttons["Create"].isEnabled, "Create is not enabled while it loads")
-        XCTAssertEqual(lastAction(timeout: 10), "Created “billing”", "the draft was not saved")
+        XCTAssertEqual(lastAction(), "Saving “billing”", "a save that began was not recorded as it began")
+        XCTAssertTrue(lastActionBecomes("Created “billing”", timeout: 10), "the draft was not saved")
         XCTAssertEqual(app.buttons["Create"].value as? String ?? "", "", "Create still loads after the save")
     }
 
