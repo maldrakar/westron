@@ -13,7 +13,7 @@
 #     registry of matrices, a shared file of WestronUI, a token file, the package manifest);
 #   - use: a component's change also gives exactly the entries that draw it (Disclosure's: list-row; Checkbox's:
 #     list-row, list-row-in-list, disclosure; IconTile's: the pattern entries choice-list-sheet and empty-state), not
-#     the entries that reach it only through a base component (Rule's: color-in-use and the two pattern entries, not
+#     the entries that reach it only through a base component (Rule's: color-in-use and the three pattern entries, not
 #     list-row, whose insertion mark is ListRow's), and not the entries that call a system style or another
 #     component's of the same name (Checkbox's does not give chip, `.toggleStyle(.chip)`; in a copy with Button's cut
 #     lifted, Button's change does not give disclosure, whose page calls `.buttonStyle(.plain)`);
@@ -63,15 +63,15 @@ expect() {
 expect "$ui/Generated/Disclosure+Contract.swift" list-row,disclosure
 # Its enums in WestronContract (decisions/0017): the same entries as the component's other generated file.
 expect "$contract/Generated/Disclosure+Contract.swift" list-row,disclosure
-expect "$contract/Generated/Rule+Contract.swift" rule,choice-list-sheet,empty-state,color-in-use
+expect "$contract/Generated/Rule+Contract.swift" rule,choice-list-sheet,empty-state,form,color-in-use
 expect "$catalog/Generated/Chip+Matrix.swift" chip
 expect "$catalog/Components/DisclosurePages.swift" disclosure
 expect spec/components/text-field/text-field.spec.yaml \
-  text-field,text-field-glyphs,text-field-behavior,text-field-focus-framed,text-field-focus-inline
+  text-field,text-field-glyphs,text-field-behavior,text-field-focus-framed,text-field-focus-inline,form
 # Use, exactly.
 expect "$ui/Disclosure/DisclosureVariantStyle.swift" list-row,disclosure
 # Not through a base component: list-row draws Rule only inside ListRow (its insertion mark).
-expect "$ui/Rule/Rule.swift" rule,choice-list-sheet,empty-state,color-in-use
+expect "$ui/Rule/Rule.swift" rule,choice-list-sheet,empty-state,form,color-in-use
 # Not a use: Chip's `.toggleStyle(.chip)` (the system's `.buttonStyle(.plain)`: in a copy, below).
 expect "$ui/Checkbox/CheckboxVariantStyle.swift" checkbox,checkbox-in-list,list-row,list-row-in-list,disclosure
 expect "$ui/Chip/ChipStyles.swift" chip
@@ -127,13 +127,13 @@ IconTile impl: 2
 IconTile page: 0
 ListRow impl: 0 (base component
 ListRow page: 0 (base component
-Rule impl: 3
+Rule impl: 4
 Rule page: 0
 Surface impl: 5
 Surface page: 0
 Text impl: 0
 Text page: 0
-TextField impl: 0
+TextField impl: 1
 TextField page: 0"
 if [ "$margins" = "$want_margins" ]; then
   ok "the base components (Button, Icon, ListRow) and every count beyond a component's own entries, as pinned"
@@ -212,7 +212,7 @@ rule_page="$catalog/Components/RulePages.swift"
 chip_page="$catalog/Components/ChipPages.swift"
 fresh_copy
 add_to_entry "$chip_page" chip 'Rule()'
-expect "$ui/Rule/Rule.swift" rule,chip,choice-list-sheet,empty-state,color-in-use "$copy_script" \
+expect "$ui/Rule/Rule.swift" rule,chip,choice-list-sheet,empty-state,form,color-in-use "$copy_script" \
   "a type (the chip entry draws a Rule): Rule.swift"
 fresh_copy
 echo 'let auditScopeProbe = ChipVariant.chip' >> "$copy/$catalog/Foundations/AdaptiveGrid.swift"
@@ -235,9 +235,9 @@ expect "$ui/Checkbox/CheckboxVariantStyle.swift" rule,checkbox,checkbox-in-list,
 # Button's cut lifted (and the limit raised to its count): its implementation's users are followed, but not the
 # system's `.buttonStyle(.plain)` (Disclosure's page), and so are its page's (`FlowLayout`).
 fresh_copy
-perl -0pi -e 's/^Button: .*\n(?:  .*\n)*//m; s/^fan_out_limit=5$/fan_out_limit=6/m' "$copy_script"
+perl -0pi -e 's/^Button: .*\n(?:  .*\n)*//m; s/^fan_out_limit=5$/fan_out_limit=7/m' "$copy_script"
 expect "$ui/Button/ButtonVariantStyle.swift" "$button_entries,text-field-behavior,text-field-focus-framed,\
-text-field-focus-inline,empty-state,color-in-use,controls" "$copy_script" \
+text-field-focus-inline,empty-state,form,color-in-use,controls" "$copy_script" \
   "Button's cut lifted, not \`.buttonStyle(.plain)\`: ButtonVariantStyle.swift"
 expect "$catalog/Components/ButtonPages.swift" "$button_entries,checkbox,chip,color-categories,color-in-use,controls" \
   "$copy_script" "Button's cut lifted, a page's code other pages use (FlowLayout): ButtonPages.swift"
@@ -266,7 +266,7 @@ expect "$ui/ListRow/ListRow.swift" list-row,list-row-in-list "$copy_script" \
 fresh_copy
 add_to_entry "$chip_page" chip 'Button("Probe") {}.buttonStyle(.primary)'
 expect "$ui/Button/ButtonVariantStyle.swift" "$button_entries" "$copy_script" \
-  "a seventh entry drawing Button, a base component (the chip entry, .buttonStyle(.primary)): ButtonVariantStyle.swift"
+  "an eighth entry drawing Button, a base component (the chip entry, .buttonStyle(.primary)): ButtonVariantStyle.swift"
 # A base component declared within the limit fails the script: its declaration is stale.
 fresh_copy
 perl -0pi -e 's/^(base_components=")\n/$1\nChip: a probe of the test\n/m' "$copy_script"
