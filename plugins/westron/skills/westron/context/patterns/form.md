@@ -154,8 +154,8 @@ Not for:
     caret to the next field (`.submitLabel(.next)`), and in the last field submits (`.submitLabel(.done)`), so a person
     fills the form without leaving the keyboard; Esc, where there is one, is Cancel
     (`.keyboardShortcut(.cancelAction)`). The primary button takes no `.keyboardShortcut(.defaultAction)`: Return is
-    the field's, and a default action could take it from every field and submit from the first (inferred, not
-    measured: no Mac run of this entry, "Accessibility"). In place, Return keeps what was typed and ends the editing
+    the field's, and a default action could take it from every field and submit from the first (inferred: without one,
+    Return moves from field to field on the Mac as on iOS, "Accessibility"; with one, not measured). In place, Return keeps what was typed and ends the editing
     (the pilot's card's title and a row's name); a card's notes, `axis: .vertical`, take Return as the system's field
     of several lines does (not measured here).
 12. **A form opened to make something new focuses its first field; one opened on what exists does not.** Quick entry
@@ -169,7 +169,7 @@ Not for:
 ## Accessibility
 
 Measured on the catalog's entry `form` by its UI test `FormTests` and the accessibility audit (2026-11-27, the iOS 26.3
-simulator, iPhone 17; macOS: see below). Each form reads in its order: the title, a heading ("New task, heading"),
+simulator, iPhone 17; macOS 27.2.1 on 2026-11-28: see below). Each form reads in its order: the title, a heading ("New task, heading"),
 then each field, the words under it, and the actions. A field is one text field named by the words of its label, or
 by a word for what it holds where it has none: "Title", "Name", "Repository", "Branch (optional)", "Notes"; its value
 is its text, and an empty field's value is its prompt ("Buy milk", "main"). A drawn label is no element of its own,
@@ -202,10 +202,18 @@ contract, `lines`); a product whose values are often longer than a phone's field
 actions in a `ViewThatFits`, the audit also reported "Dynamic Type font sizes are partially unsupported" on all four
 buttons; with `AnyLayout` (rule 7) it does not, and the cause was not established.
 
-On macOS the entry is not measured: on 2026-11-27 the screenshot's run launched the catalog with no window ("the
-catalog did not render the entry within 30 s"), as every macOS run on this Mac did that day, so neither `FormTests`
-nor the audit ran there, and what Return and Tab do in the form on the Mac, with or without a default action, is not
-known.
+On macOS (27.2.1, 2026-11-28, the catalog's window at 720 × 540 pt) `FormTests` passes four of its six tests in each
+of two runs: what assistive technology meets, as above; Add refused under the field, with the caret given back; Return
+moving from Name to Repository to Branch and submitting from Branch, a refused draft not loading and no save begun, and
+Create loading while the product saves; and Cancel. Two do not hold there. Quick entry with `focusesOnAppear` true did
+not take the focus when the catalog opened its window, in both runs: there the form is the window's first content,
+while the pilot sets the same focus in a sheet over a window already open, which is not measured. Return in quick
+entry's empty field right after the launch refused nothing in one run and refused it in the other. Esc on Cancel is not
+measured. The macOS audit reports three findings, none on the form's elements: "Contrast failed" on the catalog
+window's title, "Westron Catalog", and "Element has no description" on the window's group and on the menu bar, in four
+of its five tests (the dark high-contrast theme passes); the entry `environment` gets the same three on this Mac. They
+are the catalog window's and the system's, and are not suppressed: the macOS audit is not triaged yet, and CI runs the
+audit on iOS alone (platforms/apple/README.md, "Accessibility audit").
 
 ## Apple
 
