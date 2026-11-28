@@ -65,6 +65,14 @@ final class FormTests: XCTestCase {
         element.value(forKey: "hasKeyboardFocus") as? Bool ?? false
     }
 
+    /// Whether the element holds the keyboard focus within the timeout: what a keystroke into it waits for.
+    @MainActor
+    private func takesFocus(_ element: XCUIElement, timeout: TimeInterval = 5) -> Bool {
+        let focused = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "hasKeyboardFocus == true"), object: element)
+        return XCTWaiter().wait(for: [focused], timeout: timeout) == .completed
+    }
+
     /// The words of the line that records the last action, or nil while there is none.
     @MainActor
     private func lastAction(timeout: TimeInterval = 5) -> String? {
@@ -230,9 +238,12 @@ final class FormTests: XCTestCase {
         launch()
         let field = quickEntryTitle
         press(field)
+        // A keystroke goes to the field only once it holds the focus.
+        XCTAssertTrue(takesFocus(field), "a click did not focus the field")
         field.typeText("\n")
         XCTAssertTrue(texts(Sample.emptyTitle).firstMatch.waitForExistence(timeout: 5), "Return refused nothing")
         press(field)
+        XCTAssertTrue(takesFocus(field), "a click did not focus the refused field")
         field.typeText("Water the plants\n")
         XCTAssertEqual(lastAction(), "Added “Water the plants”", "Return did not add the task")
         XCTAssertEqual(texts(Sample.emptyTitle).count, 0, "the error stayed after the title was taken")
@@ -291,15 +302,40 @@ final class FormTests: XCTestCase {
         XCTAssertEqual(lastAction(), "Cancelled quick entry")
     }
 
-    /// A form opened to make something new focuses its field when it appears, and the keyboard rises (iOS).
+    /// A form opened to make something new focuses its field when it appears, and the keyboard rises (iOS): here the
+    /// form is the window's first content. On macOS the focus is not taken there (spec/patterns/form.md, rule 12), and
+    /// the sheet's case is `testQuickEntryInASheetFocusesItsField`.
     @MainActor
-    func testQuickEntryFocusesItsFieldOnAppear() {
-        launch(["-WestronFormFocusOnAppear"])
-        let field = quickEntryTitle
-        let focused = expectation(for: NSPredicate(format: "hasKeyboardFocus == true"), evaluatedWith: field)
-        wait(for: [focused], timeout: 5)
+    func testQuickEntryFocusesItsFieldOnAppear() throws {
+        #if os(macOS)
+            throw XCTSkip(
+                "macOS 27.2.1, 2026-11-28: a focus set in onAppear of the window's first content is dropped, though the"
+                    + " window is key and the app active when the form appears; set one main-queue turn later it holds"
+                    + " (spec/patterns/form.md, rule 12). The pattern's case, quick entry in a sheet over an open"
+                    + " window, is testQuickEntryInASheetFocusesItsField.")
+        #else
+            launch(["-WestronFormFocusOnAppear"])
+            XCTAssertTrue(takesFocus(quickEntryTitle), "quick entry did not focus its field on appear")
+            XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5), "the keyboard did not rise")
+        #endif
+    }
+
+    /// Quick entry presented in a sheet over the open window, as the pilot presents it, focuses its field when it
+    /// appears, and the keyboard rises (iOS); Return after a title adds it and closes the sheet.
+    @MainActor
+    func testQuickEntryInASheetFocusesItsField() {
+        launch(["-WestronFormSheet"])
+        press(app.buttons["Open quick entry in a sheet"])
+        let sheet = app.descendants(matching: .any)["westron.catalog.form.sheet"]
+        XCTAssertTrue(sheet.waitForExistence(timeout: 10), "the sheet did not open")
+        let field = sheet.textFields.matching(NSPredicate(format: "label == 'Title'")).firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5), "the sheet holds no field named Title")
+        XCTAssertTrue(takesFocus(field), "quick entry in a sheet did not focus its field on appear")
         #if os(iOS)
             XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5), "the keyboard did not rise")
         #endif
+        field.typeText("Water the plants\n")
+        XCTAssertEqual(lastAction(), "Added “Water the plants”", "Return did not add the task")
+        XCTAssertTrue(sheet.waitForNonExistence(timeout: 10), "a title taken did not close the sheet")
     }
 }

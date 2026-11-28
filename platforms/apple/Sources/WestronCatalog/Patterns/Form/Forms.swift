@@ -6,9 +6,11 @@ import WestronUI
 
 /// A framed field with what stands around it: its visible label above it, and under it its error, or its hint.
 struct FormField<Field: View>: View {
-    var label: String? = nil  // nil where the form's title names its one field
-    var hint: String? = nil  // what a person needs to fill it, kept while they type
-    var error: String? = nil  // the product's sentence refusing what it holds; stands in the hint's place
+    var label: LocalizedStringKey? = nil  // nil where the form's title names its one field
+    var hint: LocalizedStringKey? = nil  // what a person needs to fill it, kept while they type
+    // The product's sentence refusing what it holds; stands in the hint's place. A String, not a key: the product's
+    // check makes it at run time, in the person's language, and the form shows it as it comes.
+    var error: String? = nil
     @ViewBuilder let field: Field  // the TextField, named with the label's words
 
     var body: some View {
@@ -72,7 +74,7 @@ struct FormActions: View {
 
 /// The form's title, the first thing it reads.
 struct FormTitle: View {
-    let text: String  // what the form makes: "New task"
+    let text: LocalizedStringKey  // what the form makes: "New task"
 
     var body: some View {
         Text(text)

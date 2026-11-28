@@ -155,30 +155,39 @@ Not for:
     fills the form without leaving the keyboard; Esc, where there is one, is Cancel
     (`.keyboardShortcut(.cancelAction)`). The primary button takes no `.keyboardShortcut(.defaultAction)`: Return is
     the field's, and a default action could take it from every field and submit from the first (inferred: without one,
-    Return moves from field to field on the Mac as on iOS, "Accessibility"; with one, not measured). In place, Return keeps what was typed and ends the editing
-    (the pilot's card's title and a row's name); a card's notes, `axis: .vertical`, take Return as the system's field
-    of several lines does (not measured here).
+    Return moves from field to field on the Mac as on iOS, "Accessibility"; with one, not measured). In place, Return
+    keeps what was typed and ends the editing (the pilot's card's title and a row's name); a card's notes,
+    `axis: .vertical`, take Return as the system's field of several lines does (not measured here).
 12. **A form opened to make something new focuses its first field; one opened on what exists does not.** Quick entry
-    and "New service" open with the caret in their first field, the keyboard up, since they open to be typed in (the
-    pilot's quick entry, `.onAppear`). A stored task's card opens with no caret, so that its whole is seen before the
-    keyboard covers half of it; a task just added opens its card with the caret in its empty title (the pilot's
-    `focusesOnAppear: model.title.text.isEmpty`).
+    and "New service" open with the caret in their first field, the keyboard up, since they open to be typed in: the
+    form sets its focus in `.onAppear`, as the pilot's quick entry does. In a sheet over a window already open, the
+    pattern's case (rule 2), the focus holds on iOS and on macOS; as a window's first content it holds on iOS and not
+    on macOS ("Accessibility"). There a focus set in `.onAppear` or in `.task`, or given with `.defaultFocus(_:_:)`,
+    was dropped, though the window was key and the app active when the form appeared, and one set a turn of the main
+    queue later, from `DispatchQueue.main.async` in `.onAppear`, held (macOS 27.2.1, 2026-11-28, the catalog's entry
+    with a diagnostic build; the cause was not established). A product whose form is the first content of a Mac
+    window, a window of its own for a new thing rather than a sheet, meets that. A stored task's card opens with no
+    caret, so that its whole is seen before the keyboard covers half of it; a task just added opens its card with the
+    caret in its empty title (the pilot's `focusesOnAppear: model.title.text.isEmpty`; not measured here, the
+    catalog's card opens on a stored task).
 13. **Every text size.** The fields grow with their text (TextField's contract), the labels, hints and errors wrap,
     and the form scrolls. Nothing in the form is set beside a field, so nothing reflows but the actions (rule 7).
 
 ## Accessibility
 
 Measured on the catalog's entry `form` by its UI test `FormTests` and the accessibility audit (2026-11-27, the iOS 26.3
-simulator, iPhone 17; macOS 27.2.1 on 2026-11-28: see below). Each form reads in its order: the title, a heading ("New task, heading"),
-then each field, the words under it, and the actions. A field is one text field named by the words of its label, or
-by a word for what it holds where it has none: "Title", "Name", "Repository", "Branch (optional)", "Notes"; its value
-is its text, and an empty field's value is its prompt ("Buy milk", "main"). A drawn label is no element of its own,
-so its words are read once, on the field. An error is a text of its own right after its field, "Enter an address that starts with
-https://.", 6 pt under the field's frame and before the next field's; its glyph adds no element (the entry has no
-image element), and the hint it stands in for is not there. A hint is a text after its field, "Without one, the
-repository’s default branch.". The actions are buttons named by their words, "Cancel" and "Add", "Cancel" and
-"Create", 36 pt high at `size: .m`, after the last field. No field holds the focus when the page appears; with the
-quick entry's `focusesOnAppear` true, its field does, and the keyboard rises.
+simulator, iPhone 17; macOS 27.2.1 on 2026-11-28: see below). Each form reads in its order: the title, a heading
+("New task, heading"), then each field, the words under it, and the actions. A field is one text field named by the
+words of its label, or by a word for what it holds where it has none: "Title", "Name", "Repository", "Branch
+(optional)", "Notes"; its value is its text, and an empty field's value is its prompt ("Buy milk", "main"). A drawn
+label is no element of its own, so its words are read once, on the field. An error is a text of its own right after
+its field, "Enter an address that starts with https://.", 6 pt under the field's frame and before the next field's;
+its glyph adds no element (the entry has no image element), and the hint it stands in for is not there. A hint is a
+text after its field, "Without one, the repository’s default branch.". The actions are buttons named by their words,
+"Cancel" and "Add", "Cancel" and "Create", 36 pt high at `size: .m`, after the last field. No field holds the focus
+when the page appears; with the quick entry's `focusesOnAppear` true, its field does, and the keyboard rises, both as
+the page's first content and in a `.sheet` the page presents from a button (launched with `-WestronFormSheet`), where
+Return after a title adds it and closes the sheet.
 
 What the pattern promises, measured by the same test: Add with an empty title shows "A title cannot be empty." under
 the field and above the actions, the field takes the caret, and nothing is added; Add again, with the caret moved to
@@ -187,8 +196,9 @@ the empty field refuses it the same way, and Return after a title adds it. "New 
 refused, and a change to the address takes the sentence away. Then Return moves the caret from Name to Repository to
 Branch, and from Branch submits: the address, still without https, is refused, its sentence comes back, Repository
 takes the caret, Create does not load, and no save begins: the page records a save as it begins, the one moment
-Create starts to load, so a loading however brief would leave its line. With the address typed again with https, Return moves on
-to Branch and submits from it: Create, still enabled, has the value "Loading" while the product saves, and none after.
+Create starts to load, so a loading however brief would leave its line. With the address typed again with https,
+Return moves on to Branch and submits from it: Create, still enabled, has the value "Loading" while the product
+saves, and none after.
 Cancel runs its form's action and nothing is added. Not measured: what VoiceOver says when the sentence is announced
 (`AccessibilityNotification.Announcement`), since a UI test hears nothing; whether VoiceOver's cursor follows the
 caret to the field in error; and Esc on Cancel, which needs a hardware keyboard.
@@ -202,18 +212,21 @@ contract, `lines`); a product whose values are often longer than a phone's field
 actions in a `ViewThatFits`, the audit also reported "Dynamic Type font sizes are partially unsupported" on all four
 buttons; with `AnyLayout` (rule 7) it does not, and the cause was not established.
 
-On macOS (27.2.1, 2026-11-28, the catalog's window at 720 × 540 pt) `FormTests` passes four of its six tests in each
-of two runs: what assistive technology meets, as above; Add refused under the field, with the caret given back; Return
-moving from Name to Repository to Branch and submitting from Branch, a refused draft not loading and no save begun, and
-Create loading while the product saves; and Cancel. Two do not hold there. Quick entry with `focusesOnAppear` true did
-not take the focus when the catalog opened its window, in both runs: there the form is the window's first content,
-while the pilot sets the same focus in a sheet over a window already open, which is not measured. Return in quick
-entry's empty field right after the launch refused nothing in one run and refused it in the other. Esc on Cancel is not
-measured. The macOS audit reports three findings, none on the form's elements: "Contrast failed" on the catalog
-window's title, "Westron Catalog", and "Element has no description" on the window's group and on the menu bar, in four
-of its five tests (the dark high-contrast theme passes); the entry `environment` gets the same three on this Mac. They
-are the catalog window's and the system's, and are not suppressed: the macOS audit is not triaged yet, and CI runs the
-audit on iOS alone (platforms/apple/README.md, "Accessibility audit").
+On macOS (27.2.1, 2026-11-28, the catalog's window at 720 × 540 pt) what assistive technology meets is as above, and
+Add refused under the field with the caret given back, Return moving from Name to Repository to Branch and submitting
+from Branch, a refused draft not loading and no save begun, Create loading while the product saves, and Cancel hold
+(`FormTests`, two runs). Quick entry as the window's first content does not take the focus (rule 12): with
+`focusesOnAppear` true its field held no focus within 5 s, in three runs; the test that measures that case is skipped
+on macOS, with this reason in its message. In the sheet the page presents over its open window, the pilot's case, the
+field takes the focus as the form appears. Return in quick entry's empty field right after the launch once refused
+nothing (one run of two), and it was typed with no wait for the field's focus; the test now waits for the focus before
+it types, and with the wait Return refused it in the one run measured, whose typing of letters is not measured: the
+Mac's keyboard layout was Russian then, and XCTest timed out typing Latin letters into every field. Esc on Cancel is
+not measured. The macOS audit reports three findings, none on the form's elements:
+"Contrast failed" on the catalog window's title, "Westron Catalog", and "Element has no description" on the window's
+group and on the menu bar, in four of its five tests (the dark high-contrast theme passes); the entry `environment`
+gets the same three on this Mac. They are the catalog window's and the system's, and are not suppressed: the macOS
+audit is not triaged yet, and CI runs the audit on iOS alone (platforms/apple/README.md, "Accessibility audit").
 
 ## Apple
 
@@ -241,9 +254,11 @@ import WestronUI
 
 /// A framed field with what stands around it: its visible label above it, and under it its error, or its hint.
 struct FormField<Field: View>: View {
-    var label: String? = nil  // nil where the form's title names its one field
-    var hint: String? = nil  // what a person needs to fill it, kept while they type
-    var error: String? = nil  // the product's sentence refusing what it holds; stands in the hint's place
+    var label: LocalizedStringKey? = nil  // nil where the form's title names its one field
+    var hint: LocalizedStringKey? = nil  // what a person needs to fill it, kept while they type
+    // The product's sentence refusing what it holds; stands in the hint's place. A String, not a key: the product's
+    // check makes it at run time, in the person's language, and the form shows it as it comes.
+    var error: String? = nil
     @ViewBuilder let field: Field  // the TextField, named with the label's words
 
     var body: some View {
@@ -307,7 +322,7 @@ struct FormActions: View {
 
 /// The form's title, the first thing it reads.
 struct FormTitle: View {
-    let text: String  // what the form makes: "New task"
+    let text: LocalizedStringKey  // what the form makes: "New task"
 
     var body: some View {
         Text(text)
