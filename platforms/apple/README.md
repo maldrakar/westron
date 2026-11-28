@@ -730,3 +730,19 @@ sudo automationmodetool enable-automationmode-without-authentication
 
 Why not `screencapture` and not an in-process capture for an entry: see decisions/0008; the snapshot matrix is drawn
 in-process (above).
+
+The catalog ignores the window state macOS saves for it (2026-11-27). On macOS 26 the system keeps that state for the
+bundle id, not for one copy of the app: every worktree's catalog shares one, in the container of `talagentd`
+(`~/Library/Daemon Containers/<uuid>/Data/Library/Saved Application State/<uuid>.savedState`, named by no bundle id).
+From the evening of 2026-11-26 on this Mac that state held the app and no window, and AppKit restored exactly that:
+the launch logged `_reopenWindowsAsNecessaryIncludingRestorableState: … hasPersistentStateToRestore=1`, SwiftUI opened
+no window, and every macOS UI test failed with "the catalog did not render the entry within 30 s" and "Window (First
+Match) … does not exist". A run that opens no window leaves that state as it is. With that state moved aside the
+same build opened its window (`hasPersistentStateToRestore=0`). How the windowless state was first saved is not known;
+it came minutes after two crashes of the catalog under a UI test (2026-11-26 22:31). So `CatalogScene` registers
+`ApplePersistenceIgnoreState`, the default Xcode's scheme option "Launch application without state restoration" passes
+as an argument: AppKit then restores nothing, and the catalog opens its window whatever the saved state. It changes
+neither what the catalog draws nor the window's size, which comes from the window's saved frame in the catalog's
+defaults. A catalog built from a commit before this one still fails while such a state is there; deleting the folder
+of that one state (the one whose `windows.plist` holds a global record with `CFBundleVersion` 1 and an empty
+`NSWindowZOrder`, and gains a `restorecount.plist` when the catalog launches) clears it once.
