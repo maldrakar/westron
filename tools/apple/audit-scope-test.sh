@@ -233,11 +233,13 @@ expect "$ui/Checkbox/CheckboxVariantStyle.swift" rule,checkbox,checkbox-in-list,
   "$copy_script" "an initializer on Toggle (the rule entry, Toggle(isOn:accessibilityLabel:)):"\
 " CheckboxVariantStyle.swift"
 # Button's cut lifted (and the limit raised to its count): its implementation's users are followed, but not the
-# system's `.buttonStyle(.plain)` (Disclosure's page), and so are its page's (`FlowLayout`).
+# system's `.buttonStyle(.plain)` (Disclosure's page), and so are its page's (`FlowLayout`). ListRow's cut is lifted
+# with it, since at that limit, Button's 8, ListRow's 8 fit and its declaration would be stale; it adds no entry here.
 fresh_copy
-perl -0pi -e 's/^Button: .*\n(?:  .*\n)*//m; s/^fan_out_limit=5$/fan_out_limit=7/m' "$copy_script"
+perl -0pi -e 's/^Button: .*\n(?:  .*\n)*//m; s/^ListRow: .*\n(?:  .*\n)*//m; s/^fan_out_limit=5$/fan_out_limit=8/m' \
+  "$copy_script"
 expect "$ui/Button/ButtonVariantStyle.swift" "$button_entries,text-field-behavior,text-field-focus-framed,\
-text-field-focus-inline,empty-state,form,color-in-use,controls" "$copy_script" \
+text-field-focus-inline,empty-state,form,errors,color-in-use,controls" "$copy_script" \
   "Button's cut lifted, not \`.buttonStyle(.plain)\`: ButtonVariantStyle.swift"
 expect "$catalog/Components/ButtonPages.swift" "$button_entries,checkbox,chip,color-categories,color-in-use,controls" \
   "$copy_script" "Button's cut lifted, a page's code other pages use (FlowLayout): ButtonPages.swift"
@@ -266,7 +268,7 @@ expect "$ui/ListRow/ListRow.swift" list-row,list-row-in-list "$copy_script" \
 fresh_copy
 add_to_entry "$chip_page" chip 'Button("Probe") {}.buttonStyle(.primary)'
 expect "$ui/Button/ButtonVariantStyle.swift" "$button_entries" "$copy_script" \
-  "an eighth entry drawing Button, a base component (the chip entry, .buttonStyle(.primary)): ButtonVariantStyle.swift"
+  "a ninth entry drawing Button, a base component (the chip entry, .buttonStyle(.primary)): ButtonVariantStyle.swift"
 # A base component declared within the limit fails the script: its declaration is stale.
 fresh_copy
 perl -0pi -e 's/^(base_components=")\n/$1\nChip: a probe of the test\n/m' "$copy_script"

@@ -19,10 +19,11 @@
 #                                    (ButtonBehaviorTests CheckboxBehaviorTests TextFieldBehaviorTests
 #                                    TextFieldAccessibilityFrameTests IconAccessibilityTests IconTileAccessibilityTests
 #                                    ChipBehaviorTests ListRowBehaviorTests DisclosureBehaviorTests ChoiceListSheetTests
-#                                    EmptyStateTests FormTests; default: all); a run that stops making progress
-#                                    (WESTRON_BEHAVIOR_STALL_LIMIT=<seconds>, default 300) or fails for infrastructure
-#                                    runs once more what has not passed, never a test XCTest reported a failure of its
-#                                    own for (#97); WESTRON_BEHAVIOR_DEADLINE=<minutes> stops it all at that time
+#                                    EmptyStateTests FormTests ErrorsTests; default: all); a run that stops making
+#                                    progress (WESTRON_BEHAVIOR_STALL_LIMIT=<seconds>, default 300) or fails for
+#                                    infrastructure runs once more what has not passed, never a test XCTest reported a
+#                                    failure of its own for (#97); WESTRON_BEHAVIOR_DEADLINE=<minutes> stops it all at
+#                                    that time
 #   tools/apple/check.sh format      swift format lint without changes, tools/ included
 #   tools/apple/check.sh fix-format  swift format that rewrites the files, tools/ included
 #   tools/apple/check.sh all         everything except fix-format, a11y and behavior (package-ios included)
@@ -440,7 +441,7 @@ a11y() {
 # (.github/workflows/accessibility-audit.yml).
 behavior_tests=(ButtonBehaviorTests CheckboxBehaviorTests TextFieldBehaviorTests TextFieldAccessibilityFrameTests
   IconAccessibilityTests IconTileAccessibilityTests ChipBehaviorTests ListRowBehaviorTests DisclosureBehaviorTests
-  ChoiceListSheetTests EmptyStateTests FormTests)
+  ChoiceListSheetTests EmptyStateTests FormTests ErrorsTests)
 
 # WESTRON_BEHAVIOR_DEADLINE=<minutes> from the script's start (unset: none; CI sets it a few minutes before the job's
 # timeout, since a job the timeout kills uploads no logs, and a macOS UI test run has gone silent on CI for an hour,

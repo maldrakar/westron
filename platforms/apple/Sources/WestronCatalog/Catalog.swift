@@ -47,6 +47,7 @@ public enum Catalog {
         .choiceListSheet,
         .emptyState,
         .form,
+        .errors,
         .colorBackgrounds,
         .colorForegrounds,
         .colorCategories,
