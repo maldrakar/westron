@@ -19,10 +19,12 @@ import WestronUI
 // (FormTests); the line shows only after the first. Neither form takes the keyboard focus when the page appears, so
 // that the screenshots and the audit see the page without the keyboard: launched with `-WestronFormFocusOnAppear`, the
 // quick entry does, as the pattern's forms do in a product. Launched with `-WestronFormSheet`, the page starts with a
-// button that presents quick entry in a system `.sheet` over the page, as the pilot presents it over its window: on
-// macOS that is the case in which the form's focus set in `onAppear` holds, since there one set in `onAppear` of a
-// window's first content is dropped (spec/patterns/form.md, rule 12). The button is drawn only then, so that the
-// screenshots and the audit see the pattern alone.
+// button that presents quick entry in a system `.sheet` over the page, as the pilot presents it over its window, the
+// pattern's case: there its field holds the focus as the form appears, on iOS and on macOS, though on macOS one set in
+// `onAppear` of a window's first content is dropped (spec/patterns/form.md, rule 12). With `-WestronFormSheetAsksNoFocus`
+// as well, the sheet's form has `focusesOnAppear` false, the control: on macOS the sheet gives its first field the focus
+// by itself all the same, so there the sheet's case does not show that the form's own focus is what holds. The button
+// is drawn only with `-WestronFormSheet`, so that the screenshots and the audit see the pattern alone.
 
 extension CatalogEntry {
     static let form = CatalogEntry(id: "form", title: "Pattern: a form", section: .patterns) {
@@ -45,6 +47,8 @@ enum FormSample {
     static let focusesOnAppear = ProcessInfo.processInfo.arguments.contains("-WestronFormFocusOnAppear")
     /// Whether the page starts with a button that presents quick entry in a sheet.
     static let opensASheet = ProcessInfo.processInfo.arguments.contains("-WestronFormSheet")
+    /// Whether the sheet's quick entry asks for no focus when it appears: the control of the sheet's focus.
+    static let sheetAsksNoFocus = ProcessInfo.processInfo.arguments.contains("-WestronFormSheetAsksNoFocus")
 }
 
 /// The three samples, live; what their actions did is recorded under them.
@@ -95,7 +99,8 @@ struct FormPage: View {
             // As the pattern's "Apple" section presents it: the form in a scroll view at the page margin.
             ScrollView {
                 TaskEntryForm(
-                    title: $sheetTitle, problem: $sheetProblem, add: addInSheet,
+                    title: $sheetTitle, problem: $sheetProblem, focusesOnAppear: !FormSample.sheetAsksNoFocus,
+                    add: addInSheet,
                     cancel: {
                         cancel("quick entry in a sheet")
                         isAdding = false

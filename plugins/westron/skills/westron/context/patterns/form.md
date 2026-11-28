@@ -161,33 +161,39 @@ Not for:
 12. **A form opened to make something new focuses its first field; one opened on what exists does not.** Quick entry
     and "New service" open with the caret in their first field, the keyboard up, since they open to be typed in: the
     form sets its focus in `.onAppear`, as the pilot's quick entry does. In a sheet over a window already open, the
-    pattern's case (rule 2), the focus holds on iOS and on macOS; as a window's first content it holds on iOS and not
-    on macOS ("Accessibility"). There a focus set in `.onAppear` or in `.task`, or given with `.defaultFocus(_:_:)`,
-    was dropped, though the window was key and the app active when the form appeared, and one set a turn of the main
-    queue later, from `DispatchQueue.main.async` in `.onAppear`, held (macOS 27.2.1, 2026-11-28, the catalog's entry
-    with a diagnostic build; the cause was not established). A product whose form is the first content of a Mac
-    window, a window of its own for a new thing rather than a sheet, meets that. A stored task's card opens with no
-    caret, so that its whole is seen before the keyboard covers half of it; a task just added opens its card with the
-    caret in its empty title (the pilot's `focusesOnAppear: model.title.text.isEmpty`; not measured here, the
-    catalog's card opens on a stored task).
+    pattern's case (rule 2), the field holds the keyboard focus as the form appears, on iOS and on macOS. On iOS that
+    focus is the form's: with `focusesOnAppear` false no field in the sheet takes it. On macOS the field holds it with
+    `focusesOnAppear` false as well, since a Mac sheet gives its first text field the focus by itself, so there the
+    measurement does not show that the form's own `.onAppear` focus is what holds ("Accessibility"). As a window's
+    first content the focus holds on iOS and not on macOS. There, on the Mac, a focus set in `.onAppear` or in
+    `.task`, or given with `.defaultFocus(_:_:)`, was dropped, though the window was key and the app active when the
+    form appeared, and one set a turn of the main queue later, from `DispatchQueue.main.async` in `.onAppear`, held
+    (macOS 27.2.1, 2026-11-28, the catalog's entry with a diagnostic build; the cause was not established). A product
+    whose form is the first content of a Mac window, a window of its own for a new thing rather than a sheet, meets
+    that. So nothing measured on the Mac shows the form's own `.onAppear` focus holding. A stored task's card opens
+    with no caret, so that its whole is seen before the keyboard covers half of it; a task just added opens its
+    card with the caret in its empty title (the pilot's `focusesOnAppear: model.title.text.isEmpty`; not measured
+    here, the catalog's card opens on a stored task).
 13. **Every text size.** The fields grow with their text (TextField's contract), the labels, hints and errors wrap,
     and the form scrolls. Nothing in the form is set beside a field, so nothing reflows but the actions (rule 7).
 
 ## Accessibility
 
-Measured on the catalog's entry `form` by its UI test `FormTests` and the accessibility audit (2026-11-27, the iOS 26.3
-simulator, iPhone 17; macOS 27.2.1 on 2026-11-28: see below). Each form reads in its order: the title, a heading
-("New task, heading"), then each field, the words under it, and the actions. A field is one text field named by the
-words of its label, or by a word for what it holds where it has none: "Title", "Name", "Repository", "Branch
-(optional)", "Notes"; its value is its text, and an empty field's value is its prompt ("Buy milk", "main"). A drawn
-label is no element of its own, so its words are read once, on the field. An error is a text of its own right after
-its field, "Enter an address that starts with https://.", 6 pt under the field's frame and before the next field's;
-its glyph adds no element (the entry has no image element), and the hint it stands in for is not there. A hint is a
-text after its field, "Without one, the repository’s default branch.". The actions are buttons named by their words,
-"Cancel" and "Add", "Cancel" and "Create", 36 pt high at `size: .m`, after the last field. No field holds the focus
-when the page appears; with the quick entry's `focusesOnAppear` true, its field does, and the keyboard rises, both as
-the page's first content and in a `.sheet` the page presents from a button (launched with `-WestronFormSheet`), where
-Return after a title adds it and closes the sheet.
+Measured on the catalog's entry `form` by its UI test `FormTests` and the accessibility audit (the iOS 26.3 simulator,
+iPhone 17: 2026-11-27, and the sheet with its control on 2026-11-28; macOS 27.2.1 on 2026-11-28: see below). Each form
+reads in its order: the title, a heading ("New task, heading"), then each field, the words under it, and the actions. A
+field is one text field named by the words of its label, or by a word for what it holds where it has none: "Title",
+"Name", "Repository", "Branch (optional)", "Notes"; its value is its text, and an empty field's value is its prompt
+("Buy milk", "main"). A drawn label is no element of its own, so its words are read once, on the field. An error is a
+text of its own right after its field, "Enter an address that starts with https://.", 6 pt under the field's frame and
+before the next field's; its glyph adds no element (the entry has no image element), and the hint it stands in for is
+not there. A hint is a text after its field, "Without one, the repository’s default branch.". The actions are buttons
+named by their words, "Cancel" and "Add", "Cancel" and "Create", 36 pt high at `size: .m`, after the last field. No
+field holds the focus when the page appears; with the quick entry's `focusesOnAppear` true, its field does, and the
+keyboard rises, both as the page's first content and in a `.sheet` the page presents from a button (launched with
+`-WestronFormSheet`), where Return after a title adds it and closes the sheet. The sheet's control, launched with
+`-WestronFormSheetAsksNoFocus` as well, gives the sheet's quick entry `focusesOnAppear` false: then its field holds no
+focus within 3 s and no keyboard rises, so on iOS the sheet's focus is the form's own.
 
 What the pattern promises, measured by the same test: Add with an empty title shows "A title cannot be empty." under
 the field and above the actions, the field takes the caret, and nothing is added; Add again, with the caret moved to
@@ -212,13 +218,17 @@ contract, `lines`); a product whose values are often longer than a phone's field
 actions in a `ViewThatFits`, the audit also reported "Dynamic Type font sizes are partially unsupported" on all four
 buttons; with `AnyLayout` (rule 7) it does not, and the cause was not established.
 
-On macOS (27.2.1, 2026-11-28, the catalog's window at 720 × 540 pt) `FormTests` passes six of its seven tests and
-skips one, in each of three runs in a row: what assistive technology meets, as above; Add refused under the field, with
-the caret given back; Return in quick entry's empty field refusing it and Return after a title adding it; Return
+On macOS (27.2.1, 2026-11-28, the catalog's window at 720 × 540 pt) `FormTests` passed six of its seven tests and
+skipped one, in each of three runs in a row: what assistive technology meets, as above; Add refused under the field,
+with the caret given back; Return in quick entry's empty field refusing it and Return after a title adding it; Return
 moving from Name to Repository to Branch and submitting from Branch, a refused draft not loading and no save begun,
 and Create loading while the product saves; Cancel; and quick entry in the sheet the page presents over its open
-window, the pilot's case, whose field takes the focus as the form appears and whose Return after a title adds it and
-closes the sheet. The skipped test is quick entry as the window's first content, which does not take the focus there
+window, the pilot's case, whose field holds the keyboard focus as the form appears and whose Return after a title adds
+it and closes the sheet. The eighth test, added after those runs, is the sheet's control: with
+`-WestronFormSheetAsksNoFocus` the sheet's form has `focusesOnAppear` false, and its field holds the focus all the
+same, since a Mac sheet gives its first text field the focus by itself (one run, and a run on the branch before the
+test with the sheet's form changed by hand to the same). So on the Mac the sheet's case shows that the pattern's case
+ends with the field focused, not that the form's own `.onAppear` focus is what holds (rule 12). The skipped test is quick entry as the window's first content, which does not take the focus there
 (rule 12): with `focusesOnAppear` true its field held no focus within 5 s in three runs before the skip, and its message
 gives this reason. Return in quick entry's empty field once refused nothing right after the launch (one run of two
 before this change), typed with no wait for the field's focus; the test now waits for the focus before it types.

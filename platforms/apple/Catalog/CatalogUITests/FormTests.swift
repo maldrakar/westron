@@ -303,16 +303,17 @@ final class FormTests: XCTestCase {
     }
 
     /// A form opened to make something new focuses its field when it appears, and the keyboard rises (iOS): here the
-    /// form is the window's first content. On macOS the focus is not taken there (spec/patterns/form.md, rule 12), and
-    /// the sheet's case is `testQuickEntryInASheetFocusesItsField`.
+    /// form is the window's first content. On macOS the focus is not taken there (spec/patterns/form.md, rule 12).
     @MainActor
     func testQuickEntryFocusesItsFieldOnAppear() throws {
         #if os(macOS)
             throw XCTSkip(
                 "macOS 27.2.1, 2026-11-28: a focus set in onAppear of the window's first content is dropped, though the"
                     + " window is key and the app active when the form appears; set one main-queue turn later it holds"
-                    + " (spec/patterns/form.md, rule 12). The pattern's case, quick entry in a sheet over an open"
-                    + " window, is testQuickEntryInASheetFocusesItsField.")
+                    + " (spec/patterns/form.md, rule 12). Nothing on the Mac measures that the form's own onAppear focus"
+                    + " holds: testQuickEntryInASheetFocusesItsField shows that quick entry in a sheet over an open"
+                    + " window ends with its field focused, and testASheetFocusesItsFieldUnasked that the sheet gives"
+                    + " that focus by itself.")
         #else
             launch(["-WestronFormFocusOnAppear"])
             XCTAssertTrue(takesFocus(quickEntryTitle), "quick entry did not focus its field on appear")
@@ -320,22 +321,45 @@ final class FormTests: XCTestCase {
         #endif
     }
 
-    /// Quick entry presented in a sheet over the open window, as the pilot presents it, focuses its field when it
-    /// appears, and the keyboard rises (iOS); Return after a title adds it and closes the sheet.
+    /// Opens quick entry in its sheet over the page; the sheet and its field.
     @MainActor
-    func testQuickEntryInASheetFocusesItsField() {
-        launch(["-WestronFormSheet"])
+    private func openSheet(_ arguments: [String] = []) -> (sheet: XCUIElement, field: XCUIElement) {
+        launch(["-WestronFormSheet"] + arguments)
         press(app.buttons["Open quick entry in a sheet"])
         let sheet = app.descendants(matching: .any)["westron.catalog.form.sheet"]
         XCTAssertTrue(sheet.waitForExistence(timeout: 10), "the sheet did not open")
         let field = sheet.textFields.matching(NSPredicate(format: "label == 'Title'")).firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 5), "the sheet holds no field named Title")
-        XCTAssertTrue(takesFocus(field), "quick entry in a sheet did not focus its field on appear")
+        return (sheet, field)
+    }
+
+    /// Quick entry presented in a sheet over the open window, as the pilot presents it, ends with its field focused as
+    /// it appears, and the keyboard rises (iOS); Return after a title adds it and closes the sheet. Who gives the focus
+    /// is `testASheetFocusesItsFieldUnasked`'s question: on macOS the sheet gives it by itself.
+    @MainActor
+    func testQuickEntryInASheetFocusesItsField() {
+        let (sheet, field) = openSheet()
+        XCTAssertTrue(takesFocus(field), "quick entry in a sheet did not end with its field focused")
         #if os(iOS)
             XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5), "the keyboard did not rise")
         #endif
         field.typeText("Water the plants\n")
         XCTAssertEqual(lastAction(), "Added “Water the plants”", "Return did not add the task")
         XCTAssertTrue(sheet.waitForNonExistence(timeout: 10), "a title taken did not close the sheet")
+    }
+
+    /// The control of the sheet's focus: the sheet's quick entry with `focusesOnAppear` false, so that nothing in the
+    /// form asks for the focus. On macOS the sheet gives its first text field the keyboard focus by itself, so there
+    /// the sheet's case does not show that the form's own focus is what holds (spec/patterns/form.md, rule 12); on iOS
+    /// no field takes the focus and no keyboard rises.
+    @MainActor
+    func testASheetFocusesItsFieldUnasked() {
+        let (_, field) = openSheet(["-WestronFormSheetAsksNoFocus"])
+        #if os(macOS)
+            XCTAssertTrue(takesFocus(field), "the sheet did not focus its field unasked: rule 12's control changed")
+        #else
+            XCTAssertFalse(takesFocus(field, timeout: 3), "the sheet focused its field unasked")
+            XCTAssertFalse(app.keyboards.firstMatch.exists, "the keyboard rose with no field asking for it")
+        #endif
     }
 }
